@@ -24,7 +24,9 @@ Voxy is a flexible Python module for speech synthesis and voice cloning, with in
 - CUDA-compatible GPU (recommended)
 - FFmpeg for audio processing
 
-### Install the CSM Model
+### Install at least one model
+
+#### Example: the CSM Model
 
 The intention is to make `voxy` into a plugin-enabled facade, where you can chose your 
 own engine (for voice cloning, voice synthesis, etc.). 
@@ -37,6 +39,8 @@ in the first place.
 
 Follow the instructions in the [CSM repository](https://github.com/SesameAILabs/csm) 
 to install the CSM model and its dependencies.
+
+Try [the csm spaces](https://huggingface.co/spaces/sesame/csm-1b) where you can try various functionalities of csm.
 
 ## Quick Start
 
