@@ -4,13 +4,9 @@ Example usage of the voxy module for voice cloning and speech synthesis.
 
 import os
 import io
-from pathlib import Path
-import torch
-import torchaudio
-import numpy as np
 
 # Import the voxy module
-from voxy import create_speech_model, audio_to_text, cleanup_audio
+from voxy import create_speech_model, audio_to_text
 
 
 def example_1_basic_usage():
@@ -23,7 +19,7 @@ def example_1_basic_usage():
     # Generate speech with default voice
     audio = model.generate_speech(
         text="Hello, this is a test of the CSM speech model.",
-        output_path="output/basic_output.wav",
+        output_path="basic_output.wav",
     )
 
     print(f"Generated audio saved to output/basic_output.wav")

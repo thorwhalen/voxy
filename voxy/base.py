@@ -7,10 +7,8 @@ models, with initial support for the CSM-1B model.
 
 import os
 import io
-import pathlib
 from typing import Union, Optional, List, Dict, Any, Callable, BinaryIO, Tuple
 from dataclasses import dataclass
-import tempfile
 
 import torch
 import torchaudio
@@ -26,16 +24,32 @@ except ImportError:
     _HAS_WHISPER = False
 
 
+# TODO: Scan for models and define DFLT accordingly
+DFLT_VOXY_MODEL = os.environ.get("DFLT_VOXY_MODEL", "csm")
+
 # Determine the default device for model inference
 DFLT_VOXY_DEVICE = os.environ.get("DFLT_VOXY_DEVICE", None)
 
+# Determine the default device for model inference
+DFLT_VOXY_DEVICE = os.environ.get("DFLT_VOXY_DEVICE", None)
+
+# Special case: CSM model has compatibility issues with MPS
+# See error: "Output channels > 65536 not supported at the MPS device"
 if DFLT_VOXY_DEVICE is None:
-    if torch.backends.mps.is_available():
-        DFLT_VOXY_DEVICE = "mps"
-    elif torch.cuda.is_available():
+    if torch.cuda.is_available():
         DFLT_VOXY_DEVICE = "cuda"
+    # Note: We're skipping MPS even if available for CSM compatibility
     else:
         DFLT_VOXY_DEVICE = "cpu"
+
+VOXY_MODELS_CACHE_DIR = os.environ.get("VOXY_MODELS_CACHE_DIR")
+if VOXY_MODELS_CACHE_DIR is None:
+    standard_huggingface_cache = os.path.expanduser('~/.cache/huggingface/hub')
+    if os.path.exists(standard_huggingface_cache):
+        VOXY_MODELS_CACHE_DIR = standard_huggingface_cache
+    else:
+        VOXY_MODELS_CACHE_DIR = '~/.cache/voxy/models'
+VOXY_MODELS_CACHE_DIR = os.path.expanduser(VOXY_MODELS_CACHE_DIR)
 
 
 # -----------------------------------------------------------------------------
@@ -377,6 +391,9 @@ class SpeechModel:
 class CSMSpeechModel(SpeechModel):
     """Speech model implementation using Sesame's CSM-1B model."""
 
+    # Class-level cache for model path to avoid repeated downloads
+    _model_cache_path = None
+
     def __init__(
         self, model_path: Optional[str] = None, device: str = DFLT_VOXY_DEVICE
     ):
@@ -385,11 +402,18 @@ class CSMSpeechModel(SpeechModel):
 
         Args:
             model_path: Path to the model checkpoint (None to download from HF)
-            device: Device for model inference ('cuda', 'cpu', 'mps')
+            device: Device for model inference ('cuda', 'cpu')
+                    Note: 'mps' is not supported due to model architecture limitations
         """
+        # Enforce CPU if MPS is requested, as CSM doesn't work on MPS
+        if device == "mps":
+            print("Warning: CSM model is not compatible with MPS. Falling back to CPU.")
+            device = "cpu"
+
         super().__init__(device)
         self.model_path = model_path
         self._generator = None  # Lazy initialization
+
 
     def _ensure_generator_loaded(self):
         """Ensure the generator is loaded."""
@@ -398,19 +422,53 @@ class CSMSpeechModel(SpeechModel):
             from generator import load_csm_1b, Segment
 
             if self.model_path is None:
-                # Download the model if not provided
-                try:
-                    self.model_path = hf_hub_download(
-                        repo_id="sesame/csm-1b", filename="ckpt.pt"
-                    )
-                except Exception as e:
-                    raise RuntimeError(
-                        "Failed to download CSM-1B model. Ensure you have huggingface-cli "
-                        f"installed and are logged in with appropriate permissions: {e}"
-                    )
+                # First check if we already have the model in the HF cache
+                cache_dir = os.path.expanduser(VOXY_MODELS_CACHE_DIR)
+                # Check if model already exists in cache
+                possible_model_path = os.path.join(
+                    cache_dir, "models--sesame--csm-1b/snapshots", "*", "ckpt.pt"
+                )
+                import glob
+
+                cached_models = glob.glob(possible_model_path)
+
+                if cached_models:
+                    # Use the first match (most recent snapshot typically)
+                    self.model_path = cached_models[0]
+                    CSMSpeechModel._model_cache_path = self.model_path
+                    print(f"Using existing model from cache: {self.model_path}")
+                else:
+                    # Check class cache
+                    if CSMSpeechModel._model_cache_path is not None and os.path.exists(
+                        CSMSpeechModel._model_cache_path
+                    ):
+                        self.model_path = CSMSpeechModel._model_cache_path
+                        print(f"Using cached CSM model from: {self.model_path}")
+                    else:
+                        # Download the model if not provided
+                        try:
+                            # Create a consistent cache directory
+                            os.makedirs(cache_dir, exist_ok=True)
+
+                            print("Downloading CSM-1B model from Hugging Face Hub...")
+                            self.model_path = hf_hub_download(
+                                repo_id="sesame/csm-1b",
+                                filename="ckpt.pt",
+                                cache_dir=cache_dir,
+                            )
+                            # Update the class-level cache
+                            CSMSpeechModel._model_cache_path = self.model_path
+                            print(f"Model downloaded to: {self.model_path}")
+                        except Exception as e:
+                            raise RuntimeError(
+                                "Failed to download CSM-1B model. Ensure you have huggingface-cli "
+                                f"installed and are logged in with appropriate permissions: {e}"
+                            )
 
             # Load the generator
-            self._generator = load_csm_1b(self.model_path, self.device)
+            print(f"Loading CSM model on {self.device}...")
+            self._generator = load_csm_1b(self.device)
+            print("Model loaded successfully.")
 
             # Save a reference to the Segment class
             self.Segment = Segment
@@ -561,7 +619,7 @@ def create_speech_model(model_type: str = "csm", **kwargs) -> SpeechModel:
     Create a speech model of the specified type.
 
     Args:
-        model_type: Type of speech model ('csm' currently supported)
+        model_type: Type of speech model ('csm' or 'csm-1b' currently supported)
         **kwargs: Additional model-specific parameters
 
     Returns:
@@ -570,7 +628,7 @@ def create_speech_model(model_type: str = "csm", **kwargs) -> SpeechModel:
     Raises:
         ValueError: If the model type is not supported
     """
-    if model_type.lower() == "csm":
+    if model_type.lower() in ["csm", "csm-1b"]:
         return CSMSpeechModel(**kwargs)
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
