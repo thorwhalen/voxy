@@ -7,7 +7,8 @@ models, with initial support for the CSM-1B model.
 
 import os
 import io
-from typing import Union, Optional, List, Dict, Any, Callable, BinaryIO, Tuple
+from typing import Union, Optional, List, Dict, Any, BinaryIO, Tuple
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import torch
@@ -58,8 +59,8 @@ VOXY_MODELS_CACHE_DIR = os.path.expanduser(VOXY_MODELS_CACHE_DIR)
 
 
 def _resolve_audio_input(
-    audio_input: Union[str, bytes, BinaryIO, torch.Tensor, np.ndarray],
-) -> Tuple[torch.Tensor, int]:
+    audio_input: str | bytes | BinaryIO | torch.Tensor | np.ndarray,
+) -> tuple[torch.Tensor, int]:
     """
     Resolves various audio input formats to a torch.Tensor and sample rate.
 
@@ -110,7 +111,7 @@ def _resolve_audio_input(
         raise TypeError(f"Unsupported audio input type: {type(audio_input)}")
 
 
-def _resolve_text_input(text_input: Union[str, bytes, io.TextIOBase]) -> str:
+def _resolve_text_input(text_input: str | bytes | io.TextIOBase) -> str:
     """
     Resolves various text input formats to a string.
 
@@ -126,7 +127,7 @@ def _resolve_text_input(text_input: Union[str, bytes, io.TextIOBase]) -> str:
     if isinstance(text_input, str):
         # If it starts with / and is a file, read the content
         if text_input.startswith('/') and os.path.isfile(text_input):
-            with open(text_input, 'r') as f:
+            with open(text_input) as f:
                 return f.read()
         # Otherwise, use the string directly
         return text_input
@@ -258,7 +259,7 @@ def cleanup_audio(
 
 
 def audio_to_text(
-    audio_input: Union[str, bytes, BinaryIO, torch.Tensor, np.ndarray],
+    audio_input: str | bytes | BinaryIO | torch.Tensor | np.ndarray,
     model_size: str = "base",
 ) -> str:
     """
@@ -327,7 +328,7 @@ class VoiceProfile:
     speaker_id: int
     model_type: str
     sample_rate: int
-    metadata: Dict[str, Any] = None
+    metadata: dict[str, Any] = None
 
 
 class SpeechModel:
@@ -344,11 +345,11 @@ class SpeechModel:
 
     def clone_voice(
         self,
-        audio_input: Union[str, bytes, BinaryIO, torch.Tensor, np.ndarray],
-        transcript: Optional[str] = None,
+        audio_input: str | bytes | BinaryIO | torch.Tensor | np.ndarray,
+        transcript: str | None = None,
         speaker_id: int = 999,
         *,
-        cleanup_audio_fn: Optional[Callable] = cleanup_audio,
+        cleanup_audio_fn: Callable | None = cleanup_audio,
     ) -> VoiceProfile:
         """
         Create a voice profile from an audio sample and its transcript.
@@ -366,9 +367,9 @@ class SpeechModel:
 
     def generate_speech(
         self,
-        text: Union[str, bytes, io.TextIOBase],
-        voice_profile: Optional[VoiceProfile] = None,
-        output_path: Optional[str] = None,
+        text: str | bytes | io.TextIOBase,
+        voice_profile: VoiceProfile | None = None,
+        output_path: str | None = None,
         max_length_ms: int = 10000,
         **kwargs,
     ) -> torch.Tensor:
@@ -394,9 +395,7 @@ class CSMSpeechModel(SpeechModel):
     # Class-level cache for model path to avoid repeated downloads
     _model_cache_path = None
 
-    def __init__(
-        self, model_path: Optional[str] = None, device: str = DFLT_VOXY_DEVICE
-    ):
+    def __init__(self, model_path: str | None = None, device: str = DFLT_VOXY_DEVICE):
         """
         Initialize the CSM speech model.
 
@@ -413,7 +412,6 @@ class CSMSpeechModel(SpeechModel):
         super().__init__(device)
         self.model_path = model_path
         self._generator = None  # Lazy initialization
-
 
     def _ensure_generator_loaded(self):
         """Ensure the generator is loaded."""
@@ -475,11 +473,11 @@ class CSMSpeechModel(SpeechModel):
 
     def clone_voice(
         self,
-        audio_input: Union[str, bytes, BinaryIO, torch.Tensor, np.ndarray],
-        transcript: Optional[str] = None,
+        audio_input: str | bytes | BinaryIO | torch.Tensor | np.ndarray,
+        transcript: str | None = None,
         speaker_id: int = 999,
         *,
-        cleanup_audio_fn: Optional[Callable] = cleanup_audio,
+        cleanup_audio_fn: Callable | None = cleanup_audio,
     ) -> VoiceProfile:
         """
         Create a voice profile from an audio sample and its transcript.
@@ -544,9 +542,9 @@ class CSMSpeechModel(SpeechModel):
 
     def generate_speech(
         self,
-        text: Union[str, bytes, io.TextIOBase],
-        voice_profile: Optional[VoiceProfile] = None,
-        output_path: Optional[str] = None,
+        text: str | bytes | io.TextIOBase,
+        voice_profile: VoiceProfile | None = None,
+        output_path: str | None = None,
         max_length_ms: int = 10000,
         temperature: float = 0.7,
         topk: int = 30,
