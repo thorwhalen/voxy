@@ -50,11 +50,11 @@ if DFLT_VOXY_DEVICE is None:
 
 VOXY_MODELS_CACHE_DIR = os.environ.get("VOXY_MODELS_CACHE_DIR")
 if VOXY_MODELS_CACHE_DIR is None:
-    standard_huggingface_cache = os.path.expanduser('~/.cache/huggingface/hub')
+    standard_huggingface_cache = os.path.expanduser("~/.cache/huggingface/hub")
     if os.path.exists(standard_huggingface_cache):
         VOXY_MODELS_CACHE_DIR = standard_huggingface_cache
     else:
-        VOXY_MODELS_CACHE_DIR = '~/.cache/voxy/models'
+        VOXY_MODELS_CACHE_DIR = "~/.cache/voxy/models"
 VOXY_MODELS_CACHE_DIR = os.path.expanduser(VOXY_MODELS_CACHE_DIR)
 
 
@@ -136,7 +136,7 @@ def _resolve_text_input(text_input: str | bytes | io.TextIOBase) -> str:
     """
     if isinstance(text_input, str):
         # If it starts with / and is a file, read the content
-        if text_input.startswith('/') and os.path.isfile(text_input):
+        if text_input.startswith("/") and os.path.isfile(text_input):
             with open(text_input) as f:
                 return f.read()
         # Otherwise, use the string directly
@@ -144,7 +144,7 @@ def _resolve_text_input(text_input: str | bytes | io.TextIOBase) -> str:
 
     elif isinstance(text_input, bytes):
         # Decode bytes to string
-        return text_input.decode('utf-8')
+        return text_input.decode("utf-8")
 
     elif isinstance(text_input, io.TextIOBase):
         # Read from file-like object
@@ -258,7 +258,7 @@ def cleanup_audio(
 
             # Concatenate all segments
             processed_audio_np = np.concatenate(processed_segments)
-            processed_audio = torch.tensor(processed_audio_np, device='cpu').unsqueeze(
+            processed_audio = torch.tensor(processed_audio_np, device="cpu").unsqueeze(
                 0
             )
     else:
@@ -614,8 +614,8 @@ class CSMSpeechModel(SpeechModel):
             speaker_id = 0
 
         # Add punctuation if missing to help with phrasing
-        if not any(p in text for p in ['.', ',', '!', '?']):
-            text = text + '.'
+        if not any(p in text for p in [".", ",", "!", "?"]):
+            text = text + "."
 
         # Generate audio
         audio = self._generator.generate(
