@@ -133,6 +133,17 @@ def _resolve_text_input(text_input: str | bytes | io.TextIOBase) -> str:
 
     Returns:
         String containing the text
+
+    >>> _resolve_text_input("Hello there.")
+    'Hello there.'
+    >>> _resolve_text_input(b"Hello there.")
+    'Hello there.'
+    >>> _resolve_text_input(io.StringIO("Hello there."))
+    'Hello there.'
+    >>> _resolve_text_input(42)
+    Traceback (most recent call last):
+      ...
+    TypeError: Unsupported text input type: <class 'int'>
     """
     if isinstance(text_input, str):
         # If it starts with / and is a file, read the content
@@ -180,6 +191,22 @@ def cleanup_audio(
 
     Returns:
         Processed audio tensor
+
+    A 1-D input is given a channel dimension, and the loudest sample is
+    normalized to 1.0:
+
+    >>> audio = torch.tensor([0.0, 0.5, 0.0, 0.0])
+    >>> processed = cleanup_audio(audio, sample_rate=8000)
+    >>> tuple(processed.shape)
+    (1, 4)
+    >>> round(float(processed.max()), 3)
+    1.0
+
+    Stereo input is mixed down to mono:
+
+    >>> stereo = torch.tensor([[0.0, 0.5, 0.0, 0.0], [0.0, 0.5, 0.0, 0.0]])
+    >>> tuple(cleanup_audio(stereo, sample_rate=8000).shape)
+    (1, 4)
     """
     # Ensure input is 2D with shape [channels, samples]
     if len(audio.shape) == 1:
@@ -655,6 +682,16 @@ def create_speech_model(model_type: str = "csm", **kwargs) -> SpeechModel:
 
     Raises:
         ValueError: If the model type is not supported
+
+    The returned model loads its (large) weights lazily, on first use:
+
+    >>> model = create_speech_model("csm")
+    >>> type(model).__name__
+    'CSMSpeechModel'
+    >>> create_speech_model("no-such-model")
+    Traceback (most recent call last):
+      ...
+    ValueError: Unsupported model type: no-such-model
     """
     if model_type.lower() in ["csm", "csm-1b"]:
         return CSMSpeechModel(**kwargs)
