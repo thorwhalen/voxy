@@ -28,8 +28,13 @@ except ImportError:
 # TODO: Scan for models and define DFLT accordingly
 DFLT_VOXY_MODEL = os.environ.get("DFLT_VOXY_MODEL", "csm")
 
-# Determine the default device for model inference
-DFLT_VOXY_DEVICE = os.environ.get("DFLT_VOXY_DEVICE", None)
+# Sample rate assumed for raw (already-decoded) audio inputs -- tensors and
+# numpy arrays carry no sample rate of their own. Callers that know the real
+# rate should pass it explicitly rather than rely on this.
+DFLT_ASSUMED_SAMPLE_RATE = 16000
+
+# The sample rate Whisper expects its input audio to be at
+WHISPER_SAMPLE_RATE = 16000
 
 # Determine the default device for model inference
 DFLT_VOXY_DEVICE = os.environ.get("DFLT_VOXY_DEVICE", None)
@@ -60,6 +65,8 @@ VOXY_MODELS_CACHE_DIR = os.path.expanduser(VOXY_MODELS_CACHE_DIR)
 
 def _resolve_audio_input(
     audio_input: str | bytes | BinaryIO | torch.Tensor | np.ndarray,
+    *,
+    assumed_sample_rate: int = DFLT_ASSUMED_SAMPLE_RATE,
 ) -> tuple[torch.Tensor, int]:
     """
     Resolves various audio input formats to a torch.Tensor and sample rate.
@@ -71,6 +78,10 @@ def _resolve_audio_input(
             - BinaryIO: File-like object containing audio data
             - torch.Tensor: Direct audio tensor
             - np.ndarray: Numpy array of audio samples
+        assumed_sample_rate: Sample rate to report for raw tensor/array inputs,
+            which carry no sample rate of their own. Ignored for inputs that
+            are decoded (paths, bytes, file-like objects), since those have a
+            real sample rate.
 
     Returns:
         Tuple of (audio_tensor, sample_rate)
@@ -92,20 +103,19 @@ def _resolve_audio_input(
         return torchaudio.load(audio_input)
 
     elif isinstance(audio_input, torch.Tensor):
-        # Assume default sample rate of 16000 if directly passed tensor
-        # and the tensor shape is [channels, samples] or [samples]
+        # A bare tensor carries no sample rate; use the caller's assumption.
+        # The tensor shape must be [channels, samples] or [samples]
         if len(audio_input.shape) > 2:
             raise ValueError(f"Invalid audio tensor shape: {audio_input.shape}")
-        return audio_input, 16000
+        return audio_input, assumed_sample_rate
 
     elif isinstance(audio_input, np.ndarray):
-        # Convert numpy array to tensor
-        # Assume default sample rate of 16000
+        # Convert numpy array to tensor; it carries no sample rate either
         audio_tensor = torch.from_numpy(audio_input)
         if len(audio_tensor.shape) == 1:
             # Add channel dimension if not present
             audio_tensor = audio_tensor.unsqueeze(0)
-        return audio_tensor, 16000
+        return audio_tensor, assumed_sample_rate
 
     else:
         raise TypeError(f"Unsupported audio input type: {type(audio_input)}")
@@ -261,6 +271,8 @@ def cleanup_audio(
 def audio_to_text(
     audio_input: str | bytes | BinaryIO | torch.Tensor | np.ndarray,
     model_size: str = "base",
+    *,
+    sample_rate: int | None = None,
 ) -> str:
     """
     Transcribe audio to text using Whisper.
@@ -268,6 +280,10 @@ def audio_to_text(
     Args:
         audio_input: Audio in various formats
         model_size: Whisper model size ('tiny', 'base', 'small', 'medium', 'large')
+        sample_rate: Sample rate of ``audio_input`` when it is a raw tensor or
+            numpy array. Required for correct transcription of raw audio that
+            is not at ``DFLT_ASSUMED_SAMPLE_RATE``; ignored when the input is a
+            path, bytes or file-like object (those carry their own rate).
 
     Returns:
         Transcribed text
@@ -277,11 +293,18 @@ def audio_to_text(
     """
     if not _HAS_WHISPER:
         raise ImportError(
-            "whisper is required for transcription. Install with 'pip install whisper'"
+            "openai-whisper is required for transcription. "
+            "Install with 'pip install voxy[transcription]' "
+            "(or 'pip install openai-whisper')."
         )
 
     # Resolve audio input
-    audio, sample_rate = _resolve_audio_input(audio_input)
+    audio, resolved_sample_rate = _resolve_audio_input(
+        audio_input,
+        assumed_sample_rate=(
+            sample_rate if sample_rate is not None else DFLT_ASSUMED_SAMPLE_RATE
+        ),
+    )
 
     # Load whisper model
     model = whisper.load_model(model_size)
@@ -299,13 +322,14 @@ def audio_to_text(
     else:
         audio_np = audio
 
-    # Resample if needed
-    if sample_rate != 16000:
-        # Whisper expects 16kHz
+    # Resample if needed -- Whisper expects WHISPER_SAMPLE_RATE
+    if resolved_sample_rate != WHISPER_SAMPLE_RATE:
         # Use torchaudio for resampling
         audio_tensor = torch.tensor(audio_np).unsqueeze(0)
         audio_tensor = torchaudio.functional.resample(
-            audio_tensor, orig_freq=sample_rate, new_freq=16000
+            audio_tensor,
+            orig_freq=resolved_sample_rate,
+            new_freq=WHISPER_SAMPLE_RATE,
         )
         audio_np = audio_tensor.squeeze(0).numpy()
 
@@ -328,7 +352,7 @@ class VoiceProfile:
     speaker_id: int
     model_type: str
     sample_rate: int
-    metadata: dict[str, Any] = None
+    metadata: dict[str, Any] | None = None
 
 
 class SpeechModel:
@@ -516,9 +540,15 @@ class CSMSpeechModel(SpeechModel):
                 new_freq=self._generator.sample_rate,
             )
 
-        # Auto-transcribe if no transcript provided
+        # Auto-transcribe if no transcript provided.
+        # Pass the sample rate explicitly: audio_tensor has just been resampled
+        # to the generator's rate, and a bare tensor carries no rate of its own,
+        # so without this the audio would be transcribed as if it were at
+        # DFLT_ASSUMED_SAMPLE_RATE (i.e. at the wrong speed).
         if transcript is None:
-            transcript = audio_to_text(audio_tensor)
+            transcript = audio_to_text(
+                audio_tensor, sample_rate=self._generator.sample_rate
+            )
         else:
             # Resolve transcript if not a string
             transcript = _resolve_text_input(transcript)
