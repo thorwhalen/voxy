@@ -54,8 +54,7 @@ model = create_speech_model(model_type="csm")
 
 # Generate speech with default voice
 audio = model.generate_speech(
-    text="Hello, this is a test of the CSM speech model.", 
-    output_path="output.wav"
+    text="Hello, this is a test of the CSM speech model.", output_path="output.wav"
 )
 ```
 
@@ -70,14 +69,14 @@ model = create_speech_model(model_type="csm")
 # Clone a voice from an audio file
 voice_profile = model.clone_voice(
     audio_input="sample_voice.wav",
-    transcript="This is a sample of my voice for cloning purposes."
+    transcript="This is a sample of my voice for cloning purposes.",
 )
 
 # Generate speech with the cloned voice
 audio = model.generate_speech(
     text="This is my cloned voice speaking. Isn't it amazing?",
     voice_profile=voice_profile,
-    output_path="cloned_voice.wav"
+    output_path="cloned_voice.wav",
 )
 ```
 
@@ -99,7 +98,7 @@ voice_profile = model.clone_voice(
 audio = model.generate_speech(
     text="This voice was cloned using automatic transcription.",
     voice_profile=voice_profile,
-    output_path="auto_transcribed_voice.wav"
+    output_path="auto_transcribed_voice.wav",
 )
 ```
 
@@ -110,32 +109,27 @@ The module supports various input formats:
 ```python
 # From file path
 voice_profile1 = model.clone_voice(
-    audio_input="sample_voice.wav",
-    transcript="Text transcript."
+    audio_input="sample_voice.wav", transcript="Text transcript."
 )
 
 # From bytes
 with open("sample_voice.wav", "rb") as f:
     audio_bytes = f.read()
 voice_profile2 = model.clone_voice(
-    audio_input=audio_bytes,
-    transcript="Text transcript."
+    audio_input=audio_bytes, transcript="Text transcript."
 )
 
 # From file object
 with open("sample_voice.wav", "rb") as f:
-    voice_profile3 = model.clone_voice(
-        audio_input=f,
-        transcript="Text transcript."
-    )
+    voice_profile3 = model.clone_voice(audio_input=f, transcript="Text transcript.")
 
 # From tensor
 import torch
 import torchaudio
+
 audio_tensor, sample_rate = torchaudio.load("sample_voice.wav")
 voice_profile4 = model.clone_voice(
-    audio_input=audio_tensor,
-    transcript="Text transcript."
+    audio_input=audio_tensor, transcript="Text transcript."
 )
 ```
 
@@ -174,7 +168,7 @@ cleaned_audio = cleanup_audio(
     normalize=True,
     remove_silence=True,
     silence_threshold=0.02,
-    min_silence_duration=0.2
+    min_silence_duration=0.2,
 )
 
 # Save cleaned audio
@@ -189,7 +183,7 @@ You can disable audio cleanup when cloning a voice:
 voice_profile = model.clone_voice(
     audio_input="sample_voice.wav",
     transcript="This is a sample of my voice.",
-    cleanup_audio_fn=None  # Disable audio cleanup
+    cleanup_audio_fn=None,  # Disable audio cleanup
 )
 ```
 

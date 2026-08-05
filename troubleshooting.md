@@ -60,6 +60,7 @@ Ensure you have all the required dependencies installed:
 3. Set the Python path to include the CSM directory:
    ```python
    import sys
+
    sys.path.append("/path/to/csm")
    ```
 
@@ -80,13 +81,14 @@ Ensure you have all the required dependencies installed:
    audio = model.generate_speech(
        text="Hello world",
        voice_profile=profile,
-       max_length_ms=5000  # Reduced from default
+       max_length_ms=5000,  # Reduced from default
    )
    ```
 
 3. If using a multi-GPU system, ensure PyTorch is only using one GPU:
    ```python
    import os
+
    os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Use only the first GPU
    ```
 
