@@ -25,6 +25,21 @@ class FakeClient:
             ivc=SimpleNamespace(create=self._ivc_create), delete=self._delete
         )
         self.text_to_speech = SimpleNamespace(convert=self._convert)
+        self.text_to_voice = SimpleNamespace(design=self._design, create=self._create)
+
+    def _design(self, **kwargs):
+        import base64
+
+        self.calls.append(("ttv.design", kwargs))
+        previews = [
+            SimpleNamespace(generated_voice_id=f"gen{i}", audio_base_64=base64.b64encode(b"ID3" + bytes([i])).decode(), duration_secs=2.0)
+            for i in range(3)
+        ]
+        return SimpleNamespace(previews=previews, text="auto text")
+
+    def _create(self, **kwargs):
+        self.calls.append(("ttv.create", kwargs))
+        return SimpleNamespace(voice_id="designed-id")
 
     def _ivc_create(self, **kwargs):
         self.calls.append(("ivc.create", kwargs))

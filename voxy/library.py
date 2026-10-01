@@ -75,20 +75,37 @@ def save_voice(
     return record
 
 
-def load_voice(
-    name: str,
-    *,
-    model_type: str = DFLT_LIBRARY_MODEL_TYPE,
-    voices: Mapping | None = None,
-) -> VoiceProfile:
-    """The saved ``model_type`` profile of the voice called ``name``."""
+def find_voice(name: str, *, voices: Mapping | None = None) -> str | None:
+    """The library key of the voice called ``name`` (case-insensitive, aliases too).
+
+    >>> lib = {"cora": {"aliases": ["Cora", "Coco"]}, "vanessa": {"aliases": ["Ness"]}}
+    >>> find_voice("coco", voices=lib), find_voice("Vanessa", voices=lib), find_voice("x", voices=lib)
+    ('cora', 'vanessa', None)
+    """
     voices = stores.voices_store() if voices is None else voices
-    if name not in voices:
-        raise KeyError(f"No voice named {name!r} (have: {', '.join(voices)})")
-    profiles = voices[name].get("profiles", {})
+    if not isinstance(name, str):
+        return None
+    if name in voices:
+        return name
+    wanted = name.casefold()
+    for key in voices:
+        names = [key, *voices[key].get("aliases", [])]
+        if any(isinstance(n, str) and n.casefold() == wanted for n in names):
+            return key
+    return None
+
+
+def profile_from_record(record: Mapping, model_type: str | None = None) -> VoiceProfile:
+    """The record's saved ``model_type`` profile (its first one if ``None``)."""
+    profiles = record.get("profiles", {})
+    if not profiles:
+        raise KeyError(f"Voice {record.get('name')!r} has no saved profiles")
+    if model_type is None:
+        model_type = next(iter(profiles))
     if model_type not in profiles:
         raise KeyError(
-            f"Voice {name!r} has no {model_type!r} profile (has: {', '.join(profiles)})"
+            f"Voice {record.get('name')!r} has no {model_type!r} profile "
+            f"(has: {', '.join(profiles)})"
         )
     fields = {
         k: v
@@ -96,6 +113,23 @@ def load_voice(
         if k in VoiceProfile.__annotations__
     }
     return VoiceProfile(**fields)
+
+
+def load_voice(
+    name: str,
+    *,
+    model_type: str | None = DFLT_LIBRARY_MODEL_TYPE,
+    voices: Mapping | None = None,
+) -> VoiceProfile:
+    """The saved ``model_type`` profile of the voice called ``name`` (or an alias).
+
+    ``model_type=None`` takes the voice's first saved profile.
+    """
+    voices = stores.voices_store() if voices is None else voices
+    key = find_voice(name, voices=voices)
+    if key is None:
+        raise KeyError(f"No voice named {name!r} (have: {', '.join(voices)})")
+    return profile_from_record(voices[key], model_type)
 
 
 def _is_sample_key(key: str) -> bool:
@@ -146,4 +180,35 @@ def clone_from_samples(
     clone_kwargs.setdefault("name", name)
     profile = model.clone_voice(files, **clone_kwargs)
     save_voice(name, profile, voices=voices, **dict(record_fields or {}))
+    return profile
+
+
+def design_from_description(
+    name: str,
+    description: str,
+    *,
+    preview=None,
+    model: SpeechModel | None = None,
+    model_type: str = DFLT_LIBRARY_MODEL_TYPE,
+    voices: MutableMapping | None = None,
+    record_fields: Mapping[str, Any] | None = None,
+    **design_kwargs: Any,
+) -> VoiceProfile:
+    """Design a new voice from a text ``description`` and save it as ``name``.
+
+    Args:
+        name: Library name for the voice.
+        description: What it sounds like (age, accent, tone, pace, character).
+        preview: The chosen preview (or its id) from the model's
+            ``design_voice_previews``; if omitted, the first generated one.
+        model: A speech model that can design voices (default: ``model_type``'s).
+        record_fields: Extra fields for the voice record (aliases...).
+        **design_kwargs: Passed to ``model.design_voice`` (``labels=``, ``seed=``...).
+    """
+    stores.check_voice_name(name)
+    model = model or create_speech_model(model_type)
+    design_kwargs.setdefault("name", name)
+    profile = model.design_voice(description, preview=preview, **design_kwargs)
+    fields = {"description": description, **dict(record_fields or {})}
+    save_voice(name, profile, voices=voices, **fields)
     return profile

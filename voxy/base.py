@@ -382,8 +382,117 @@ class VoiceProfile:
     metadata: dict[str, Any] | None = None
 
 
+@dataclass
+class Speech:
+    """Synthesized speech: encoded audio plus what produced it.
+
+    >>> import tempfile, os
+    >>> speech = Speech(b"RIFF...", format="wav", backend="say", voice="Daniel")
+    >>> path = speech.save(os.path.join(tempfile.mkdtemp(), "hi.wav"))
+    >>> open(path, "rb").read()[:4]
+    b'RIFF'
+    """
+
+    audio: bytes
+    format: str  # container/codec: 'mp3', 'wav', 'opus', 'flac', 'aac', ...
+    backend: str = ""
+    voice: str | None = None
+    sample_rate: int | None = None
+    text: str | None = None
+
+    def save(self, path: str) -> str:
+        """Write the audio to ``path`` (folders created) and return the path."""
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(self.audio)
+        return path
+
+
+@dataclass
+class VoiceInfo:
+    """A voice a backend offers (stock, designed, or cloned)."""
+
+    voice_id: str
+    name: str
+    backend: str
+    description: str = ""
+    labels: dict[str, Any] | None = None
+
+
+def tensor_to_wav_bytes(audio: torch.Tensor, sample_rate: int) -> bytes:
+    """Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
+
+    Integer tensors are taken as PCM and scaled to [-1, 1] first.
+
+    >>> data = tensor_to_wav_bytes(torch.zeros(160), 16000)
+    >>> data[:4], len(data)
+    (b'RIFF', 364)
+    >>> tensor_to_wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]
+    b'\\xff\\x7f'
+    """
+    import wave
+
+    if not torch.is_floating_point(audio):
+        audio = audio.to(torch.float64) / torch.iinfo(audio.dtype).max
+    if audio.dim() == 2:
+        audio = audio.mean(dim=0)
+    samples = audio.detach().cpu().to(torch.float32).clamp(-1.0, 1.0).numpy()
+    pcm = (samples * 32767).astype("<i2").tobytes()
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(int(sample_rate))
+        w.writeframes(pcm)
+    return buffer.getvalue()
+
+
 class SpeechModel:
-    """Base class for speech synthesis models."""
+    """Base class for speech backends (local models or services).
+
+    A backend implements whichever capabilities it has; the rest raise
+    ``NotImplementedError`` naming the backend:
+
+    - ``synthesize(text, voice) -> Speech``: the facade's one required method
+      (the default renders ``generate_speech`` to WAV);
+    - ``list_voices() -> list[VoiceInfo]``;
+    - ``clone_voice(samples, ...) -> VoiceProfile``;
+    - ``design_voice(description, ...) -> VoiceProfile``;
+    - ``generate_speech(text, profile) -> torch.Tensor``.
+    """
+
+    #: Registry name of the backend (also each profile's ``model_type``).
+    name: str = ""
+    #: Voice used when the caller names none (``None``: the caller must).
+    dflt_voice: str | None = None
+
+    def _unsupported(self, capability: str):
+        return NotImplementedError(
+            f"The {self.name or type(self).__name__!r} backend can't {capability}"
+        )
+
+    def synthesize(
+        self, text: str, voice: "VoiceProfile | str | None" = None, **kwargs
+    ) -> Speech:
+        """Render ``text`` in ``voice`` and return encoded audio."""
+        audio = self.generate_speech(text, voice, **kwargs)
+        sample_rate = getattr(voice, "sample_rate", None) or self.sample_rate
+        return Speech(
+            tensor_to_wav_bytes(audio, sample_rate),
+            format="wav",
+            backend=self.name,
+            voice=None if voice is None else str(getattr(voice, "segment", voice)),
+            sample_rate=sample_rate,
+            text=_resolve_text_input(text),
+        )
+
+    def list_voices(self) -> list[VoiceInfo]:
+        """The voices this backend offers."""
+        raise self._unsupported("list voices")
+
+    def design_voice(self, description: str, **kwargs) -> VoiceProfile:
+        """Create a new voice from a text description."""
+        raise self._unsupported("design voices")
 
     def __init__(self, device: str = DFLT_VOXY_DEVICE):
         """
@@ -414,7 +523,7 @@ class SpeechModel:
         Returns:
             VoiceProfile: A packaged voice profile
         """
-        raise NotImplementedError("Subclasses must implement this method")
+        raise self._unsupported("clone voices")
 
     def generate_speech(
         self,
@@ -437,11 +546,13 @@ class SpeechModel:
         Returns:
             Generated audio tensor
         """
-        raise NotImplementedError("Subclasses must implement this method")
+        raise self._unsupported("generate speech tensors")
 
 
 class CSMSpeechModel(SpeechModel):
     """Speech model implementation using Sesame's CSM-1B model."""
+
+    name = "csm"
 
     # Class-level cache for model path to avoid repeated downloads
     _model_cache_path = None
@@ -521,6 +632,12 @@ class CSMSpeechModel(SpeechModel):
 
             # Save a reference to the Segment class
             self.Segment = Segment
+
+    @property
+    def sample_rate(self) -> int:
+        """Sample rate of the generated audio (loads the model)."""
+        self._ensure_generator_loaded()
+        return self._generator.sample_rate
 
     def clone_voice(
         self,
@@ -669,19 +786,55 @@ class CSMSpeechModel(SpeechModel):
 # -----------------------------------------------------------------------------
 
 
-def _elevenlabs_speech_model(**kwargs) -> SpeechModel:
-    # Imported here: voxy.elevenlabs_model imports from this module.
-    from voxy.elevenlabs_model import ElevenLabsSpeechModel
+def _lazy_factory(module: str, class_name: str) -> Callable[..., SpeechModel]:
+    """A factory importing its backend on first use (backends import this module)."""
 
-    return ElevenLabsSpeechModel(**kwargs)
+    def factory(**kwargs) -> SpeechModel:
+        import importlib
+
+        return getattr(importlib.import_module(module), class_name)(**kwargs)
+
+    factory.__name__ = f"create_{class_name}"
+    return factory
 
 
-#: Backend name -> factory. Add a backend by adding an entry here.
+#: Backend name -> factory (keys lowercase). Add one with ``register_speech_model``.
 speech_model_factories: dict[str, Callable[..., SpeechModel]] = {
     "csm": CSMSpeechModel,
     "csm-1b": CSMSpeechModel,
-    "elevenlabs": _elevenlabs_speech_model,
+    "elevenlabs": _lazy_factory("voxy.elevenlabs_model", "ElevenLabsSpeechModel"),
+    "aix": _lazy_factory("voxy.aix_model", "AixSpeechModel"),
+    "fal": _lazy_factory("voxy.fal_model", "FalSpeechModel"),
+    "say": _lazy_factory("voxy.say_model", "SaySpeechModel"),
 }
+
+
+def register_speech_model(
+    name: str, factory: Callable[..., SpeechModel], *, overwrite: bool = False
+) -> Callable[..., SpeechModel]:
+    """Register a backend (a class or ``**kwargs -> SpeechModel`` callable).
+
+    Returns ``factory``, so it also works as a class decorator via ``functools.partial``.
+
+    >>> class Echo(SpeechModel):
+    ...     name = "echo"
+    >>> _ = register_speech_model("echo", Echo)
+    >>> type(create_speech_model("echo")).__name__
+    'Echo'
+    >>> register_speech_model("echo", Echo)
+    Traceback (most recent call last):
+      ...
+    ValueError: A speech backend named 'echo' is already registered (pass overwrite=True)
+    >>> del speech_model_factories["echo"]
+    """
+    key = name.lower()
+    if key in speech_model_factories and not overwrite:
+        raise ValueError(
+            f"A speech backend named {name!r} is already registered "
+            "(pass overwrite=True)"
+        )
+    speech_model_factories[key] = factory
+    return factory
 
 
 def create_speech_model(model_type: str = DFLT_VOXY_MODEL, **kwargs) -> SpeechModel:
@@ -690,7 +843,7 @@ def create_speech_model(model_type: str = DFLT_VOXY_MODEL, **kwargs) -> SpeechMo
 
     Args:
         model_type: A key of ``speech_model_factories`` ('csm', 'csm-1b',
-            'elevenlabs'); case-insensitive.
+            'elevenlabs', 'aix', 'fal', 'say', or any registered); case-insensitive.
         **kwargs: Additional model-specific parameters
 
     Returns:
@@ -709,7 +862,7 @@ def create_speech_model(model_type: str = DFLT_VOXY_MODEL, **kwargs) -> SpeechMo
     >>> create_speech_model("no-such-model")
     Traceback (most recent call last):
       ...
-    ValueError: Unsupported model type: no-such-model (supported: csm, csm-1b, elevenlabs)
+    ValueError: Unsupported model type: no-such-model (supported: csm, csm-1b, elevenlabs, aix, fal, say)
     """
     factories = {k.lower(): v for k, v in speech_model_factories.items()}
     factory = factories.get(model_type.lower())

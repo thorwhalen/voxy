@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 [project]
 name = "voxy"
 version = "0.0.6"
-description = "Facade for voice cloning and speech synthesis"
+description = "Facade for voice generation: speech synthesis in any voice, cloning and designing voices"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -65,6 +65,14 @@ transcription = [
 # The ElevenLabs backend (create_speech_model("elevenlabs")); imported lazily.
 elevenlabs = [
     "elevenlabs>=2",
+]
+# The "aix" backend (LiteLLM providers: OpenAI TTS and others); imported lazily.
+aix = [
+    "aix",
+]
+# The "fal" backend (fal.ai TTS models via falaw); imported lazily.
+fal = [
+    "falaw",
 ]
 dev = [
     "pytest>=7.0",

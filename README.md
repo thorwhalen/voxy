@@ -1,10 +1,31 @@
 # voxy
 
-Facade for voice cloning and speech synthesis
+Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designing voices.
 
-To install:	```pip install voxy```
+To install:	```pip install voxy``` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'voxy[fal]'` for those services)
 
-Voxy is a flexible Python module for speech synthesis and voice cloning, with two backends: the local Sesame CSM-1B model and the ElevenLabs API (instant voice cloning). You pick the backend with one keyword: `create_speech_model("csm")` or `create_speech_model("elevenlabs")`; new backends are entries in `voxy.speech_model_factories`.
+```python
+import voxy
+
+voxy.text_to_speech("Hello!", voice="cora").save("hi.mp3")          # a named voice from the library
+voxy.text_to_speech("A quick draft.", voice="Daniel", backend="say")  # free local voice (macOS)
+voxy.list_voices()                # our named voices
+voxy.list_voices("elevenlabs")    # a service's voices
+```
+
+Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
+
+Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice cora -o out.mp3`.
+
+### Designing a voice from a description
+
+```python
+model = voxy.get_speech_model("elevenlabs")
+previews = model.design_voice_previews("a warm, slow, elderly storyteller", text="Once upon a time...")
+for i, p in enumerate(previews):
+    p.save(f"preview_{i}.mp3")          # listen, then pick one
+voxy.design_from_description("storyteller", "a warm, slow, elderly storyteller", preview=previews[1])
+```
 
 ## Features
 
