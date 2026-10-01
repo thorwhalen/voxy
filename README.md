@@ -147,7 +147,9 @@ model = create_speech_model("elevenlabs")
 profile = model.clone_voice(["clip1.wav", "clip2.m4a"], name="my-voice")
 print(profile.segment)  # the ElevenLabs voice_id
 
-audio = model.generate_speech("Hello from my cloned voice.", profile, output_path="hello.wav")
+audio = model.generate_speech(
+    "Hello from my cloned voice.", profile, output_path="hello.wav"
+)
 
 # Later sessions: rebuild the profile from the id, no re-upload.
 profile = model.voice_profile("<voice_id>")
