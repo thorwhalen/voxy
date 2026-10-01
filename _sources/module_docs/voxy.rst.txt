@@ -1,4 +1,0 @@
-voxy
-====
-.. automodule:: voxy
-   :members:

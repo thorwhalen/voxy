@@ -1,0 +1,19 @@
+voxy.elevenlabs\_model
+======================
+
+.. automodule:: voxy.elevenlabs_model
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      default_elevenlabs_client_factory
+      resolve_elevenlabs_api_key
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      ElevenLabsSpeechModel
+   

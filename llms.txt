@@ -1,0 +1,21 @@
+# voxy
+
+> Facade for voice cloning and speech synthesis
+
+
+## Pages
+
+- [voxy](index.html.md): Facade for voice cloning and speech synthesis
+- [API reference](api.html.md): | &#96;voxy&#96;   | Facade for voice cloning and speech synthesis   |
+- [voxy](_autosummary/voxy.html.md): Facade for voice cloning and speech synthesis
+- [voxy.base](_autosummary/voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
+- [voxy.elevenlabs_model](_autosummary/voxy.elevenlabs_model.html.md): ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-01 05:55 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
+
+## Optional
+
+- [voxy.md](voxy.md): Complete documentation in a single file.
+
+## Build
+
+- [build_info.json](build_info.json): build provenance (commit, version, tool versions, whether the docs match the package)

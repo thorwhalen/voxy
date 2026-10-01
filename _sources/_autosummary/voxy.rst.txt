@@ -1,0 +1,14 @@
+﻿voxy
+====
+
+.. automodule:: voxy
+
+   
+.. rubric:: Modules
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   base
+   elevenlabs_model

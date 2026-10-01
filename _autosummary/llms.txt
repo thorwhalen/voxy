@@ -1,0 +1,14 @@
+# voxy
+
+> Facade for voice cloning and speech synthesis
+
+
+## Pages in this subsection
+
+- [voxy](voxy.html.md): Facade for voice cloning and speech synthesis
+- [voxy.base](voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
+- [voxy.elevenlabs_model](voxy.elevenlabs_model.html.md): ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.
+
+## Optional
+
+- [Top-level llms.txt](../llms.txt): Complete documentation index.

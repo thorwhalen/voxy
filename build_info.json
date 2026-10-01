@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "built_at": "2026-10-01T05:55:39Z",
+  "package": {
+    "name": "voxy",
+    "version": "0.0.4",
+    "display_name": "voxy",
+    "source": "pyproject.toml"
+  },
+  "git": {
+    "available": true,
+    "commit": "76d4782cbda023f162153a4aaea53c63094e39b8",
+    "short_commit": "76d4782",
+    "branch": "main",
+    "tags": [],
+    "dirty": false,
+    "remote_url": "https://github.com/thorwhalen/voxy",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/76d4782cbda023f162153a4aaea53c63094e39b8",
+    "error": null
+  },
+  "ci": {
+    "provider": "github",
+    "repository": "thorwhalen/voxy",
+    "sha": "76d4782cbda023f162153a4aaea53c63094e39b8",
+    "sha_in_history": true,
+    "ref": "refs/heads/main",
+    "ref_name": "main",
+    "run_id": "36821821150",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/36821821150",
+    "server_url": "https://github.com"
+  },
+  "tools": {
+    "epythet": "0.2.12",
+    "sphinx": "9.1.0",
+    "docutils": "0.22.4",
+    "python": "3.12.14"
+  },
+  "config": {
+    "theme": "auto",
+    "html_theme": "sphinxawesome_theme",
+    "accent": "#00658b",
+    "mode": "auto",
+    "api_generator": "autosummary",
+    "ignore": [
+      "tests/",
+      "scrap/",
+      "examples/"
+    ],
+    "agent_outputs": true,
+    "aggregates": [
+      "md"
+    ],
+    "ai_artifacts": true,
+    "provenance": true,
+    "docs_dir": "docsrc"
+  },
+  "site": {
+    "modules_documented": 3,
+    "objects_documented": 21
+  },
+  "pypi": {
+    "checked": true,
+    "latest": "0.0.5",
+    "relation": "behind",
+    "error": null
+  },
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 76d4782cbda023f162153a4aaea53c63094e39b8\npip install \"epythet==0.2.12\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "warnings": [],
+  "alignment": {
+    "aligned": false,
+    "notes": [
+      "The documented version (0.0.4) is behind the latest release on PyPI (0.0.5): `pip install voxy` gives newer code than these docs describe."
+    ]
+  }
+}

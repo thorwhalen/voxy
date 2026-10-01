@@ -1,0 +1,28 @@
+voxy.base
+=========
+
+.. automodule:: voxy.base
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      speech_model_factories
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      audio_to_text
+      cleanup_audio
+      create_speech_model
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      CSMSpeechModel
+      SpeechModel
+      VoiceProfile
+   
