@@ -159,6 +159,21 @@ profile = model.voice_profile("<voice_id>")
 
 Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `VOXY_LIVE_ELEVENLABS_SAMPLE=<audio you may clone>` also clones, speaks and deletes.
 
+### The voice library: clone once, reuse by name
+
+voxy keeps voice data in stores (`MutableMapping`s) under `$VOXY_DATA_DIR` (default `~/.local/share/voxy`): `voices/{name}.json` records (with each backend's saved profile, e.g. the ElevenLabs `voice_id`), `samples/{name}/` (audio a clone is made from), `sources/{name}/` (raw media). Swap a store factory to move the data elsewhere.
+
+```python
+from voxy import samples_store, clone_from_samples, load_voice, create_speech_model
+
+samples = samples_store("ada")
+samples["clip1.wav"] = open("clip1.wav", "rb").read()
+clone_from_samples("ada")                      # uploads the samples, saves the profile
+
+model = create_speech_model("elevenlabs")
+model.generate_speech("Hi!", load_voice("ada"), output_path="hi.wav")
+```
+
 ## Configuration
 
 You can configure the default device by setting the `DFLT_VOXY_DEVICE` environment variable:

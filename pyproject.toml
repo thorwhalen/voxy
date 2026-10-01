@@ -44,6 +44,9 @@ dependencies = [
     "torchaudio",
     "numpy",
     "huggingface-hub",
+    # voxy.stores: the voice library and its audio, as MutableMappings
+    "dol",
+    "config2py",
 ]
 
 [project.urls]
