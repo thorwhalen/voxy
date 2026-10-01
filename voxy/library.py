@@ -60,12 +60,13 @@ def save_voice(
     """Save ``profile`` under ``name`` (merged into any existing record) and return the record.
 
     ``record_fields`` (e.g. ``aliases=``, ``description=``, ``consent=``) are set on
-    the record itself.
+    the record itself. Aliases must not already name another voice.
     """
     reserved = RESERVED_RECORD_FIELDS & set(record_fields)
     if reserved:
         raise ValueError(f"Record fields {sorted(reserved)} are managed by voxy")
     voices = stores.voices_store() if voices is None else voices
+    _check_aliases_free(name, record_fields.get("aliases"), voices)
     record = dict(voices[name]) if name in voices else {"name": name}
     record.update(record_fields)
     entry = profile_to_dict(profile)
@@ -85,23 +86,44 @@ def find_voice(name: str, *, voices: Mapping | None = None) -> str | None:
     voices = stores.voices_store() if voices is None else voices
     if not isinstance(name, str):
         return None
-    if name in voices:
-        return name
+    keys = list(voices)  # the stored spelling, even on case-insensitive disks
     wanted = name.casefold()
-    for key in voices:
-        names = [key, *voices[key].get("aliases", [])]
-        if any(isinstance(n, str) and n.casefold() == wanted for n in names):
+    for match in (lambda k: k == name, lambda k: k.casefold() == wanted):
+        if found := next((k for k in keys if match(k)), None):
+            return found
+    for key in keys:
+        if any(
+            isinstance(a, str) and a.casefold() == wanted
+            for a in voices[key].get("aliases", [])
+        ):
             return key
     return None
 
 
-def profile_from_record(record: Mapping, model_type: str | None = None) -> VoiceProfile:
-    """The record's saved ``model_type`` profile (its first one if ``None``)."""
+def _check_aliases_free(name: str, aliases, voices: Mapping) -> None:
+    """Refuse aliases that already name, or alias, another voice."""
+    for alias in aliases or []:
+        owner = find_voice(alias, voices=voices)
+        if owner is not None and owner.casefold() != name.casefold():
+            raise ValueError(f"Alias {alias!r} already refers to voice {owner!r}")
+
+
+def profile_from_record(
+    record: Mapping, model_type: str | None = None, *, prefer: str | None = None
+) -> VoiceProfile:
+    """The record's saved ``model_type`` profile.
+
+    With ``model_type=None``: the ``prefer`` profile if the record has one, else
+    the record's ``default_backend``, else its first.
+    """
     profiles = record.get("profiles", {})
     if not profiles:
         raise KeyError(f"Voice {record.get('name')!r} has no saved profiles")
     if model_type is None:
-        model_type = next(iter(profiles))
+        model_type = next(
+            (b for b in (prefer, record.get("default_backend")) if b in profiles),
+            next(iter(profiles)),
+        )
     if model_type not in profiles:
         raise KeyError(
             f"Voice {record.get('name')!r} has no {model_type!r} profile "
@@ -132,6 +154,19 @@ def load_voice(
     return profile_from_record(voices[key], model_type)
 
 
+def _refuse_existing(name, voices, backend: str, overwrite: bool) -> None:
+    """Refuse to replace a saved ``backend`` profile of ``name`` unless asked to."""
+    if overwrite:
+        return
+    voices = stores.voices_store() if voices is None else voices
+    key = find_voice(name, voices=voices)
+    if key is not None and backend in voices[key].get("profiles", {}):
+        raise ValueError(
+            f"Voice {key!r} already has a {backend!r} profile; pass overwrite=True "
+            "to replace it"
+        )
+
+
 def _is_sample_key(key: str) -> bool:
     """Top-level audio files only (no notes, no subfolders).
 
@@ -156,6 +191,7 @@ def clone_from_samples(
     samples: Mapping[str, bytes] | None = None,
     voices: MutableMapping | None = None,
     record_fields: Mapping[str, Any] | None = None,
+    overwrite: bool = False,
     **clone_kwargs: Any,
 ) -> VoiceProfile:
     """Clone the voice ``name`` from its stored samples and save the profile.
@@ -168,9 +204,14 @@ def clone_from_samples(
             its top-level audio files are uploaded.
         voices: Voice records store; defaults to ``voices_store()``.
         record_fields: Extra fields for the voice record (aliases, consent...).
+        overwrite: Replace an existing profile of this backend for ``name``
+            (otherwise refused before anything is uploaded).
         **clone_kwargs: Passed to ``model.clone_voice`` (e.g. ``labels=``,
             ``remove_background_noise=``). ``name=`` defaults to ``name``.
     """
+    _refuse_existing(
+        name, voices, model_type if model is None else model.name, overwrite
+    )
     samples = stores.samples_store(name) if samples is None else samples
     keys = sorted(k for k in samples if _is_sample_key(k))
     if not keys:
@@ -192,6 +233,7 @@ def design_from_description(
     model_type: str = DFLT_LIBRARY_MODEL_TYPE,
     voices: MutableMapping | None = None,
     record_fields: Mapping[str, Any] | None = None,
+    overwrite: bool = False,
     **design_kwargs: Any,
 ) -> VoiceProfile:
     """Design a new voice from a text ``description`` and save it as ``name``.
@@ -203,9 +245,14 @@ def design_from_description(
             ``design_voice_previews``; if omitted, the first generated one.
         model: A speech model that can design voices (default: ``model_type``'s).
         record_fields: Extra fields for the voice record (aliases...).
+        overwrite: Replace an existing profile of this backend for ``name``
+            (otherwise refused before any paid call).
         **design_kwargs: Passed to ``model.design_voice`` (``labels=``, ``seed=``...).
     """
     stores.check_voice_name(name)
+    _refuse_existing(
+        name, voices, model_type if model is None else model.name, overwrite
+    )
     model = model or create_speech_model(model_type)
     design_kwargs.setdefault("name", name)
     profile = model.design_voice(description, preview=preview, **design_kwargs)

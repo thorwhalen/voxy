@@ -2,14 +2,15 @@
 Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
 
 >>> import voxy
->>> sorted(voxy.speech_model_factories)
-['aix', 'csm', 'csm-1b', 'elevenlabs', 'fal', 'say']
+>>> {'elevenlabs', 'say', 'aix', 'fal', 'csm'} <= set(voxy.speech_model_factories)
+True
 """
 
 from voxy.base import (
     create_speech_model,
     register_speech_model,
     speech_model_factories,
+    canonical_backend,
     audio_to_text,
     cleanup_audio,
     Speech,
@@ -32,4 +33,5 @@ from voxy.facade import (
     voice_id,
     resolve_voice,
     get_speech_model,
+    clear_speech_models,
 )

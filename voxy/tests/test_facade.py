@@ -188,3 +188,98 @@ def test_cli_lists_library_voices(library, monkeypatch, capsys, tmp_path):
     monkeypatch.setenv("VOXY_DATA_DIR", str(tmp_path))
     assert main(["voices"]) == 0
     assert capsys.readouterr().out.startswith("cora\tCora, Coco\televenlabs, rec")
+
+
+def test_given_model_decides_the_backend(library):
+    model = Recorder()
+    text_to_speech("Hi", "cora", voices=library, model=model)  # no backend=
+    assert model.calls[-1][1].segment == "Kathy"  # cora's 'rec' profile, not ElevenLabs
+
+
+def test_use_library_false_reaches_a_shadowed_backend_voice(library):
+    model = Recorder()
+    text_to_speech("Hi", "Coco", backend="rec", voices=library, model=model, use_library=False)
+    assert model.calls[-1][1] == "Coco"
+
+
+def test_library_voice_prefers_the_default_backend(library, monkeypatch):
+    monkeypatch.setenv("VOXY_TTS_BACKEND", "rec")
+    backend, profile = voxy.resolve_voice("cora", voices=library)
+    assert (backend, profile.segment) == ("rec", "Kathy")
+    monkeypatch.setenv("VOXY_TTS_BACKEND", "say")  # cora has no 'say' profile
+    assert voxy.resolve_voice("cora", voices=library)[0] == "elevenlabs"  # first saved
+
+
+def test_find_voice_prefers_names_over_aliases_and_returns_stored_key(tmp_path):
+    voices = voices_store(rootdir=tmp_path)
+    save_voice("ness", VoiceProfile("a", 1, "elevenlabs", 1), voices=voices)
+    save_voice("vanessa", VoiceProfile("b", 1, "elevenlabs", 1), voices=voices, aliases=["Maman"])
+    assert voxy.find_voice("NESS", voices=voices) == "ness"
+    assert voxy.find_voice("maman", voices=voices) == "vanessa"
+    with pytest.raises(ValueError, match="already refers to voice 'ness'"):
+        save_voice("vanessa", VoiceProfile("b", 1, "elevenlabs", 1), voices=voices, aliases=["Ness"])
+
+
+def test_existing_profiles_are_not_replaced_without_overwrite(tmp_path):
+    client = FakeClient()
+    model = ElevenLabsSpeechModel(api_key="k", client_factory=lambda key: client)
+    voices = voices_store(rootdir=tmp_path)
+    save_voice("ov", VoiceProfile("old", 1, "elevenlabs", 1), voices=voices)
+    with pytest.raises(ValueError, match="overwrite=True"):
+        design_from_description("ov", "calm", model=model, voices=voices)
+    assert client.calls == []  # refused before any paid call
+    design_from_description("ov", "calm", model=model, voices=voices, overwrite=True)
+    assert voice_id("ov", voices=voices) == "designed-id"
+
+
+def test_design_with_preview_refuses_preview_only_arguments():
+    model = ElevenLabsSpeechModel(api_key="k", client_factory=lambda key: FakeClient())
+    with pytest.raises(TypeError, match="seed"):
+        model.design_voice("calm", preview="gen1", seed=3)
+
+
+def test_backend_names_are_canonical(library):
+    assert voice_id("cora", backend="ElevenLabs", voices=library) == "el-cora"
+    assert voxy.canonical_backend("csm-1b") == "csm"
+    models = {}
+    assert voxy.get_speech_model("CSM-1B", models=models) is voxy.get_speech_model("csm", models=models)
+    voxy.clear_speech_models(models)
+    assert models == {}
+
+
+def test_elevenlabs_key_is_read_when_the_client_is_built(monkeypatch):
+    for var in ("ELEVEN_API_KEY", "ELEVENLABS_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    keys = []
+    model = ElevenLabsSpeechModel(client_factory=lambda key: keys.append(key) or FakeClient())
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "late-key")
+    model.client
+    assert keys == ["late-key"]
+
+
+def test_say_refuses_unknown_voices_and_reports_failures():
+    import subprocess
+
+    listing = "Daniel              en_GB    # Hello!\n"
+
+    def run(cmd, **kwargs):
+        if cmd[1:3] == ["-v", "?"]:
+            return SimpleNamespace(stdout=listing)
+        raise subprocess.CalledProcessError(1, cmd, stderr="Can't write file")
+
+    model = SaySpeechModel(run=run)
+    with pytest.raises(ValueError, match="No system voice named 'Nobody'"):
+        model.synthesize("Hi", "Nobody")
+    with pytest.raises(RuntimeError, match="Can't write file"):
+        model.synthesize("Hi", "daniel")
+
+
+def test_fal_puts_model_arguments_in_extra():
+    seen = {}
+
+    def tts(text, **kwargs):
+        seen.update(kwargs)
+        return SimpleNamespace(first=SimpleNamespace(url="u.mp3", content_type=""), application="m")
+
+    FalSpeechModel(tts=tts, fetch=lambda url: b"x").synthesize("Hi", speed=1.1, extra={"a": 1})
+    assert seen["extra"] == {"a": 1, "speed": 1.1} and "speed" not in seen

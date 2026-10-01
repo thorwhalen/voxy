@@ -16,9 +16,13 @@ How ``voice`` is understood, first match wins:
 3. anything else: the backend's own voice id or name (e.g. 'nova', 'Daniel');
 4. ``None``: the backend's default voice, if it has one.
 
+Pass ``use_library=False`` to reach a backend voice whose name is also a library
+name or alias. With no ``backend``, a library voice uses its profile for the
+default backend if it has one, else its ``default_backend``, else its first.
+
 Backends are entries of ``voxy.speech_model_factories``; add one with
-``voxy.register_speech_model``. The default backend is ``$VOXY_TTS_BACKEND``,
-else 'elevenlabs'.
+``voxy.register_speech_model``. The default backend is ``$VOXY_TTS_BACKEND``
+(read at call time), else 'elevenlabs'.
 """
 
 import os
@@ -30,26 +34,40 @@ from voxy.base import (
     SpeechModel,
     VoiceInfo,
     VoiceProfile,
+    canonical_backend,
     create_speech_model,
 )
 from voxy.library import find_voice, profile_from_record
 
-DFLT_TTS_BACKEND = os.environ.get("VOXY_TTS_BACKEND", "elevenlabs")
+VOXY_TTS_BACKEND_ENVVAR = "VOXY_TTS_BACKEND"
+FALLBACK_TTS_BACKEND = "elevenlabs"
 LIBRARY_BACKEND = "voxy"  # the ``backend`` of library entries in ``list_voices()``
 
 #: One model per backend, built on first use (clients are reusable).
 _models: dict[str, SpeechModel] = {}
 
 
+def dflt_tts_backend() -> str:
+    """``$VOXY_TTS_BACKEND``, else 'elevenlabs' (read on every call)."""
+    return canonical_backend(
+        os.environ.get(VOXY_TTS_BACKEND_ENVVAR) or FALLBACK_TTS_BACKEND
+    )
+
+
 def get_speech_model(
-    backend: str = DFLT_TTS_BACKEND, *, models: MutableMapping | None = None
+    backend: str | None = None, *, models: MutableMapping | None = None
 ) -> SpeechModel:
-    """The (cached) model for ``backend``; ``models`` overrides the cache."""
+    """The (cached) model for ``backend``; ``models`` replaces the shared cache."""
     cache = _models if models is None else models
-    key = backend.lower()
+    key = canonical_backend(backend or dflt_tts_backend())
     if key not in cache:
         cache[key] = create_speech_model(key)
     return cache[key]
+
+
+def clear_speech_models(models: MutableMapping | None = None) -> None:
+    """Forget cached models (e.g. after changing keys or settings)."""
+    (_models if models is None else models).clear()
 
 
 def resolve_voice(
@@ -57,6 +75,7 @@ def resolve_voice(
     *,
     backend: str | None = None,
     voices: Mapping | None = None,
+    use_library: bool = True,
 ) -> tuple[str, VoiceProfile | str | None]:
     """``(backend, voice)`` to synthesize with (see the module docstring for the rules).
 
@@ -69,18 +88,23 @@ def resolve_voice(
     >>> resolve_voice("Daniel", backend="say", voices=lib)
     ('say', 'Daniel')
     """
+    backend = canonical_backend(backend) if backend else None
     if isinstance(voice, VoiceProfile):
-        if backend is not None and backend.lower() != voice.model_type:
+        profile_backend = canonical_backend(voice.model_type)
+        if backend is not None and backend != profile_backend:
             raise ValueError(
                 f"A {voice.model_type!r} voice can't be used with backend {backend!r}"
             )
-        return voice.model_type, voice
-    key = find_voice(voice, voices=voices) if voice is not None else None
-    if key is not None:
+        return profile_backend, voice
+    if use_library and isinstance(voice, str):
         voices = stores.voices_store() if voices is None else voices
-        profile = profile_from_record(voices[key], backend and backend.lower())
-        return profile.model_type, profile
-    return (backend or DFLT_TTS_BACKEND).lower(), voice
+        key = find_voice(voice, voices=voices)
+        if key is not None:
+            profile = profile_from_record(
+                voices[key], backend, prefer=dflt_tts_backend()
+            )
+            return canonical_backend(profile.model_type), profile
+    return backend or dflt_tts_backend(), voice
 
 
 def text_to_speech(
@@ -91,6 +115,8 @@ def text_to_speech(
     output_path: str | None = None,
     voices: Mapping | None = None,
     model: SpeechModel | None = None,
+    models: MutableMapping | None = None,
+    use_library: bool = True,
     **kwargs,
 ) -> Speech:
     """Speak ``text`` in ``voice`` and return the encoded audio (``.save(path)``).
@@ -103,12 +129,19 @@ def text_to_speech(
             any registered). Inferred from library voices.
         output_path: Also save the audio there.
         voices: Voice library store (default ``voxy.voices_store()``).
-        model: A ready model to use instead of the cached one for ``backend``.
+        model: A ready model to use (its backend is then the backend).
+        models: Model cache to use instead of the shared one.
+        use_library: Look ``voice`` up in the library first (False: always
+            the backend's own voice of that name).
         **kwargs: Backend-specific options (e.g. ``output_format=`` for
             ElevenLabs, ``speed=`` for aix, ``quality=`` for fal).
     """
-    backend, voice = resolve_voice(voice, backend=backend, voices=voices)
-    model = model or get_speech_model(backend)
+    if model is not None:
+        backend = backend or model.name
+    backend, voice = resolve_voice(
+        voice, backend=backend, voices=voices, use_library=use_library
+    )
+    model = model or get_speech_model(backend, models=models)
     if voice is None:
         voice = model.dflt_voice
     speech = model.synthesize(text, voice, **kwargs)
@@ -122,6 +155,7 @@ def list_voices(
     *,
     voices: Mapping | None = None,
     model: SpeechModel | None = None,
+    models: MutableMapping | None = None,
     **kwargs,
 ) -> list[VoiceInfo]:
     """Our named voices (``backend=None``), or the voices a backend offers.
@@ -146,7 +180,7 @@ def list_voices(
             )
             for key in sorted(voices)
         ]
-    return (model or get_speech_model(backend)).list_voices(**kwargs)
+    return (model or get_speech_model(backend, models=models)).list_voices(**kwargs)
 
 
 def voice_id(
@@ -164,4 +198,4 @@ def voice_id(
     key = find_voice(name, voices=voices)
     if key is None:
         raise KeyError(f"No voice named {name!r} (have: {', '.join(sorted(voices))})")
-    return str(profile_from_record(voices[key], backend).segment)
+    return str(profile_from_record(voices[key], canonical_backend(backend)).segment)

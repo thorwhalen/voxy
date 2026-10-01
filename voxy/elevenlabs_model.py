@@ -281,7 +281,7 @@ class ElevenLabsSpeechModel(SpeechModel):
         device: str = DFLT_VOXY_DEVICE,
     ):
         super().__init__(device)
-        self._api_key = resolve_elevenlabs_api_key(api_key)
+        self._explicit_api_key = api_key  # env vars are read when the client is built
         self.model_id = model_id
         self.output_format = output_format
         self.client_factory = client_factory or default_elevenlabs_client_factory
@@ -300,12 +300,13 @@ class ElevenLabsSpeechModel(SpeechModel):
     @cached_property
     def client(self):
         """The ElevenLabs client, built on first use."""
-        if not self._api_key:
+        api_key = resolve_elevenlabs_api_key(self._explicit_api_key)
+        if not api_key:
             raise RuntimeError(
                 "voxy's ElevenLabs backend needs an API key. Set one of "
                 f"{', '.join(ELEVENLABS_API_KEY_ENVVARS)} or pass api_key=."
             )
-        return self.client_factory(self._api_key)
+        return self.client_factory(api_key)
 
     # --- voices -------------------------------------------------------------
 
@@ -506,6 +507,11 @@ class ElevenLabsSpeechModel(SpeechModel):
         """
         if preview is None:
             preview = self.design_voice_previews(description, **preview_kwargs)[0]
+        elif preview_kwargs:
+            raise TypeError(
+                f"{sorted(preview_kwargs)} only apply when generating previews; "
+                "pass them to design_voice_previews, not with a chosen preview"
+            )
         generated_id = getattr(preview, "generated_voice_id", preview)
         name = name or DFLT_CLONE_NAME_TEMPLATE.format(speaker_id=speaker_id)
         optional = {"labels": dict(labels) if labels is not None else None}

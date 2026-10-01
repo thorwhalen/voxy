@@ -21,7 +21,9 @@ Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "t
 
 ```python
 model = voxy.get_speech_model("elevenlabs")
-previews = model.design_voice_previews("a warm, slow, elderly storyteller", text="Once upon a time...")
+line = ("Once upon a time, in a village at the edge of a very old forest, there lived a "
+        "baker who could hear the bread singing as it rose.")  # 100-1000 characters
+previews = model.design_voice_previews("a warm, slow, elderly storyteller", text=line)
 for i, p in enumerate(previews):
     p.save(f"preview_{i}.mp3")          # listen, then pick one
 voxy.design_from_description("storyteller", "a warm, slow, elderly storyteller", preview=previews[1])

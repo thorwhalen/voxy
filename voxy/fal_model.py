@@ -16,6 +16,7 @@ from voxy.base import Speech, SpeechModel, VoiceProfile, _resolve_text_input
 
 FAL_MODEL_TYPE = "fal"
 DFLT_FAL_QUALITY = "balanced"
+FETCH_TIMEOUT_S = 120
 _AUDIO_SUBTYPES = {
     "mpeg": "mp3",
     "mp3": "mp3",
@@ -46,7 +47,7 @@ def _falaw_text_to_speech(text, **kwargs):
 def _fetch_url(url: str) -> bytes:
     import urllib.request
 
-    with urllib.request.urlopen(url) as response:
+    with urllib.request.urlopen(url, timeout=FETCH_TIMEOUT_S) as response:
         return response.read()
 
 
@@ -92,15 +93,14 @@ class FalSpeechModel(SpeechModel):
     def synthesize(
         self, text, voice: VoiceProfile | str | None = None, **kwargs
     ) -> Speech:
-        """Speech from fal; ``extra=`` passes model-specific arguments."""
+        """Speech from fal; other keyword arguments go to the model (falaw's ``extra``)."""
         text = _resolve_text_input(text)
         voice = getattr(voice, "segment", voice)
+        quality = kwargs.pop("quality", self.quality)
+        model_id = kwargs.pop("model_id", self.model_id)
+        extra = {**kwargs.pop("extra", {}), **kwargs}
         result = self._tts(
-            text,
-            quality=kwargs.pop("quality", self.quality),
-            voice=voice,
-            model_id=kwargs.pop("model_id", self.model_id),
-            **kwargs,
+            text, quality=quality, voice=voice, model_id=model_id, extra=extra or None
         )
         asset = result.first
         if asset is None:

@@ -474,14 +474,24 @@ class SpeechModel:
     def synthesize(
         self, text: str, voice: "VoiceProfile | str | None" = None, **kwargs
     ) -> Speech:
-        """Render ``text`` in ``voice`` and return encoded audio."""
+        """Render ``text`` in ``voice`` and return encoded audio.
+
+        This default (for tensor-producing models such as CSM) needs a
+        ``VoiceProfile`` or ``None``; services override it.
+        """
+        if isinstance(voice, str):
+            raise ValueError(
+                f"The {self.name!r} backend needs a VoiceProfile, not a voice name "
+                f"({voice!r}); clone one first"
+            )
         audio = self.generate_speech(text, voice, **kwargs)
         sample_rate = getattr(voice, "sample_rate", None) or self.sample_rate
+        segment = getattr(voice, "segment", None)
         return Speech(
             tensor_to_wav_bytes(audio, sample_rate),
             format="wav",
             backend=self.name,
-            voice=None if voice is None else str(getattr(voice, "segment", voice)),
+            voice=segment if isinstance(segment, str) else None,
             sample_rate=sample_rate,
             text=_resolve_text_input(text),
         )
@@ -801,12 +811,25 @@ def _lazy_factory(module: str, class_name: str) -> Callable[..., SpeechModel]:
 #: Backend name -> factory (keys lowercase). Add one with ``register_speech_model``.
 speech_model_factories: dict[str, Callable[..., SpeechModel]] = {
     "csm": CSMSpeechModel,
-    "csm-1b": CSMSpeechModel,
     "elevenlabs": _lazy_factory("voxy.elevenlabs_model", "ElevenLabsSpeechModel"),
     "aix": _lazy_factory("voxy.aix_model", "AixSpeechModel"),
     "fal": _lazy_factory("voxy.fal_model", "FalSpeechModel"),
     "say": _lazy_factory("voxy.say_model", "SaySpeechModel"),
 }
+
+
+#: Other names for a backend -> its registry name (one model, one profile type).
+backend_aliases: dict[str, str] = {"csm-1b": "csm"}
+
+
+def canonical_backend(name: str) -> str:
+    """The registry name of backend ``name`` (lowercased, aliases resolved).
+
+    >>> canonical_backend("ElevenLabs"), canonical_backend("CSM-1B")
+    ('elevenlabs', 'csm')
+    """
+    key = name.lower()
+    return backend_aliases.get(key, key)
 
 
 def register_speech_model(
@@ -843,7 +866,8 @@ def create_speech_model(model_type: str = DFLT_VOXY_MODEL, **kwargs) -> SpeechMo
 
     Args:
         model_type: A key of ``speech_model_factories`` ('csm', 'csm-1b',
-            'elevenlabs', 'aix', 'fal', 'say', or any registered); case-insensitive.
+            'elevenlabs', 'aix', 'fal', 'say', or any registered); case-insensitive,
+            aliases in ``backend_aliases`` accepted.
         **kwargs: Additional model-specific parameters
 
     Returns:
@@ -862,10 +886,10 @@ def create_speech_model(model_type: str = DFLT_VOXY_MODEL, **kwargs) -> SpeechMo
     >>> create_speech_model("no-such-model")
     Traceback (most recent call last):
       ...
-    ValueError: Unsupported model type: no-such-model (supported: csm, csm-1b, elevenlabs, aix, fal, say)
+    ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say)
     """
     factories = {k.lower(): v for k, v in speech_model_factories.items()}
-    factory = factories.get(model_type.lower())
+    factory = factories.get(canonical_backend(model_type))
     if factory is None:
         raise ValueError(
             f"Unsupported model type: {model_type} "

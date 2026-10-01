@@ -69,25 +69,39 @@ class SaySpeechModel(SpeechModel):
         self.dflt_voice = voice
         self.sample_rate = sample_rate
         self._run = run
+        self._voices: list[VoiceInfo] | None = None
 
     def _say(self, *args: str) -> subprocess.CompletedProcess:
-        if self._run is not None:
-            return self._run(["say", *args], capture_output=True, text=True, check=True)
-        if shutil.which("say") is None:
-            raise RuntimeError("The 'say' backend needs macOS's 'say' command.")
-        return subprocess.run(
-            ["say", *args], capture_output=True, text=True, check=True
-        )
+        run = self._run
+        if run is None:
+            if shutil.which("say") is None:
+                raise RuntimeError("The 'say' backend needs macOS's 'say' command.")
+            run = subprocess.run
+        try:
+            return run(["say", *args], capture_output=True, text=True, check=True)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"say failed: {(e.stderr or '').strip() or e}") from e
 
     def list_voices(self) -> list[VoiceInfo]:
-        return parse_say_voices(self._say("-v", "?").stdout)
+        if self._voices is None:
+            self._voices = parse_say_voices(self._say("-v", "?").stdout)
+        return list(self._voices)
+
+    def _check_voice(self, voice: str) -> str:
+        """``say`` silently uses the default voice for unknown names: refuse them."""
+        names = {v.name.casefold(): v.name for v in self.list_voices()}
+        if voice.casefold() not in names:
+            raise ValueError(
+                f"No system voice named {voice!r} (see voxy.list_voices('say'))"
+            )
+        return names[voice.casefold()]
 
     def synthesize(
         self, text, voice: VoiceProfile | str | None = None, **kwargs
     ) -> Speech:
         """WAV speech from ``say`` (``voice``: a system voice name or profile)."""
         text = _resolve_text_input(text)
-        voice = getattr(voice, "segment", voice) or self.dflt_voice
+        voice = self._check_voice(getattr(voice, "segment", voice) or self.dflt_voice)
         with tempfile.TemporaryDirectory() as tmp:
             out = os.path.join(tmp, "speech.wav")
             self._say(
