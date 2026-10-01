@@ -669,12 +669,28 @@ class CSMSpeechModel(SpeechModel):
 # -----------------------------------------------------------------------------
 
 
-def create_speech_model(model_type: str = "csm", **kwargs) -> SpeechModel:
+def _elevenlabs_speech_model(**kwargs) -> SpeechModel:
+    # Imported here: voxy.elevenlabs_model imports from this module.
+    from voxy.elevenlabs_model import ElevenLabsSpeechModel
+
+    return ElevenLabsSpeechModel(**kwargs)
+
+
+#: Backend name -> factory. Add a backend by adding an entry here.
+speech_model_factories: dict[str, Callable[..., SpeechModel]] = {
+    "csm": CSMSpeechModel,
+    "csm-1b": CSMSpeechModel,
+    "elevenlabs": _elevenlabs_speech_model,
+}
+
+
+def create_speech_model(model_type: str = DFLT_VOXY_MODEL, **kwargs) -> SpeechModel:
     """
     Create a speech model of the specified type.
 
     Args:
-        model_type: Type of speech model ('csm' or 'csm-1b' currently supported)
+        model_type: A key of ``speech_model_factories`` ('csm', 'csm-1b',
+            'elevenlabs'); case-insensitive.
         **kwargs: Additional model-specific parameters
 
     Returns:
@@ -688,12 +704,17 @@ def create_speech_model(model_type: str = "csm", **kwargs) -> SpeechModel:
     >>> model = create_speech_model("csm")
     >>> type(model).__name__
     'CSMSpeechModel'
+    >>> type(create_speech_model("elevenlabs", api_key="unused")).__name__
+    'ElevenLabsSpeechModel'
     >>> create_speech_model("no-such-model")
     Traceback (most recent call last):
       ...
-    ValueError: Unsupported model type: no-such-model
+    ValueError: Unsupported model type: no-such-model (supported: csm, csm-1b, elevenlabs)
     """
-    if model_type.lower() in ["csm", "csm-1b"]:
-        return CSMSpeechModel(**kwargs)
-    else:
-        raise ValueError(f"Unsupported model type: {model_type}")
+    factory = speech_model_factories.get(model_type.lower())
+    if factory is None:
+        raise ValueError(
+            f"Unsupported model type: {model_type} "
+            f"(supported: {', '.join(speech_model_factories)})"
+        )
+    return factory(**kwargs)
