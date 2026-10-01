@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-10-01T12:28:33Z",
+  "built_at": "2026-10-01T14:33:52Z",
   "package": {
     "name": "voxy",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "display_name": "voxy",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "795e328dbc3566f0802f713dad2fcc6251b87e6a",
-    "short_commit": "795e328",
+    "commit": "6827adeeefe48eceef12772dbd693722ddd499b7",
+    "short_commit": "6827ade",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/thorwhalen/voxy",
-    "commit_url": "https://github.com/thorwhalen/voxy/commit/795e328dbc3566f0802f713dad2fcc6251b87e6a",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/6827adeeefe48eceef12772dbd693722ddd499b7",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "thorwhalen/voxy",
-    "sha": "795e328dbc3566f0802f713dad2fcc6251b87e6a",
+    "sha": "6827adeeefe48eceef12772dbd693722ddd499b7",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "36861445637",
-    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/36861445637",
+    "run_id": "36876789920",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/36876789920",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -60,16 +60,16 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.8",
+    "latest": "0.0.9",
     "relation": "behind",
     "error": null
   },
-  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 795e328dbc3566f0802f713dad2fcc6251b87e6a\npip install \"epythet==0.2.12\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 6827adeeefe48eceef12772dbd693722ddd499b7\npip install \"epythet==0.2.12\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": false,
     "notes": [
-      "The documented version (0.0.7) is behind the latest release on PyPI (0.0.8): `pip install voxy` gives newer code than these docs describe."
+      "The documented version (0.0.8) is behind the latest release on PyPI (0.0.9): `pip install voxy` gives newer code than these docs describe."
     ]
   }
 }
