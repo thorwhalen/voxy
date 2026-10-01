@@ -28,8 +28,11 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any
 
+from voxy import stores
 from voxy.base import SpeechModel, VoiceProfile, create_speech_model
-from voxy.stores import samples_store, voices_store
+from voxy.stores import AUDIO_EXTS, voices_store
+
+RESERVED_RECORD_FIELDS = frozenset({"name", "profiles"})
 
 DFLT_LIBRARY_MODEL_TYPE = "elevenlabs"
 
@@ -59,7 +62,10 @@ def save_voice(
     ``record_fields`` (e.g. ``aliases=``, ``description=``, ``consent=``) are set on
     the record itself.
     """
-    voices = voices_store() if voices is None else voices
+    reserved = RESERVED_RECORD_FIELDS & set(record_fields)
+    if reserved:
+        raise ValueError(f"Record fields {sorted(reserved)} are managed by voxy")
+    voices = stores.voices_store() if voices is None else voices
     record = dict(voices[name]) if name in voices else {"name": name}
     record.update(record_fields)
     entry = profile_to_dict(profile)
@@ -76,7 +82,7 @@ def load_voice(
     voices: Mapping | None = None,
 ) -> VoiceProfile:
     """The saved ``model_type`` profile of the voice called ``name``."""
-    voices = voices_store() if voices is None else voices
+    voices = stores.voices_store() if voices is None else voices
     if name not in voices:
         raise KeyError(f"No voice named {name!r} (have: {', '.join(voices)})")
     profiles = voices[name].get("profiles", {})
@@ -90,6 +96,16 @@ def load_voice(
         if k in VoiceProfile.__annotations__
     }
     return VoiceProfile(**fields)
+
+
+def _is_sample_key(key: str) -> bool:
+    """Top-level audio files only (no notes, no subfolders).
+
+    >>> [k for k in ["a.wav", "b.MP3", "notes.txt", "sub/c.wav"] if _is_sample_key(k)]
+    ['a.wav', 'b.MP3']
+    """
+    k = key.replace("\\", "/")
+    return "/" not in k and k.lower().endswith(AUDIO_EXTS)
 
 
 def _named_file(key: str, content: bytes) -> io.BytesIO:
@@ -114,17 +130,19 @@ def clone_from_samples(
         name: Voice name: the key in the samples and voices stores.
         model: A speech model; defaults to ``create_speech_model(model_type)``.
         model_type: Backend used when ``model`` is not given.
-        samples: ``filename -> bytes``; defaults to ``samples_store(name)``.
+        samples: ``filename -> bytes``; defaults to ``samples_store(name)``. Only
+            its top-level audio files are uploaded.
         voices: Voice records store; defaults to ``voices_store()``.
         record_fields: Extra fields for the voice record (aliases, consent...).
         **clone_kwargs: Passed to ``model.clone_voice`` (e.g. ``labels=``,
             ``remove_background_noise=``). ``name=`` defaults to ``name``.
     """
+    samples = stores.samples_store(name) if samples is None else samples
+    keys = sorted(k for k in samples if _is_sample_key(k))
+    if not keys:
+        raise ValueError(f"No audio samples stored for voice {name!r}")
+    files = [_named_file(k, samples[k]) for k in keys]
     model = model or create_speech_model(model_type)
-    samples = samples_store(name) if samples is None else samples
-    files = [_named_file(k, samples[k]) for k in sorted(samples)]
-    if not files:
-        raise ValueError(f"No samples stored for voice {name!r}")
     clone_kwargs.setdefault("name", name)
     profile = model.clone_voice(files, **clone_kwargs)
     save_voice(name, profile, voices=voices, **dict(record_fields or {}))

@@ -161,7 +161,7 @@ Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `
 
 ### The voice library: clone once, reuse by name
 
-voxy keeps voice data in stores (`MutableMapping`s) under `$VOXY_DATA_DIR` (default `~/.local/share/voxy`): `voices/{name}.json` records (with each backend's saved profile, e.g. the ElevenLabs `voice_id`), `samples/{name}/` (audio a clone is made from), `sources/{name}/` (raw media). Swap a store factory to move the data elsewhere.
+voxy keeps voice data in stores (`MutableMapping`s) under `$VOXY_DATA_DIR` (default `~/.local/share/voxy`): `voices/{name}.json` records (with each backend's saved profile, e.g. the ElevenLabs `voice_id`), `samples/{name}/` (audio a clone is made from), `sources/{name}/` (raw media). Every library function takes its stores as arguments (`voices=`, `samples=`), so any `MutableMapping` (another folder, S3) can stand in.
 
 ```python
 from voxy import samples_store, clone_from_samples, load_voice, create_speech_model

@@ -57,5 +57,52 @@ def test_unsaveable_profile_and_missing_voice(tmp_path):
 
 def test_clone_from_empty_samples_fails(tmp_path):
     model = ElevenLabsSpeechModel(api_key="k", client_factory=lambda key: FakeClient())
-    with pytest.raises(ValueError, match="No samples"):
+    with pytest.raises(ValueError, match="No audio samples"):
         clone_from_samples("ada", model=model, samples={}, voices={})
+
+
+def test_voices_store_ignores_stray_files(tmp_path):
+    voices = voices_store(rootdir=tmp_path)
+    voices["ada"] = {"name": "ada"}
+    for stray in ["README.txt", "ada.json~"]:
+        (tmp_path / "voices" / stray).write_text("x")
+    assert list(voices) == ["ada"]
+    assert [r["name"] for r in voices.values()] == ["ada"]
+
+
+@pytest.mark.parametrize("bad", ["../escape", "a/b", "a\\b", "", ".."])
+def test_voice_names_are_validated(tmp_path, bad):
+    with pytest.raises(ValueError, match="Invalid voice name"):
+        voices_store(rootdir=tmp_path)[bad] = {}
+    with pytest.raises(ValueError, match="Invalid voice name"):
+        samples_store(bad, rootdir=tmp_path)
+    assert not (tmp_path / "escape.json").exists()
+
+
+def test_stores_create_folders_only_on_write(tmp_path):
+    samples = samples_store("typo", rootdir=tmp_path)
+    voices = voices_store(rootdir=tmp_path)
+    assert list(samples) == [] and list(voices) == []
+    assert not (tmp_path / "samples").exists() and not (tmp_path / "voices").exists()
+
+
+def test_clone_uploads_only_top_level_audio(tmp_path):
+    client = FakeClient()
+    model = ElevenLabsSpeechModel(api_key="k", client_factory=lambda key: client)
+    samples = samples_store("ada", rootdir=tmp_path)
+    samples["a.wav"] = b"RIFFa"
+    samples["notes.txt"] = b"hello"
+    (tmp_path / "samples" / "ada" / "sub").mkdir()
+    (tmp_path / "samples" / "ada" / "sub" / "c.wav").write_bytes(b"RIFFc")
+    clone_from_samples("ada", model=model, samples=samples, voices={})
+    assert [n for n, _ in client.calls[-1][1]["files"]] == ["a.wav"]
+
+
+def test_reserved_record_fields_are_refused(tmp_path):
+    with pytest.raises(ValueError, match="managed by voxy"):
+        save_voice("ada", VoiceProfile("v", 1, "elevenlabs", 1), voices={}, profiles={})
+
+
+def test_empty_samples_fail_before_building_a_model():
+    with pytest.raises(ValueError, match="No audio samples"):
+        clone_from_samples("ada", samples={}, voices={})  # no API key needed

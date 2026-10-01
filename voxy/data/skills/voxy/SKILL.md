@@ -24,7 +24,9 @@ Recomputable intermediates (resampled audio, embeddings, separated stems) are ca
 ```python
 from voxy import clone_from_samples, load_voice, create_speech_model
 
-profile = clone_from_samples("ada", record_fields={"aliases": ["Ada"], "consent": "..."})
+profile = clone_from_samples(
+    "ada", record_fields={"aliases": ["Ada"], "consent": "..."}
+)
 # uploads every file in samples_store("ada"), saves the profile in voices_store()["ada"]
 
 model = create_speech_model("elevenlabs")

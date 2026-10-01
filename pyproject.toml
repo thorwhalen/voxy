@@ -76,6 +76,12 @@ docs = [
     "sphinx-rtd-theme>=1.0",
 ]
 
+[tool.hatch.build.targets.sdist]
+# .claude/skills/voxy is a symlink to voxy/data/skills/voxy. If hatchling walks
+# .claude at all (even to exclude it) it dedupes the real skill away, so the
+# sdist (and the wheel built from it) would ship no skill. Walk only these.
+only-include = ["voxy", "README.md", "LICENSE", "pyproject.toml"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py310"
