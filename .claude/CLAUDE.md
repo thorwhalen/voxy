@@ -1,6 +1,6 @@
 # voxy (dev map)
 
-Facade for voice cloning and speech synthesis. Backends: `voxy/base.py` (`SpeechModel`, `VoiceProfile`, CSM, the `speech_model_factories` registry) and `voxy/elevenlabs_model.py`.
+The fleet's voice-generation facade. `voxy/facade.py` (`text_to_speech`, `list_voices`, `voice_id`, voice resolution) over backends registered in `voxy/base.py` (`SpeechModel`, `Speech`, `speech_model_factories`, `register_speech_model`): `elevenlabs_model.py`, `say_model.py`, `aix_model.py`, `fal_model.py`, and CSM in `base.py`. Every backend takes an injectable client/command so tests never reach a service.
 
 - **Data never lives in this repo.** Voices, samples and sources go through `voxy/stores.py` (`MutableMapping`s under `$VOXY_DATA_DIR`, default `~/.local/share/voxy/{voices,samples,sources}/`); intermediates go to `~/.cache/voxy/`. Voice data is personal: never commit it, never add it as a fixture.
 - The voice library (`voxy/library.py`) saves one profile per backend in each voice record; use `clone_from_samples` / `load_voice` rather than re-cloning.

@@ -24,6 +24,7 @@ import io
 import json
 import os
 import wave
+from dataclasses import dataclass
 from collections.abc import Callable, Iterable, Mapping
 from functools import cached_property
 from typing import Any, BinaryIO
@@ -34,10 +35,13 @@ import torch
 from voxy.base import (
     DFLT_ASSUMED_SAMPLE_RATE,
     DFLT_VOXY_DEVICE,
+    Speech,
     SpeechModel,
+    VoiceInfo,
     VoiceProfile,
     _resolve_audio_input,
     _resolve_text_input,
+    tensor_to_wav_bytes,
 )
 
 ELEVENLABS_MODEL_TYPE = "elevenlabs"
@@ -48,6 +52,9 @@ DFLT_ELEVENLABS_MODEL_ID = os.environ.get(
 # Raw PCM is available on every ElevenLabs tier and decodes without ffmpeg.
 DFLT_ELEVENLABS_OUTPUT_FORMAT = "pcm_24000"
 DFLT_CLONE_NAME_TEMPLATE = "voxy-{speaker_id}"
+# What synthesize() returns by default: a playable file, on every tier.
+DFLT_ELEVENLABS_SYNTH_FORMAT = "mp3_44100_128"
+DFLT_VOICE_DESIGN_MODEL_ID = "eleven_multilingual_ttv_v2"
 # The ElevenLabs IVC form accepts at most this many sample files per voice.
 DFLT_MAX_CLONE_FILES = 25
 
@@ -88,28 +95,7 @@ def default_elevenlabs_client_factory(api_key: str):
 # -----------------------------------------------------------------------------
 
 
-def _wav_bytes(audio: torch.Tensor, sample_rate: int) -> bytes:
-    """Encode a float tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
-
-    >>> data = _wav_bytes(torch.zeros(160), 16000)
-    >>> data[:4], len(data)
-    (b'RIFF', 364)
-    >>> _wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]
-    b'\\xff\\x7f'
-    """
-    if not torch.is_floating_point(audio):  # integer PCM, e.g. int16 from soundfile
-        audio = audio.to(torch.float64) / torch.iinfo(audio.dtype).max
-    if audio.dim() == 2:
-        audio = audio.mean(dim=0)
-    samples = audio.detach().cpu().to(torch.float32).clamp(-1.0, 1.0).numpy()
-    pcm = (samples * 32767).astype("<i2").tobytes()
-    buffer = io.BytesIO()
-    with wave.open(buffer, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(int(sample_rate))
-        w.writeframes(pcm)
-    return buffer.getvalue()
+_wav_bytes = tensor_to_wav_bytes  # one WAV encoder, in voxy.base
 
 
 def _pcm16_to_tensor(pcm: bytes) -> torch.Tensor:
@@ -256,6 +242,20 @@ def _as_input_list(audio_input) -> list:
 # -----------------------------------------------------------------------------
 
 
+@dataclass
+class VoiceDesignPreview:
+    """One candidate voice from ``design_voice_previews``: listen, then pick."""
+
+    generated_voice_id: str
+    audio: bytes  # an mp3 sample of the voice
+    text: str = ""
+    duration_s: float | None = None
+
+    def save(self, path: str) -> str:
+        _write_bytes(path, self.audio)
+        return path
+
+
 class ElevenLabsSpeechModel(SpeechModel):
     """Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).
 
@@ -269,6 +269,8 @@ class ElevenLabsSpeechModel(SpeechModel):
         device: Device the returned tensors are placed on.
     """
 
+    name = ELEVENLABS_MODEL_TYPE
+
     def __init__(
         self,
         *,
@@ -279,7 +281,7 @@ class ElevenLabsSpeechModel(SpeechModel):
         device: str = DFLT_VOXY_DEVICE,
     ):
         super().__init__(device)
-        self._api_key = resolve_elevenlabs_api_key(api_key)
+        self._explicit_api_key = api_key  # env vars are read when the client is built
         self.model_id = model_id
         self.output_format = output_format
         self.client_factory = client_factory or default_elevenlabs_client_factory
@@ -298,12 +300,13 @@ class ElevenLabsSpeechModel(SpeechModel):
     @cached_property
     def client(self):
         """The ElevenLabs client, built on first use."""
-        if not self._api_key:
+        api_key = resolve_elevenlabs_api_key(self._explicit_api_key)
+        if not api_key:
             raise RuntimeError(
                 "voxy's ElevenLabs backend needs an API key. Set one of "
                 f"{', '.join(ELEVENLABS_API_KEY_ENVVARS)} or pass api_key=."
             )
-        return self.client_factory(self._api_key)
+        return self.client_factory(api_key)
 
     # --- voices -------------------------------------------------------------
 
@@ -412,6 +415,145 @@ class ElevenLabsSpeechModel(SpeechModel):
             model_type=ELEVENLABS_MODEL_TYPE,
             sample_rate=self.sample_rate,
             metadata={"voice_id": voice_id, **(metadata or {})},
+        )
+
+    def list_voices(
+        self,
+        *,
+        search: str | None = None,
+        voice_type: str | None = None,
+        page_size: int = 100,
+    ) -> list[VoiceInfo]:
+        """Voices in the account and its library (``voice_type``: e.g. 'default',
+        'personal', 'cloned', 'generated')."""
+        optional = {"search": search, "voice_type": voice_type}
+        response = self.client.voices.search(
+            page_size=page_size, **{k: v for k, v in optional.items() if v}
+        )
+        return [
+            VoiceInfo(
+                voice_id=v.voice_id,
+                name=v.name or "",
+                backend=self.name,
+                description=getattr(v, "description", None) or "",
+                labels=dict(getattr(v, "labels", None) or {}),
+            )
+            for v in response.voices
+        ]
+
+    def design_voice_previews(
+        self,
+        description: str,
+        *,
+        text: str | None = None,
+        model_id: str = DFLT_VOICE_DESIGN_MODEL_ID,
+        seed: int | None = None,
+        guidance_scale: float | None = None,
+        loudness: float | None = None,
+        **design_kwargs,
+    ) -> list[VoiceDesignPreview]:
+        """Candidate voices for a text ``description`` (ElevenLabs Voice Design).
+
+        ``text`` (100-1000 characters) is what the previews say; without it
+        ElevenLabs writes a fitting line. Nothing is added to the account until
+        one preview is passed to ``design_voice``.
+        """
+        import base64
+
+        optional = {
+            "text": text,
+            "auto_generate_text": None if text else True,
+            "model_id": model_id,
+            "seed": seed,
+            "guidance_scale": guidance_scale,
+            "loudness": loudness,
+        }
+        response = self.client.text_to_voice.design(
+            voice_description=description,
+            **{k: v for k, v in optional.items() if v is not None},
+            **design_kwargs,
+        )
+        return [
+            VoiceDesignPreview(
+                generated_voice_id=p.generated_voice_id,
+                audio=base64.b64decode(p.audio_base_64),
+                text=getattr(response, "text", None) or text or "",
+                duration_s=getattr(p, "duration_secs", None),
+            )
+            for p in response.previews
+        ]
+
+    def design_voice(
+        self,
+        description: str,
+        *,
+        preview: "VoiceDesignPreview | str | None" = None,
+        name: str | None = None,
+        labels: Mapping[str, str] | None = None,
+        speaker_id: int = 999,
+        **preview_kwargs,
+    ) -> VoiceProfile:
+        """Create a voice from a text ``description`` and return its profile.
+
+        Args:
+            description: What the voice sounds like (age, accent, tone, pace...).
+            preview: The chosen preview (or its ``generated_voice_id``) from
+                ``design_voice_previews``. If omitted, previews are generated
+                and the first is used.
+            name: Voice name in ElevenLabs (default ``voxy-<speaker_id>``).
+            labels: Voice labels (language, accent, gender, age...).
+            **preview_kwargs: Passed to ``design_voice_previews`` when
+                ``preview`` is omitted.
+        """
+        if preview is None:
+            preview = self.design_voice_previews(description, **preview_kwargs)[0]
+        elif preview_kwargs:
+            raise TypeError(
+                f"{sorted(preview_kwargs)} only apply when generating previews; "
+                "pass them to design_voice_previews, not with a chosen preview"
+            )
+        generated_id = getattr(preview, "generated_voice_id", preview)
+        name = name or DFLT_CLONE_NAME_TEMPLATE.format(speaker_id=speaker_id)
+        optional = {"labels": dict(labels) if labels is not None else None}
+        voice = self.client.text_to_voice.create(
+            voice_name=name,
+            voice_description=description,
+            generated_voice_id=generated_id,
+            **{k: v for k, v in optional.items() if v is not None},
+        )
+        return self.voice_profile(
+            voice.voice_id,
+            speaker_id=speaker_id,
+            metadata={"name": name, "designed_from": description},
+        )
+
+    def synthesize(
+        self,
+        text: str | bytes | io.TextIOBase,
+        voice: VoiceProfile | str | None = None,
+        *,
+        output_format: str = DFLT_ELEVENLABS_SYNTH_FORMAT,
+        **kwargs,
+    ) -> Speech:
+        """Encoded speech (mp3 by default) in ``voice`` (a profile or voice id)."""
+        if voice is None:
+            raise ValueError(
+                "ElevenLabs needs a voice: pass a VoiceProfile or a voice id"
+            )
+        text = _resolve_text_input(text)
+        codec, rate = _output_format_parts(output_format)
+        payload = self.synthesize_bytes(
+            text, voice, output_format=output_format, **kwargs
+        )
+        if codec == "pcm":  # raw samples aren't a playable file: wrap them as WAV
+            payload, codec = _wav_bytes(_pcm16_to_tensor(payload), rate), "wav"
+        return Speech(
+            payload,
+            format=codec,
+            backend=self.name,
+            voice=_voice_id(voice),
+            sample_rate=rate,
+            text=text,
         )
 
     def delete_voice(self, voice: VoiceProfile | str) -> None:
