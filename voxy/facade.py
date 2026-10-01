@@ -2,11 +2,11 @@
 Voice generation in one call, whatever the service behind it.
 
     >>> import voxy                                                    # doctest: +SKIP
-    >>> voxy.text_to_speech("Hello!", voice="cora").save("hi.mp3")    # doctest: +SKIP
+    >>> voxy.text_to_speech("Hello!", voice="ada").save("hi.mp3")    # doctest: +SKIP
     >>> voxy.text_to_speech("Hello!", voice="Daniel", backend="say")  # doctest: +SKIP
     >>> voxy.list_voices()               # the library: our named voices  # doctest: +SKIP
     >>> voxy.list_voices("elevenlabs")   # a backend's own voices          # doctest: +SKIP
-    >>> voxy.voice_id("coco")            # 'rcrK...' (aliases work)        # doctest: +SKIP
+    >>> voxy.voice_id("addie")            # 'xY12...' (aliases work)        # doctest: +SKIP
 
 How ``voice`` is understood, first match wins:
 
@@ -79,10 +79,10 @@ def resolve_voice(
 ) -> tuple[str, VoiceProfile | str | None]:
     """``(backend, voice)`` to synthesize with (see the module docstring for the rules).
 
-    >>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "profiles": {
+    >>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {
     ...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",
     ...                    "sample_rate": 24000}}}}
-    >>> b, v = resolve_voice("coco", voices=lib)
+    >>> b, v = resolve_voice("addie", voices=lib)
     >>> b, v.segment
     ('elevenlabs', 'v1')
     >>> resolve_voice("Daniel", backend="say", voices=lib)
@@ -123,7 +123,7 @@ def text_to_speech(
 
     Args:
         text: What to say.
-        voice: A library name or alias ('cora', 'Coco'), a backend's own voice
+        voice: A library name or alias ('ada', 'Addie'), a backend's own voice
             ('nova', 'Daniel', an ElevenLabs id), a ``VoiceProfile``, or None.
         backend: Service to use ('elevenlabs', 'say', 'aix', 'fal', 'csm', or
             any registered). Inferred from library voices.
@@ -160,10 +160,10 @@ def list_voices(
 ) -> list[VoiceInfo]:
     """Our named voices (``backend=None``), or the voices a backend offers.
 
-    >>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "description": "d",
+    >>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "description": "d",
     ...                 "profiles": {"elevenlabs": {"segment": "v1"}}}}
     >>> [(v.name, v.labels["backends"]) for v in list_voices(voices=lib)]
-    [('cora', ['elevenlabs'])]
+    [('ada', ['elevenlabs'])]
     """
     if backend is None and model is None:
         voices = stores.voices_store() if voices is None else voices
@@ -188,10 +188,10 @@ def voice_id(
 ) -> str:
     """The provider's id for library voice ``name`` (for code that calls a provider).
 
-    >>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "profiles": {
+    >>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {
     ...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",
     ...                    "sample_rate": 24000}}}}
-    >>> voice_id("Coco", voices=lib)
+    >>> voice_id("Addie", voices=lib)
     'v1'
     """
     voices = stores.voices_store() if voices is None else voices

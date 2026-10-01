@@ -79,9 +79,9 @@ def save_voice(
 def find_voice(name: str, *, voices: Mapping | None = None) -> str | None:
     """The library key of the voice called ``name`` (case-insensitive, aliases too).
 
-    >>> lib = {"cora": {"aliases": ["Cora", "Coco"]}, "vanessa": {"aliases": ["Ness"]}}
-    >>> find_voice("coco", voices=lib), find_voice("Vanessa", voices=lib), find_voice("x", voices=lib)
-    ('cora', 'vanessa', None)
+    >>> lib = {"ada": {"aliases": ["Ada", "Addie"]}, "grace": {"aliases": ["Gracie"]}}
+    >>> find_voice("addie", voices=lib), find_voice("Grace", voices=lib), find_voice("x", voices=lib)
+    ('ada', 'grace', None)
     """
     voices = stores.voices_store() if voices is None else voices
     if not isinstance(name, str):

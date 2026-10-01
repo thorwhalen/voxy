@@ -3,7 +3,7 @@ Command line for voxy: ``python -m voxy voices`` / ``python -m voxy speak``.
 
     python -m voxy voices                       # our named voices
     python -m voxy voices --backend say         # a backend's voices
-    python -m voxy speak "Hello" --voice cora -o hello.mp3
+    python -m voxy speak "Hello" --voice ada -o hello.mp3
 """
 
 import argparse
