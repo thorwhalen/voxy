@@ -168,7 +168,7 @@ from voxy import samples_store, clone_from_samples, load_voice, create_speech_mo
 
 samples = samples_store("ada")
 samples["clip1.wav"] = open("clip1.wav", "rb").read()
-clone_from_samples("ada")                      # uploads the samples, saves the profile
+clone_from_samples("ada")  # uploads the samples, saves the profile
 
 model = create_speech_model("elevenlabs")
 model.generate_speech("Hi!", load_voice("ada"), output_path="hi.wav")
