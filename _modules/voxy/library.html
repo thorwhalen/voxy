@@ -113,9 +113,13 @@
   <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../api.html">API reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../_autosummary/voxy.html">voxy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.aix_model.html">voxy.aix_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.facade.html">voxy.facade</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.fal_model.html">voxy.fal_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.library.html">voxy.library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.stores.html">voxy.stores</a></li>
 </ul>
 </li>
@@ -231,99 +235,220 @@
 </span><span id="line-60"><span class="w">    </span><span class="sd">"""Save ``profile`` under ``name`` (merged into any existing record) and return the record.</span>
 </span><span id="line-61">
 </span><span id="line-62"><span class="sd">    ``record_fields`` (e.g. ``aliases=``, ``description=``, ``consent=``) are set on</span>
-</span><span id="line-63"><span class="sd">    the record itself.</span>
+</span><span id="line-63"><span class="sd">    the record itself. Aliases must not already name another voice.</span>
 </span><span id="line-64"><span class="sd">    """</span>
 </span><span id="line-65">    <span class="n">reserved</span> <span class="o">=</span> <span class="n">RESERVED_RECORD_FIELDS</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">record_fields</span><span class="p">)</span>
 </span><span id="line-66">    <span class="k">if</span> <span class="n">reserved</span><span class="p">:</span>
 </span><span id="line-67">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Record fields </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">reserved</span><span class="p">)</span><span class="si">}</span><span class="s2"> are managed by voxy"</span><span class="p">)</span>
 </span><span id="line-68">    <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
-</span><span id="line-69">    <span class="n">record</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">name</span><span class="p">])</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">voices</span> <span class="k">else</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span>
-</span><span id="line-70">    <span class="n">record</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">record_fields</span><span class="p">)</span>
-</span><span id="line-71">    <span class="n">entry</span> <span class="o">=</span> <span class="n">profile_to_dict</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
-</span><span id="line-72">    <span class="n">entry</span><span class="p">[</span><span class="s2">"saved_at"</span><span class="p">]</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(</span><span class="n">timespec</span><span class="o">=</span><span class="s2">"seconds"</span><span class="p">)</span>
-</span><span id="line-73">    <span class="n">record</span><span class="p">[</span><span class="s2">"profiles"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"profiles"</span><span class="p">,</span> <span class="p">{}),</span> <span class="n">profile</span><span class="o">.</span><span class="n">model_type</span><span class="p">:</span> <span class="n">entry</span><span class="p">}</span>
-</span><span id="line-74">    <span class="n">voices</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">record</span>
-</span><span id="line-75">    <span class="k">return</span> <span class="n">record</span></div>
+</span><span id="line-69">    <span class="n">_check_aliases_free</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">record_fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"aliases"</span><span class="p">),</span> <span class="n">voices</span><span class="p">)</span>
+</span><span id="line-70">    <span class="n">record</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">name</span><span class="p">])</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">voices</span> <span class="k">else</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span>
+</span><span id="line-71">    <span class="n">record</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">record_fields</span><span class="p">)</span>
+</span><span id="line-72">    <span class="n">entry</span> <span class="o">=</span> <span class="n">profile_to_dict</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+</span><span id="line-73">    <span class="n">entry</span><span class="p">[</span><span class="s2">"saved_at"</span><span class="p">]</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(</span><span class="n">timespec</span><span class="o">=</span><span class="s2">"seconds"</span><span class="p">)</span>
+</span><span id="line-74">    <span class="n">record</span><span class="p">[</span><span class="s2">"profiles"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"profiles"</span><span class="p">,</span> <span class="p">{}),</span> <span class="n">profile</span><span class="o">.</span><span class="n">model_type</span><span class="p">:</span> <span class="n">entry</span><span class="p">}</span>
+</span><span id="line-75">    <span class="n">voices</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">record</span>
+</span><span id="line-76">    <span class="k">return</span> <span class="n">record</span></div>
 
-</span><span id="line-76">
 </span><span id="line-77">
-<div class="viewcode-block" id="load_voice">
-<a class="viewcode-back" href="../../_autosummary/voxy.library.html#voxy.library.load_voice">[docs]</a>
-</span><span id="line-78"><span class="k">def</span><span class="w"> </span><span class="nf">load_voice</span><span class="p">(</span>
-</span><span id="line-79">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-80">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-81">    <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LIBRARY_MODEL_TYPE</span><span class="p">,</span>
-</span><span id="line-82">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-83"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
-</span><span id="line-84"><span class="w">    </span><span class="sd">"""The saved ``model_type`` profile of the voice called ``name``."""</span>
-</span><span id="line-85">    <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
-</span><span id="line-86">    <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">voices</span><span class="p">:</span>
-</span><span id="line-87">        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No voice named </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">voices</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-</span><span id="line-88">    <span class="n">profiles</span> <span class="o">=</span> <span class="n">voices</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"profiles"</span><span class="p">,</span> <span class="p">{})</span>
-</span><span id="line-89">    <span class="k">if</span> <span class="n">model_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">profiles</span><span class="p">:</span>
-</span><span id="line-90">        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-</span><span id="line-91">            <span class="sa">f</span><span class="s2">"Voice </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has no </span><span class="si">{</span><span class="n">model_type</span><span class="si">!r}</span><span class="s2"> profile (has: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">profiles</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
-</span><span id="line-92">        <span class="p">)</span>
-</span><span id="line-93">    <span class="n">fields</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-94">        <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
-</span><span id="line-95">        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">profiles</span><span class="p">[</span><span class="n">model_type</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-</span><span id="line-96">        <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">VoiceProfile</span><span class="o">.</span><span class="vm">__annotations__</span>
-</span><span id="line-97">    <span class="p">}</span>
-</span><span id="line-98">    <span class="k">return</span> <span class="n">VoiceProfile</span><span class="p">(</span><span class="o">**</span><span class="n">fields</span><span class="p">)</span></div>
+</span><span id="line-78">
+<div class="viewcode-block" id="find_voice">
+<a class="viewcode-back" href="../../_autosummary/voxy.library.html#voxy.library.find_voice">[docs]</a>
+</span><span id="line-79"><span class="k">def</span><span class="w"> </span><span class="nf">find_voice</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-80"><span class="w">    </span><span class="sd">"""The library key of the voice called ``name`` (case-insensitive, aliases too).</span>
+</span><span id="line-81">
+</span><span id="line-82"><span class="sd">    &gt;&gt;&gt; lib = {"cora": {"aliases": ["Cora", "Coco"]}, "vanessa": {"aliases": ["Ness"]}}</span>
+</span><span id="line-83"><span class="sd">    &gt;&gt;&gt; find_voice("coco", voices=lib), find_voice("Vanessa", voices=lib), find_voice("x", voices=lib)</span>
+</span><span id="line-84"><span class="sd">    ('cora', 'vanessa', None)</span>
+</span><span id="line-85"><span class="sd">    """</span>
+</span><span id="line-86">    <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
+</span><span id="line-87">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="line-88">        <span class="k">return</span> <span class="kc">None</span>
+</span><span id="line-89">    <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">voices</span><span class="p">)</span>  <span class="c1"># the stored spelling, even on case-insensitive disks</span>
+</span><span id="line-90">    <span class="n">wanted</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
+</span><span id="line-91">    <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">k</span> <span class="o">==</span> <span class="n">name</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="n">k</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="o">==</span> <span class="n">wanted</span><span class="p">):</span>
+</span><span id="line-92">        <span class="k">if</span> <span class="n">found</span> <span class="o">:=</span> <span class="nb">next</span><span class="p">((</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span> <span class="k">if</span> <span class="n">match</span><span class="p">(</span><span class="n">k</span><span class="p">)),</span> <span class="kc">None</span><span class="p">):</span>
+</span><span id="line-93">            <span class="k">return</span> <span class="n">found</span>
+</span><span id="line-94">    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+</span><span id="line-95">        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
+</span><span id="line-96">            <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">a</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="o">==</span> <span class="n">wanted</span>
+</span><span id="line-97">            <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"aliases"</span><span class="p">,</span> <span class="p">[])</span>
+</span><span id="line-98">        <span class="p">):</span>
+</span><span id="line-99">            <span class="k">return</span> <span class="n">key</span>
+</span><span id="line-100">    <span class="k">return</span> <span class="kc">None</span></div>
 
-</span><span id="line-99">
-</span><span id="line-100">
-</span><span id="line-101"><span class="k">def</span><span class="w"> </span><span class="nf">_is_sample_key</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="line-102"><span class="w">    </span><span class="sd">"""Top-level audio files only (no notes, no subfolders).</span>
-</span><span id="line-103">
-</span><span id="line-104"><span class="sd">    &gt;&gt;&gt; [k for k in ["a.wav", "b.MP3", "notes.txt", "sub/c.wav"] if _is_sample_key(k)]</span>
-</span><span id="line-105"><span class="sd">    ['a.wav', 'b.MP3']</span>
-</span><span id="line-106"><span class="sd">    """</span>
-</span><span id="line-107">    <span class="n">k</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">)</span>
-</span><span id="line-108">    <span class="k">return</span> <span class="s2">"/"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">k</span> <span class="ow">and</span> <span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">AUDIO_EXTS</span><span class="p">)</span>
+</span><span id="line-101">
+</span><span id="line-102">
+</span><span id="line-103"><span class="k">def</span><span class="w"> </span><span class="nf">_check_aliases_free</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">aliases</span><span class="p">,</span> <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-104"><span class="w">    </span><span class="sd">"""Refuse aliases that already name, or alias, another voice."""</span>
+</span><span id="line-105">    <span class="k">for</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">aliases</span> <span class="ow">or</span> <span class="p">[]:</span>
+</span><span id="line-106">        <span class="n">owner</span> <span class="o">=</span> <span class="n">find_voice</span><span class="p">(</span><span class="n">alias</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
+</span><span id="line-107">        <span class="k">if</span> <span class="n">owner</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">owner</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="o">!=</span> <span class="n">name</span><span class="o">.</span><span class="n">casefold</span><span class="p">():</span>
+</span><span id="line-108">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Alias </span><span class="si">{</span><span class="n">alias</span><span class="si">!r}</span><span class="s2"> already refers to voice </span><span class="si">{</span><span class="n">owner</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="line-109">
 </span><span id="line-110">
-</span><span id="line-111"><span class="k">def</span><span class="w"> </span><span class="nf">_named_file</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">:</span>
-</span><span id="line-112">    <span class="n">f</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
-</span><span id="line-113">    <span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-</span><span id="line-114">    <span class="k">return</span> <span class="n">f</span>
+<div class="viewcode-block" id="profile_from_record">
+<a class="viewcode-back" href="../../_autosummary/voxy.library.html#voxy.library.profile_from_record">[docs]</a>
+</span><span id="line-111"><span class="k">def</span><span class="w"> </span><span class="nf">profile_from_record</span><span class="p">(</span>
+</span><span id="line-112">    <span class="n">record</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">prefer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-113"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-114"><span class="w">    </span><span class="sd">"""The record's saved ``model_type`` profile.</span>
 </span><span id="line-115">
-</span><span id="line-116">
+</span><span id="line-116"><span class="sd">    With ``model_type=None``: the ``prefer`` profile if the record has one, else</span>
+</span><span id="line-117"><span class="sd">    the record's ``default_backend``, else its first.</span>
+</span><span id="line-118"><span class="sd">    """</span>
+</span><span id="line-119">    <span class="n">profiles</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"profiles"</span><span class="p">,</span> <span class="p">{})</span>
+</span><span id="line-120">    <span class="k">if</span> <span class="ow">not</span> <span class="n">profiles</span><span class="p">:</span>
+</span><span id="line-121">        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Voice </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'name'</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> has no saved profiles"</span><span class="p">)</span>
+</span><span id="line-122">    <span class="k">if</span> <span class="n">model_type</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-123">        <span class="n">model_type</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+</span><span id="line-124">            <span class="p">(</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="p">(</span><span class="n">prefer</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"default_backend"</span><span class="p">))</span> <span class="k">if</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">profiles</span><span class="p">),</span>
+</span><span id="line-125">            <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">profiles</span><span class="p">)),</span>
+</span><span id="line-126">        <span class="p">)</span>
+</span><span id="line-127">    <span class="k">if</span> <span class="n">model_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">profiles</span><span class="p">:</span>
+</span><span id="line-128">        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+</span><span id="line-129">            <span class="sa">f</span><span class="s2">"Voice </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'name'</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> has no </span><span class="si">{</span><span class="n">model_type</span><span class="si">!r}</span><span class="s2"> profile "</span>
+</span><span id="line-130">            <span class="sa">f</span><span class="s2">"(has: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">profiles</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
+</span><span id="line-131">        <span class="p">)</span>
+</span><span id="line-132">    <span class="n">fields</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-133">        <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+</span><span id="line-134">        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">profiles</span><span class="p">[</span><span class="n">model_type</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+</span><span id="line-135">        <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">VoiceProfile</span><span class="o">.</span><span class="vm">__annotations__</span>
+</span><span id="line-136">    <span class="p">}</span>
+</span><span id="line-137">    <span class="k">return</span> <span class="n">VoiceProfile</span><span class="p">(</span><span class="o">**</span><span class="n">fields</span><span class="p">)</span></div>
+
+</span><span id="line-138">
+</span><span id="line-139">
+<div class="viewcode-block" id="load_voice">
+<a class="viewcode-back" href="../../_autosummary/voxy.library.html#voxy.library.load_voice">[docs]</a>
+</span><span id="line-140"><span class="k">def</span><span class="w"> </span><span class="nf">load_voice</span><span class="p">(</span>
+</span><span id="line-141">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-142">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-143">    <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_LIBRARY_MODEL_TYPE</span><span class="p">,</span>
+</span><span id="line-144">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-145"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-146"><span class="w">    </span><span class="sd">"""The saved ``model_type`` profile of the voice called ``name`` (or an alias).</span>
+</span><span id="line-147">
+</span><span id="line-148"><span class="sd">    ``model_type=None`` takes the voice's first saved profile.</span>
+</span><span id="line-149"><span class="sd">    """</span>
+</span><span id="line-150">    <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
+</span><span id="line-151">    <span class="n">key</span> <span class="o">=</span> <span class="n">find_voice</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
+</span><span id="line-152">    <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-153">        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No voice named </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">voices</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+</span><span id="line-154">    <span class="k">return</span> <span class="n">profile_from_record</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">model_type</span><span class="p">)</span></div>
+
+</span><span id="line-155">
+</span><span id="line-156">
+</span><span id="line-157"><span class="k">def</span><span class="w"> </span><span class="nf">_refuse_existing</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-158"><span class="w">    </span><span class="sd">"""Refuse to replace a saved ``backend`` profile of ``name`` unless asked to."""</span>
+</span><span id="line-159">    <span class="k">if</span> <span class="n">overwrite</span><span class="p">:</span>
+</span><span id="line-160">        <span class="k">return</span>
+</span><span id="line-161">    <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
+</span><span id="line-162">    <span class="n">key</span> <span class="o">=</span> <span class="n">find_voice</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
+</span><span id="line-163">    <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">backend</span> <span class="ow">in</span> <span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"profiles"</span><span class="p">,</span> <span class="p">{}):</span>
+</span><span id="line-164">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-165">            <span class="sa">f</span><span class="s2">"Voice </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> already has a </span><span class="si">{</span><span class="n">backend</span><span class="si">!r}</span><span class="s2"> profile; pass overwrite=True "</span>
+</span><span id="line-166">            <span class="s2">"to replace it"</span>
+</span><span id="line-167">        <span class="p">)</span>
+</span><span id="line-168">
+</span><span id="line-169">
+</span><span id="line-170"><span class="k">def</span><span class="w"> </span><span class="nf">_is_sample_key</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-171"><span class="w">    </span><span class="sd">"""Top-level audio files only (no notes, no subfolders).</span>
+</span><span id="line-172">
+</span><span id="line-173"><span class="sd">    &gt;&gt;&gt; [k for k in ["a.wav", "b.MP3", "notes.txt", "sub/c.wav"] if _is_sample_key(k)]</span>
+</span><span id="line-174"><span class="sd">    ['a.wav', 'b.MP3']</span>
+</span><span id="line-175"><span class="sd">    """</span>
+</span><span id="line-176">    <span class="n">k</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">)</span>
+</span><span id="line-177">    <span class="k">return</span> <span class="s2">"/"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">k</span> <span class="ow">and</span> <span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">AUDIO_EXTS</span><span class="p">)</span>
+</span><span id="line-178">
+</span><span id="line-179">
+</span><span id="line-180"><span class="k">def</span><span class="w"> </span><span class="nf">_named_file</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">:</span>
+</span><span id="line-181">    <span class="n">f</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+</span><span id="line-182">    <span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+</span><span id="line-183">    <span class="k">return</span> <span class="n">f</span>
+</span><span id="line-184">
+</span><span id="line-185">
 <div class="viewcode-block" id="clone_from_samples">
 <a class="viewcode-back" href="../../_autosummary/voxy.library.html#voxy.library.clone_from_samples">[docs]</a>
-</span><span id="line-117"><span class="k">def</span><span class="w"> </span><span class="nf">clone_from_samples</span><span class="p">(</span>
-</span><span id="line-118">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-119">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-120">    <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-121">    <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LIBRARY_MODEL_TYPE</span><span class="p">,</span>
-</span><span id="line-122">    <span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-123">    <span class="n">voices</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-124">    <span class="n">record_fields</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-125">    <span class="o">**</span><span class="n">clone_kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-</span><span id="line-126"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
-</span><span id="line-127"><span class="w">    </span><span class="sd">"""Clone the voice ``name`` from its stored samples and save the profile.</span>
-</span><span id="line-128">
-</span><span id="line-129"><span class="sd">    Args:</span>
-</span><span id="line-130"><span class="sd">        name: Voice name: the key in the samples and voices stores.</span>
-</span><span id="line-131"><span class="sd">        model: A speech model; defaults to ``create_speech_model(model_type)``.</span>
-</span><span id="line-132"><span class="sd">        model_type: Backend used when ``model`` is not given.</span>
-</span><span id="line-133"><span class="sd">        samples: ``filename -&gt; bytes``; defaults to ``samples_store(name)``. Only</span>
-</span><span id="line-134"><span class="sd">            its top-level audio files are uploaded.</span>
-</span><span id="line-135"><span class="sd">        voices: Voice records store; defaults to ``voices_store()``.</span>
-</span><span id="line-136"><span class="sd">        record_fields: Extra fields for the voice record (aliases, consent...).</span>
-</span><span id="line-137"><span class="sd">        **clone_kwargs: Passed to ``model.clone_voice`` (e.g. ``labels=``,</span>
-</span><span id="line-138"><span class="sd">            ``remove_background_noise=``). ``name=`` defaults to ``name``.</span>
-</span><span id="line-139"><span class="sd">    """</span>
-</span><span id="line-140">    <span class="n">samples</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">samples_store</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">if</span> <span class="n">samples</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">samples</span>
-</span><span id="line-141">    <span class="n">keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">samples</span> <span class="k">if</span> <span class="n">_is_sample_key</span><span class="p">(</span><span class="n">k</span><span class="p">))</span>
-</span><span id="line-142">    <span class="k">if</span> <span class="ow">not</span> <span class="n">keys</span><span class="p">:</span>
-</span><span id="line-143">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No audio samples stored for voice </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-144">    <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">_named_file</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">samples</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">]</span>
-</span><span id="line-145">    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="n">create_speech_model</span><span class="p">(</span><span class="n">model_type</span><span class="p">)</span>
-</span><span id="line-146">    <span class="n">clone_kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
-</span><span id="line-147">    <span class="n">profile</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">clone_voice</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="o">**</span><span class="n">clone_kwargs</span><span class="p">)</span>
-</span><span id="line-148">    <span class="n">save_voice</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">profile</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">,</span> <span class="o">**</span><span class="nb">dict</span><span class="p">(</span><span class="n">record_fields</span> <span class="ow">or</span> <span class="p">{}))</span>
-</span><span id="line-149">    <span class="k">return</span> <span class="n">profile</span></div>
+</span><span id="line-186"><span class="k">def</span><span class="w"> </span><span class="nf">clone_from_samples</span><span class="p">(</span>
+</span><span id="line-187">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-188">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-189">    <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-190">    <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LIBRARY_MODEL_TYPE</span><span class="p">,</span>
+</span><span id="line-191">    <span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-192">    <span class="n">voices</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-193">    <span class="n">record_fields</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-194">    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="line-195">    <span class="o">**</span><span class="n">clone_kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+</span><span id="line-196"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-197"><span class="w">    </span><span class="sd">"""Clone the voice ``name`` from its stored samples and save the profile.</span>
+</span><span id="line-198">
+</span><span id="line-199"><span class="sd">    Args:</span>
+</span><span id="line-200"><span class="sd">        name: Voice name: the key in the samples and voices stores.</span>
+</span><span id="line-201"><span class="sd">        model: A speech model; defaults to ``create_speech_model(model_type)``.</span>
+</span><span id="line-202"><span class="sd">        model_type: Backend used when ``model`` is not given.</span>
+</span><span id="line-203"><span class="sd">        samples: ``filename -&gt; bytes``; defaults to ``samples_store(name)``. Only</span>
+</span><span id="line-204"><span class="sd">            its top-level audio files are uploaded.</span>
+</span><span id="line-205"><span class="sd">        voices: Voice records store; defaults to ``voices_store()``.</span>
+</span><span id="line-206"><span class="sd">        record_fields: Extra fields for the voice record (aliases, consent...).</span>
+</span><span id="line-207"><span class="sd">        overwrite: Replace an existing profile of this backend for ``name``</span>
+</span><span id="line-208"><span class="sd">            (otherwise refused before anything is uploaded).</span>
+</span><span id="line-209"><span class="sd">        **clone_kwargs: Passed to ``model.clone_voice`` (e.g. ``labels=``,</span>
+</span><span id="line-210"><span class="sd">            ``remove_background_noise=``). ``name=`` defaults to ``name``.</span>
+</span><span id="line-211"><span class="sd">    """</span>
+</span><span id="line-212">    <span class="n">_refuse_existing</span><span class="p">(</span>
+</span><span id="line-213">        <span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="p">,</span> <span class="n">model_type</span> <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">overwrite</span>
+</span><span id="line-214">    <span class="p">)</span>
+</span><span id="line-215">    <span class="n">samples</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">samples_store</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">if</span> <span class="n">samples</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">samples</span>
+</span><span id="line-216">    <span class="n">keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">samples</span> <span class="k">if</span> <span class="n">_is_sample_key</span><span class="p">(</span><span class="n">k</span><span class="p">))</span>
+</span><span id="line-217">    <span class="k">if</span> <span class="ow">not</span> <span class="n">keys</span><span class="p">:</span>
+</span><span id="line-218">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No audio samples stored for voice </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-219">    <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">_named_file</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">samples</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">]</span>
+</span><span id="line-220">    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="n">create_speech_model</span><span class="p">(</span><span class="n">model_type</span><span class="p">)</span>
+</span><span id="line-221">    <span class="n">clone_kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+</span><span id="line-222">    <span class="n">profile</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">clone_voice</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="o">**</span><span class="n">clone_kwargs</span><span class="p">)</span>
+</span><span id="line-223">    <span class="n">save_voice</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">profile</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">,</span> <span class="o">**</span><span class="nb">dict</span><span class="p">(</span><span class="n">record_fields</span> <span class="ow">or</span> <span class="p">{}))</span>
+</span><span id="line-224">    <span class="k">return</span> <span class="n">profile</span></div>
+
+</span><span id="line-225">
+</span><span id="line-226">
+<div class="viewcode-block" id="design_from_description">
+<a class="viewcode-back" href="../../_autosummary/voxy.library.html#voxy.library.design_from_description">[docs]</a>
+</span><span id="line-227"><span class="k">def</span><span class="w"> </span><span class="nf">design_from_description</span><span class="p">(</span>
+</span><span id="line-228">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-229">    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-230">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-231">    <span class="n">preview</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-232">    <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-233">    <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LIBRARY_MODEL_TYPE</span><span class="p">,</span>
+</span><span id="line-234">    <span class="n">voices</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-235">    <span class="n">record_fields</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-236">    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="line-237">    <span class="o">**</span><span class="n">design_kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+</span><span id="line-238"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-239"><span class="w">    </span><span class="sd">"""Design a new voice from a text ``description`` and save it as ``name``.</span>
+</span><span id="line-240">
+</span><span id="line-241"><span class="sd">    Args:</span>
+</span><span id="line-242"><span class="sd">        name: Library name for the voice.</span>
+</span><span id="line-243"><span class="sd">        description: What it sounds like (age, accent, tone, pace, character).</span>
+</span><span id="line-244"><span class="sd">        preview: The chosen preview (or its id) from the model's</span>
+</span><span id="line-245"><span class="sd">            ``design_voice_previews``; if omitted, the first generated one.</span>
+</span><span id="line-246"><span class="sd">        model: A speech model that can design voices (default: ``model_type``'s).</span>
+</span><span id="line-247"><span class="sd">        record_fields: Extra fields for the voice record (aliases...).</span>
+</span><span id="line-248"><span class="sd">        overwrite: Replace an existing profile of this backend for ``name``</span>
+</span><span id="line-249"><span class="sd">            (otherwise refused before any paid call).</span>
+</span><span id="line-250"><span class="sd">        **design_kwargs: Passed to ``model.design_voice`` (``labels=``, ``seed=``...).</span>
+</span><span id="line-251"><span class="sd">    """</span>
+</span><span id="line-252">    <span class="n">stores</span><span class="o">.</span><span class="n">check_voice_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+</span><span id="line-253">    <span class="n">_refuse_existing</span><span class="p">(</span>
+</span><span id="line-254">        <span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="p">,</span> <span class="n">model_type</span> <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">overwrite</span>
+</span><span id="line-255">    <span class="p">)</span>
+</span><span id="line-256">    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="n">create_speech_model</span><span class="p">(</span><span class="n">model_type</span><span class="p">)</span>
+</span><span id="line-257">    <span class="n">design_kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+</span><span id="line-258">    <span class="n">profile</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">design_voice</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">preview</span><span class="o">=</span><span class="n">preview</span><span class="p">,</span> <span class="o">**</span><span class="n">design_kwargs</span><span class="p">)</span>
+</span><span id="line-259">    <span class="n">fields</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span> <span class="o">**</span><span class="nb">dict</span><span class="p">(</span><span class="n">record_fields</span> <span class="ow">or</span> <span class="p">{})}</span>
+</span><span id="line-260">    <span class="n">save_voice</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">profile</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">,</span> <span class="o">**</span><span class="n">fields</span><span class="p">)</span>
+</span><span id="line-261">    <span class="k">return</span> <span class="n">profile</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -338,7 +463,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=282f96c0"></script>
+    <script src="../../_static/documentation_options.js?v=1fd71caa"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

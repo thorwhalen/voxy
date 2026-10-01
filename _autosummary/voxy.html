@@ -34,7 +34,7 @@
 <link href="../_static/epythet.css?v=22887b56" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
-<link href="voxy.base.html" rel="next" title="voxy.base"/>
+<link href="voxy.aix_model.html" rel="next" title="voxy.aix_model"/>
 <link href="../api.html" rel="prev" title="API reference"/>
 </head>
 <body :class="{ 'overflow-hidden': showSidebar }" class="min-h-screen font-sans antialiased bg-background text-foreground" x-data="{ showSidebar: false, showScrollTop: false }">
@@ -83,9 +83,13 @@
 <ul class="current">
 <li class="toctree-l1 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="../api.html">API reference<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul class="current" x-show="expanded">
 <li class="toctree-l2 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="current reference internal expandable" href="#">voxy<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
+<li class="toctree-l3"><a class="reference internal" href="voxy.aix_model.html">voxy.aix_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.facade.html">voxy.facade</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.fal_model.html">voxy.fal_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.stores.html">voxy.stores</a></li>
 </ul>
 </li>
@@ -117,18 +121,35 @@
 <div id="content" role="main">
 <section id="module-voxy">
 <span id="voxy"></span><h1>voxy<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#module-voxy">¶</a></h1>
-<p>Facade for voice cloning and speech synthesis</p>
+<p>Facade for voice generation: speech synthesis in any voice, cloning and designing voices.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">voxy</span>
+</span><span id="line-2"><span class="gp">&gt;&gt;&gt; </span><span class="p">{</span><span class="s1">'elevenlabs'</span><span class="p">,</span> <span class="s1">'say'</span><span class="p">,</span> <span class="s1">'aix'</span><span class="p">,</span> <span class="s1">'fal'</span><span class="p">,</span> <span class="s1">'csm'</span><span class="p">}</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">voxy</span><span class="o">.</span><span class="n">speech_model_factories</span><span class="p">)</span>
+</span><span id="line-3"><span class="go">True</span>
+</span></code></pre></div>
+</div>
 <p class="rubric">Modules</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.base.html#module-voxy.base" title="voxy.base"><code class="xref py py-obj docutils literal notranslate"><span class="pre">base</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.aix_model.html#module-voxy.aix_model" title="voxy.aix_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">aix_model</span></code></a></p></td>
+<td><p>Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.base.html#module-voxy.base" title="voxy.base"><code class="xref py py-obj docutils literal notranslate"><span class="pre">base</span></code></a></p></td>
 <td><p>Voxy: A flexible speech synthesis and voice cloning module.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.elevenlabs_model.html#module-voxy.elevenlabs_model" title="voxy.elevenlabs_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">elevenlabs_model</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.elevenlabs_model.html#module-voxy.elevenlabs_model" title="voxy.elevenlabs_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">elevenlabs_model</span></code></a></p></td>
 <td><p>ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.library.html#module-voxy.library" title="voxy.library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">library</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.facade.html#module-voxy.facade" title="voxy.facade"><code class="xref py py-obj docutils literal notranslate"><span class="pre">facade</span></code></a></p></td>
+<td><p>Voice generation in one call, whatever the service behind it.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.fal_model.html#module-voxy.fal_model" title="voxy.fal_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fal_model</span></code></a></p></td>
+<td><p>Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.library.html#module-voxy.library" title="voxy.library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">library</span></code></a></p></td>
 <td><p>A persistent voice library: clone a voice once, then use it by name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.say_model.html#module-voxy.say_model" title="voxy.say_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">say_model</span></code></a></p></td>
+<td><p>Local speech with the macOS <code class="docutils literal notranslate"><span class="pre">say</span></code> command: free, offline, no API key, no deps.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="voxy.stores.html#module-voxy.stores" title="voxy.stores"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stores</span></code></a></p></td>
 <td><p>Where voxy keeps its data: voice records and audio, as <code class="docutils literal notranslate"><span class="pre">MutableMapping</span></code> stores.</p></td>
@@ -147,7 +168,7 @@
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=282f96c0"></script>
+<script src="../_static/documentation_options.js?v=1fd71caa"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

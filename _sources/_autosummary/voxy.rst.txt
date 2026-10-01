@@ -10,7 +10,11 @@
    :toctree:
    :recursive:
 
+   aix_model
    base
    elevenlabs_model
+   facade
+   fal_model
    library
+   say_model
    stores

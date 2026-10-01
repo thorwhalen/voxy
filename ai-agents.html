@@ -82,9 +82,13 @@
 <ul class="current">
 <li class="toctree-l1" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="api.html">API reference<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
 <li class="toctree-l2" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="_autosummary/voxy.html">voxy<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.aix_model.html">voxy.aix_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.facade.html">voxy.facade</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.fal_model.html">voxy.fal_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.library.html">voxy.library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.stores.html">voxy.stores</a></li>
 </ul>
 </li>
@@ -124,7 +128,7 @@ machine-readable copies of this documentation.</p>
 <p>Skills are folders holding a <code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code> (the <a class="reference external" href="https://agentskills.io" rel="nofollow noopener">Agent Skills<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> format): a description that tells an agent when to use it and a body with the procedure. Install one into your agent with <code class="docutils literal notranslate"><span class="pre">gh</span> <span class="pre">skill</span></code> (any host: <code class="docutils literal notranslate"><span class="pre">--agent</span> <span class="pre">claude-code</span></code>, <code class="docutils literal notranslate"><span class="pre">copilot</span></code>, <code class="docutils literal notranslate"><span class="pre">cursor</span></code>, <code class="docutils literal notranslate"><span class="pre">codex</span></code>, <code class="docutils literal notranslate"><span class="pre">gemini</span></code>), or use the copy bundled in the wheel.</p>
 <section id="voxy">
 <h3><code class="docutils literal notranslate"><span class="pre">voxy</span></code><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy'">¶</a></h3>
-<p>Clone a voice and synthesize speech with the voxy facade, and keep the voice and its audio in voxy’s data store. Use when asked to clone someone’s voice, make a voice model, speak text in a cloned voice, reuse a voice made earlier, or prepare audio samples for a clone; and whenever deciding where voice samples, source media or voice ids should be saved. Triggers on “clone a voice”, “voice clone”, “ElevenLabs voice”, “make a voice model of”, “say this in X’s voice”, “voxy”.</p>
+<p>Read first whenever spoken voice must be generated - “use voice X to…”, “use a cloned voice for…”, “have X narrate…”, “say/read this in X’s voice”, voice-over, dubbing, giving characters voices, text-to-speech, which voices we have, cloning or designing a voice - and when making a video, animation, podcast or demo where a character or narrator speaks. voxy is the fleet’s voice-generation facade; never call a TTS SDK directly.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">gh<span class="w"> </span>skill<span class="w"> </span>install<span class="w"> </span>thorwhalen/voxy<span class="w"> </span>voxy<span class="w"> </span>--agent<span class="w"> </span>claude-code
 </span></code></pre></div>
 </div>
@@ -172,7 +176,7 @@ machine-readable copies of this documentation.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=282f96c0"></script>
+<script src="_static/documentation_options.js?v=1fd71caa"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

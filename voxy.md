@@ -1,4 +1,4 @@
-> built 2026-10-01 08:31 UTC from 67b416b (main) · voxy 0.0.5. Details: build_info.json
+> built 2026-10-01 09:48 UTC from e6f5701 (main) · voxy 0.0.6. Details: build_info.json
 
 # index.html.md
 
@@ -6,11 +6,34 @@
 
 # voxy
 
-Facade for voice cloning and speech synthesis
+Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designing voices.
 
-To install:	`pip install voxy`
+To install:	`pip install voxy` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'voxy[fal]'` for those services)
 
-Voxy is a flexible Python module for speech synthesis and voice cloning, with two backends: the local Sesame CSM-1B model and the ElevenLabs API (instant voice cloning). You pick the backend with one keyword: `create_speech_model("csm")` or `create_speech_model("elevenlabs")`; new backends are entries in `voxy.speech_model_factories`.
+```python
+import voxy
+
+voxy.text_to_speech("Hello!", voice="cora").save("hi.mp3")          # a named voice from the library
+voxy.text_to_speech("A quick draft.", voice="Daniel", backend="say")  # free local voice (macOS)
+voxy.list_voices()                # our named voices
+voxy.list_voices("elevenlabs")    # a service's voices
+```
+
+Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
+
+Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice cora -o out.mp3`.
+
+## Designing a voice from a description
+
+```python
+model = voxy.get_speech_model("elevenlabs")
+line = ("Once upon a time, in a village at the edge of a very old forest, there lived a "
+        "baker who could hear the bread singing as it rose.")  # 100-1000 characters
+previews = model.design_voice_previews("a warm, slow, elderly storyteller", text=line)
+for i, p in enumerate(previews):
+    p.save(f"preview_{i}.mp3")          # listen, then pick one
+voxy.design_from_description("storyteller", "a warm, slow, elderly storyteller", preview=previews[1])
+```
 
 ## Features
 
@@ -174,7 +197,7 @@ from voxy import samples_store, clone_from_samples, load_voice, create_speech_mo
 
 samples = samples_store("ada")
 samples["clip1.wav"] = open("clip1.wav", "rb").read()
-clone_from_samples("ada")                      # uploads the samples, saves the profile
+clone_from_samples("ada")  # uploads the samples, saves the profile
 
 model = create_speech_model("elevenlabs")
 model.generate_speech("Hi!", load_voice("ada"), output_path="hi.wav")
@@ -249,6 +272,65 @@ voice_profile = model.
 <p class="epythet-aggregates">This documentation as a single file: <a href="voxy.md">voxy.md</a> (Markdown, for agents).</p>
 
 
+# _autosummary/voxy.aix_model.html.md
+
+# voxy.aix_model
+
+Speech through aix (LiteLLM): OpenAI’s TTS voices and the other providers LiteLLM routes.
+
+The provider is picked by the `model` string (e.g. `"gpt-4o-mini-tts"`,
+`"tts-1-hd"`); keys and defaults come from aix’s own config. aix is imported
+lazily (`pip install 'voxy[aix]'`).
+
+```pycon
+>>> AixSpeechModel(tts=lambda text, **kw: None).name
+'aix'
+```
+
+### Module Attributes
+
+| [`OPENAI_TTS_VOICES`](_autosummary/voxy.aix_model.html.md#voxy.aix_model.OPENAI_TTS_VOICES)   | OpenAI's built-in TTS voices (which ones a model accepts depends on the model).   |
+|----------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+
+### Classes
+
+| [`AixSpeechModel`](_autosummary/voxy.aix_model.html.md#voxy.aix_model.AixSpeechModel)(\*[, model, response_format, tts])   | aix/LiteLLM text-to-speech as a voxy backend.   |
+|------------------------------------------------------------------------------------------------------|-------------------------------------------------|
+
+### *class* voxy.aix_model.AixSpeechModel(, model=None, response_format='mp3', tts=None)
+
+Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
+
+aix/LiteLLM text-to-speech as a voxy backend.
+
+* **Parameters:**
+  * **model** (`str` | `None`) – TTS model (None: aix’s configured default).
+  * **response_format** (`str`) – ‘mp3’, ‘opus’, ‘aac’, ‘flac’, ‘wav’…
+  * **tts** (`Callable` | `None`) – `(text, **kw) -> GeneratedAudio` (tests inject a fake).
+
+#### list_voices()
+
+OpenAI’s built-in voices (other LiteLLM providers have their own).
+
+* **Return type:**
+  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+#### name *: str* *= 'aix'*
+
+Registry name of the backend (also each profile’s `model_type`).
+
+#### synthesize(text, voice=None, \*\*kwargs)
+
+Speech from aix; extra kwargs (`speed=`, `api_key=`…) go to aix.
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### voxy.aix_model.OPENAI_TTS_VOICES *= ('alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer', 'verse')*
+
+OpenAI’s built-in TTS voices (which ones a model accepts depends on the model).
+
+
 # _autosummary/voxy.base.html.md
 
 # voxy.base
@@ -260,21 +342,27 @@ models, with initial support for the CSM-1B model.
 
 ### Module Attributes
 
-| [`speech_model_factories`](_autosummary/voxy.base.html.md#voxy.base.speech_model_factories)   | Backend name -> factory.   |
-|---------------------------------------------------------------------------|----------------------------|
+| [`speech_model_factories`](_autosummary/voxy.base.html.md#voxy.base.speech_model_factories)   | Backend name -> factory (keys lowercase).                                     |
+|---------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`backend_aliases`](_autosummary/voxy.base.html.md#voxy.base.backend_aliases)          | Other names for a backend -> its registry name (one model, one profile type). |
 
 ### Functions
 
-| [`audio_to_text`](_autosummary/voxy.base.html.md#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                    |
-|--------------------------------------------------------------------------------------------------|------------------------------------------------------------|
-| [`cleanup_audio`](_autosummary/voxy.base.html.md#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence. |
-| [`create_speech_model`](_autosummary/voxy.base.html.md#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.               |
+| [`audio_to_text`](_autosummary/voxy.base.html.md#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                |
+|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| [`canonical_backend`](_autosummary/voxy.base.html.md#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).    |
+| [`cleanup_audio`](_autosummary/voxy.base.html.md#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.             |
+| [`create_speech_model`](_autosummary/voxy.base.html.md#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                           |
+| [`register_speech_model`](_autosummary/voxy.base.html.md#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).    |
+| [`tensor_to_wav_bytes`](_autosummary/voxy.base.html.md#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV. |
 
 ### Classes
 
 | [`CSMSpeechModel`](_autosummary/voxy.base.html.md#voxy.base.CSMSpeechModel)([model_path, device])          | Speech model implementation using Sesame's CSM-1B model.   |
 |------------------------------------------------------------------------------------------------|------------------------------------------------------------|
-| [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)([device])                         | Base class for speech synthesis models.                    |
+| [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)(audio, format[, backend, voice, ...])  | Synthesized speech: encoded audio plus what produced it.   |
+| [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)([device])                         | Base class for speech backends (local models or services). |
+| [`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)(voice_id, name, backend[, ...])     | A voice a backend offers (stock, designed, or cloned).     |
 | [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)(segment, speaker_id, ...[, ...]) | Data class to store voice cloning information.             |
 
 ### *class* voxy.base.CSMSpeechModel(model_path=None, device='cpu')
@@ -313,11 +401,50 @@ Generate speech using a voice profile.
 * **Returns:**
   Generated audio tensor
 
+#### name *: str* *= 'csm'*
+
+Registry name of the backend (also each profile’s `model_type`).
+
+#### *property* sample_rate *: int*
+
+Sample rate of the generated audio (loads the model).
+
+### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None)
+
+Bases: `object`
+
+Synthesized speech: encoded audio plus what produced it.
+
+```pycon
+>>> import tempfile, os
+>>> speech = Speech(b"RIFF...", format="wav", backend="say", voice="Daniel")
+>>> path = speech.save(os.path.join(tempfile.mkdtemp(), "hi.wav"))
+>>> open(path, "rb").read()[:4]
+b'RIFF'
+```
+
+#### save(path)
+
+Write the audio to `path` (folders created) and return the path.
+
+* **Return type:**
+  `str`
+
 ### *class* voxy.base.SpeechModel(device='cpu')
 
 Bases: `object`
 
-Base class for speech synthesis models.
+Base class for speech backends (local models or services).
+
+A backend implements whichever capabilities it has; the rest raise
+`NotImplementedError` naming the backend:
+
+- `synthesize(text, voice) -> Speech`: the facade’s one required method
+  (the default renders `generate_speech` to WAV);
+- `list_voices() -> list[VoiceInfo]`;
+- `clone_voice(samples, ...) -> VoiceProfile`;
+- `design_voice(description, ...) -> VoiceProfile`;
+- `generate_speech(text, profile) -> torch.Tensor`.
 
 #### clone_voice(audio_input, transcript=None, speaker_id=999, \*, cleanup_audio_fn=<function cleanup_audio>)
 
@@ -333,6 +460,20 @@ Create a voice profile from an audio sample and its transcript.
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
 
+#### design_voice(description, \*\*kwargs)
+
+Create a new voice from a text description.
+
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+#### dflt_voice *: str | None* *= None*
+
+the caller must).
+
+* **Type:**
+  Voice used when the caller names none (`None`
+
 #### generate_speech(text, voice_profile=None, output_path=None, max_length_ms=10000, \*\*kwargs)
 
 Generate speech using a voice profile.
@@ -347,6 +488,33 @@ Generate speech using a voice profile.
   `Tensor`
 * **Returns:**
   Generated audio tensor
+
+#### list_voices()
+
+The voices this backend offers.
+
+* **Return type:**
+  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+#### name *: str* *= ''*
+
+Registry name of the backend (also each profile’s `model_type`).
+
+#### synthesize(text, voice=None, \*\*kwargs)
+
+Render `text` in `voice` and return encoded audio.
+
+This default (for tensor-producing models such as CSM) needs a
+`VoiceProfile` or `None`; services override it.
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### *class* voxy.base.VoiceInfo(voice_id, name, backend, description='', labels=None)
+
+Bases: `object`
+
+A voice a backend offers (stock, designed, or cloned).
 
 ### *class* voxy.base.VoiceProfile(segment, speaker_id, model_type, sample_rate, metadata=None)
 
@@ -371,6 +539,22 @@ Transcribe audio to text using Whisper.
   Transcribed text
 * **Raises:**
   **ImportError** – If whisper is not installed
+
+### voxy.base.backend_aliases *: dict[str, str]* *= {'csm-1b': 'csm'}*
+
+Other names for a backend -> its registry name (one model, one profile type).
+
+### voxy.base.canonical_backend(name)
+
+The registry name of backend `name` (lowercased, aliases resolved).
+
+* **Return type:**
+  `str`
+
+```pycon
+>>> canonical_backend("ElevenLabs"), canonical_backend("CSM-1B")
+('elevenlabs', 'csm')
+```
 
 ### voxy.base.cleanup_audio(audio, sample_rate, normalize=True, remove_silence=True, silence_threshold=0.02, min_silence_duration=0.2)
 
@@ -414,7 +598,8 @@ Create a speech model of the specified type.
 
 * **Parameters:**
   * **model_type** (`str`) – A key of `speech_model_factories` (‘csm’, ‘csm-1b’,
-    ‘elevenlabs’); case-insensitive.
+    ‘elevenlabs’, ‘aix’, ‘fal’, ‘say’, or any registered); case-insensitive,
+    aliases in `backend_aliases` accepted.
   * **\*\*kwargs** – Additional model-specific parameters
 * **Return type:**
   [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
@@ -434,12 +619,51 @@ The returned model loads its (large) weights lazily, on first use:
 >>> create_speech_model("no-such-model")
 Traceback (most recent call last):
   ...
-ValueError: Unsupported model type: no-such-model (supported: csm, csm-1b, elevenlabs)
+ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say)
 ```
 
-### voxy.base.speech_model_factories *: dict[str, Callable[[...], [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'csm': <class 'voxy.base.CSMSpeechModel'>, 'csm-1b': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_elevenlabs_speech_model>}*
+### voxy.base.register_speech_model(name, factory, , overwrite=False)
 
-Backend name -> factory. Add a backend by adding an entry here.
+Register a backend (a class or `**kwargs -> SpeechModel` callable).
+
+Returns `factory`, so it also works as a class decorator via `functools.partial`.
+
+* **Return type:**
+  `Callable`[`...`, [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]
+
+```pycon
+>>> class Echo(SpeechModel):
+...     name = "echo"
+>>> _ = register_speech_model("echo", Echo)
+>>> type(create_speech_model("echo")).__name__
+'Echo'
+>>> register_speech_model("echo", Echo)
+Traceback (most recent call last):
+  ...
+ValueError: A speech backend named 'echo' is already registered (pass overwrite=True)
+>>> del speech_model_factories["echo"]
+```
+
+### voxy.base.speech_model_factories *: dict[str, Callable[[...], [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>}*
+
+Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
+
+### voxy.base.tensor_to_wav_bytes(audio, sample_rate)
+
+Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
+
+Integer tensors are taken as PCM and scaled to [-1, 1] first.
+
+* **Return type:**
+  `bytes`
+
+```pycon
+>>> data = tensor_to_wav_bytes(torch.zeros(160), 16000)
+>>> data[:4], len(data)
+(b'RIFF', 364)
+>>> tensor_to_wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]
+b'\xff\x7f'
+```
 
 
 # _autosummary/voxy.elevenlabs_model.html.md
@@ -476,8 +700,9 @@ the voice’s owner (or their guardian) to do so.
 
 ### Classes
 
-| [`ElevenLabsSpeechModel`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.ElevenLabsSpeechModel)(\*[, api_key, ...])   | Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).   |
-|----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`ElevenLabsSpeechModel`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.ElevenLabsSpeechModel)(\*[, api_key, ...])     | Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).   |
+|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview)(generated_voice_id, audio) | One candidate voice from `design_voice_previews`: listen, then pick.       |
 
 ### *class* voxy.elevenlabs_model.ElevenLabsSpeechModel(, api_key=None, model_id='eleven_multilingual_v2', output_format='pcm_24000', client_factory=None, device='cpu')
 
@@ -537,6 +762,33 @@ Delete a voice from the ElevenLabs account.
 * **Return type:**
   `None`
 
+#### design_voice(description, , preview=None, name=None, labels=None, speaker_id=999, \*\*preview_kwargs)
+
+Create a voice from a text `description` and return its profile.
+
+* **Parameters:**
+  * **description** (`str`) – What the voice sounds like (age, accent, tone, pace…).
+  * **preview** ([`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview) | `str` | `None`) – The chosen preview (or its `generated_voice_id`) from
+    `design_voice_previews`. If omitted, previews are generated
+    and the first is used.
+  * **name** (`str` | `None`) – Voice name in ElevenLabs (default `voxy-<speaker_id>`).
+  * **labels** (`Mapping`[`str`, `str`] | `None`) – Voice labels (language, accent, gender, age…).
+  * **\*\*preview_kwargs** – Passed to `design_voice_previews` when
+    `preview` is omitted.
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+#### design_voice_previews(description, , text=None, model_id='eleven_multilingual_ttv_v2', seed=None, guidance_scale=None, loudness=None, \*\*design_kwargs)
+
+Candidate voices for a text `description` (ElevenLabs Voice Design).
+
+`text` (100-1000 characters) is what the previews say; without it
+ElevenLabs writes a fitting line. Nothing is added to the account until
+one preview is passed to `design_voice`.
+
+* **Return type:**
+  `list`[[`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview)]
+
 #### generate_speech(text, voice_profile=None, output_path=None, max_length_ms=10000, \*\*kwargs)
 
 Synthesize `text` in a cloned (or stock) ElevenLabs voice.
@@ -555,9 +807,28 @@ Synthesize `text` in a cloned (or stock) ElevenLabs voice.
   A mono float tensor at the output format’s sample rate (that is
   `self.sample_rate` unless `output_format=` is passed here).
 
+#### list_voices(, search=None, voice_type=None, page_size=100)
+
+Voices in the account and its library (`voice_type`: e.g. ‘default’,
+‘personal’, ‘cloned’, ‘generated’).
+
+* **Return type:**
+  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+#### name *: str* *= 'elevenlabs'*
+
+Registry name of the backend (also each profile’s `model_type`).
+
 #### *property* sample_rate *: int*
 
 Sample rate of the audio `generate_speech` returns.
+
+#### synthesize(text, voice=None, , output_format='mp3_44100_128', \*\*kwargs)
+
+Encoded speech (mp3 by default) in `voice` (a profile or voice id).
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
 #### synthesize_bytes(text, voice_profile, , model_id=None, output_format=None, \*\*convert_kwargs)
 
@@ -582,6 +853,12 @@ A profile for an existing ElevenLabs voice (a past clone, or a stock voice).
 'abc123'
 ```
 
+### *class* voxy.elevenlabs_model.VoiceDesignPreview(generated_voice_id, audio, text='', duration_s=None)
+
+Bases: `object`
+
+One candidate voice from `design_voice_previews`: listen, then pick.
+
 ### voxy.elevenlabs_model.default_elevenlabs_client_factory(api_key)
 
 Build the official SDK client (imported lazily).
@@ -601,19 +878,205 @@ True
 ```
 
 
+# _autosummary/voxy.facade.html.md
+
+# voxy.facade
+
+Voice generation in one call, whatever the service behind it.
+
+```pycon
+>>> import voxy
+>>> voxy.text_to_speech("Hello!", voice="cora").save("hi.mp3")
+>>> voxy.text_to_speech("Hello!", voice="Daniel", backend="say")
+>>> voxy.list_voices()               # the library: our named voices
+>>> voxy.list_voices("elevenlabs")   # a backend's own voices
+>>> voxy.voice_id("coco")            # 'rcrK...' (aliases work)
+```
+
+How `voice` is understood, first match wins:
+
+1. a `VoiceProfile`: used as is, on its own backend;
+2. a name or alias in the voice library (`voxy.voices_store()`): that voice’s
+   saved profile for `backend` (or, if `backend` is not given, its first one);
+3. anything else: the backend’s own voice id or name (e.g. ‘nova’, ‘Daniel’);
+4. `None`: the backend’s default voice, if it has one.
+
+Pass `use_library=False` to reach a backend voice whose name is also a library
+name or alias. With no `backend`, a library voice uses its profile for the
+default backend if it has one, else its `default_backend`, else its first.
+
+Backends are entries of `voxy.speech_model_factories`; add one with
+`voxy.register_speech_model`. The default backend is `$VOXY_TTS_BACKEND`
+(read at call time), else ‘elevenlabs’.
+
+### Functions
+
+| [`clear_speech_models`](_autosummary/voxy.facade.html.md#voxy.facade.clear_speech_models)([models])                    | Forget cached models (e.g. after changing keys or settings).                    |
+|---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
+| [`dflt_tts_backend`](_autosummary/voxy.facade.html.md#voxy.facade.dflt_tts_backend)()                               | `$VOXY_TTS_BACKEND`, else 'elevenlabs' (read on every call).                    |
+| [`get_speech_model`](_autosummary/voxy.facade.html.md#voxy.facade.get_speech_model)([backend, models])              | The (cached) model for `backend`; `models` replaces the shared cache.           |
+| [`list_voices`](_autosummary/voxy.facade.html.md#voxy.facade.list_voices)([backend, voices, model, models])    | Our named voices (`backend=None`), or the voices a backend offers.              |
+| [`resolve_voice`](_autosummary/voxy.facade.html.md#voxy.facade.resolve_voice)(voice, \*[, backend, voices, ...]) | `(backend, voice)` to synthesize with (see the module docstring for the rules). |
+| [`text_to_speech`](_autosummary/voxy.facade.html.md#voxy.facade.text_to_speech)(text[, voice, backend, ...])      | Speak `text` in `voice` and return the encoded audio (`.save(path)`).           |
+| [`voice_id`](_autosummary/voxy.facade.html.md#voxy.facade.voice_id)(name, \*[, backend, voices])            | The provider's id for library voice `name` (for code that calls a provider).    |
+
+### voxy.facade.clear_speech_models(models=None)
+
+Forget cached models (e.g. after changing keys or settings).
+
+* **Return type:**
+  `None`
+
+### voxy.facade.dflt_tts_backend()
+
+`$VOXY_TTS_BACKEND`, else ‘elevenlabs’ (read on every call).
+
+* **Return type:**
+  `str`
+
+### voxy.facade.get_speech_model(backend=None, , models=None)
+
+The (cached) model for `backend`; `models` replaces the shared cache.
+
+* **Return type:**
+  [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
+
+### voxy.facade.list_voices(backend=None, , voices=None, model=None, models=None, \*\*kwargs)
+
+Our named voices (`backend=None`), or the voices a backend offers.
+
+* **Return type:**
+  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+```pycon
+>>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "description": "d",
+...                 "profiles": {"elevenlabs": {"segment": "v1"}}}}
+>>> [(v.name, v.labels["backends"]) for v in list_voices(voices=lib)]
+[('cora', ['elevenlabs'])]
+```
+
+### voxy.facade.resolve_voice(voice, , backend=None, voices=None, use_library=True)
+
+`(backend, voice)` to synthesize with (see the module docstring for the rules).
+
+* **Return type:**
+  `tuple`[`str`, [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | `str` | `None`]
+
+```pycon
+>>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "profiles": {
+...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",
+...                    "sample_rate": 24000}}}}
+>>> b, v = resolve_voice("coco", voices=lib)
+>>> b, v.segment
+('elevenlabs', 'v1')
+>>> resolve_voice("Daniel", backend="say", voices=lib)
+('say', 'Daniel')
+```
+
+### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
+
+Speak `text` in `voice` and return the encoded audio (`.save(path)`).
+
+* **Parameters:**
+  * **text** (`str`) – What to say.
+  * **voice** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | `str` | `None`) – A library name or alias (‘cora’, ‘Coco’), a backend’s own voice
+    (‘nova’, ‘Daniel’, an ElevenLabs id), a `VoiceProfile`, or None.
+  * **backend** (`str` | `None`) – Service to use (‘elevenlabs’, ‘say’, ‘aix’, ‘fal’, ‘csm’, or
+    any registered). Inferred from library voices.
+  * **output_path** (`str` | `None`) – Also save the audio there.
+  * **voices** (`Mapping` | `None`) – Voice library store (default `voxy.voices_store()`).
+  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | `None`) – A ready model to use (its backend is then the backend).
+  * **models** (`MutableMapping` | `None`) – Model cache to use instead of the shared one.
+  * **use_library** (`bool`) – Look `voice` up in the library first (False: always
+    the backend’s own voice of that name).
+  * **\*\*kwargs** – Backend-specific options (e.g. `output_format=` for
+    ElevenLabs, `speed=` for aix, `quality=` for fal).
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### voxy.facade.voice_id(name, , backend='elevenlabs', voices=None)
+
+The provider’s id for library voice `name` (for code that calls a provider).
+
+* **Return type:**
+  `str`
+
+```pycon
+>>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "profiles": {
+...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",
+...                    "sample_rate": 24000}}}}
+>>> voice_id("Coco", voices=lib)
+'v1'
+```
+
+
+# _autosummary/voxy.fal_model.html.md
+
+# voxy.fal_model
+
+Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.
+
+falaw picks a model for `quality` (‘fast’, ‘balanced’, ‘best’…) unless
+`model_id` is given; `voice` means whatever that model calls a voice. falaw is
+imported lazily (`pip install 'voxy[fal]'`).
+
+```pycon
+>>> FalSpeechModel(tts=lambda text, **kw: None, fetch=lambda url: b"").name
+'fal'
+```
+
+### Classes
+
+| [`FalSpeechModel`](_autosummary/voxy.fal_model.html.md#voxy.fal_model.FalSpeechModel)(\*[, quality, model_id, tts, ...])   | fal.ai text-to-speech (through falaw) as a voxy backend.   |
+|------------------------------------------------------------------------------------------------------|------------------------------------------------------------|
+
+### *class* voxy.fal_model.FalSpeechModel(, quality='balanced', model_id=None, tts=None, fetch=None)
+
+Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
+
+fal.ai text-to-speech (through falaw) as a voxy backend.
+
+* **Parameters:**
+  * **quality** (`str`) – falaw quality tier used to pick a model.
+  * **model_id** (`str` | `None`) – A specific fal model (overrides `quality`).
+  * **tts** (`Callable` | `None`) – `(text, **kw) -> falaw.Result` (tests inject a fake).
+  * **fetch** (`Callable`[[`str`], `bytes`] | `None`) – `url -> bytes` to download the result.
+
+#### name *: str* *= 'fal'*
+
+Registry name of the backend (also each profile’s `model_type`).
+
+#### synthesize(text, voice=None, \*\*kwargs)
+
+Speech from fal; other keyword arguments go to the model (falaw’s `extra`).
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+
 # _autosummary/voxy.html.md
 
 # voxy
 
-Facade for voice cloning and speech synthesis
+Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
+
+```pycon
+>>> import voxy
+>>> {'elevenlabs', 'say', 'aix', 'fal', 'csm'} <= set(voxy.speech_model_factories)
+True
+```
 
 ### Modules
 
-| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                         | Voxy: A flexible speech synthesis and voice cloning module.                       |
-|------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model) | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API. |
-| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                   | A persistent voice library: clone a voice once, then use it by name.              |
-| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                     | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.   |
+| [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)               | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.   |
+|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                         | Voxy: A flexible speech synthesis and voice cloning module.                                 |
+| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model) | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.           |
+| [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                     | Voice generation in one call, whatever the service behind it.                               |
+| [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)               | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.           |
+| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                   | A persistent voice library: clone a voice once, then use it by name.                        |
+| [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)               | Local speech with the macOS `say` command: free, offline, no API key, no deps.              |
+| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                     | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.             |
 
 
 # _autosummary/voxy.library.html.md
@@ -645,13 +1108,16 @@ saved; a local model’s in-memory segment (CSM) cannot.
 
 ### Functions
 
-| [`clone_from_samples`](_autosummary/voxy.library.html.md#voxy.library.clone_from_samples)(name, \*[, model, ...])   | Clone the voice `name` from its stored samples and save the profile.                 |
-|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| [`load_voice`](_autosummary/voxy.library.html.md#voxy.library.load_voice)(name, \*[, model_type, voices])   | The saved `model_type` profile of the voice called `name`.                           |
-| [`profile_to_dict`](_autosummary/voxy.library.html.md#voxy.library.profile_to_dict)(profile)                     | A JSON-ready dict of `profile`; refuses segments that aren't plain data.             |
-| [`save_voice`](_autosummary/voxy.library.html.md#voxy.library.save_voice)(name, profile, \*[, voices])      | Save `profile` under `name` (merged into any existing record) and return the record. |
+| [`clone_from_samples`](_autosummary/voxy.library.html.md#voxy.library.clone_from_samples)(name, \*[, model, ...])        | Clone the voice `name` from its stored samples and save the profile.                 |
+|----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
+| [`design_from_description`](_autosummary/voxy.library.html.md#voxy.library.design_from_description)(name, description, \*)    | Design a new voice from a text `description` and save it as `name`.                  |
+| [`find_voice`](_autosummary/voxy.library.html.md#voxy.library.find_voice)(name, \*[, voices])                    | The library key of the voice called `name` (case-insensitive, aliases too).          |
+| [`load_voice`](_autosummary/voxy.library.html.md#voxy.library.load_voice)(name, \*[, model_type, voices])        | The saved `model_type` profile of the voice called `name` (or an alias).             |
+| [`profile_from_record`](_autosummary/voxy.library.html.md#voxy.library.profile_from_record)(record[, model_type, prefer]) | The record's saved `model_type` profile.                                             |
+| [`profile_to_dict`](_autosummary/voxy.library.html.md#voxy.library.profile_to_dict)(profile)                          | A JSON-ready dict of `profile`; refuses segments that aren't plain data.             |
+| [`save_voice`](_autosummary/voxy.library.html.md#voxy.library.save_voice)(name, profile, \*[, voices])           | Save `profile` under `name` (merged into any existing record) and return the record. |
 
-### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, \*\*clone_kwargs)
+### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, overwrite=False, \*\*clone_kwargs)
 
 Clone the voice `name` from its stored samples and save the profile.
 
@@ -663,14 +1129,58 @@ Clone the voice `name` from its stored samples and save the profile.
     its top-level audio files are uploaded.
   * **voices** (`MutableMapping` | `None`) – Voice records store; defaults to `voices_store()`.
   * **record_fields** (`Mapping`[`str`, `Any`] | `None`) – Extra fields for the voice record (aliases, consent…).
+  * **overwrite** (`bool`) – Replace an existing profile of this backend for `name`
+    (otherwise refused before anything is uploaded).
   * **\*\*clone_kwargs** (`Any`) – Passed to `model.clone_voice` (e.g. `labels=`,
     `remove_background_noise=`). `name=` defaults to `name`.
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
 
+### voxy.library.design_from_description(name, description, , preview=None, model=None, model_type='elevenlabs', voices=None, record_fields=None, overwrite=False, \*\*design_kwargs)
+
+Design a new voice from a text `description` and save it as `name`.
+
+* **Parameters:**
+  * **name** (`str`) – Library name for the voice.
+  * **description** (`str`) – What it sounds like (age, accent, tone, pace, character).
+  * **preview** – The chosen preview (or its id) from the model’s
+    `design_voice_previews`; if omitted, the first generated one.
+  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | `None`) – A speech model that can design voices (default: `model_type`’s).
+  * **record_fields** (`Mapping`[`str`, `Any`] | `None`) – Extra fields for the voice record (aliases…).
+  * **overwrite** (`bool`) – Replace an existing profile of this backend for `name`
+    (otherwise refused before any paid call).
+  * **\*\*design_kwargs** (`Any`) – Passed to `model.design_voice` (`labels=`, `seed=`…).
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+### voxy.library.find_voice(name, , voices=None)
+
+The library key of the voice called `name` (case-insensitive, aliases too).
+
+* **Return type:**
+  `str` | `None`
+
+```pycon
+>>> lib = {"cora": {"aliases": ["Cora", "Coco"]}, "vanessa": {"aliases": ["Ness"]}}
+>>> find_voice("coco", voices=lib), find_voice("Vanessa", voices=lib), find_voice("x", voices=lib)
+('cora', 'vanessa', None)
+```
+
 ### voxy.library.load_voice(name, , model_type='elevenlabs', voices=None)
 
-The saved `model_type` profile of the voice called `name`.
+The saved `model_type` profile of the voice called `name` (or an alias).
+
+`model_type=None` takes the voice’s first saved profile.
+
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+### voxy.library.profile_from_record(record, model_type=None, , prefer=None)
+
+The record’s saved `model_type` profile.
+
+With `model_type=None`: the `prefer` profile if the record has one, else
+the record’s `default_backend`, else its first.
 
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
@@ -687,10 +1197,77 @@ A JSON-ready dict of `profile`; refuses segments that aren’t plain data.
 Save `profile` under `name` (merged into any existing record) and return the record.
 
 `record_fields` (e.g. `aliases=`, `description=`, `consent=`) are set on
-the record itself.
+the record itself. Aliases must not already name another voice.
 
 * **Return type:**
   `dict`
+
+
+# _autosummary/voxy.say_model.html.md
+
+# voxy.say_model
+
+Local speech with the macOS `say` command: free, offline, no API key, no deps.
+
+Good for previews and drafts before spending credits on a cloud voice. Voices are
+the system’s (`say -v '?'`): e.g. “Samantha”, “Daniel”, “Karen”.
+
+```pycon
+>>> SaySpeechModel(run=lambda *a, **k: None).dflt_voice
+'Samantha'
+```
+
+### Functions
+
+| [`parse_say_voices`](_autosummary/voxy.say_model.html.md#voxy.say_model.parse_say_voices)(listing)   | Parse `say -v '?'` output.   |
+|------------------------------------------------------------------------------|------------------------------|
+
+### Classes
+
+| [`SaySpeechModel`](_autosummary/voxy.say_model.html.md#voxy.say_model.SaySpeechModel)(\*[, voice, sample_rate, run])   | macOS `say` as a voxy backend.   |
+|--------------------------------------------------------------------------------------------------|----------------------------------|
+
+### *class* voxy.say_model.SaySpeechModel(, voice='Samantha', sample_rate=22050, run=None)
+
+Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
+
+macOS `say` as a voxy backend.
+
+* **Parameters:**
+  * **voice** (`str`) – Default system voice.
+  * **sample_rate** (`int`) – Output WAV sample rate.
+  * **run** (`Callable` | `None`) – `subprocess.run`-like callable (tests inject a fake).
+
+#### list_voices()
+
+The voices this backend offers.
+
+* **Return type:**
+  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+#### name *: str* *= 'say'*
+
+Registry name of the backend (also each profile’s `model_type`).
+
+#### synthesize(text, voice=None, \*\*kwargs)
+
+WAV speech from `say` (`voice`: a system voice name or profile).
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### voxy.say_model.parse_say_voices(listing)
+
+Parse `say -v '?'` output.
+
+* **Return type:**
+  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+```pycon
+>>> [v.name for v in parse_say_voices("Albert              en_US    # Hello!\n"
+...                                     "Eddy (English (US)) en_US    # Hi!\n")]
+['Albert', 'Eddy (English (US))']
+```
 
 
 # _autosummary/voxy.stores.html.md
@@ -806,18 +1383,18 @@ The data root: `$VOXY_DATA_DIR` if set, else the platform’s app-data folder.
 
 # About this build
 
-This documentation was built on **2026-10-01 08:31 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/67b416be825983003cd117332ae68a23f57e6cde"><code>67b416b</code></a> on branch <code>main</code>, for **voxy 0.0.5** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-01 09:48 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/e6f5701397ad2c6cda14dbf9fa64f6502353e741"><code>e6f5701</code></a> on branch <code>main</code>, for **voxy 0.0.6** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.5) is behind the latest release on PyPI (0.0.6): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.6) is behind the latest release on PyPI (0.0.7): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/67b416be825983003cd117332ae68a23f57e6cde"><code>67b416be825983003cd117332ae68a23f57e6cde</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/e6f5701397ad2c6cda14dbf9fa64f6502353e741"><code>e6f5701397ad2c6cda14dbf9fa64f6502353e741</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -828,9 +1405,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/36836436290">36836436290</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/36844740220">36844740220</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>67b416be825983003cd117332ae68a23f57e6cde</code> (in the history of the built commit) |
+| Event commit | <code>e6f5701397ad2c6cda14dbf9fa64f6502353e741</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -855,13 +1432,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.6/">0.0.6</a>, newer than the documented version (0.0.5).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.7/">0.0.7</a>, newer than the documented version (0.0.6).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 67b416be825983003cd117332ae68a23f57e6cde
+git checkout e6f5701397ad2c6cda14dbf9fa64f6502353e741
 pip install "epythet==0.2.12"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
@@ -885,7 +1462,7 @@ Skills are folders holding a `SKILL.md` (the [Agent Skills](https://agentskills.
 
 ### `voxy`
 
-Clone a voice and synthesize speech with the voxy facade, and keep the voice and its audio in voxy’s data store. Use when asked to clone someone’s voice, make a voice model, speak text in a cloned voice, reuse a voice made earlier, or prepare audio samples for a clone; and whenever deciding where voice samples, source media or voice ids should be saved. Triggers on “clone a voice”, “voice clone”, “ElevenLabs voice”, “make a voice model of”, “say this in X’s voice”, “voxy”.
+Read first whenever spoken voice must be generated - “use voice X to…”, “use a cloned voice for…”, “have X narrate…”, “say/read this in X’s voice”, voice-over, dubbing, giving characters voices, text-to-speech, which voices we have, cloning or designing a voice - and when making a video, animation, podcast or demo where a character or narrator speaks. voxy is the fleet’s voice-generation facade; never call a TTS SDK directly.
 
 ```bash
 gh skill install thorwhalen/voxy voxy --agent claude-code
@@ -915,7 +1492,7 @@ This site publishes the same documentation in forms that fit an agent’s contex
 
 # API reference
 
-| [`voxy`](_autosummary/voxy.html.md#module-voxy)   | Facade for voice cloning and speech synthesis   |
-|---------------------------------------------------------------------|-------------------------------------------------|
+| [`voxy`](_autosummary/voxy.html.md#module-voxy)   | Facade for voice generation: speech synthesis in any voice, cloning and designing voices.   |
+|---------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
 
 

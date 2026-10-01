@@ -9,7 +9,10 @@ voxy.library
    .. autosummary::
    
       clone_from_samples
+      design_from_description
+      find_voice
       load_voice
+      profile_from_record
       profile_to_dict
       save_voice
    

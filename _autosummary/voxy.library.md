@@ -25,13 +25,16 @@ saved; a local model’s in-memory segment (CSM) cannot.
 
 ### Functions
 
-| [`clone_from_samples`](#voxy.library.clone_from_samples)(name, \*[, model, ...])   | Clone the voice `name` from its stored samples and save the profile.                 |
-|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| [`load_voice`](#voxy.library.load_voice)(name, \*[, model_type, voices])   | The saved `model_type` profile of the voice called `name`.                           |
-| [`profile_to_dict`](#voxy.library.profile_to_dict)(profile)                     | A JSON-ready dict of `profile`; refuses segments that aren't plain data.             |
-| [`save_voice`](#voxy.library.save_voice)(name, profile, \*[, voices])      | Save `profile` under `name` (merged into any existing record) and return the record. |
+| [`clone_from_samples`](#voxy.library.clone_from_samples)(name, \*[, model, ...])        | Clone the voice `name` from its stored samples and save the profile.                 |
+|----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
+| [`design_from_description`](#voxy.library.design_from_description)(name, description, \*)    | Design a new voice from a text `description` and save it as `name`.                  |
+| [`find_voice`](#voxy.library.find_voice)(name, \*[, voices])                    | The library key of the voice called `name` (case-insensitive, aliases too).          |
+| [`load_voice`](#voxy.library.load_voice)(name, \*[, model_type, voices])        | The saved `model_type` profile of the voice called `name` (or an alias).             |
+| [`profile_from_record`](#voxy.library.profile_from_record)(record[, model_type, prefer]) | The record's saved `model_type` profile.                                             |
+| [`profile_to_dict`](#voxy.library.profile_to_dict)(profile)                          | A JSON-ready dict of `profile`; refuses segments that aren't plain data.             |
+| [`save_voice`](#voxy.library.save_voice)(name, profile, \*[, voices])           | Save `profile` under `name` (merged into any existing record) and return the record. |
 
-### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, \*\*clone_kwargs)
+### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, overwrite=False, \*\*clone_kwargs)
 
 Clone the voice `name` from its stored samples and save the profile.
 
@@ -43,14 +46,58 @@ Clone the voice `name` from its stored samples and save the profile.
     its top-level audio files are uploaded.
   * **voices** (`MutableMapping` | `None`) – Voice records store; defaults to `voices_store()`.
   * **record_fields** (`Mapping`[`str`, `Any`] | `None`) – Extra fields for the voice record (aliases, consent…).
+  * **overwrite** (`bool`) – Replace an existing profile of this backend for `name`
+    (otherwise refused before anything is uploaded).
   * **\*\*clone_kwargs** (`Any`) – Passed to `model.clone_voice` (e.g. `labels=`,
     `remove_background_noise=`). `name=` defaults to `name`.
 * **Return type:**
   [`VoiceProfile`](voxy.base.md#voxy.base.VoiceProfile)
 
+### voxy.library.design_from_description(name, description, , preview=None, model=None, model_type='elevenlabs', voices=None, record_fields=None, overwrite=False, \*\*design_kwargs)
+
+Design a new voice from a text `description` and save it as `name`.
+
+* **Parameters:**
+  * **name** (`str`) – Library name for the voice.
+  * **description** (`str`) – What it sounds like (age, accent, tone, pace, character).
+  * **preview** – The chosen preview (or its id) from the model’s
+    `design_voice_previews`; if omitted, the first generated one.
+  * **model** ([`SpeechModel`](voxy.base.md#voxy.base.SpeechModel) | `None`) – A speech model that can design voices (default: `model_type`’s).
+  * **record_fields** (`Mapping`[`str`, `Any`] | `None`) – Extra fields for the voice record (aliases…).
+  * **overwrite** (`bool`) – Replace an existing profile of this backend for `name`
+    (otherwise refused before any paid call).
+  * **\*\*design_kwargs** (`Any`) – Passed to `model.design_voice` (`labels=`, `seed=`…).
+* **Return type:**
+  [`VoiceProfile`](voxy.base.md#voxy.base.VoiceProfile)
+
+### voxy.library.find_voice(name, , voices=None)
+
+The library key of the voice called `name` (case-insensitive, aliases too).
+
+* **Return type:**
+  `str` | `None`
+
+```pycon
+>>> lib = {"cora": {"aliases": ["Cora", "Coco"]}, "vanessa": {"aliases": ["Ness"]}}
+>>> find_voice("coco", voices=lib), find_voice("Vanessa", voices=lib), find_voice("x", voices=lib)
+('cora', 'vanessa', None)
+```
+
 ### voxy.library.load_voice(name, , model_type='elevenlabs', voices=None)
 
-The saved `model_type` profile of the voice called `name`.
+The saved `model_type` profile of the voice called `name` (or an alias).
+
+`model_type=None` takes the voice’s first saved profile.
+
+* **Return type:**
+  [`VoiceProfile`](voxy.base.md#voxy.base.VoiceProfile)
+
+### voxy.library.profile_from_record(record, model_type=None, , prefer=None)
+
+The record’s saved `model_type` profile.
+
+With `model_type=None`: the `prefer` profile if the record has one, else
+the record’s `default_backend`, else its first.
 
 * **Return type:**
   [`VoiceProfile`](voxy.base.md#voxy.base.VoiceProfile)
@@ -67,7 +114,7 @@ A JSON-ready dict of `profile`; refuses segments that aren’t plain data.
 Save `profile` under `name` (merged into any existing record) and return the record.
 
 `record_fields` (e.g. `aliases=`, `description=`, `consent=`) are set on
-the record itself.
+the record itself. Aliases must not already name another voice.
 
 * **Return type:**
   `dict`

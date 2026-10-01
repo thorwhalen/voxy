@@ -12,7 +12,7 @@ Skills are folders holding a `SKILL.md` (the [Agent Skills](https://agentskills.
 
 ### `voxy`
 
-Clone a voice and synthesize speech with the voxy facade, and keep the voice and its audio in voxy’s data store. Use when asked to clone someone’s voice, make a voice model, speak text in a cloned voice, reuse a voice made earlier, or prepare audio samples for a clone; and whenever deciding where voice samples, source media or voice ids should be saved. Triggers on “clone a voice”, “voice clone”, “ElevenLabs voice”, “make a voice model of”, “say this in X’s voice”, “voxy”.
+Read first whenever spoken voice must be generated - “use voice X to…”, “use a cloned voice for…”, “have X narrate…”, “say/read this in X’s voice”, voice-over, dubbing, giving characters voices, text-to-speech, which voices we have, cloning or designing a voice - and when making a video, animation, podcast or demo where a character or narrator speaks. voxy is the fleet’s voice-generation facade; never call a TTS SDK directly.
 
 ```bash
 gh skill install thorwhalen/voxy voxy --agent claude-code

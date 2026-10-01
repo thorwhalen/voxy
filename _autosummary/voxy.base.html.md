@@ -7,21 +7,27 @@ models, with initial support for the CSM-1B model.
 
 ### Module Attributes
 
-| [`speech_model_factories`](#voxy.base.speech_model_factories)   | Backend name -> factory.   |
-|---------------------------------------------------------------------------|----------------------------|
+| [`speech_model_factories`](#voxy.base.speech_model_factories)   | Backend name -> factory (keys lowercase).                                     |
+|---------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`backend_aliases`](#voxy.base.backend_aliases)          | Other names for a backend -> its registry name (one model, one profile type). |
 
 ### Functions
 
-| [`audio_to_text`](#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                    |
-|--------------------------------------------------------------------------------------------------|------------------------------------------------------------|
-| [`cleanup_audio`](#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence. |
-| [`create_speech_model`](#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.               |
+| [`audio_to_text`](#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                |
+|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| [`canonical_backend`](#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).    |
+| [`cleanup_audio`](#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.             |
+| [`create_speech_model`](#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                           |
+| [`register_speech_model`](#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).    |
+| [`tensor_to_wav_bytes`](#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV. |
 
 ### Classes
 
 | [`CSMSpeechModel`](#voxy.base.CSMSpeechModel)([model_path, device])          | Speech model implementation using Sesame's CSM-1B model.   |
 |------------------------------------------------------------------------------------------------|------------------------------------------------------------|
-| [`SpeechModel`](#voxy.base.SpeechModel)([device])                         | Base class for speech synthesis models.                    |
+| [`Speech`](#voxy.base.Speech)(audio, format[, backend, voice, ...])  | Synthesized speech: encoded audio plus what produced it.   |
+| [`SpeechModel`](#voxy.base.SpeechModel)([device])                         | Base class for speech backends (local models or services). |
+| [`VoiceInfo`](#voxy.base.VoiceInfo)(voice_id, name, backend[, ...])     | A voice a backend offers (stock, designed, or cloned).     |
 | [`VoiceProfile`](#voxy.base.VoiceProfile)(segment, speaker_id, ...[, ...]) | Data class to store voice cloning information.             |
 
 ### *class* voxy.base.CSMSpeechModel(model_path=None, device='cpu')
@@ -60,11 +66,50 @@ Generate speech using a voice profile.
 * **Returns:**
   Generated audio tensor
 
+#### name *: str* *= 'csm'*
+
+Registry name of the backend (also each profile’s `model_type`).
+
+#### *property* sample_rate *: int*
+
+Sample rate of the generated audio (loads the model).
+
+### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None)
+
+Bases: `object`
+
+Synthesized speech: encoded audio plus what produced it.
+
+```pycon
+>>> import tempfile, os
+>>> speech = Speech(b"RIFF...", format="wav", backend="say", voice="Daniel")
+>>> path = speech.save(os.path.join(tempfile.mkdtemp(), "hi.wav"))
+>>> open(path, "rb").read()[:4]
+b'RIFF'
+```
+
+#### save(path)
+
+Write the audio to `path` (folders created) and return the path.
+
+* **Return type:**
+  `str`
+
 ### *class* voxy.base.SpeechModel(device='cpu')
 
 Bases: `object`
 
-Base class for speech synthesis models.
+Base class for speech backends (local models or services).
+
+A backend implements whichever capabilities it has; the rest raise
+`NotImplementedError` naming the backend:
+
+- `synthesize(text, voice) -> Speech`: the facade’s one required method
+  (the default renders `generate_speech` to WAV);
+- `list_voices() -> list[VoiceInfo]`;
+- `clone_voice(samples, ...) -> VoiceProfile`;
+- `design_voice(description, ...) -> VoiceProfile`;
+- `generate_speech(text, profile) -> torch.Tensor`.
 
 #### clone_voice(audio_input, transcript=None, speaker_id=999, \*, cleanup_audio_fn=<function cleanup_audio>)
 
@@ -80,6 +125,20 @@ Create a voice profile from an audio sample and its transcript.
 * **Return type:**
   [`VoiceProfile`](#voxy.base.VoiceProfile)
 
+#### design_voice(description, \*\*kwargs)
+
+Create a new voice from a text description.
+
+* **Return type:**
+  [`VoiceProfile`](#voxy.base.VoiceProfile)
+
+#### dflt_voice *: str | None* *= None*
+
+the caller must).
+
+* **Type:**
+  Voice used when the caller names none (`None`
+
 #### generate_speech(text, voice_profile=None, output_path=None, max_length_ms=10000, \*\*kwargs)
 
 Generate speech using a voice profile.
@@ -94,6 +153,33 @@ Generate speech using a voice profile.
   `Tensor`
 * **Returns:**
   Generated audio tensor
+
+#### list_voices()
+
+The voices this backend offers.
+
+* **Return type:**
+  `list`[[`VoiceInfo`](#voxy.base.VoiceInfo)]
+
+#### name *: str* *= ''*
+
+Registry name of the backend (also each profile’s `model_type`).
+
+#### synthesize(text, voice=None, \*\*kwargs)
+
+Render `text` in `voice` and return encoded audio.
+
+This default (for tensor-producing models such as CSM) needs a
+`VoiceProfile` or `None`; services override it.
+
+* **Return type:**
+  [`Speech`](#voxy.base.Speech)
+
+### *class* voxy.base.VoiceInfo(voice_id, name, backend, description='', labels=None)
+
+Bases: `object`
+
+A voice a backend offers (stock, designed, or cloned).
 
 ### *class* voxy.base.VoiceProfile(segment, speaker_id, model_type, sample_rate, metadata=None)
 
@@ -118,6 +204,22 @@ Transcribe audio to text using Whisper.
   Transcribed text
 * **Raises:**
   **ImportError** – If whisper is not installed
+
+### voxy.base.backend_aliases *: dict[str, str]* *= {'csm-1b': 'csm'}*
+
+Other names for a backend -> its registry name (one model, one profile type).
+
+### voxy.base.canonical_backend(name)
+
+The registry name of backend `name` (lowercased, aliases resolved).
+
+* **Return type:**
+  `str`
+
+```pycon
+>>> canonical_backend("ElevenLabs"), canonical_backend("CSM-1B")
+('elevenlabs', 'csm')
+```
 
 ### voxy.base.cleanup_audio(audio, sample_rate, normalize=True, remove_silence=True, silence_threshold=0.02, min_silence_duration=0.2)
 
@@ -161,7 +263,8 @@ Create a speech model of the specified type.
 
 * **Parameters:**
   * **model_type** (`str`) – A key of `speech_model_factories` (‘csm’, ‘csm-1b’,
-    ‘elevenlabs’); case-insensitive.
+    ‘elevenlabs’, ‘aix’, ‘fal’, ‘say’, or any registered); case-insensitive,
+    aliases in `backend_aliases` accepted.
   * **\*\*kwargs** – Additional model-specific parameters
 * **Return type:**
   [`SpeechModel`](#voxy.base.SpeechModel)
@@ -181,9 +284,48 @@ The returned model loads its (large) weights lazily, on first use:
 >>> create_speech_model("no-such-model")
 Traceback (most recent call last):
   ...
-ValueError: Unsupported model type: no-such-model (supported: csm, csm-1b, elevenlabs)
+ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say)
 ```
 
-### voxy.base.speech_model_factories *: dict[str, Callable[[...], [SpeechModel](#voxy.base.SpeechModel)]]* *= {'csm': <class 'voxy.base.CSMSpeechModel'>, 'csm-1b': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_elevenlabs_speech_model>}*
+### voxy.base.register_speech_model(name, factory, , overwrite=False)
 
-Backend name -> factory. Add a backend by adding an entry here.
+Register a backend (a class or `**kwargs -> SpeechModel` callable).
+
+Returns `factory`, so it also works as a class decorator via `functools.partial`.
+
+* **Return type:**
+  `Callable`[`...`, [`SpeechModel`](#voxy.base.SpeechModel)]
+
+```pycon
+>>> class Echo(SpeechModel):
+...     name = "echo"
+>>> _ = register_speech_model("echo", Echo)
+>>> type(create_speech_model("echo")).__name__
+'Echo'
+>>> register_speech_model("echo", Echo)
+Traceback (most recent call last):
+  ...
+ValueError: A speech backend named 'echo' is already registered (pass overwrite=True)
+>>> del speech_model_factories["echo"]
+```
+
+### voxy.base.speech_model_factories *: dict[str, Callable[[...], [SpeechModel](#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>}*
+
+Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
+
+### voxy.base.tensor_to_wav_bytes(audio, sample_rate)
+
+Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
+
+Integer tensors are taken as PCM and scaled to [-1, 1] first.
+
+* **Return type:**
+  `bytes`
+
+```pycon
+>>> data = tensor_to_wav_bytes(torch.zeros(160), 16000)
+>>> data[:4], len(data)
+(b'RIFF', 364)
+>>> tensor_to_wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]
+b'\xff\x7f'
+```

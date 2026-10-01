@@ -1,0 +1,18 @@
+voxy.aix\_model
+===============
+
+.. automodule:: voxy.aix_model
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      OPENAI_TTS_VOICES
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      AixSpeechModel
+   

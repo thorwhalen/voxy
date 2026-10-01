@@ -30,8 +30,9 @@ the voice’s owner (or their guardian) to do so.
 
 ### Classes
 
-| [`ElevenLabsSpeechModel`](#voxy.elevenlabs_model.ElevenLabsSpeechModel)(\*[, api_key, ...])   | Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).   |
-|----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`ElevenLabsSpeechModel`](#voxy.elevenlabs_model.ElevenLabsSpeechModel)(\*[, api_key, ...])     | Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).   |
+|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`VoiceDesignPreview`](#voxy.elevenlabs_model.VoiceDesignPreview)(generated_voice_id, audio) | One candidate voice from `design_voice_previews`: listen, then pick.       |
 
 ### *class* voxy.elevenlabs_model.ElevenLabsSpeechModel(, api_key=None, model_id='eleven_multilingual_v2', output_format='pcm_24000', client_factory=None, device='cpu')
 
@@ -91,6 +92,33 @@ Delete a voice from the ElevenLabs account.
 * **Return type:**
   `None`
 
+#### design_voice(description, , preview=None, name=None, labels=None, speaker_id=999, \*\*preview_kwargs)
+
+Create a voice from a text `description` and return its profile.
+
+* **Parameters:**
+  * **description** (`str`) – What the voice sounds like (age, accent, tone, pace…).
+  * **preview** ([`VoiceDesignPreview`](#voxy.elevenlabs_model.VoiceDesignPreview) | `str` | `None`) – The chosen preview (or its `generated_voice_id`) from
+    `design_voice_previews`. If omitted, previews are generated
+    and the first is used.
+  * **name** (`str` | `None`) – Voice name in ElevenLabs (default `voxy-<speaker_id>`).
+  * **labels** (`Mapping`[`str`, `str`] | `None`) – Voice labels (language, accent, gender, age…).
+  * **\*\*preview_kwargs** – Passed to `design_voice_previews` when
+    `preview` is omitted.
+* **Return type:**
+  [`VoiceProfile`](voxy.base.md#voxy.base.VoiceProfile)
+
+#### design_voice_previews(description, , text=None, model_id='eleven_multilingual_ttv_v2', seed=None, guidance_scale=None, loudness=None, \*\*design_kwargs)
+
+Candidate voices for a text `description` (ElevenLabs Voice Design).
+
+`text` (100-1000 characters) is what the previews say; without it
+ElevenLabs writes a fitting line. Nothing is added to the account until
+one preview is passed to `design_voice`.
+
+* **Return type:**
+  `list`[[`VoiceDesignPreview`](#voxy.elevenlabs_model.VoiceDesignPreview)]
+
 #### generate_speech(text, voice_profile=None, output_path=None, max_length_ms=10000, \*\*kwargs)
 
 Synthesize `text` in a cloned (or stock) ElevenLabs voice.
@@ -109,9 +137,28 @@ Synthesize `text` in a cloned (or stock) ElevenLabs voice.
   A mono float tensor at the output format’s sample rate (that is
   `self.sample_rate` unless `output_format=` is passed here).
 
+#### list_voices(, search=None, voice_type=None, page_size=100)
+
+Voices in the account and its library (`voice_type`: e.g. ‘default’,
+‘personal’, ‘cloned’, ‘generated’).
+
+* **Return type:**
+  `list`[[`VoiceInfo`](voxy.base.md#voxy.base.VoiceInfo)]
+
+#### name *: str* *= 'elevenlabs'*
+
+Registry name of the backend (also each profile’s `model_type`).
+
 #### *property* sample_rate *: int*
 
 Sample rate of the audio `generate_speech` returns.
+
+#### synthesize(text, voice=None, , output_format='mp3_44100_128', \*\*kwargs)
+
+Encoded speech (mp3 by default) in `voice` (a profile or voice id).
+
+* **Return type:**
+  [`Speech`](voxy.base.md#voxy.base.Speech)
 
 #### synthesize_bytes(text, voice_profile, , model_id=None, output_format=None, \*\*convert_kwargs)
 
@@ -135,6 +182,12 @@ A profile for an existing ElevenLabs voice (a past clone, or a stock voice).
 >>> model.voice_profile("abc123").segment
 'abc123'
 ```
+
+### *class* voxy.elevenlabs_model.VoiceDesignPreview(generated_voice_id, audio, text='', duration_s=None)
+
+Bases: `object`
+
+One candidate voice from `design_voice_previews`: listen, then pick.
 
 ### voxy.elevenlabs_model.default_elevenlabs_client_factory(api_key)
 

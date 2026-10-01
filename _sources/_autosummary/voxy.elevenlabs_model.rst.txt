@@ -16,4 +16,5 @@ voxy.elevenlabs\_model
    .. autosummary::
    
       ElevenLabsSpeechModel
+      VoiceDesignPreview
    

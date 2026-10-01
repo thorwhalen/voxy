@@ -1,0 +1,18 @@
+voxy.say\_model
+===============
+
+.. automodule:: voxy.say_model
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      parse_say_voices
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      SaySpeechModel
+   

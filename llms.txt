@@ -1,19 +1,23 @@
 # voxy
 
-> Facade for voice cloning and speech synthesis
+> Facade for voice generation: speech synthesis in any voice, cloning and designing voices
 
 
 ## Pages
 
-- [voxy](index.html.md): Facade for voice cloning and speech synthesis
-- [API reference](api.html.md): | &#96;voxy&#96;   | Facade for voice cloning and speech synthesis   |
-- [voxy](_autosummary/voxy.html.md): Facade for voice cloning and speech synthesis
+- [voxy](index.html.md): Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designi...
+- [API reference](api.html.md): | &#96;voxy&#96;   | Facade for voice generation: speech synthesis in any voice, cloning and designing voice...
+- [voxy](_autosummary/voxy.html.md): Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
+- [voxy.aix_model](_autosummary/voxy.aix_model.html.md): Speech through aix (LiteLLM): OpenAI’s TTS voices and the other providers LiteLLM routes.
 - [voxy.base](_autosummary/voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
 - [voxy.elevenlabs_model](_autosummary/voxy.elevenlabs_model.html.md): ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.
+- [voxy.facade](_autosummary/voxy.facade.html.md): Voice generation in one call, whatever the service behind it.
+- [voxy.fal_model](_autosummary/voxy.fal_model.html.md): Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.
 - [voxy.library](_autosummary/voxy.library.html.md): A persistent voice library: clone a voice once, then use it by name.
+- [voxy.say_model](_autosummary/voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
 - [voxy.stores](_autosummary/voxy.stores.html.md): Where voxy keeps its data: voice records and audio, as &#96;MutableMapping&#96; stores.
 - [For AI agents](ai-agents.html.md): &#96;voxy&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-01 08:31 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-01 09:48 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
 
 ## Optional
 

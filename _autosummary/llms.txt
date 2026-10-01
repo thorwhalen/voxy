@@ -1,14 +1,18 @@
 # voxy
 
-> Facade for voice cloning and speech synthesis
+> Facade for voice generation: speech synthesis in any voice, cloning and designing voices
 
 
 ## Pages in this subsection
 
-- [voxy](voxy.html.md): Facade for voice cloning and speech synthesis
+- [voxy](voxy.html.md): Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
+- [voxy.aix_model](voxy.aix_model.html.md): Speech through aix (LiteLLM): OpenAI’s TTS voices and the other providers LiteLLM routes.
 - [voxy.base](voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
 - [voxy.elevenlabs_model](voxy.elevenlabs_model.html.md): ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.
+- [voxy.facade](voxy.facade.html.md): Voice generation in one call, whatever the service behind it.
+- [voxy.fal_model](voxy.fal_model.html.md): Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.
 - [voxy.library](voxy.library.html.md): A persistent voice library: clone a voice once, then use it by name.
+- [voxy.say_model](voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
 - [voxy.stores](voxy.stores.html.md): Where voxy keeps its data: voice records and audio, as &#96;MutableMapping&#96; stores.
 
 ## Optional

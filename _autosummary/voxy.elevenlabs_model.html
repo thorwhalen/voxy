@@ -34,7 +34,7 @@
 <link href="../_static/epythet.css?v=22887b56" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
-<link href="voxy.library.html" rel="next" title="voxy.library"/>
+<link href="voxy.facade.html" rel="next" title="voxy.facade"/>
 <link href="voxy.base.html" rel="prev" title="voxy.base"/>
 </head>
 <body :class="{ 'overflow-hidden': showSidebar }" class="min-h-screen font-sans antialiased bg-background text-foreground" x-data="{ showSidebar: false, showScrollTop: false }">
@@ -83,9 +83,13 @@
 <ul class="current">
 <li class="toctree-l1 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="../api.html">API reference<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul class="current" x-show="expanded">
 <li class="toctree-l2 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="voxy.html">voxy<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul class="current" x-show="expanded">
+<li class="toctree-l3"><a class="reference internal" href="voxy.aix_model.html">voxy.aix_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">voxy.elevenlabs_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.facade.html">voxy.facade</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.fal_model.html">voxy.fal_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.stores.html">voxy.stores</a></li>
 </ul>
 </li>
@@ -151,6 +155,9 @@ the voice’s owner (or their guardian) to do so.</p>
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel" title="voxy.elevenlabs_model.ElevenLabsSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel</span></code></a>(*[, api_key, ...])</p></td>
 <td><p>Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.elevenlabs_model.VoiceDesignPreview" title="voxy.elevenlabs_model.VoiceDesignPreview"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VoiceDesignPreview</span></code></a>(generated_voice_id, audio)</p></td>
+<td><p>One candidate voice from <code class="docutils literal notranslate"><span class="pre">design_voice_previews</span></code>: listen, then pick.</p></td>
 </tr>
 </tbody>
 </table>
@@ -226,6 +233,41 @@ is the new ElevenLabs voice id.</p>
 </dl>
 </dd></dl>
 <dl class="py method">
+<dt class="sig sig-object py" id="voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice">
+<span class="sig-name descname"><span class="pre">design_voice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">description</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">preview</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">speaker_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">999</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">preview_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/elevenlabs_model.html#ElevenLabsSpeechModel.design_voice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice'">¶</a></dt>
+<dd><p>Create a voice from a text <code class="docutils literal notranslate"><span class="pre">description</span></code> and return its profile.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>description</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – What the voice sounds like (age, accent, tone, pace…).</p></li>
+<li><p><strong>preview</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#voxy.elevenlabs_model.VoiceDesignPreview" title="voxy.elevenlabs_model.VoiceDesignPreview"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceDesignPreview</span></code></a> | <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – The chosen preview (or its <code class="docutils literal notranslate"><span class="pre">generated_voice_id</span></code>) from
+<code class="docutils literal notranslate"><span class="pre">design_voice_previews</span></code>. If omitted, previews are generated
+and the first is used.</p></li>
+<li><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Voice name in ElevenLabs (default <code class="docutils literal notranslate"><span class="pre">voxy-&lt;speaker_id&gt;</span></code>).</p></li>
+<li><p><strong>labels</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Voice labels (language, accent, gender, age…).</p></li>
+<li><p><strong>**preview_kwargs</strong> – Passed to <code class="docutils literal notranslate"><span class="pre">design_voice_previews</span></code> when
+<code class="docutils literal notranslate"><span class="pre">preview</span></code> is omitted.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="voxy.base.html#voxy.base.VoiceProfile" title="voxy.base.VoiceProfile"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceProfile</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice_previews">
+<span class="sig-name descname"><span class="pre">design_voice_previews</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">description</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'eleven_multilingual_ttv_v2'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">guidance_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loudness</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">design_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/elevenlabs_model.html#ElevenLabsSpeechModel.design_voice_previews"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice_previews" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice_previews'">¶</a></dt>
+<dd><p>Candidate voices for a text <code class="docutils literal notranslate"><span class="pre">description</span></code> (ElevenLabs Voice Design).</p>
+<p><code class="docutils literal notranslate"><span class="pre">text</span></code> (100-1000 characters) is what the previews say; without it
+ElevenLabs writes a fitting line. Nothing is added to the account until
+one preview is passed to <code class="docutils literal notranslate"><span class="pre">design_voice</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#voxy.elevenlabs_model.VoiceDesignPreview" title="voxy.elevenlabs_model.VoiceDesignPreview"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceDesignPreview</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
 <dt class="sig sig-object py" id="voxy.elevenlabs_model.ElevenLabsSpeechModel.generate_speech">
 <span class="sig-name descname"><span class="pre">generate_speech</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_profile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/elevenlabs_model.html#ElevenLabsSpeechModel.generate_speech"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.generate_speech" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.elevenlabs_model.ElevenLabsSpeechModel.generate_speech'">¶</a></dt>
 <dd><p>Synthesize <code class="docutils literal notranslate"><span class="pre">text</span></code> in a cloned (or stock) ElevenLabs voice.</p>
@@ -250,10 +292,36 @@ the raw payload otherwise).</p></li>
 </dd>
 </dl>
 </dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="voxy.elevenlabs_model.ElevenLabsSpeechModel.list_voices">
+<span class="sig-name descname"><span class="pre">list_voices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">search</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">page_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/elevenlabs_model.html#ElevenLabsSpeechModel.list_voices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.list_voices" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.elevenlabs_model.ElevenLabsSpeechModel.list_voices'">¶</a></dt>
+<dd><p>Voices in the account and its library (<code class="docutils literal notranslate"><span class="pre">voice_type</span></code>: e.g. ‘default’,
+‘personal’, ‘cloned’, ‘generated’).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="voxy.base.html#voxy.base.VoiceInfo" title="voxy.base.VoiceInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceInfo</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="voxy.elevenlabs_model.ElevenLabsSpeechModel.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'elevenlabs'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.name" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.elevenlabs_model.ElevenLabsSpeechModel.name'">¶</a></dt>
+<dd><p>Registry name of the backend (also each profile’s <code class="docutils literal notranslate"><span class="pre">model_type</span></code>).</p>
+</dd></dl>
 <dl class="py property">
 <dt class="sig sig-object py" id="voxy.elevenlabs_model.ElevenLabsSpeechModel.sample_rate">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">sample_rate</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.sample_rate" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.elevenlabs_model.ElevenLabsSpeechModel.sample_rate'">¶</a></dt>
 <dd><p>Sample rate of the audio <code class="docutils literal notranslate"><span class="pre">generate_speech</span></code> returns.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize">
+<span class="sig-name descname"><span class="pre">synthesize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mp3_44100_128'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/elevenlabs_model.html#ElevenLabsSpeechModel.synthesize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize'">¶</a></dt>
+<dd><p>Encoded speech (mp3 by default) in <code class="docutils literal notranslate"><span class="pre">voice</span></code> (a profile or voice id).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="voxy.base.html#voxy.base.Speech" title="voxy.base.Speech"><code class="xref py py-class docutils literal notranslate"><span class="pre">Speech</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize_bytes">
@@ -282,6 +350,14 @@ go straight to <code class="docutils literal notranslate"><span class="pre">clie
 </span></code></pre></div>
 </div>
 </dd></dl>
+</dd></dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="voxy.elevenlabs_model.VoiceDesignPreview">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">voxy.elevenlabs_model.</span></span><span class="sig-name descname"><span class="pre">VoiceDesignPreview</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">generated_voice_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">audio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/elevenlabs_model.html#VoiceDesignPreview"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.elevenlabs_model.VoiceDesignPreview" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.elevenlabs_model.VoiceDesignPreview'">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>One candidate voice from <code class="docutils literal notranslate"><span class="pre">design_voice_previews</span></code>: listen, then pick.</p>
+<dl class="field-list simple">
+</dl>
 </dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.elevenlabs_model.default_elevenlabs_client_factory">
@@ -314,12 +390,18 @@ go straight to <code class="docutils literal notranslate"><span class="pre">clie
 <li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.client'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.client"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.client</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.clone_voice'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.clone_voice"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.clone_voice()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.delete_voice'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.delete_voice"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.delete_voice()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.design_voice()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice_previews'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice_previews"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.design_voice_previews()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.generate_speech'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.generate_speech"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.generate_speech()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.list_voices'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.list_voices"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.list_voices()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.name'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.name"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.name</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.sample_rate'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.sample_rate"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.sample_rate</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.synthesize()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize_bytes'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize_bytes"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.synthesize_bytes()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.elevenlabs_model.ElevenLabsSpeechModel.voice_profile'" class="reference internal" href="#voxy.elevenlabs_model.ElevenLabsSpeechModel.voice_profile"><code class="docutils literal notranslate"><span class="pre">ElevenLabsSpeechModel.voice_profile()</span></code></a></li>
 </ul>
 </li>
+<li><a :data-current="activeSection === '#voxy.elevenlabs_model.VoiceDesignPreview'" class="reference internal" href="#voxy.elevenlabs_model.VoiceDesignPreview"><code class="docutils literal notranslate"><span class="pre">VoiceDesignPreview</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.elevenlabs_model.default_elevenlabs_client_factory'" class="reference internal" href="#voxy.elevenlabs_model.default_elevenlabs_client_factory"><code class="docutils literal notranslate"><span class="pre">default_elevenlabs_client_factory()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.elevenlabs_model.resolve_elevenlabs_api_key'" class="reference internal" href="#voxy.elevenlabs_model.resolve_elevenlabs_api_key"><code class="docutils literal notranslate"><span class="pre">resolve_elevenlabs_api_key()</span></code></a></li>
 </ul>
@@ -335,7 +417,7 @@ go straight to <code class="docutils literal notranslate"><span class="pre">clie
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=282f96c0"></script>
+<script src="../_static/documentation_options.js?v=1fd71caa"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

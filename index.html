@@ -82,9 +82,13 @@
 <ul>
 <li class="toctree-l1" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="api.html">API reference<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
 <li class="toctree-l2" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="_autosummary/voxy.html">voxy<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.aix_model.html">voxy.aix_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.facade.html">voxy.facade</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.fal_model.html">voxy.fal_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.library.html">voxy.library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.stores.html">voxy.stores</a></li>
 </ul>
 </li>
@@ -107,9 +111,30 @@
 
 <section id="voxy">
 <h1>voxy<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy">¶</a></h1>
-<p>Facade for voice cloning and speech synthesis</p>
-<p>To install:	<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">voxy</span></code></p>
-<p>Voxy is a flexible Python module for speech synthesis and voice cloning, with two backends: the local Sesame CSM-1B model and the ElevenLabs API (instant voice cloning). You pick the backend with one keyword: <code class="docutils literal notranslate"><span class="pre">create_speech_model("csm")</span></code> or <code class="docutils literal notranslate"><span class="pre">create_speech_model("elevenlabs")</span></code>; new backends are entries in <code class="docutils literal notranslate"><span class="pre">voxy.speech_model_factories</span></code>.</p>
+<p>Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designing voices.</p>
+<p>To install:	<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">voxy</span></code> (add <code class="docutils literal notranslate"><span class="pre">'voxy[elevenlabs]'</span></code>, <code class="docutils literal notranslate"><span class="pre">'voxy[aix]'</span></code> or <code class="docutils literal notranslate"><span class="pre">'voxy[fal]'</span></code> for those services)</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">import</span><span class="w"> </span><span class="nn">voxy</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span><span class="s2">"Hello!"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"cora"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"hi.mp3"</span><span class="p">)</span>          <span class="c1"># a named voice from the library</span>
+</span><span id="line-4"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span><span class="s2">"A quick draft."</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"Daniel"</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"say"</span><span class="p">)</span>  <span class="c1"># free local voice (macOS)</span>
+</span><span id="line-5"><span class="n">voxy</span><span class="o">.</span><span class="n">list_voices</span><span class="p">()</span>                <span class="c1"># our named voices</span>
+</span><span id="line-6"><span class="n">voxy</span><span class="o">.</span><span class="n">list_voices</span><span class="p">(</span><span class="s2">"elevenlabs"</span><span class="p">)</span>    <span class="c1"># a service's voices</span>
+</span></code></pre></div>
+</div>
+<p>Backends: <code class="docutils literal notranslate"><span class="pre">elevenlabs</span></code> (cloning, voice design, TTS), <code class="docutils literal notranslate"><span class="pre">say</span></code> (macOS, offline), <code class="docutils literal notranslate"><span class="pre">aix</span></code> (OpenAI voices and other LiteLLM providers), <code class="docutils literal notranslate"><span class="pre">fal</span></code> (fal.ai models via falaw), <code class="docutils literal notranslate"><span class="pre">csm</span></code> (local Sesame CSM-1B). Register more with <code class="docutils literal notranslate"><span class="pre">voxy.register_speech_model(name,</span> <span class="pre">factory)</span></code>.</p>
+<p>Command line: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">voxy</span> <span class="pre">voices</span> <span class="pre">[--backend</span> <span class="pre">X]</span></code> and <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">voxy</span> <span class="pre">speak</span> <span class="pre">"text"</span> <span class="pre">--voice</span> <span class="pre">cora</span> <span class="pre">-o</span> <span class="pre">out.mp3</span></code>.</p>
+<section id="designing-a-voice-from-a-description">
+<h2>Designing a voice from a description<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#designing-a-voice-from-a-description" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#designing-a-voice-from-a-description'">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">model</span> <span class="o">=</span> <span class="n">voxy</span><span class="o">.</span><span class="n">get_speech_model</span><span class="p">(</span><span class="s2">"elevenlabs"</span><span class="p">)</span>
+</span><span id="line-2"><span class="n">line</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Once upon a time, in a village at the edge of a very old forest, there lived a "</span>
+</span><span id="line-3">        <span class="s2">"baker who could hear the bread singing as it rose."</span><span class="p">)</span>  <span class="c1"># 100-1000 characters</span>
+</span><span id="line-4"><span class="n">previews</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">design_voice_previews</span><span class="p">(</span><span class="s2">"a warm, slow, elderly storyteller"</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">line</span><span class="p">)</span>
+</span><span id="line-5"><span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">previews</span><span class="p">):</span>
+</span><span id="line-6">    <span class="n">p</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">"preview_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">.mp3"</span><span class="p">)</span>          <span class="c1"># listen, then pick one</span>
+</span><span id="line-7"><span class="n">voxy</span><span class="o">.</span><span class="n">design_from_description</span><span class="p">(</span><span class="s2">"storyteller"</span><span class="p">,</span> <span class="s2">"a warm, slow, elderly storyteller"</span><span class="p">,</span> <span class="n">preview</span><span class="o">=</span><span class="n">previews</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</span></code></pre></div>
+</div>
+</section>
 <section id="features">
 <h2>Features<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#features" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#features'">¶</a></h2>
 <ul class="simple">
@@ -270,7 +295,7 @@ to install the CSM model and its dependencies.</p>
 </span><span id="line-2">
 </span><span id="line-3"><span class="n">samples</span> <span class="o">=</span> <span class="n">samples_store</span><span class="p">(</span><span class="s2">"ada"</span><span class="p">)</span>
 </span><span id="line-4"><span class="n">samples</span><span class="p">[</span><span class="s2">"clip1.wav"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"clip1.wav"</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-</span><span id="line-5"><span class="n">clone_from_samples</span><span class="p">(</span><span class="s2">"ada"</span><span class="p">)</span>                      <span class="c1"># uploads the samples, saves the profile</span>
+</span><span id="line-5"><span class="n">clone_from_samples</span><span class="p">(</span><span class="s2">"ada"</span><span class="p">)</span>  <span class="c1"># uploads the samples, saves the profile</span>
 </span><span id="line-6">
 </span><span id="line-7"><span class="n">model</span> <span class="o">=</span> <span class="n">create_speech_model</span><span class="p">(</span><span class="s2">"elevenlabs"</span><span class="p">)</span>
 </span><span id="line-8"><span class="n">model</span><span class="o">.</span><span class="n">generate_speech</span><span class="p">(</span><span class="s2">"Hi!"</span><span class="p">,</span> <span class="n">load_voice</span><span class="p">(</span><span class="s2">"ada"</span><span class="p">),</span> <span class="n">output_path</span><span class="o">=</span><span class="s2">"hi.wav"</span><span class="p">)</span>
@@ -344,10 +369,11 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-01 08:31 UTC from <a href="https://github.com/thorwhalen/voxy/commit/67b416be825983003cd117332ae68a23f57e6cde">67b416b</a> (main) · voxy 0.0.5 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-01 09:48 UTC from <a href="https://github.com/thorwhalen/voxy/commit/e6f5701397ad2c6cda14dbf9fa64f6502353e741">e6f5701</a> (main) · voxy 0.0.6 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
+<li><a :data-current="activeSection === '#designing-a-voice-from-a-description'" class="reference internal" href="#designing-a-voice-from-a-description">Designing a voice from a description</a></li>
 <li><a :data-current="activeSection === '#features'" class="reference internal" href="#features">Features</a></li>
 <li><a :data-current="activeSection === '#installation'" class="reference internal" href="#installation">Installation</a><ul>
 <li><a :data-current="activeSection === '#prerequisites'" class="reference internal" href="#prerequisites">Prerequisites</a></li>
@@ -386,7 +412,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=282f96c0"></script>
+<script src="_static/documentation_options.js?v=1fd71caa"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

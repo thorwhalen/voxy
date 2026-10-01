@@ -1,0 +1,12 @@
+voxy.fal\_model
+===============
+
+.. automodule:: voxy.fal_model
+
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      FalSpeechModel
+   
