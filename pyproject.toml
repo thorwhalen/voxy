@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "voxy"
-version = "0.0.7"
+version = "0.0.8"
 description = "Facade for voice generation: speech synthesis in any voice, cloning and designing voices"
 readme = "README.md"
 requires-python = ">=3.10"
