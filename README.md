@@ -7,10 +7,14 @@ To install:	```pip install voxy``` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `
 ```python
 import voxy
 
-voxy.text_to_speech("Hello!", voice="cora").save("hi.mp3")          # a named voice from the library
-voxy.text_to_speech("A quick draft.", voice="Daniel", backend="say")  # free local voice (macOS)
-voxy.list_voices()                # our named voices
-voxy.list_voices("elevenlabs")    # a service's voices
+voxy.text_to_speech("Hello!", voice="cora").save(
+    "hi.mp3"
+)  # a named voice from the library
+voxy.text_to_speech(
+    "A quick draft.", voice="Daniel", backend="say"
+)  # free local voice (macOS)
+voxy.list_voices()  # our named voices
+voxy.list_voices("elevenlabs")  # a service's voices
 ```
 
 Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
@@ -21,12 +25,16 @@ Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "t
 
 ```python
 model = voxy.get_speech_model("elevenlabs")
-line = ("Once upon a time, in a village at the edge of a very old forest, there lived a "
-        "baker who could hear the bread singing as it rose.")  # 100-1000 characters
+line = (
+    "Once upon a time, in a village at the edge of a very old forest, there lived a "
+    "baker who could hear the bread singing as it rose."
+)  # 100-1000 characters
 previews = model.design_voice_previews("a warm, slow, elderly storyteller", text=line)
 for i, p in enumerate(previews):
-    p.save(f"preview_{i}.mp3")          # listen, then pick one
-voxy.design_from_description("storyteller", "a warm, slow, elderly storyteller", preview=previews[1])
+    p.save(f"preview_{i}.mp3")  # listen, then pick one
+voxy.design_from_description(
+    "storyteller", "a warm, slow, elderly storyteller", preview=previews[1]
+)
 ```
 
 ## Features
