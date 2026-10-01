@@ -21,21 +21,20 @@
 <meta content="#ffffff" media="(prefers-color-scheme: light)" name="theme-color"/>
 <meta content="#030711" media="(prefers-color-scheme: dark)" name="theme-color"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<link href="api.html.md" rel="alternate" type="text/markdown"/>
+<link href="ai-agents.html.md" rel="alternate" type="text/markdown"/>
 <link href="llms.txt" rel="describedby" type="text/markdown"/>
-<link href="api.html.md" rel="alternate" type="text/markdown"/>
+<link href="ai-agents.html.md" rel="alternate" type="text/markdown"/>
 <link href="llms.txt" rel="describedby"/>
-<title>API reference | voxy</title>
-<meta content="API reference | voxy" property="og:title"/>
-<meta content="API reference | voxy" name="twitter:title"/>
+<title>For AI agents | voxy</title>
+<meta content="For AI agents | voxy" property="og:title"/>
+<meta content="For AI agents | voxy" name="twitter:title"/>
 <link href="_static/pygments.css?v=d75fae25" rel="stylesheet" type="text/css"/>
 <link href="_static/theme.css?v=d6d7c91b" rel="stylesheet" type="text/css"/>
 <link href="_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
 <link href="_static/epythet.css?v=22887b56" rel="stylesheet" type="text/css"/>
 <link href="search.html" rel="search" title="Search"/>
 <link href="genindex.html" rel="index" title="Index"/>
-<link href="_autosummary/voxy.html" rel="next" title="voxy"/>
-<link href="index.html" rel="prev" title="voxy"/>
+<link href="_autosummary/voxy.stores.html" rel="prev" title="voxy.stores"/>
 </head>
 <body :class="{ 'overflow-hidden': showSidebar }" class="min-h-screen font-sans antialiased bg-background text-foreground" x-data="{ showSidebar: false, showScrollTop: false }">
 <div @click.self="showSidebar = false" class="fixed inset-0 z-50 overflow-hidden bg-background/80 backdrop-blur-sm md:hidden" x-cloak="" x-show="showSidebar"></div><div class="relative flex flex-col min-h-screen" id="page"><a class="absolute top-0 left-0 z-[100] block bg-background p-4 text-xl transition -translate-x-full opacity-0 focus:translate-x-0 focus:opacity-100" href="#content">
@@ -81,7 +80,7 @@
 <a href="https://github.com/thorwhalen/voxy" rel="nofollow noopener">GitHub</a>
 </nav><nav class="table w-full min-w-full my-6 lg:my-8">
 <ul class="current">
-<li class="toctree-l1 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="current reference internal expandable" href="#">API reference<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
+<li class="toctree-l1" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="api.html">API reference<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
 <li class="toctree-l2" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="_autosummary/voxy.html">voxy<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
@@ -91,7 +90,7 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="ai-agents.html">For AI agents</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">For AI agents</a></li>
 </ul>
 </nav>
 </div>
@@ -111,20 +110,58 @@
 <path d="M240 856h120V616h240v240h120V496L480 316 240 496v360Zm-80 80V456l320-240 320 240v480H520V696h-80v240H160Zm320-350Z"></path>
 </svg>
 </a>
-<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">API reference</span>
+<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">For AI agents</span>
 </nav>
 <div id="content" role="main">
-<section id="api-reference">
-<h1>API reference<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#api-reference">¶</a></h1>
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/voxy.html#module-voxy" title="voxy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voxy</span></code></a></p></td>
-<td><p>Facade for voice cloning and speech synthesis</p></td>
-</tr>
-</tbody>
-</table>
+
+<section id="for-ai-agents">
+<h1>For AI agents<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#for-ai-agents">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">voxy</span></code> ships artifacts for coding agents alongside its code. This page lists
+them, says where each lives in the repository, and points at the
+machine-readable copies of this documentation.</p>
+<section id="skills">
+<h2>Skills<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#skills" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#skills'">¶</a></h2>
+<p>Skills are folders holding a <code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code> (the <a class="reference external" href="https://agentskills.io" rel="nofollow noopener">Agent Skills<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> format): a description that tells an agent when to use it and a body with the procedure. Install one into your agent with <code class="docutils literal notranslate"><span class="pre">gh</span> <span class="pre">skill</span></code> (any host: <code class="docutils literal notranslate"><span class="pre">--agent</span> <span class="pre">claude-code</span></code>, <code class="docutils literal notranslate"><span class="pre">copilot</span></code>, <code class="docutils literal notranslate"><span class="pre">cursor</span></code>, <code class="docutils literal notranslate"><span class="pre">codex</span></code>, <code class="docutils literal notranslate"><span class="pre">gemini</span></code>), or use the copy bundled in the wheel.</p>
+<section id="voxy">
+<h3><code class="docutils literal notranslate"><span class="pre">voxy</span></code><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy'">¶</a></h3>
+<p>Clone a voice and synthesize speech with the voxy facade, and keep the voice and its audio in voxy’s data store. Use when asked to clone someone’s voice, make a voice model, speak text in a cloned voice, reuse a voice made earlier, or prepare audio samples for a clone; and whenever deciding where voice samples, source media or voice ids should be saved. Triggers on “clone a voice”, “voice clone”, “ElevenLabs voice”, “make a voice model of”, “say this in X’s voice”, “voxy”.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">gh<span class="w"> </span>skill<span class="w"> </span>install<span class="w"> </span>thorwhalen/voxy<span class="w"> </span>voxy<span class="w"> </span>--agent<span class="w"> </span>claude-code
+</span></code></pre></div>
+</div>
+<p>Source: <a class="reference external" href="https://github.com/thorwhalen/voxy/tree/HEAD/voxy/data/skills/voxy" rel="nofollow noopener"><code class="docutils literal notranslate"><span class="pre">voxy/data/skills/voxy</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> (bundled with the pip package).</p>
+<p>The bundled skills are also on disk after <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">voxy</span></code>, under the package’s <code class="docutils literal notranslate"><span class="pre">data/skills/</span></code> directory; link them into an agent without network access with <code class="docutils literal notranslate"><span class="pre">skill</span> <span class="pre">link-skills</span> <span class="pre">&lt;that</span> <span class="pre">directory&gt;</span></code>.</p>
 </section>
-</div></div>
+</section>
+<section id="instruction-files">
+<h2>Instruction files<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#instruction-files" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#instruction-files'">¶</a></h2>
+<p>Files agents read before working in this repository.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/thorwhalen/voxy/tree/HEAD/.claude/CLAUDE.md" rel="nofollow noopener"><code class="docutils literal notranslate"><span class="pre">.claude/CLAUDE.md</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>: read by Claude Code</p></li>
+</ul>
+</section>
+<section id="machine-readable-documentation">
+<h2>Machine-readable documentation<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#machine-readable-documentation" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#machine-readable-documentation'">¶</a></h2>
+<p>This site publishes the same documentation in forms that fit an agent’s context window:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://thorwhalen.github.io/voxy/llms.txt" rel="nofollow noopener"><code class="docutils literal notranslate"><span class="pre">llms.txt</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>: an index of every page with a one-line description (<a class="reference external" href="https://llmstxt.org" rel="nofollow noopener">llms.txt<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> format)</p></li>
+<li><p><a class="reference external" href="https://thorwhalen.github.io/voxy/voxy.md" rel="nofollow noopener"><code class="docutils literal notranslate"><span class="pre">voxy.md</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>: the whole documentation as one Markdown file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;page&gt;.html.md</span></code>: a rendered Markdown twin of every page, advertised from each page’s <code class="docutils literal notranslate"><span class="pre">&lt;head&gt;</span></code> with <code class="docutils literal notranslate"><span class="pre">&lt;link</span> <span class="pre">rel="alternate"</span> <span class="pre">type="text/markdown"&gt;</span></code></p></li>
+<li><p><a class="reference external" href="https://thorwhalen.github.io/voxy/objects.inv" rel="nofollow noopener"><code class="docutils literal notranslate"><span class="pre">objects.inv</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>: the Sphinx inventory: a symbol-to-URL index (<code class="docutils literal notranslate"><span class="pre">sphobjinv</span> <span class="pre">convert</span> <span class="pre">plain</span> <span class="pre">objects.inv</span> <span class="pre">-</span></code>)</p></li>
+</ul>
+</section>
+</section>
+</div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
+<div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
+<ul>
+<li><a :data-current="activeSection === '#skills'" class="reference internal" href="#skills">Skills</a><ul>
+<li><a :data-current="activeSection === '#voxy'" class="reference internal" href="#voxy"><code class="docutils literal notranslate"><span class="pre">voxy</span></code></a></li>
+</ul>
+</li>
+<li><a :data-current="activeSection === '#instruction-files'" class="reference internal" href="#instruction-files">Instruction files</a></li>
+<li><a :data-current="activeSection === '#machine-readable-documentation'" class="reference internal" href="#machine-readable-documentation">Machine-readable documentation</a></li>
+</ul>
+</div>
+</aside>
 </main>
 </div>
 </div><footer class="py-6 border-t border-border md:py-0">

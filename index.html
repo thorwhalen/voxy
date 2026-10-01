@@ -84,10 +84,13 @@
 <li class="toctree-l2" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="_autosummary/voxy.html">voxy<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.library.html">voxy.library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.stores.html">voxy.stores</a></li>
 </ul>
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="ai-agents.html">For AI agents</a></li>
 </ul>
 </nav>
 </div>
@@ -249,14 +252,30 @@ to install the CSM model and its dependencies.</p>
 </span><span id="line-7"><span class="n">profile</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">clone_voice</span><span class="p">([</span><span class="s2">"clip1.wav"</span><span class="p">,</span> <span class="s2">"clip2.m4a"</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="s2">"my-voice"</span><span class="p">)</span>
 </span><span id="line-8"><span class="nb">print</span><span class="p">(</span><span class="n">profile</span><span class="o">.</span><span class="n">segment</span><span class="p">)</span>  <span class="c1"># the ElevenLabs voice_id</span>
 </span><span id="line-9">
-</span><span id="line-10"><span class="n">audio</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate_speech</span><span class="p">(</span><span class="s2">"Hello from my cloned voice."</span><span class="p">,</span> <span class="n">profile</span><span class="p">,</span> <span class="n">output_path</span><span class="o">=</span><span class="s2">"hello.wav"</span><span class="p">)</span>
-</span><span id="line-11">
-</span><span id="line-12"><span class="c1"># Later sessions: rebuild the profile from the id, no re-upload.</span>
-</span><span id="line-13"><span class="n">profile</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">voice_profile</span><span class="p">(</span><span class="s2">"&lt;voice_id&gt;"</span><span class="p">)</span>
+</span><span id="line-10"><span class="n">audio</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate_speech</span><span class="p">(</span>
+</span><span id="line-11">    <span class="s2">"Hello from my cloned voice."</span><span class="p">,</span> <span class="n">profile</span><span class="p">,</span> <span class="n">output_path</span><span class="o">=</span><span class="s2">"hello.wav"</span>
+</span><span id="line-12"><span class="p">)</span>
+</span><span id="line-13">
+</span><span id="line-14"><span class="c1"># Later sessions: rebuild the profile from the id, no re-upload.</span>
+</span><span id="line-15"><span class="n">profile</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">voice_profile</span><span class="p">(</span><span class="s2">"&lt;voice_id&gt;"</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">generate_speech</span></code> returns a tensor for <code class="docutils literal notranslate"><span class="pre">pcm_*</span></code>/<code class="docutils literal notranslate"><span class="pre">wav_*</span></code> output formats (default <code class="docutils literal notranslate"><span class="pre">pcm_24000</span></code>); <code class="docutils literal notranslate"><span class="pre">synthesize_bytes</span></code> returns the raw payload in any format (e.g. <code class="docutils literal notranslate"><span class="pre">mp3_44100_128</span></code>). <code class="docutils literal notranslate"><span class="pre">delete_voice</span></code> removes a clone from the account. ElevenLabs requires that you have the right, and the voice owner’s consent, to clone a voice.</p>
 <p>Live tests are opt-in: <code class="docutils literal notranslate"><span class="pre">VOXY_LIVE_ELEVENLABS=1</span></code> runs a short synthesis; adding <code class="docutils literal notranslate"><span class="pre">VOXY_LIVE_ELEVENLABS_SAMPLE=&lt;audio</span> <span class="pre">you</span> <span class="pre">may</span> <span class="pre">clone&gt;</span></code> also clones, speaks and deletes.</p>
+</section>
+<section id="the-voice-library-clone-once-reuse-by-name">
+<h3>The voice library: clone once, reuse by name<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#the-voice-library-clone-once-reuse-by-name" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#the-voice-library-clone-once-reuse-by-name'">¶</a></h3>
+<p>voxy keeps voice data in stores (<code class="docutils literal notranslate"><span class="pre">MutableMapping</span></code>s) under <code class="docutils literal notranslate"><span class="pre">$VOXY_DATA_DIR</span></code> (default <code class="docutils literal notranslate"><span class="pre">~/.local/share/voxy</span></code>): <code class="docutils literal notranslate"><span class="pre">voices/{name}.json</span></code> records (with each backend’s saved profile, e.g. the ElevenLabs <code class="docutils literal notranslate"><span class="pre">voice_id</span></code>), <code class="docutils literal notranslate"><span class="pre">samples/{name}/</span></code> (audio a clone is made from), <code class="docutils literal notranslate"><span class="pre">sources/{name}/</span></code> (raw media). Every library function takes its stores as arguments (<code class="docutils literal notranslate"><span class="pre">voices=</span></code>, <code class="docutils literal notranslate"><span class="pre">samples=</span></code>), so any <code class="docutils literal notranslate"><span class="pre">MutableMapping</span></code> (another folder, S3) can stand in.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy</span><span class="w"> </span><span class="kn">import</span> <span class="n">samples_store</span><span class="p">,</span> <span class="n">clone_from_samples</span><span class="p">,</span> <span class="n">load_voice</span><span class="p">,</span> <span class="n">create_speech_model</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="n">samples</span> <span class="o">=</span> <span class="n">samples_store</span><span class="p">(</span><span class="s2">"ada"</span><span class="p">)</span>
+</span><span id="line-4"><span class="n">samples</span><span class="p">[</span><span class="s2">"clip1.wav"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"clip1.wav"</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+</span><span id="line-5"><span class="n">clone_from_samples</span><span class="p">(</span><span class="s2">"ada"</span><span class="p">)</span>                      <span class="c1"># uploads the samples, saves the profile</span>
+</span><span id="line-6">
+</span><span id="line-7"><span class="n">model</span> <span class="o">=</span> <span class="n">create_speech_model</span><span class="p">(</span><span class="s2">"elevenlabs"</span><span class="p">)</span>
+</span><span id="line-8"><span class="n">model</span><span class="o">.</span><span class="n">generate_speech</span><span class="p">(</span><span class="s2">"Hi!"</span><span class="p">,</span> <span class="n">load_voice</span><span class="p">(</span><span class="s2">"ada"</span><span class="p">),</span> <span class="n">output_path</span><span class="o">=</span><span class="s2">"hi.wav"</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
 </section>
 </section>
 <section id="configuration">
@@ -325,7 +344,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-01 05:55 UTC from <a href="https://github.com/thorwhalen/voxy/commit/76d4782cbda023f162153a4aaea53c63094e39b8">76d4782</a> (main) · voxy 0.0.4 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-01 08:31 UTC from <a href="https://github.com/thorwhalen/voxy/commit/67b416be825983003cd117332ae68a23f57e6cde">67b416b</a> (main) · voxy 0.0.5 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -344,6 +363,7 @@ to install the CSM model and its dependencies.</p>
 <li><a :data-current="activeSection === '#automatic-transcription'" class="reference internal" href="#automatic-transcription">Automatic Transcription</a></li>
 <li><a :data-current="activeSection === '#flexible-input-formats'" class="reference internal" href="#flexible-input-formats">Flexible Input Formats</a></li>
 <li><a :data-current="activeSection === '#elevenlabs-backend'" class="reference internal" href="#elevenlabs-backend">ElevenLabs backend</a></li>
+<li><a :data-current="activeSection === '#the-voice-library-clone-once-reuse-by-name'" class="reference internal" href="#the-voice-library-clone-once-reuse-by-name">The voice library: clone once, reuse by name</a></li>
 </ul>
 </li>
 <li><a :data-current="activeSection === '#configuration'" class="reference internal" href="#configuration">Configuration</a></li>
@@ -366,7 +386,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=8c5712d9"></script>
+<script src="_static/documentation_options.js?v=282f96c0"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

@@ -10,7 +10,10 @@
 - [voxy](_autosummary/voxy.html.md): Facade for voice cloning and speech synthesis
 - [voxy.base](_autosummary/voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
 - [voxy.elevenlabs_model](_autosummary/voxy.elevenlabs_model.html.md): ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-01 05:55 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
+- [voxy.library](_autosummary/voxy.library.html.md): A persistent voice library: clone a voice once, then use it by name.
+- [voxy.stores](_autosummary/voxy.stores.html.md): Where voxy keeps its data: voice records and audio, as &#96;MutableMapping&#96; stores.
+- [For AI agents](ai-agents.html.md): &#96;voxy&#96; ships artifacts for coding agents alongside its code. This page lists
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-01 08:31 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
 
 ## Optional
 

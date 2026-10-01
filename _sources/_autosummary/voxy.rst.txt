@@ -12,3 +12,5 @@
 
    base
    elevenlabs_model
+   library
+   stores

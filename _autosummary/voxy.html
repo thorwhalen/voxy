@@ -85,10 +85,13 @@
 <li class="toctree-l2 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="current reference internal expandable" href="#">voxy<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-cloak="" x-show="expanded">
 <li class="toctree-l3"><a class="reference internal" href="voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.stores.html">voxy.stores</a></li>
 </ul>
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../ai-agents.html">For AI agents</a></li>
 </ul>
 </nav>
 </div>
@@ -124,6 +127,12 @@
 <tr class="row-even"><td><p><a class="reference internal" href="voxy.elevenlabs_model.html#module-voxy.elevenlabs_model" title="voxy.elevenlabs_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">elevenlabs_model</span></code></a></p></td>
 <td><p>ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.library.html#module-voxy.library" title="voxy.library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">library</span></code></a></p></td>
+<td><p>A persistent voice library: clone a voice once, then use it by name.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.stores.html#module-voxy.stores" title="voxy.stores"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stores</span></code></a></p></td>
+<td><p>Where voxy keeps its data: voice records and audio, as <code class="docutils literal notranslate"><span class="pre">MutableMapping</span></code> stores.</p></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -138,7 +147,7 @@
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=8c5712d9"></script>
+<script src="../_static/documentation_options.js?v=282f96c0"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

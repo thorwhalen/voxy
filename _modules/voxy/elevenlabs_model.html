@@ -115,10 +115,13 @@
 <li class="toctree-l2"><a class="reference internal" href="../../_autosummary/voxy.html">voxy</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.library.html">voxy.library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.stores.html">voxy.stores</a></li>
 </ul>
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../ai-agents.html">For AI agents</a></li>
 </ul>
 
 </nav>
@@ -184,518 +187,520 @@
 </span><span id="line-21"><span class="sd">"""</span>
 </span><span id="line-22">
 </span><span id="line-23"><span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
-</span><span id="line-24"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-</span><span id="line-25"><span class="kn">import</span><span class="w"> </span><span class="nn">wave</span>
-</span><span id="line-26"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
-</span><span id="line-27"><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
-</span><span id="line-28"><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">BinaryIO</span>
-</span><span id="line-29">
-</span><span id="line-30"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-</span><span id="line-31"><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-</span><span id="line-32">
-</span><span id="line-33"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-</span><span id="line-34">    <span class="n">DFLT_ASSUMED_SAMPLE_RATE</span><span class="p">,</span>
-</span><span id="line-35">    <span class="n">DFLT_VOXY_DEVICE</span><span class="p">,</span>
-</span><span id="line-36">    <span class="n">SpeechModel</span><span class="p">,</span>
-</span><span id="line-37">    <span class="n">VoiceProfile</span><span class="p">,</span>
-</span><span id="line-38">    <span class="n">_resolve_audio_input</span><span class="p">,</span>
-</span><span id="line-39">    <span class="n">_resolve_text_input</span><span class="p">,</span>
-</span><span id="line-40"><span class="p">)</span>
-</span><span id="line-41">
-</span><span id="line-42"><span class="n">ELEVENLABS_MODEL_TYPE</span> <span class="o">=</span> <span class="s2">"elevenlabs"</span>
-</span><span id="line-43"><span class="n">ELEVENLABS_API_KEY_ENVVARS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"ELEVEN_API_KEY"</span><span class="p">,</span> <span class="s2">"ELEVENLABS_API_KEY"</span><span class="p">)</span>
-</span><span id="line-44"><span class="n">DFLT_ELEVENLABS_MODEL_ID</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-</span><span id="line-45">    <span class="s2">"VOXY_ELEVENLABS_MODEL_ID"</span><span class="p">,</span> <span class="s2">"eleven_multilingual_v2"</span>
-</span><span id="line-46"><span class="p">)</span>
-</span><span id="line-47"><span class="c1"># Raw PCM is available on every ElevenLabs tier and decodes without ffmpeg.</span>
-</span><span id="line-48"><span class="n">DFLT_ELEVENLABS_OUTPUT_FORMAT</span> <span class="o">=</span> <span class="s2">"pcm_24000"</span>
-</span><span id="line-49"><span class="n">DFLT_CLONE_NAME_TEMPLATE</span> <span class="o">=</span> <span class="s2">"voxy-</span><span class="si">{speaker_id}</span><span class="s2">"</span>
-</span><span id="line-50"><span class="c1"># The ElevenLabs IVC form accepts at most this many sample files per voice.</span>
-</span><span id="line-51"><span class="n">DFLT_MAX_CLONE_FILES</span> <span class="o">=</span> <span class="mi">25</span>
-</span><span id="line-52">
-</span><span id="line-53"><span class="n">AudioInput</span> <span class="o">=</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="n">BinaryIO</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-</span><span id="line-54">
+</span><span id="line-24"><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+</span><span id="line-25"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+</span><span id="line-26"><span class="kn">import</span><span class="w"> </span><span class="nn">wave</span>
+</span><span id="line-27"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
+</span><span id="line-28"><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
+</span><span id="line-29"><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">BinaryIO</span>
+</span><span id="line-30">
+</span><span id="line-31"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="line-32"><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+</span><span id="line-33">
+</span><span id="line-34"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="line-35">    <span class="n">DFLT_ASSUMED_SAMPLE_RATE</span><span class="p">,</span>
+</span><span id="line-36">    <span class="n">DFLT_VOXY_DEVICE</span><span class="p">,</span>
+</span><span id="line-37">    <span class="n">SpeechModel</span><span class="p">,</span>
+</span><span id="line-38">    <span class="n">VoiceProfile</span><span class="p">,</span>
+</span><span id="line-39">    <span class="n">_resolve_audio_input</span><span class="p">,</span>
+</span><span id="line-40">    <span class="n">_resolve_text_input</span><span class="p">,</span>
+</span><span id="line-41"><span class="p">)</span>
+</span><span id="line-42">
+</span><span id="line-43"><span class="n">ELEVENLABS_MODEL_TYPE</span> <span class="o">=</span> <span class="s2">"elevenlabs"</span>
+</span><span id="line-44"><span class="n">ELEVENLABS_API_KEY_ENVVARS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"ELEVEN_API_KEY"</span><span class="p">,</span> <span class="s2">"ELEVENLABS_API_KEY"</span><span class="p">)</span>
+</span><span id="line-45"><span class="n">DFLT_ELEVENLABS_MODEL_ID</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+</span><span id="line-46">    <span class="s2">"VOXY_ELEVENLABS_MODEL_ID"</span><span class="p">,</span> <span class="s2">"eleven_multilingual_v2"</span>
+</span><span id="line-47"><span class="p">)</span>
+</span><span id="line-48"><span class="c1"># Raw PCM is available on every ElevenLabs tier and decodes without ffmpeg.</span>
+</span><span id="line-49"><span class="n">DFLT_ELEVENLABS_OUTPUT_FORMAT</span> <span class="o">=</span> <span class="s2">"pcm_24000"</span>
+</span><span id="line-50"><span class="n">DFLT_CLONE_NAME_TEMPLATE</span> <span class="o">=</span> <span class="s2">"voxy-</span><span class="si">{speaker_id}</span><span class="s2">"</span>
+</span><span id="line-51"><span class="c1"># The ElevenLabs IVC form accepts at most this many sample files per voice.</span>
+</span><span id="line-52"><span class="n">DFLT_MAX_CLONE_FILES</span> <span class="o">=</span> <span class="mi">25</span>
+</span><span id="line-53">
+</span><span id="line-54"><span class="n">AudioInput</span> <span class="o">=</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="n">BinaryIO</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
 </span><span id="line-55">
+</span><span id="line-56">
 <div class="viewcode-block" id="resolve_elevenlabs_api_key">
 <a class="viewcode-back" href="../../_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.resolve_elevenlabs_api_key">[docs]</a>
-</span><span id="line-56"><span class="k">def</span><span class="w"> </span><span class="nf">resolve_elevenlabs_api_key</span><span class="p">(</span>
-</span><span id="line-57">    <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-58">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-59">    <span class="n">envvars</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">ELEVENLABS_API_KEY_ENVVARS</span><span class="p">,</span>
-</span><span id="line-60"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-61"><span class="w">    </span><span class="sd">"""The explicit ``api_key`` if given, else the first set env var, else None.</span>
-</span><span id="line-62">
-</span><span id="line-63"><span class="sd">    &gt;&gt;&gt; resolve_elevenlabs_api_key("explicit")</span>
-</span><span id="line-64"><span class="sd">    'explicit'</span>
-</span><span id="line-65"><span class="sd">    &gt;&gt;&gt; resolve_elevenlabs_api_key(envvars=["VOXY_SURELY_UNSET_VAR"]) is None</span>
-</span><span id="line-66"><span class="sd">    True</span>
-</span><span id="line-67"><span class="sd">    """</span>
-</span><span id="line-68">    <span class="k">if</span> <span class="n">api_key</span><span class="p">:</span>
-</span><span id="line-69">        <span class="k">return</span> <span class="n">api_key</span>
-</span><span id="line-70">    <span class="k">return</span> <span class="nb">next</span><span class="p">((</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">envvars</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="kc">None</span><span class="p">)</span></div>
+</span><span id="line-57"><span class="k">def</span><span class="w"> </span><span class="nf">resolve_elevenlabs_api_key</span><span class="p">(</span>
+</span><span id="line-58">    <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-59">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-60">    <span class="n">envvars</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">ELEVENLABS_API_KEY_ENVVARS</span><span class="p">,</span>
+</span><span id="line-61"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-62"><span class="w">    </span><span class="sd">"""The explicit ``api_key`` if given, else the first set env var, else None.</span>
+</span><span id="line-63">
+</span><span id="line-64"><span class="sd">    &gt;&gt;&gt; resolve_elevenlabs_api_key("explicit")</span>
+</span><span id="line-65"><span class="sd">    'explicit'</span>
+</span><span id="line-66"><span class="sd">    &gt;&gt;&gt; resolve_elevenlabs_api_key(envvars=["VOXY_SURELY_UNSET_VAR"]) is None</span>
+</span><span id="line-67"><span class="sd">    True</span>
+</span><span id="line-68"><span class="sd">    """</span>
+</span><span id="line-69">    <span class="k">if</span> <span class="n">api_key</span><span class="p">:</span>
+</span><span id="line-70">        <span class="k">return</span> <span class="n">api_key</span>
+</span><span id="line-71">    <span class="k">return</span> <span class="nb">next</span><span class="p">((</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">envvars</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="kc">None</span><span class="p">)</span></div>
 
-</span><span id="line-71">
 </span><span id="line-72">
+</span><span id="line-73">
 <div class="viewcode-block" id="default_elevenlabs_client_factory">
 <a class="viewcode-back" href="../../_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.default_elevenlabs_client_factory">[docs]</a>
-</span><span id="line-73"><span class="k">def</span><span class="w"> </span><span class="nf">default_elevenlabs_client_factory</span><span class="p">(</span><span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="line-74"><span class="w">    </span><span class="sd">"""Build the official SDK client (imported lazily)."""</span>
-</span><span id="line-75">    <span class="k">try</span><span class="p">:</span>
-</span><span id="line-76">        <span class="kn">from</span><span class="w"> </span><span class="nn">elevenlabs.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">ElevenLabs</span>
-</span><span id="line-77">    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="line-78">        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
-</span><span id="line-79">            <span class="s2">"The elevenlabs package is required for voxy's ElevenLabs backend. "</span>
-</span><span id="line-80">            <span class="s2">"Install with 'pip install voxy[elevenlabs]' (or 'pip install elevenlabs')."</span>
-</span><span id="line-81">        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-</span><span id="line-82">    <span class="k">return</span> <span class="n">ElevenLabs</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">)</span></div>
+</span><span id="line-74"><span class="k">def</span><span class="w"> </span><span class="nf">default_elevenlabs_client_factory</span><span class="p">(</span><span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="line-75"><span class="w">    </span><span class="sd">"""Build the official SDK client (imported lazily)."""</span>
+</span><span id="line-76">    <span class="k">try</span><span class="p">:</span>
+</span><span id="line-77">        <span class="kn">from</span><span class="w"> </span><span class="nn">elevenlabs.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">ElevenLabs</span>
+</span><span id="line-78">    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="line-79">        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+</span><span id="line-80">            <span class="s2">"The elevenlabs package is required for voxy's ElevenLabs backend. "</span>
+</span><span id="line-81">            <span class="s2">"Install with 'pip install voxy[elevenlabs]' (or 'pip install elevenlabs')."</span>
+</span><span id="line-82">        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+</span><span id="line-83">    <span class="k">return</span> <span class="n">ElevenLabs</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">)</span></div>
 
-</span><span id="line-83">
 </span><span id="line-84">
-</span><span id="line-85"><span class="c1"># -----------------------------------------------------------------------------</span>
-</span><span id="line-86"><span class="c1"># Audio encoding helpers</span>
-</span><span id="line-87"><span class="c1"># -----------------------------------------------------------------------------</span>
-</span><span id="line-88">
+</span><span id="line-85">
+</span><span id="line-86"><span class="c1"># -----------------------------------------------------------------------------</span>
+</span><span id="line-87"><span class="c1"># Audio encoding helpers</span>
+</span><span id="line-88"><span class="c1"># -----------------------------------------------------------------------------</span>
 </span><span id="line-89">
-</span><span id="line-90"><span class="k">def</span><span class="w"> </span><span class="nf">_wav_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-</span><span id="line-91"><span class="w">    </span><span class="sd">"""Encode a float tensor ([channels, samples] or [samples]) as mono 16-bit WAV.</span>
-</span><span id="line-92">
-</span><span id="line-93"><span class="sd">    &gt;&gt;&gt; data = _wav_bytes(torch.zeros(160), 16000)</span>
-</span><span id="line-94"><span class="sd">    &gt;&gt;&gt; data[:4], len(data)</span>
-</span><span id="line-95"><span class="sd">    (b'RIFF', 364)</span>
-</span><span id="line-96"><span class="sd">    &gt;&gt;&gt; _wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]</span>
-</span><span id="line-97"><span class="sd">    b'\\xff\\x7f'</span>
-</span><span id="line-98"><span class="sd">    """</span>
-</span><span id="line-99">    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">(</span><span class="n">audio</span><span class="p">):</span>  <span class="c1"># integer PCM, e.g. int16 from soundfile</span>
-</span><span id="line-100">        <span class="n">audio</span> <span class="o">=</span> <span class="n">audio</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">audio</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">max</span>
-</span><span id="line-101">    <span class="k">if</span> <span class="n">audio</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-</span><span id="line-102">        <span class="n">audio</span> <span class="o">=</span> <span class="n">audio</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="line-103">    <span class="n">samples</span> <span class="o">=</span> <span class="n">audio</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
-</span><span id="line-104">    <span class="n">pcm</span> <span class="o">=</span> <span class="p">(</span><span class="n">samples</span> <span class="o">*</span> <span class="mi">32767</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"&lt;i2"</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">()</span>
-</span><span id="line-105">    <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
-</span><span id="line-106">    <span class="k">with</span> <span class="n">wave</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">w</span><span class="p">:</span>
-</span><span id="line-107">        <span class="n">w</span><span class="o">.</span><span class="n">setnchannels</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="line-108">        <span class="n">w</span><span class="o">.</span><span class="n">setsampwidth</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-</span><span id="line-109">        <span class="n">w</span><span class="o">.</span><span class="n">setframerate</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">))</span>
-</span><span id="line-110">        <span class="n">w</span><span class="o">.</span><span class="n">writeframes</span><span class="p">(</span><span class="n">pcm</span><span class="p">)</span>
-</span><span id="line-111">    <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
-</span><span id="line-112">
+</span><span id="line-90">
+</span><span id="line-91"><span class="k">def</span><span class="w"> </span><span class="nf">_wav_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+</span><span id="line-92"><span class="w">    </span><span class="sd">"""Encode a float tensor ([channels, samples] or [samples]) as mono 16-bit WAV.</span>
+</span><span id="line-93">
+</span><span id="line-94"><span class="sd">    &gt;&gt;&gt; data = _wav_bytes(torch.zeros(160), 16000)</span>
+</span><span id="line-95"><span class="sd">    &gt;&gt;&gt; data[:4], len(data)</span>
+</span><span id="line-96"><span class="sd">    (b'RIFF', 364)</span>
+</span><span id="line-97"><span class="sd">    &gt;&gt;&gt; _wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]</span>
+</span><span id="line-98"><span class="sd">    b'\\xff\\x7f'</span>
+</span><span id="line-99"><span class="sd">    """</span>
+</span><span id="line-100">    <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">is_floating_point</span><span class="p">(</span><span class="n">audio</span><span class="p">):</span>  <span class="c1"># integer PCM, e.g. int16 from soundfile</span>
+</span><span id="line-101">        <span class="n">audio</span> <span class="o">=</span> <span class="n">audio</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">audio</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">max</span>
+</span><span id="line-102">    <span class="k">if</span> <span class="n">audio</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+</span><span id="line-103">        <span class="n">audio</span> <span class="o">=</span> <span class="n">audio</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="line-104">    <span class="n">samples</span> <span class="o">=</span> <span class="n">audio</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+</span><span id="line-105">    <span class="n">pcm</span> <span class="o">=</span> <span class="p">(</span><span class="n">samples</span> <span class="o">*</span> <span class="mi">32767</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"&lt;i2"</span><span class="p">)</span><span class="o">.</span><span class="n">tobytes</span><span class="p">()</span>
+</span><span id="line-106">    <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+</span><span id="line-107">    <span class="k">with</span> <span class="n">wave</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">w</span><span class="p">:</span>
+</span><span id="line-108">        <span class="n">w</span><span class="o">.</span><span class="n">setnchannels</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="line-109">        <span class="n">w</span><span class="o">.</span><span class="n">setsampwidth</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</span><span id="line-110">        <span class="n">w</span><span class="o">.</span><span class="n">setframerate</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">))</span>
+</span><span id="line-111">        <span class="n">w</span><span class="o">.</span><span class="n">writeframes</span><span class="p">(</span><span class="n">pcm</span><span class="p">)</span>
+</span><span id="line-112">    <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
 </span><span id="line-113">
-</span><span id="line-114"><span class="k">def</span><span class="w"> </span><span class="nf">_pcm16_to_tensor</span><span class="p">(</span><span class="n">pcm</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-</span><span id="line-115"><span class="w">    </span><span class="sd">"""Decode little-endian 16-bit mono PCM into a float tensor in [-1, 1].</span>
-</span><span id="line-116">
-</span><span id="line-117"><span class="sd">    &gt;&gt;&gt; _pcm16_to_tensor(b"\\x00\\x00\\xff\\x7f").tolist()</span>
-</span><span id="line-118"><span class="sd">    [0.0, 0.999969482421875]</span>
-</span><span id="line-119"><span class="sd">    &gt;&gt;&gt; _pcm16_to_tensor(b"\\x00\\x00\\xff").tolist()</span>
-</span><span id="line-120"><span class="sd">    [0.0]</span>
-</span><span id="line-121"><span class="sd">    """</span>
-</span><span id="line-122">    <span class="n">pcm</span> <span class="o">=</span> <span class="n">pcm</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">pcm</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">pcm</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span><span class="p">]</span>  <span class="c1"># a truncated stream can end mid-sample</span>
-</span><span id="line-123">    <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">pcm</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"&lt;i2"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">32768.0</span>
-</span><span id="line-124">    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
-</span><span id="line-125">
+</span><span id="line-114">
+</span><span id="line-115"><span class="k">def</span><span class="w"> </span><span class="nf">_pcm16_to_tensor</span><span class="p">(</span><span class="n">pcm</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+</span><span id="line-116"><span class="w">    </span><span class="sd">"""Decode little-endian 16-bit mono PCM into a float tensor in [-1, 1].</span>
+</span><span id="line-117">
+</span><span id="line-118"><span class="sd">    &gt;&gt;&gt; _pcm16_to_tensor(b"\\x00\\x00\\xff\\x7f").tolist()</span>
+</span><span id="line-119"><span class="sd">    [0.0, 0.999969482421875]</span>
+</span><span id="line-120"><span class="sd">    &gt;&gt;&gt; _pcm16_to_tensor(b"\\x00\\x00\\xff").tolist()</span>
+</span><span id="line-121"><span class="sd">    [0.0]</span>
+</span><span id="line-122"><span class="sd">    """</span>
+</span><span id="line-123">    <span class="n">pcm</span> <span class="o">=</span> <span class="n">pcm</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">pcm</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">pcm</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span><span class="p">]</span>  <span class="c1"># a truncated stream can end mid-sample</span>
+</span><span id="line-124">    <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">pcm</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"&lt;i2"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">32768.0</span>
+</span><span id="line-125">    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
 </span><span id="line-126">
-</span><span id="line-127"><span class="k">def</span><span class="w"> </span><span class="nf">_wav_to_tensor</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-</span><span id="line-128"><span class="w">    </span><span class="sd">"""Decode 16-bit mono WAV bytes to ``(tensor, sample_rate)``.</span>
-</span><span id="line-129">
-</span><span id="line-130"><span class="sd">    Reads the samples from the ``data`` chunk directly, so a streamed WAV whose</span>
-</span><span id="line-131"><span class="sd">    header carries a placeholder size still decodes.</span>
-</span><span id="line-132">
-</span><span id="line-133"><span class="sd">    &gt;&gt;&gt; audio, sr = _wav_to_tensor(_wav_bytes(torch.zeros(10), 16000))</span>
-</span><span id="line-134"><span class="sd">    &gt;&gt;&gt; tuple(audio.shape), sr</span>
-</span><span id="line-135"><span class="sd">    ((10,), 16000)</span>
-</span><span id="line-136"><span class="sd">    """</span>
-</span><span id="line-137">    <span class="k">if</span> <span class="n">data</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="sa">b</span><span class="s2">"RIFF"</span> <span class="ow">or</span> <span class="n">data</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]</span> <span class="o">!=</span> <span class="sa">b</span><span class="s2">"WAVE"</span><span class="p">:</span>
-</span><span id="line-138">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Not a WAV payload"</span><span class="p">)</span>
-</span><span id="line-139">    <span class="n">pos</span><span class="p">,</span> <span class="n">fmt</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span> <span class="kc">None</span>
-</span><span id="line-140">    <span class="k">while</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
-</span><span id="line-141">        <span class="n">chunk_id</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-142">            <span class="n">data</span><span class="p">[</span><span class="n">pos</span> <span class="p">:</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">4</span><span class="p">],</span>
-</span><span id="line-143">            <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">4</span> <span class="p">:</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">],</span> <span class="s2">"little"</span><span class="p">),</span>
-</span><span id="line-144">        <span class="p">)</span>
-</span><span id="line-145">        <span class="n">body</span> <span class="o">=</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span>
-</span><span id="line-146">        <span class="k">if</span> <span class="n">chunk_id</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"fmt "</span><span class="p">:</span>
-</span><span id="line-147">            <span class="n">channels</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">body</span> <span class="o">+</span> <span class="mi">2</span> <span class="p">:</span> <span class="n">body</span> <span class="o">+</span> <span class="mi">4</span><span class="p">],</span> <span class="s2">"little"</span><span class="p">)</span>
-</span><span id="line-148">            <span class="n">rate</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">body</span> <span class="o">+</span> <span class="mi">4</span> <span class="p">:</span> <span class="n">body</span> <span class="o">+</span> <span class="mi">8</span><span class="p">],</span> <span class="s2">"little"</span><span class="p">)</span>
-</span><span id="line-149">            <span class="n">width</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">body</span> <span class="o">+</span> <span class="mi">14</span> <span class="p">:</span> <span class="n">body</span> <span class="o">+</span> <span class="mi">16</span><span class="p">],</span> <span class="s2">"little"</span><span class="p">)</span>
-</span><span id="line-150">            <span class="n">fmt</span> <span class="o">=</span> <span class="p">(</span><span class="n">channels</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
-</span><span id="line-151">        <span class="k">elif</span> <span class="n">chunk_id</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"data"</span><span class="p">:</span>
-</span><span id="line-152">            <span class="k">if</span> <span class="n">fmt</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">fmt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">fmt</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">16</span><span class="p">:</span>
-</span><span id="line-153">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-154">                    <span class="sa">f</span><span class="s2">"Expected 16-bit mono WAV, got (channels, rate, bits)=</span><span class="si">{</span><span class="n">fmt</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="line-155">                <span class="p">)</span>
-</span><span id="line-156">            <span class="n">end</span> <span class="o">=</span> <span class="n">body</span> <span class="o">+</span> <span class="n">size</span> <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">size</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="n">body</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-</span><span id="line-157">            <span class="k">return</span> <span class="n">_pcm16_to_tensor</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">body</span><span class="p">:</span><span class="n">end</span><span class="p">]),</span> <span class="n">fmt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-</span><span id="line-158">        <span class="n">pos</span> <span class="o">=</span> <span class="n">body</span> <span class="o">+</span> <span class="n">size</span> <span class="o">+</span> <span class="p">(</span><span class="n">size</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span>
-</span><span id="line-159">    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"WAV payload has no data chunk"</span><span class="p">)</span>
-</span><span id="line-160">
+</span><span id="line-127">
+</span><span id="line-128"><span class="k">def</span><span class="w"> </span><span class="nf">_wav_to_tensor</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="line-129"><span class="w">    </span><span class="sd">"""Decode 16-bit mono WAV bytes to ``(tensor, sample_rate)``.</span>
+</span><span id="line-130">
+</span><span id="line-131"><span class="sd">    Reads the samples from the ``data`` chunk directly, so a streamed WAV whose</span>
+</span><span id="line-132"><span class="sd">    header carries a placeholder size still decodes.</span>
+</span><span id="line-133">
+</span><span id="line-134"><span class="sd">    &gt;&gt;&gt; audio, sr = _wav_to_tensor(_wav_bytes(torch.zeros(10), 16000))</span>
+</span><span id="line-135"><span class="sd">    &gt;&gt;&gt; tuple(audio.shape), sr</span>
+</span><span id="line-136"><span class="sd">    ((10,), 16000)</span>
+</span><span id="line-137"><span class="sd">    """</span>
+</span><span id="line-138">    <span class="k">if</span> <span class="n">data</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="sa">b</span><span class="s2">"RIFF"</span> <span class="ow">or</span> <span class="n">data</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]</span> <span class="o">!=</span> <span class="sa">b</span><span class="s2">"WAVE"</span><span class="p">:</span>
+</span><span id="line-139">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Not a WAV payload"</span><span class="p">)</span>
+</span><span id="line-140">    <span class="n">pos</span><span class="p">,</span> <span class="n">fmt</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="line-141">    <span class="k">while</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+</span><span id="line-142">        <span class="n">chunk_id</span><span class="p">,</span> <span class="n">size</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-143">            <span class="n">data</span><span class="p">[</span><span class="n">pos</span> <span class="p">:</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">4</span><span class="p">],</span>
+</span><span id="line-144">            <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">4</span> <span class="p">:</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span><span class="p">],</span> <span class="s2">"little"</span><span class="p">),</span>
+</span><span id="line-145">        <span class="p">)</span>
+</span><span id="line-146">        <span class="n">body</span> <span class="o">=</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">8</span>
+</span><span id="line-147">        <span class="k">if</span> <span class="n">chunk_id</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"fmt "</span><span class="p">:</span>
+</span><span id="line-148">            <span class="n">channels</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">body</span> <span class="o">+</span> <span class="mi">2</span> <span class="p">:</span> <span class="n">body</span> <span class="o">+</span> <span class="mi">4</span><span class="p">],</span> <span class="s2">"little"</span><span class="p">)</span>
+</span><span id="line-149">            <span class="n">rate</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">body</span> <span class="o">+</span> <span class="mi">4</span> <span class="p">:</span> <span class="n">body</span> <span class="o">+</span> <span class="mi">8</span><span class="p">],</span> <span class="s2">"little"</span><span class="p">)</span>
+</span><span id="line-150">            <span class="n">width</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">body</span> <span class="o">+</span> <span class="mi">14</span> <span class="p">:</span> <span class="n">body</span> <span class="o">+</span> <span class="mi">16</span><span class="p">],</span> <span class="s2">"little"</span><span class="p">)</span>
+</span><span id="line-151">            <span class="n">fmt</span> <span class="o">=</span> <span class="p">(</span><span class="n">channels</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
+</span><span id="line-152">        <span class="k">elif</span> <span class="n">chunk_id</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"data"</span><span class="p">:</span>
+</span><span id="line-153">            <span class="k">if</span> <span class="n">fmt</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">fmt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">fmt</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">16</span><span class="p">:</span>
+</span><span id="line-154">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-155">                    <span class="sa">f</span><span class="s2">"Expected 16-bit mono WAV, got (channels, rate, bits)=</span><span class="si">{</span><span class="n">fmt</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-156">                <span class="p">)</span>
+</span><span id="line-157">            <span class="n">end</span> <span class="o">=</span> <span class="n">body</span> <span class="o">+</span> <span class="n">size</span> <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">size</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="n">body</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</span><span id="line-158">            <span class="k">return</span> <span class="n">_pcm16_to_tensor</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">body</span><span class="p">:</span><span class="n">end</span><span class="p">]),</span> <span class="n">fmt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</span><span id="line-159">        <span class="n">pos</span> <span class="o">=</span> <span class="n">body</span> <span class="o">+</span> <span class="n">size</span> <span class="o">+</span> <span class="p">(</span><span class="n">size</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="line-160">    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"WAV payload has no data chunk"</span><span class="p">)</span>
 </span><span id="line-161">
-</span><span id="line-162"><span class="k">def</span><span class="w"> </span><span class="nf">_output_format_parts</span><span class="p">(</span><span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-</span><span id="line-163"><span class="w">    </span><span class="sd">"""Split an ElevenLabs output format into ``(codec, sample_rate)``.</span>
-</span><span id="line-164">
-</span><span id="line-165"><span class="sd">    &gt;&gt;&gt; _output_format_parts("pcm_24000")</span>
-</span><span id="line-166"><span class="sd">    ('pcm', 24000)</span>
-</span><span id="line-167"><span class="sd">    &gt;&gt;&gt; _output_format_parts("mp3_44100_128")</span>
-</span><span id="line-168"><span class="sd">    ('mp3', 44100)</span>
-</span><span id="line-169"><span class="sd">    """</span>
-</span><span id="line-170">    <span class="n">codec</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">output_format</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
-</span><span id="line-171">    <span class="k">return</span> <span class="n">codec</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">rate</span><span class="p">)</span>
-</span><span id="line-172">
+</span><span id="line-162">
+</span><span id="line-163"><span class="k">def</span><span class="w"> </span><span class="nf">_output_format_parts</span><span class="p">(</span><span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="line-164"><span class="w">    </span><span class="sd">"""Split an ElevenLabs output format into ``(codec, sample_rate)``.</span>
+</span><span id="line-165">
+</span><span id="line-166"><span class="sd">    &gt;&gt;&gt; _output_format_parts("pcm_24000")</span>
+</span><span id="line-167"><span class="sd">    ('pcm', 24000)</span>
+</span><span id="line-168"><span class="sd">    &gt;&gt;&gt; _output_format_parts("mp3_44100_128")</span>
+</span><span id="line-169"><span class="sd">    ('mp3', 44100)</span>
+</span><span id="line-170"><span class="sd">    """</span>
+</span><span id="line-171">    <span class="n">codec</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">output_format</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+</span><span id="line-172">    <span class="k">return</span> <span class="n">codec</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">rate</span><span class="p">)</span>
 </span><span id="line-173">
-</span><span id="line-174"><span class="k">def</span><span class="w"> </span><span class="nf">_to_upload_file</span><span class="p">(</span>
-</span><span id="line-175">    <span class="n">audio_input</span><span class="p">:</span> <span class="n">AudioInput</span><span class="p">,</span>
-</span><span id="line-176">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-177">    <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-</span><span id="line-178">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-</span><span id="line-179">    <span class="n">cleanup_audio_fn</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-180"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
-</span><span id="line-181"><span class="w">    </span><span class="sd">"""Turn one voxy audio input into a ``(filename, bytes)`` upload part.</span>
-</span><span id="line-182">
-</span><span id="line-183"><span class="sd">    Encoded inputs (paths, bytes, file-likes) are uploaded untouched, unless a</span>
-</span><span id="line-184"><span class="sd">    ``cleanup_audio_fn`` is given, in which case they are decoded, cleaned, and</span>
-</span><span id="line-185"><span class="sd">    re-encoded as WAV. Raw tensors/arrays are always encoded as WAV.</span>
-</span><span id="line-186"><span class="sd">    """</span>
-</span><span id="line-187">    <span class="n">default_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"sample_</span><span class="si">{</span><span class="n">index</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="line-188">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">):</span>
-</span><span id="line-189">        <span class="n">audio_input</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span>
-</span><span id="line-190">
-</span><span id="line-191">    <span class="k">if</span> <span class="n">cleanup_audio_fn</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
-</span><span id="line-192">        <span class="n">audio_input</span><span class="p">,</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
-</span><span id="line-193">    <span class="p">):</span>
-</span><span id="line-194">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="line-195">            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">audio_input</span><span class="p">):</span>
-</span><span id="line-196">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Audio path does not exist: </span><span class="si">{</span><span class="n">audio_input</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-197">            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span><span id="line-198">                <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">audio_input</span><span class="p">),</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-</span><span id="line-199">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
-</span><span id="line-200">            <span class="k">return</span> <span class="n">default_name</span> <span class="o">+</span> <span class="n">_sniff_suffix</span><span class="p">(</span><span class="n">audio_input</span><span class="p">),</span> <span class="n">audio_input</span>
-</span><span id="line-201">        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="s2">"read"</span><span class="p">):</span>
-</span><span id="line-202">            <span class="n">content</span> <span class="o">=</span> <span class="n">audio_input</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-</span><span id="line-203">            <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-204">            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">name</span><span class="p">:</span>
-</span><span id="line-205">                <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">content</span>
-</span><span id="line-206">            <span class="k">return</span> <span class="n">default_name</span> <span class="o">+</span> <span class="n">_sniff_suffix</span><span class="p">(</span><span class="n">content</span><span class="p">),</span> <span class="n">content</span>
-</span><span id="line-207">        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unsupported audio input type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-208">
-</span><span id="line-209">    <span class="n">audio</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">_resolve_audio_input</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="n">assumed_sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
-</span><span id="line-210">    <span class="k">if</span> <span class="n">cleanup_audio_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-211">        <span class="n">audio</span> <span class="o">=</span> <span class="n">cleanup_audio_fn</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">rate</span><span class="p">)</span>
-</span><span id="line-212">    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">default_name</span><span class="si">}</span><span class="s2">.wav"</span><span class="p">,</span> <span class="n">_wav_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">rate</span><span class="p">)</span>
-</span><span id="line-213">
+</span><span id="line-174">
+</span><span id="line-175"><span class="k">def</span><span class="w"> </span><span class="nf">_to_upload_file</span><span class="p">(</span>
+</span><span id="line-176">    <span class="n">audio_input</span><span class="p">:</span> <span class="n">AudioInput</span><span class="p">,</span>
+</span><span id="line-177">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-178">    <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+</span><span id="line-179">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+</span><span id="line-180">    <span class="n">cleanup_audio_fn</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-181"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
+</span><span id="line-182"><span class="w">    </span><span class="sd">"""Turn one voxy audio input into a ``(filename, bytes)`` upload part.</span>
+</span><span id="line-183">
+</span><span id="line-184"><span class="sd">    Encoded inputs (paths, bytes, file-likes) are uploaded untouched, unless a</span>
+</span><span id="line-185"><span class="sd">    ``cleanup_audio_fn`` is given, in which case they are decoded, cleaned, and</span>
+</span><span id="line-186"><span class="sd">    re-encoded as WAV. Raw tensors/arrays are always encoded as WAV.</span>
+</span><span id="line-187"><span class="sd">    """</span>
+</span><span id="line-188">    <span class="n">default_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"sample_</span><span class="si">{</span><span class="n">index</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-189">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">):</span>
+</span><span id="line-190">        <span class="n">audio_input</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span>
+</span><span id="line-191">
+</span><span id="line-192">    <span class="k">if</span> <span class="n">cleanup_audio_fn</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+</span><span id="line-193">        <span class="n">audio_input</span><span class="p">,</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+</span><span id="line-194">    <span class="p">):</span>
+</span><span id="line-195">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="line-196">            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">audio_input</span><span class="p">):</span>
+</span><span id="line-197">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Audio path does not exist: </span><span class="si">{</span><span class="n">audio_input</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-198">            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="line-199">                <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">audio_input</span><span class="p">),</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+</span><span id="line-200">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+</span><span id="line-201">            <span class="k">return</span> <span class="n">default_name</span> <span class="o">+</span> <span class="n">_sniff_suffix</span><span class="p">(</span><span class="n">audio_input</span><span class="p">),</span> <span class="n">audio_input</span>
+</span><span id="line-202">        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="s2">"read"</span><span class="p">):</span>
+</span><span id="line-203">            <span class="n">content</span> <span class="o">=</span> <span class="n">audio_input</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+</span><span id="line-204">            <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-205">            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">name</span><span class="p">:</span>
+</span><span id="line-206">                <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">content</span>
+</span><span id="line-207">            <span class="k">return</span> <span class="n">default_name</span> <span class="o">+</span> <span class="n">_sniff_suffix</span><span class="p">(</span><span class="n">content</span><span class="p">),</span> <span class="n">content</span>
+</span><span id="line-208">        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unsupported audio input type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-209">
+</span><span id="line-210">    <span class="n">audio</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">_resolve_audio_input</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="n">assumed_sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
+</span><span id="line-211">    <span class="k">if</span> <span class="n">cleanup_audio_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-212">        <span class="n">audio</span> <span class="o">=</span> <span class="n">cleanup_audio_fn</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">rate</span><span class="p">)</span>
+</span><span id="line-213">    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">default_name</span><span class="si">}</span><span class="s2">.wav"</span><span class="p">,</span> <span class="n">_wav_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">rate</span><span class="p">)</span>
 </span><span id="line-214">
-</span><span id="line-215"><span class="k">def</span><span class="w"> </span><span class="nf">_sniff_suffix</span><span class="p">(</span><span class="n">content</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-216"><span class="w">    </span><span class="sd">"""A file suffix guessed from the first bytes, so the upload has a format hint.</span>
-</span><span id="line-217">
-</span><span id="line-218"><span class="sd">    &gt;&gt;&gt; _sniff_suffix(b"RIFF....WAVEfmt "), _sniff_suffix(b"ID3..."), _sniff_suffix(b"??")</span>
-</span><span id="line-219"><span class="sd">    ('.wav', '.mp3', '')</span>
-</span><span id="line-220"><span class="sd">    """</span>
-</span><span id="line-221">    <span class="n">head</span> <span class="o">=</span> <span class="n">content</span><span class="p">[:</span><span class="mi">12</span><span class="p">]</span>
-</span><span id="line-222">    <span class="k">if</span> <span class="n">head</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"RIFF"</span> <span class="ow">and</span> <span class="n">head</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"WAVE"</span><span class="p">:</span>
-</span><span id="line-223">        <span class="k">return</span> <span class="s2">".wav"</span>
-</span><span id="line-224">    <span class="k">if</span> <span class="n">head</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"ID3"</span> <span class="ow">or</span> <span class="n">head</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="sa">b</span><span class="s2">"</span><span class="se">\xff\xfb</span><span class="s2">"</span><span class="p">,</span> <span class="sa">b</span><span class="s2">"</span><span class="se">\xff\xf3</span><span class="s2">"</span><span class="p">,</span> <span class="sa">b</span><span class="s2">"</span><span class="se">\xff\xf2</span><span class="s2">"</span><span class="p">):</span>
-</span><span id="line-225">        <span class="k">return</span> <span class="s2">".mp3"</span>
-</span><span id="line-226">    <span class="k">if</span> <span class="n">head</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">8</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"ftyp"</span><span class="p">:</span>
-</span><span id="line-227">        <span class="k">return</span> <span class="s2">".m4a"</span>
-</span><span id="line-228">    <span class="k">if</span> <span class="n">head</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="sa">b</span><span class="s2">"OggS"</span><span class="p">,</span> <span class="sa">b</span><span class="s2">"fLaC"</span><span class="p">):</span>
-</span><span id="line-229">        <span class="k">return</span> <span class="s2">".ogg"</span> <span class="k">if</span> <span class="n">head</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"OggS"</span> <span class="k">else</span> <span class="s2">".flac"</span>
-</span><span id="line-230">    <span class="k">return</span> <span class="s2">""</span>
-</span><span id="line-231">
+</span><span id="line-215">
+</span><span id="line-216"><span class="k">def</span><span class="w"> </span><span class="nf">_sniff_suffix</span><span class="p">(</span><span class="n">content</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-217"><span class="w">    </span><span class="sd">"""A file suffix guessed from the first bytes, so the upload has a format hint.</span>
+</span><span id="line-218">
+</span><span id="line-219"><span class="sd">    &gt;&gt;&gt; _sniff_suffix(b"RIFF....WAVEfmt "), _sniff_suffix(b"ID3..."), _sniff_suffix(b"??")</span>
+</span><span id="line-220"><span class="sd">    ('.wav', '.mp3', '')</span>
+</span><span id="line-221"><span class="sd">    """</span>
+</span><span id="line-222">    <span class="n">head</span> <span class="o">=</span> <span class="n">content</span><span class="p">[:</span><span class="mi">12</span><span class="p">]</span>
+</span><span id="line-223">    <span class="k">if</span> <span class="n">head</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"RIFF"</span> <span class="ow">and</span> <span class="n">head</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"WAVE"</span><span class="p">:</span>
+</span><span id="line-224">        <span class="k">return</span> <span class="s2">".wav"</span>
+</span><span id="line-225">    <span class="k">if</span> <span class="n">head</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"ID3"</span> <span class="ow">or</span> <span class="n">head</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="sa">b</span><span class="s2">"</span><span class="se">\xff\xfb</span><span class="s2">"</span><span class="p">,</span> <span class="sa">b</span><span class="s2">"</span><span class="se">\xff\xf3</span><span class="s2">"</span><span class="p">,</span> <span class="sa">b</span><span class="s2">"</span><span class="se">\xff\xf2</span><span class="s2">"</span><span class="p">):</span>
+</span><span id="line-226">        <span class="k">return</span> <span class="s2">".mp3"</span>
+</span><span id="line-227">    <span class="k">if</span> <span class="n">head</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">8</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"ftyp"</span><span class="p">:</span>
+</span><span id="line-228">        <span class="k">return</span> <span class="s2">".m4a"</span>
+</span><span id="line-229">    <span class="k">if</span> <span class="n">head</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="sa">b</span><span class="s2">"OggS"</span><span class="p">,</span> <span class="sa">b</span><span class="s2">"fLaC"</span><span class="p">):</span>
+</span><span id="line-230">        <span class="k">return</span> <span class="s2">".ogg"</span> <span class="k">if</span> <span class="n">head</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"OggS"</span> <span class="k">else</span> <span class="s2">".flac"</span>
+</span><span id="line-231">    <span class="k">return</span> <span class="s2">""</span>
 </span><span id="line-232">
-</span><span id="line-233"><span class="n">_SINGLE_AUDIO_TYPES</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
-</span><span id="line-234">
+</span><span id="line-233">
+</span><span id="line-234"><span class="n">_SINGLE_AUDIO_TYPES</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
 </span><span id="line-235">
-</span><span id="line-236"><span class="k">def</span><span class="w"> </span><span class="nf">_as_input_list</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-</span><span id="line-237"><span class="w">    </span><span class="sd">"""A single audio input becomes a one-element list; any other iterable is listed.</span>
-</span><span id="line-238">
-</span><span id="line-239"><span class="sd">    &gt;&gt;&gt; _as_input_list("a.wav")</span>
-</span><span id="line-240"><span class="sd">    ['a.wav']</span>
-</span><span id="line-241"><span class="sd">    &gt;&gt;&gt; _as_input_list(("a.wav", b"..."))</span>
-</span><span id="line-242"><span class="sd">    ['a.wav', b'...']</span>
-</span><span id="line-243"><span class="sd">    &gt;&gt;&gt; _as_input_list(x for x in ["a.wav", "b.wav"])</span>
-</span><span id="line-244"><span class="sd">    ['a.wav', 'b.wav']</span>
-</span><span id="line-245"><span class="sd">    """</span>
-</span><span id="line-246">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="n">_SINGLE_AUDIO_TYPES</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="s2">"read"</span><span class="p">):</span>
-</span><span id="line-247">        <span class="k">return</span> <span class="p">[</span><span class="n">audio_input</span><span class="p">]</span>
-</span><span id="line-248">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">):</span>
-</span><span id="line-249">        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span>
-</span><span id="line-250">    <span class="k">return</span> <span class="p">[</span><span class="n">audio_input</span><span class="p">]</span>
-</span><span id="line-251">
+</span><span id="line-236">
+</span><span id="line-237"><span class="k">def</span><span class="w"> </span><span class="nf">_as_input_list</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+</span><span id="line-238"><span class="w">    </span><span class="sd">"""A single audio input becomes a one-element list; any other iterable is listed.</span>
+</span><span id="line-239">
+</span><span id="line-240"><span class="sd">    &gt;&gt;&gt; _as_input_list("a.wav")</span>
+</span><span id="line-241"><span class="sd">    ['a.wav']</span>
+</span><span id="line-242"><span class="sd">    &gt;&gt;&gt; _as_input_list(("a.wav", b"..."))</span>
+</span><span id="line-243"><span class="sd">    ['a.wav', b'...']</span>
+</span><span id="line-244"><span class="sd">    &gt;&gt;&gt; _as_input_list(x for x in ["a.wav", "b.wav"])</span>
+</span><span id="line-245"><span class="sd">    ['a.wav', 'b.wav']</span>
+</span><span id="line-246"><span class="sd">    """</span>
+</span><span id="line-247">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="n">_SINGLE_AUDIO_TYPES</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="s2">"read"</span><span class="p">):</span>
+</span><span id="line-248">        <span class="k">return</span> <span class="p">[</span><span class="n">audio_input</span><span class="p">]</span>
+</span><span id="line-249">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio_input</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">):</span>
+</span><span id="line-250">        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span>
+</span><span id="line-251">    <span class="k">return</span> <span class="p">[</span><span class="n">audio_input</span><span class="p">]</span>
 </span><span id="line-252">
-</span><span id="line-253"><span class="c1"># -----------------------------------------------------------------------------</span>
-</span><span id="line-254"><span class="c1"># The speech model</span>
-</span><span id="line-255"><span class="c1"># -----------------------------------------------------------------------------</span>
-</span><span id="line-256">
+</span><span id="line-253">
+</span><span id="line-254"><span class="c1"># -----------------------------------------------------------------------------</span>
+</span><span id="line-255"><span class="c1"># The speech model</span>
+</span><span id="line-256"><span class="c1"># -----------------------------------------------------------------------------</span>
 </span><span id="line-257">
+</span><span id="line-258">
 <div class="viewcode-block" id="ElevenLabsSpeechModel">
 <a class="viewcode-back" href="../../_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.ElevenLabsSpeechModel">[docs]</a>
-</span><span id="line-258"><span class="k">class</span><span class="w"> </span><span class="nc">ElevenLabsSpeechModel</span><span class="p">(</span><span class="n">SpeechModel</span><span class="p">):</span>
-</span><span id="line-259"><span class="w">    </span><span class="sd">"""Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).</span>
-</span><span id="line-260">
-</span><span id="line-261"><span class="sd">    Args:</span>
-</span><span id="line-262"><span class="sd">        api_key: ElevenLabs key; defaults to ``ELEVEN_API_KEY`` / ``ELEVENLABS_API_KEY``.</span>
-</span><span id="line-263"><span class="sd">        model_id: TTS model used by ``generate_speech``.</span>
-</span><span id="line-264"><span class="sd">        output_format: ElevenLabs output format. ``pcm_*`` and ``wav_*`` formats</span>
-</span><span id="line-265"><span class="sd">            decode to a tensor with no extra dependency.</span>
-</span><span id="line-266"><span class="sd">        client_factory: ``api_key -&gt; client``. Defaults to the official SDK; tests</span>
-</span><span id="line-267"><span class="sd">            inject a fake so nothing reaches the API.</span>
-</span><span id="line-268"><span class="sd">        device: Device the returned tensors are placed on.</span>
-</span><span id="line-269"><span class="sd">    """</span>
-</span><span id="line-270">
-</span><span id="line-271">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="line-272">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-273">        <span class="o">*</span><span class="p">,</span>
-</span><span id="line-274">        <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-275">        <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_ELEVENLABS_MODEL_ID</span><span class="p">,</span>
-</span><span id="line-276">        <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_ELEVENLABS_OUTPUT_FORMAT</span><span class="p">,</span>
-</span><span id="line-277">        <span class="n">client_factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-278">        <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_VOXY_DEVICE</span><span class="p">,</span>
-</span><span id="line-279">    <span class="p">):</span>
-</span><span id="line-280">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-</span><span id="line-281">        <span class="bp">self</span><span class="o">.</span><span class="n">_api_key</span> <span class="o">=</span> <span class="n">resolve_elevenlabs_api_key</span><span class="p">(</span><span class="n">api_key</span><span class="p">)</span>
-</span><span id="line-282">        <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span> <span class="o">=</span> <span class="n">model_id</span>
-</span><span id="line-283">        <span class="bp">self</span><span class="o">.</span><span class="n">output_format</span> <span class="o">=</span> <span class="n">output_format</span>
-</span><span id="line-284">        <span class="bp">self</span><span class="o">.</span><span class="n">client_factory</span> <span class="o">=</span> <span class="n">client_factory</span> <span class="ow">or</span> <span class="n">default_elevenlabs_client_factory</span>
-</span><span id="line-285">
-</span><span id="line-286">    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># never show the key</span>
-</span><span id="line-287">        <span class="k">return</span> <span class="p">(</span>
-</span><span id="line-288">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">(model_id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_id</span><span class="si">!r}</span><span class="s2">, "</span>
-</span><span id="line-289">            <span class="sa">f</span><span class="s2">"output_format=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">output_format</span><span class="si">!r}</span><span class="s2">)"</span>
-</span><span id="line-290">        <span class="p">)</span>
-</span><span id="line-291">
-</span><span id="line-292">    <span class="nd">@property</span>
-</span><span id="line-293">    <span class="k">def</span><span class="w"> </span><span class="nf">sample_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-</span><span id="line-294"><span class="w">        </span><span class="sd">"""Sample rate of the audio ``generate_speech`` returns."""</span>
-</span><span id="line-295">        <span class="k">return</span> <span class="n">_output_format_parts</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_format</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-</span><span id="line-296">
-</span><span id="line-297">    <span class="nd">@cached_property</span>
-</span><span id="line-298">    <span class="k">def</span><span class="w"> </span><span class="nf">client</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="line-299"><span class="w">        </span><span class="sd">"""The ElevenLabs client, built on first use."""</span>
-</span><span id="line-300">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_key</span><span class="p">:</span>
-</span><span id="line-301">            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-</span><span id="line-302">                <span class="s2">"voxy's ElevenLabs backend needs an API key. Set one of "</span>
-</span><span id="line-303">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ELEVENLABS_API_KEY_ENVVARS</span><span class="p">)</span><span class="si">}</span><span class="s2"> or pass api_key=."</span>
-</span><span id="line-304">            <span class="p">)</span>
-</span><span id="line-305">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">client_factory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_api_key</span><span class="p">)</span>
-</span><span id="line-306">
-</span><span id="line-307">    <span class="c1"># --- voices -------------------------------------------------------------</span>
-</span><span id="line-308">
+</span><span id="line-259"><span class="k">class</span><span class="w"> </span><span class="nc">ElevenLabsSpeechModel</span><span class="p">(</span><span class="n">SpeechModel</span><span class="p">):</span>
+</span><span id="line-260"><span class="w">    </span><span class="sd">"""Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).</span>
+</span><span id="line-261">
+</span><span id="line-262"><span class="sd">    Args:</span>
+</span><span id="line-263"><span class="sd">        api_key: ElevenLabs key; defaults to ``ELEVEN_API_KEY`` / ``ELEVENLABS_API_KEY``.</span>
+</span><span id="line-264"><span class="sd">        model_id: TTS model used by ``generate_speech``.</span>
+</span><span id="line-265"><span class="sd">        output_format: ElevenLabs output format. ``pcm_*`` and ``wav_*`` formats</span>
+</span><span id="line-266"><span class="sd">            decode to a tensor with no extra dependency.</span>
+</span><span id="line-267"><span class="sd">        client_factory: ``api_key -&gt; client``. Defaults to the official SDK; tests</span>
+</span><span id="line-268"><span class="sd">            inject a fake so nothing reaches the API.</span>
+</span><span id="line-269"><span class="sd">        device: Device the returned tensors are placed on.</span>
+</span><span id="line-270"><span class="sd">    """</span>
+</span><span id="line-271">
+</span><span id="line-272">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="line-273">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-274">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-275">        <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-276">        <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_ELEVENLABS_MODEL_ID</span><span class="p">,</span>
+</span><span id="line-277">        <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_ELEVENLABS_OUTPUT_FORMAT</span><span class="p">,</span>
+</span><span id="line-278">        <span class="n">client_factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-279">        <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_VOXY_DEVICE</span><span class="p">,</span>
+</span><span id="line-280">    <span class="p">):</span>
+</span><span id="line-281">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+</span><span id="line-282">        <span class="bp">self</span><span class="o">.</span><span class="n">_api_key</span> <span class="o">=</span> <span class="n">resolve_elevenlabs_api_key</span><span class="p">(</span><span class="n">api_key</span><span class="p">)</span>
+</span><span id="line-283">        <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span> <span class="o">=</span> <span class="n">model_id</span>
+</span><span id="line-284">        <span class="bp">self</span><span class="o">.</span><span class="n">output_format</span> <span class="o">=</span> <span class="n">output_format</span>
+</span><span id="line-285">        <span class="bp">self</span><span class="o">.</span><span class="n">client_factory</span> <span class="o">=</span> <span class="n">client_factory</span> <span class="ow">or</span> <span class="n">default_elevenlabs_client_factory</span>
+</span><span id="line-286">
+</span><span id="line-287">    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># never show the key</span>
+</span><span id="line-288">        <span class="k">return</span> <span class="p">(</span>
+</span><span id="line-289">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">(model_id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_id</span><span class="si">!r}</span><span class="s2">, "</span>
+</span><span id="line-290">            <span class="sa">f</span><span class="s2">"output_format=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">output_format</span><span class="si">!r}</span><span class="s2">)"</span>
+</span><span id="line-291">        <span class="p">)</span>
+</span><span id="line-292">
+</span><span id="line-293">    <span class="nd">@property</span>
+</span><span id="line-294">    <span class="k">def</span><span class="w"> </span><span class="nf">sample_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="line-295"><span class="w">        </span><span class="sd">"""Sample rate of the audio ``generate_speech`` returns."""</span>
+</span><span id="line-296">        <span class="k">return</span> <span class="n">_output_format_parts</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_format</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+</span><span id="line-297">
+</span><span id="line-298">    <span class="nd">@cached_property</span>
+</span><span id="line-299">    <span class="k">def</span><span class="w"> </span><span class="nf">client</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="line-300"><span class="w">        </span><span class="sd">"""The ElevenLabs client, built on first use."""</span>
+</span><span id="line-301">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_api_key</span><span class="p">:</span>
+</span><span id="line-302">            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+</span><span id="line-303">                <span class="s2">"voxy's ElevenLabs backend needs an API key. Set one of "</span>
+</span><span id="line-304">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ELEVENLABS_API_KEY_ENVVARS</span><span class="p">)</span><span class="si">}</span><span class="s2"> or pass api_key=."</span>
+</span><span id="line-305">            <span class="p">)</span>
+</span><span id="line-306">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">client_factory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_api_key</span><span class="p">)</span>
+</span><span id="line-307">
+</span><span id="line-308">    <span class="c1"># --- voices -------------------------------------------------------------</span>
+</span><span id="line-309">
 <div class="viewcode-block" id="ElevenLabsSpeechModel.clone_voice">
 <a class="viewcode-back" href="../../_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.ElevenLabsSpeechModel.clone_voice">[docs]</a>
-</span><span id="line-309">    <span class="k">def</span><span class="w"> </span><span class="nf">clone_voice</span><span class="p">(</span>
-</span><span id="line-310">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-311">        <span class="n">audio_input</span><span class="p">:</span> <span class="n">AudioInput</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">AudioInput</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">AudioInput</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
-</span><span id="line-312">        <span class="n">transcript</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-313">        <span class="n">speaker_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">999</span><span class="p">,</span>
-</span><span id="line-314">        <span class="o">*</span><span class="p">,</span>
-</span><span id="line-315">        <span class="n">cleanup_audio_fn</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-316">        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-317">        <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-318">        <span class="n">labels</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-319">        <span class="n">remove_background_noise</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-320">        <span class="n">assumed_sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_ASSUMED_SAMPLE_RATE</span><span class="p">,</span>
-</span><span id="line-321">        <span class="n">max_files</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_MAX_CLONE_FILES</span><span class="p">,</span>
-</span><span id="line-322">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
-</span><span id="line-323"><span class="w">        </span><span class="sd">"""Create an ElevenLabs instant voice clone from one or more audio samples.</span>
-</span><span id="line-324">
-</span><span id="line-325"><span class="sd">        ElevenLabs recommends about 1-2 minutes of clean, single-speaker audio in</span>
-</span><span id="line-326"><span class="sd">        total (at least 1, at most about 3); how it is split across files does</span>
-</span><span id="line-327"><span class="sd">        not matter.</span>
-</span><span id="line-328">
-</span><span id="line-329"><span class="sd">        Args:</span>
-</span><span id="line-330"><span class="sd">            audio_input: One audio input, or an iterable of them (paths, bytes,</span>
-</span><span id="line-331"><span class="sd">                file-likes, tensors, arrays).</span>
-</span><span id="line-332"><span class="sd">            transcript: Ignored: IVC needs no transcript. Kept so every voxy</span>
-</span><span id="line-333"><span class="sd">                backend shares one ``clone_voice`` signature.</span>
-</span><span id="line-334"><span class="sd">            speaker_id: Carried on the profile, and used in the default name.</span>
-</span><span id="line-335"><span class="sd">            cleanup_audio_fn: Optional ``(audio, sample_rate) -&gt; audio`` applied</span>
-</span><span id="line-336"><span class="sd">                before upload. Off by default: ElevenLabs does its own processing,</span>
-</span><span id="line-337"><span class="sd">                and voxy's silence trimmer can chop soft speech.</span>
-</span><span id="line-338"><span class="sd">            name: Voice name shown in ElevenLabs (default ``voxy-&lt;speaker_id&gt;``).</span>
-</span><span id="line-339"><span class="sd">            description: Voice description.</span>
-</span><span id="line-340"><span class="sd">            labels: Voice labels (keys such as language, accent, gender, age).</span>
-</span><span id="line-341"><span class="sd">            remove_background_noise: Ask ElevenLabs to isolate the voice. Can</span>
-</span><span id="line-342"><span class="sd">                make clean samples worse.</span>
-</span><span id="line-343"><span class="sd">            assumed_sample_rate: Sample rate of raw tensor/array inputs.</span>
-</span><span id="line-344"><span class="sd">            max_files: Refuse, before uploading anything, more samples than</span>
-</span><span id="line-345"><span class="sd">                ElevenLabs accepts per voice (``None`` to skip the check).</span>
-</span><span id="line-346"><span class="sd">                Concatenate short clips to stay under it.</span>
-</span><span id="line-347">
-</span><span id="line-348"><span class="sd">        Returns:</span>
-</span><span id="line-349"><span class="sd">            A ``VoiceProfile`` whose ``segment`` (and ``metadata['voice_id']``)</span>
-</span><span id="line-350"><span class="sd">            is the new ElevenLabs voice id.</span>
-</span><span id="line-351"><span class="sd">        """</span>
-</span><span id="line-352">        <span class="n">inputs</span> <span class="o">=</span> <span class="n">_as_input_list</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span>
-</span><span id="line-353">        <span class="k">if</span> <span class="ow">not</span> <span class="n">inputs</span><span class="p">:</span>
-</span><span id="line-354">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"clone_voice needs at least one audio sample"</span><span class="p">)</span>
-</span><span id="line-355">        <span class="k">if</span> <span class="n">max_files</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_files</span><span class="p">:</span>
-</span><span id="line-356">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-357">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples given; ElevenLabs accepts at most </span><span class="si">{</span><span class="n">max_files</span><span class="si">}</span><span class="s2"> "</span>
-</span><span id="line-358">                <span class="s2">"per voice. Concatenate clips into fewer files (total length is "</span>
-</span><span id="line-359">                <span class="s2">"what matters), or pass max_files= if the limit changed."</span>
-</span><span id="line-360">            <span class="p">)</span>
-</span><span id="line-361">        <span class="n">files</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="line-362">            <span class="n">_to_upload_file</span><span class="p">(</span>
-</span><span id="line-363">                <span class="n">x</span><span class="p">,</span>
-</span><span id="line-364">                <span class="n">index</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
-</span><span id="line-365">                <span class="n">sample_rate</span><span class="o">=</span><span class="n">assumed_sample_rate</span><span class="p">,</span>
-</span><span id="line-366">                <span class="n">cleanup_audio_fn</span><span class="o">=</span><span class="n">cleanup_audio_fn</span><span class="p">,</span>
-</span><span id="line-367">            <span class="p">)</span>
-</span><span id="line-368">            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
-</span><span id="line-369">        <span class="p">]</span>
-</span><span id="line-370">        <span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">DFLT_CLONE_NAME_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">speaker_id</span><span class="o">=</span><span class="n">speaker_id</span><span class="p">)</span>
-</span><span id="line-371">        <span class="n">optional</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-372">            <span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
-</span><span id="line-373">            <span class="s2">"labels"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-374">            <span class="s2">"remove_background_noise"</span><span class="p">:</span> <span class="n">remove_background_noise</span><span class="p">,</span>
-</span><span id="line-375">        <span class="p">}</span>
-</span><span id="line-376">        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">voices</span><span class="o">.</span><span class="n">ivc</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-</span><span id="line-377">            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-</span><span id="line-378">            <span class="n">files</span><span class="o">=</span><span class="n">files</span><span class="p">,</span>
-</span><span id="line-379">            <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">optional</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">},</span>
-</span><span id="line-380">        <span class="p">)</span>
-</span><span id="line-381">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice_profile</span><span class="p">(</span>
-</span><span id="line-382">            <span class="n">response</span><span class="o">.</span><span class="n">voice_id</span><span class="p">,</span>
-</span><span id="line-383">            <span class="n">speaker_id</span><span class="o">=</span><span class="n">speaker_id</span><span class="p">,</span>
-</span><span id="line-384">            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
-</span><span id="line-385">                <span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
-</span><span id="line-386">                <span class="s2">"n_samples"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">),</span>
-</span><span id="line-387">                <span class="s2">"upload_bytes"</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">content</span> <span class="ow">in</span> <span class="n">files</span><span class="p">),</span>
-</span><span id="line-388">                <span class="s2">"requires_verification"</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span>
-</span><span id="line-389">                    <span class="n">response</span><span class="p">,</span> <span class="s2">"requires_verification"</span><span class="p">,</span> <span class="kc">None</span>
-</span><span id="line-390">                <span class="p">),</span>
-</span><span id="line-391">            <span class="p">},</span>
-</span><span id="line-392">        <span class="p">)</span></div>
+</span><span id="line-310">    <span class="k">def</span><span class="w"> </span><span class="nf">clone_voice</span><span class="p">(</span>
+</span><span id="line-311">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-312">        <span class="n">audio_input</span><span class="p">:</span> <span class="n">AudioInput</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">AudioInput</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">AudioInput</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+</span><span id="line-313">        <span class="n">transcript</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-314">        <span class="n">speaker_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">999</span><span class="p">,</span>
+</span><span id="line-315">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-316">        <span class="n">cleanup_audio_fn</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-317">        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-318">        <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-319">        <span class="n">labels</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-320">        <span class="n">remove_background_noise</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-321">        <span class="n">assumed_sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_ASSUMED_SAMPLE_RATE</span><span class="p">,</span>
+</span><span id="line-322">        <span class="n">max_files</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_MAX_CLONE_FILES</span><span class="p">,</span>
+</span><span id="line-323">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-324"><span class="w">        </span><span class="sd">"""Create an ElevenLabs instant voice clone from one or more audio samples.</span>
+</span><span id="line-325">
+</span><span id="line-326"><span class="sd">        ElevenLabs recommends about 1-2 minutes of clean, single-speaker audio in</span>
+</span><span id="line-327"><span class="sd">        total (at least 1, at most about 3); how it is split across files does</span>
+</span><span id="line-328"><span class="sd">        not matter.</span>
+</span><span id="line-329">
+</span><span id="line-330"><span class="sd">        Args:</span>
+</span><span id="line-331"><span class="sd">            audio_input: One audio input, or an iterable of them (paths, bytes,</span>
+</span><span id="line-332"><span class="sd">                file-likes, tensors, arrays).</span>
+</span><span id="line-333"><span class="sd">            transcript: Ignored: IVC needs no transcript. Kept so every voxy</span>
+</span><span id="line-334"><span class="sd">                backend shares one ``clone_voice`` signature.</span>
+</span><span id="line-335"><span class="sd">            speaker_id: Carried on the profile, and used in the default name.</span>
+</span><span id="line-336"><span class="sd">            cleanup_audio_fn: Optional ``(audio, sample_rate) -&gt; audio`` applied</span>
+</span><span id="line-337"><span class="sd">                before upload. Off by default: ElevenLabs does its own processing,</span>
+</span><span id="line-338"><span class="sd">                and voxy's silence trimmer can chop soft speech.</span>
+</span><span id="line-339"><span class="sd">            name: Voice name shown in ElevenLabs (default ``voxy-&lt;speaker_id&gt;``).</span>
+</span><span id="line-340"><span class="sd">            description: Voice description.</span>
+</span><span id="line-341"><span class="sd">            labels: Voice labels (keys such as language, accent, gender, age).</span>
+</span><span id="line-342"><span class="sd">            remove_background_noise: Ask ElevenLabs to isolate the voice. Can</span>
+</span><span id="line-343"><span class="sd">                make clean samples worse.</span>
+</span><span id="line-344"><span class="sd">            assumed_sample_rate: Sample rate of raw tensor/array inputs.</span>
+</span><span id="line-345"><span class="sd">            max_files: Refuse, before uploading anything, more samples than</span>
+</span><span id="line-346"><span class="sd">                ElevenLabs accepts per voice (``None`` to skip the check).</span>
+</span><span id="line-347"><span class="sd">                Concatenate short clips to stay under it.</span>
+</span><span id="line-348">
+</span><span id="line-349"><span class="sd">        Returns:</span>
+</span><span id="line-350"><span class="sd">            A ``VoiceProfile`` whose ``segment`` (and ``metadata['voice_id']``)</span>
+</span><span id="line-351"><span class="sd">            is the new ElevenLabs voice id.</span>
+</span><span id="line-352"><span class="sd">        """</span>
+</span><span id="line-353">        <span class="n">inputs</span> <span class="o">=</span> <span class="n">_as_input_list</span><span class="p">(</span><span class="n">audio_input</span><span class="p">)</span>
+</span><span id="line-354">        <span class="k">if</span> <span class="ow">not</span> <span class="n">inputs</span><span class="p">:</span>
+</span><span id="line-355">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"clone_voice needs at least one audio sample"</span><span class="p">)</span>
+</span><span id="line-356">        <span class="k">if</span> <span class="n">max_files</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_files</span><span class="p">:</span>
+</span><span id="line-357">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-358">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples given; ElevenLabs accepts at most </span><span class="si">{</span><span class="n">max_files</span><span class="si">}</span><span class="s2"> "</span>
+</span><span id="line-359">                <span class="s2">"per voice. Concatenate clips into fewer files (total length is "</span>
+</span><span id="line-360">                <span class="s2">"what matters), or pass max_files= if the limit changed."</span>
+</span><span id="line-361">            <span class="p">)</span>
+</span><span id="line-362">        <span class="n">files</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="line-363">            <span class="n">_to_upload_file</span><span class="p">(</span>
+</span><span id="line-364">                <span class="n">x</span><span class="p">,</span>
+</span><span id="line-365">                <span class="n">index</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+</span><span id="line-366">                <span class="n">sample_rate</span><span class="o">=</span><span class="n">assumed_sample_rate</span><span class="p">,</span>
+</span><span id="line-367">                <span class="n">cleanup_audio_fn</span><span class="o">=</span><span class="n">cleanup_audio_fn</span><span class="p">,</span>
+</span><span id="line-368">            <span class="p">)</span>
+</span><span id="line-369">            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+</span><span id="line-370">        <span class="p">]</span>
+</span><span id="line-371">        <span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">DFLT_CLONE_NAME_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">speaker_id</span><span class="o">=</span><span class="n">speaker_id</span><span class="p">)</span>
+</span><span id="line-372">        <span class="n">optional</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-373">            <span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+</span><span id="line-374">            <span class="c1"># A multipart form can't carry a dict: the API takes labels as JSON text.</span>
+</span><span id="line-375">            <span class="s2">"labels"</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">labels</span><span class="p">))</span> <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-376">            <span class="s2">"remove_background_noise"</span><span class="p">:</span> <span class="n">remove_background_noise</span><span class="p">,</span>
+</span><span id="line-377">        <span class="p">}</span>
+</span><span id="line-378">        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">voices</span><span class="o">.</span><span class="n">ivc</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+</span><span id="line-379">            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+</span><span id="line-380">            <span class="n">files</span><span class="o">=</span><span class="n">files</span><span class="p">,</span>
+</span><span id="line-381">            <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">optional</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">},</span>
+</span><span id="line-382">        <span class="p">)</span>
+</span><span id="line-383">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">voice_profile</span><span class="p">(</span>
+</span><span id="line-384">            <span class="n">response</span><span class="o">.</span><span class="n">voice_id</span><span class="p">,</span>
+</span><span id="line-385">            <span class="n">speaker_id</span><span class="o">=</span><span class="n">speaker_id</span><span class="p">,</span>
+</span><span id="line-386">            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+</span><span id="line-387">                <span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+</span><span id="line-388">                <span class="s2">"n_samples"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">),</span>
+</span><span id="line-389">                <span class="s2">"upload_bytes"</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">content</span> <span class="ow">in</span> <span class="n">files</span><span class="p">),</span>
+</span><span id="line-390">                <span class="s2">"requires_verification"</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span>
+</span><span id="line-391">                    <span class="n">response</span><span class="p">,</span> <span class="s2">"requires_verification"</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="line-392">                <span class="p">),</span>
+</span><span id="line-393">            <span class="p">},</span>
+</span><span id="line-394">        <span class="p">)</span></div>
 
-</span><span id="line-393">
+</span><span id="line-395">
 <div class="viewcode-block" id="ElevenLabsSpeechModel.voice_profile">
 <a class="viewcode-back" href="../../_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.ElevenLabsSpeechModel.voice_profile">[docs]</a>
-</span><span id="line-394">    <span class="k">def</span><span class="w"> </span><span class="nf">voice_profile</span><span class="p">(</span>
-</span><span id="line-395">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-396">        <span class="n">voice_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-397">        <span class="o">*</span><span class="p">,</span>
-</span><span id="line-398">        <span class="n">speaker_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">999</span><span class="p">,</span>
-</span><span id="line-399">        <span class="n">metadata</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-400">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
-</span><span id="line-401"><span class="w">        </span><span class="sd">"""A profile for an existing ElevenLabs voice (a past clone, or a stock voice).</span>
-</span><span id="line-402">
-</span><span id="line-403"><span class="sd">        &gt;&gt;&gt; model = ElevenLabsSpeechModel(api_key="unused")</span>
-</span><span id="line-404"><span class="sd">        &gt;&gt;&gt; model.voice_profile("abc123").segment</span>
-</span><span id="line-405"><span class="sd">        'abc123'</span>
-</span><span id="line-406"><span class="sd">        """</span>
-</span><span id="line-407">        <span class="k">return</span> <span class="n">VoiceProfile</span><span class="p">(</span>
-</span><span id="line-408">            <span class="n">segment</span><span class="o">=</span><span class="n">voice_id</span><span class="p">,</span>
-</span><span id="line-409">            <span class="n">speaker_id</span><span class="o">=</span><span class="n">speaker_id</span><span class="p">,</span>
-</span><span id="line-410">            <span class="n">model_type</span><span class="o">=</span><span class="n">ELEVENLABS_MODEL_TYPE</span><span class="p">,</span>
-</span><span id="line-411">            <span class="n">sample_rate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">,</span>
-</span><span id="line-412">            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">"voice_id"</span><span class="p">:</span> <span class="n">voice_id</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{})},</span>
-</span><span id="line-413">        <span class="p">)</span></div>
+</span><span id="line-396">    <span class="k">def</span><span class="w"> </span><span class="nf">voice_profile</span><span class="p">(</span>
+</span><span id="line-397">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-398">        <span class="n">voice_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-399">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-400">        <span class="n">speaker_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">999</span><span class="p">,</span>
+</span><span id="line-401">        <span class="n">metadata</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-402">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-403"><span class="w">        </span><span class="sd">"""A profile for an existing ElevenLabs voice (a past clone, or a stock voice).</span>
+</span><span id="line-404">
+</span><span id="line-405"><span class="sd">        &gt;&gt;&gt; model = ElevenLabsSpeechModel(api_key="unused")</span>
+</span><span id="line-406"><span class="sd">        &gt;&gt;&gt; model.voice_profile("abc123").segment</span>
+</span><span id="line-407"><span class="sd">        'abc123'</span>
+</span><span id="line-408"><span class="sd">        """</span>
+</span><span id="line-409">        <span class="k">return</span> <span class="n">VoiceProfile</span><span class="p">(</span>
+</span><span id="line-410">            <span class="n">segment</span><span class="o">=</span><span class="n">voice_id</span><span class="p">,</span>
+</span><span id="line-411">            <span class="n">speaker_id</span><span class="o">=</span><span class="n">speaker_id</span><span class="p">,</span>
+</span><span id="line-412">            <span class="n">model_type</span><span class="o">=</span><span class="n">ELEVENLABS_MODEL_TYPE</span><span class="p">,</span>
+</span><span id="line-413">            <span class="n">sample_rate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">,</span>
+</span><span id="line-414">            <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">"voice_id"</span><span class="p">:</span> <span class="n">voice_id</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{})},</span>
+</span><span id="line-415">        <span class="p">)</span></div>
 
-</span><span id="line-414">
+</span><span id="line-416">
 <div class="viewcode-block" id="ElevenLabsSpeechModel.delete_voice">
 <a class="viewcode-back" href="../../_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.ElevenLabsSpeechModel.delete_voice">[docs]</a>
-</span><span id="line-415">    <span class="k">def</span><span class="w"> </span><span class="nf">delete_voice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-416"><span class="w">        </span><span class="sd">"""Delete a voice from the ElevenLabs account."""</span>
-</span><span id="line-417">        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">voices</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">_voice_id</span><span class="p">(</span><span class="n">voice</span><span class="p">))</span></div>
+</span><span id="line-417">    <span class="k">def</span><span class="w"> </span><span class="nf">delete_voice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-418"><span class="w">        </span><span class="sd">"""Delete a voice from the ElevenLabs account."""</span>
+</span><span id="line-419">        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">voices</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">_voice_id</span><span class="p">(</span><span class="n">voice</span><span class="p">))</span></div>
 
-</span><span id="line-418">
-</span><span id="line-419">    <span class="c1"># --- synthesis ----------------------------------------------------------</span>
 </span><span id="line-420">
+</span><span id="line-421">    <span class="c1"># --- synthesis ----------------------------------------------------------</span>
+</span><span id="line-422">
 <div class="viewcode-block" id="ElevenLabsSpeechModel.synthesize_bytes">
 <a class="viewcode-back" href="../../_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize_bytes">[docs]</a>
-</span><span id="line-421">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize_bytes</span><span class="p">(</span>
-</span><span id="line-422">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-423">        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="n">io</span><span class="o">.</span><span class="n">TextIOBase</span><span class="p">,</span>
-</span><span id="line-424">        <span class="n">voice_profile</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-425">        <span class="o">*</span><span class="p">,</span>
-</span><span id="line-426">        <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-427">        <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-428">        <span class="o">**</span><span class="n">convert_kwargs</span><span class="p">,</span>
-</span><span id="line-429">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-</span><span id="line-430"><span class="w">        </span><span class="sd">"""The raw audio ElevenLabs returns, in ``output_format`` (any format).</span>
-</span><span id="line-431">
-</span><span id="line-432"><span class="sd">        Extra keyword arguments (``voice_settings``, ``seed``, ``language_code``...)</span>
-</span><span id="line-433"><span class="sd">        go straight to ``client.text_to_speech.convert``.</span>
-</span><span id="line-434"><span class="sd">        """</span>
-</span><span id="line-435">        <span class="n">chunks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">text_to_speech</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
-</span><span id="line-436">            <span class="n">_voice_id</span><span class="p">(</span><span class="n">voice_profile</span><span class="p">),</span>
-</span><span id="line-437">            <span class="n">text</span><span class="o">=</span><span class="n">_resolve_text_input</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
-</span><span id="line-438">            <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span><span class="p">,</span>
-</span><span id="line-439">            <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_format</span><span class="p">,</span>
-</span><span id="line-440">            <span class="o">**</span><span class="n">convert_kwargs</span><span class="p">,</span>
-</span><span id="line-441">        <span class="p">)</span>
-</span><span id="line-442">        <span class="k">return</span> <span class="n">chunks</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chunks</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="sa">b</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span></div>
+</span><span id="line-423">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize_bytes</span><span class="p">(</span>
+</span><span id="line-424">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-425">        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="n">io</span><span class="o">.</span><span class="n">TextIOBase</span><span class="p">,</span>
+</span><span id="line-426">        <span class="n">voice_profile</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-427">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-428">        <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-429">        <span class="n">output_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-430">        <span class="o">**</span><span class="n">convert_kwargs</span><span class="p">,</span>
+</span><span id="line-431">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+</span><span id="line-432"><span class="w">        </span><span class="sd">"""The raw audio ElevenLabs returns, in ``output_format`` (any format).</span>
+</span><span id="line-433">
+</span><span id="line-434"><span class="sd">        Extra keyword arguments (``voice_settings``, ``seed``, ``language_code``...)</span>
+</span><span id="line-435"><span class="sd">        go straight to ``client.text_to_speech.convert``.</span>
+</span><span id="line-436"><span class="sd">        """</span>
+</span><span id="line-437">        <span class="n">chunks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">text_to_speech</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+</span><span id="line-438">            <span class="n">_voice_id</span><span class="p">(</span><span class="n">voice_profile</span><span class="p">),</span>
+</span><span id="line-439">            <span class="n">text</span><span class="o">=</span><span class="n">_resolve_text_input</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
+</span><span id="line-440">            <span class="n">model_id</span><span class="o">=</span><span class="n">model_id</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span><span class="p">,</span>
+</span><span id="line-441">            <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_format</span><span class="p">,</span>
+</span><span id="line-442">            <span class="o">**</span><span class="n">convert_kwargs</span><span class="p">,</span>
+</span><span id="line-443">        <span class="p">)</span>
+</span><span id="line-444">        <span class="k">return</span> <span class="n">chunks</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chunks</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="sa">b</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span></div>
 
-</span><span id="line-443">
+</span><span id="line-445">
 <div class="viewcode-block" id="ElevenLabsSpeechModel.generate_speech">
 <a class="viewcode-back" href="../../_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.ElevenLabsSpeechModel.generate_speech">[docs]</a>
-</span><span id="line-444">    <span class="k">def</span><span class="w"> </span><span class="nf">generate_speech</span><span class="p">(</span>
-</span><span id="line-445">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-446">        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="n">io</span><span class="o">.</span><span class="n">TextIOBase</span><span class="p">,</span>
-</span><span id="line-447">        <span class="n">voice_profile</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-448">        <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-449">        <span class="n">max_length_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>
-</span><span id="line-450">        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-</span><span id="line-451">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-</span><span id="line-452"><span class="w">        </span><span class="sd">"""Synthesize ``text`` in a cloned (or stock) ElevenLabs voice.</span>
-</span><span id="line-453">
-</span><span id="line-454"><span class="sd">        Args:</span>
-</span><span id="line-455"><span class="sd">            text: Text to synthesize.</span>
-</span><span id="line-456"><span class="sd">            voice_profile: From ``clone_voice`` or ``voice_profile``, or a bare</span>
-</span><span id="line-457"><span class="sd">                voice id. Required: ElevenLabs has no voiceless default.</span>
-</span><span id="line-458"><span class="sd">            output_path: If given, save the audio there (WAV for pcm/wav formats,</span>
-</span><span id="line-459"><span class="sd">                the raw payload otherwise).</span>
-</span><span id="line-460"><span class="sd">            max_length_ms: Ignored; ElevenLabs sizes the audio to the text.</span>
-</span><span id="line-461"><span class="sd">            **kwargs: Passed to ``synthesize_bytes``.</span>
-</span><span id="line-462">
-</span><span id="line-463"><span class="sd">        Returns:</span>
-</span><span id="line-464"><span class="sd">            A mono float tensor at the output format's sample rate (that is</span>
-</span><span id="line-465"><span class="sd">            ``self.sample_rate`` unless ``output_format=`` is passed here).</span>
-</span><span id="line-466"><span class="sd">        """</span>
-</span><span id="line-467">        <span class="k">if</span> <span class="n">voice_profile</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-468">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-469">                <span class="s2">"ElevenLabs needs a voice: pass a VoiceProfile or a voice id"</span>
-</span><span id="line-470">            <span class="p">)</span>
-</span><span id="line-471">        <span class="n">output_format</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"output_format"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_format</span>
-</span><span id="line-472">        <span class="n">codec</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">_output_format_parts</span><span class="p">(</span><span class="n">output_format</span><span class="p">)</span>
-</span><span id="line-473">        <span class="k">if</span> <span class="n">codec</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"pcm"</span><span class="p">,</span> <span class="s2">"wav"</span><span class="p">):</span>
-</span><span id="line-474">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-475">                <span class="sa">f</span><span class="s2">"Output format </span><span class="si">{</span><span class="n">output_format</span><span class="si">!r}</span><span class="s2"> can't be decoded to a tensor "</span>
-</span><span id="line-476">                <span class="s2">"without ffmpeg; use synthesize_bytes() for compressed formats, "</span>
-</span><span id="line-477">                <span class="s2">"or a pcm_*/wav_* format here."</span>
-</span><span id="line-478">            <span class="p">)</span>
-</span><span id="line-479">        <span class="n">payload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">synthesize_bytes</span><span class="p">(</span>
-</span><span id="line-480">            <span class="n">text</span><span class="p">,</span> <span class="n">voice_profile</span><span class="p">,</span> <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
-</span><span id="line-481">        <span class="p">)</span>
-</span><span id="line-482">        <span class="k">if</span> <span class="n">codec</span> <span class="o">==</span> <span class="s2">"pcm"</span><span class="p">:</span>
-</span><span id="line-483">            <span class="n">audio</span> <span class="o">=</span> <span class="n">_pcm16_to_tensor</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
-</span><span id="line-484">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-485">            <span class="n">audio</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">_wav_to_tensor</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
-</span><span id="line-486">        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
-</span><span id="line-487">            <span class="n">_write_bytes</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">_wav_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">rate</span><span class="p">))</span>
-</span><span id="line-488">        <span class="k">return</span> <span class="n">audio</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+</span><span id="line-446">    <span class="k">def</span><span class="w"> </span><span class="nf">generate_speech</span><span class="p">(</span>
+</span><span id="line-447">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-448">        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="n">io</span><span class="o">.</span><span class="n">TextIOBase</span><span class="p">,</span>
+</span><span id="line-449">        <span class="n">voice_profile</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-450">        <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-451">        <span class="n">max_length_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">,</span>
+</span><span id="line-452">        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span><span id="line-453">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+</span><span id="line-454"><span class="w">        </span><span class="sd">"""Synthesize ``text`` in a cloned (or stock) ElevenLabs voice.</span>
+</span><span id="line-455">
+</span><span id="line-456"><span class="sd">        Args:</span>
+</span><span id="line-457"><span class="sd">            text: Text to synthesize.</span>
+</span><span id="line-458"><span class="sd">            voice_profile: From ``clone_voice`` or ``voice_profile``, or a bare</span>
+</span><span id="line-459"><span class="sd">                voice id. Required: ElevenLabs has no voiceless default.</span>
+</span><span id="line-460"><span class="sd">            output_path: If given, save the audio there (WAV for pcm/wav formats,</span>
+</span><span id="line-461"><span class="sd">                the raw payload otherwise).</span>
+</span><span id="line-462"><span class="sd">            max_length_ms: Ignored; ElevenLabs sizes the audio to the text.</span>
+</span><span id="line-463"><span class="sd">            **kwargs: Passed to ``synthesize_bytes``.</span>
+</span><span id="line-464">
+</span><span id="line-465"><span class="sd">        Returns:</span>
+</span><span id="line-466"><span class="sd">            A mono float tensor at the output format's sample rate (that is</span>
+</span><span id="line-467"><span class="sd">            ``self.sample_rate`` unless ``output_format=`` is passed here).</span>
+</span><span id="line-468"><span class="sd">        """</span>
+</span><span id="line-469">        <span class="k">if</span> <span class="n">voice_profile</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-470">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-471">                <span class="s2">"ElevenLabs needs a voice: pass a VoiceProfile or a voice id"</span>
+</span><span id="line-472">            <span class="p">)</span>
+</span><span id="line-473">        <span class="n">output_format</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"output_format"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_format</span>
+</span><span id="line-474">        <span class="n">codec</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">_output_format_parts</span><span class="p">(</span><span class="n">output_format</span><span class="p">)</span>
+</span><span id="line-475">        <span class="k">if</span> <span class="n">codec</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"pcm"</span><span class="p">,</span> <span class="s2">"wav"</span><span class="p">):</span>
+</span><span id="line-476">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-477">                <span class="sa">f</span><span class="s2">"Output format </span><span class="si">{</span><span class="n">output_format</span><span class="si">!r}</span><span class="s2"> can't be decoded to a tensor "</span>
+</span><span id="line-478">                <span class="s2">"without ffmpeg; use synthesize_bytes() for compressed formats, "</span>
+</span><span id="line-479">                <span class="s2">"or a pcm_*/wav_* format here."</span>
+</span><span id="line-480">            <span class="p">)</span>
+</span><span id="line-481">        <span class="n">payload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">synthesize_bytes</span><span class="p">(</span>
+</span><span id="line-482">            <span class="n">text</span><span class="p">,</span> <span class="n">voice_profile</span><span class="p">,</span> <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+</span><span id="line-483">        <span class="p">)</span>
+</span><span id="line-484">        <span class="k">if</span> <span class="n">codec</span> <span class="o">==</span> <span class="s2">"pcm"</span><span class="p">:</span>
+</span><span id="line-485">            <span class="n">audio</span> <span class="o">=</span> <span class="n">_pcm16_to_tensor</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+</span><span id="line-486">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-487">            <span class="n">audio</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">_wav_to_tensor</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+</span><span id="line-488">        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+</span><span id="line-489">            <span class="n">_write_bytes</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">_wav_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">rate</span><span class="p">))</span>
+</span><span id="line-490">        <span class="k">return</span> <span class="n">audio</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
 </div>
 
-</span><span id="line-489">
-</span><span id="line-490">
-</span><span id="line-491"><span class="k">def</span><span class="w"> </span><span class="nf">_voice_id</span><span class="p">(</span><span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-492"><span class="w">    </span><span class="sd">"""The ElevenLabs voice id of a profile (or of a bare id).</span>
-</span><span id="line-493">
-</span><span id="line-494"><span class="sd">    &gt;&gt;&gt; _voice_id("abc")</span>
-</span><span id="line-495"><span class="sd">    'abc'</span>
-</span><span id="line-496"><span class="sd">    &gt;&gt;&gt; _voice_id(VoiceProfile("abc", 1, "csm", 24000))</span>
-</span><span id="line-497"><span class="sd">    Traceback (most recent call last):</span>
-</span><span id="line-498"><span class="sd">      ...</span>
-</span><span id="line-499"><span class="sd">    ValueError: Incompatible voice profile type: csm</span>
-</span><span id="line-500"><span class="sd">    """</span>
-</span><span id="line-501">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="line-502">        <span class="k">return</span> <span class="n">voice</span>
-</span><span id="line-503">    <span class="k">if</span> <span class="n">voice</span><span class="o">.</span><span class="n">model_type</span> <span class="o">!=</span> <span class="n">ELEVENLABS_MODEL_TYPE</span><span class="p">:</span>
-</span><span id="line-504">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Incompatible voice profile type: </span><span class="si">{</span><span class="n">voice</span><span class="o">.</span><span class="n">model_type</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-505">    <span class="k">return</span> <span class="n">voice</span><span class="o">.</span><span class="n">segment</span>
-</span><span id="line-506">
-</span><span id="line-507">
-</span><span id="line-508"><span class="k">def</span><span class="w"> </span><span class="nf">_write_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-509">    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)),</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-510">    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span><span id="line-511">        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</span><span id="line-491">
+</span><span id="line-492">
+</span><span id="line-493"><span class="k">def</span><span class="w"> </span><span class="nf">_voice_id</span><span class="p">(</span><span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-494"><span class="w">    </span><span class="sd">"""The ElevenLabs voice id of a profile (or of a bare id).</span>
+</span><span id="line-495">
+</span><span id="line-496"><span class="sd">    &gt;&gt;&gt; _voice_id("abc")</span>
+</span><span id="line-497"><span class="sd">    'abc'</span>
+</span><span id="line-498"><span class="sd">    &gt;&gt;&gt; _voice_id(VoiceProfile("abc", 1, "csm", 24000))</span>
+</span><span id="line-499"><span class="sd">    Traceback (most recent call last):</span>
+</span><span id="line-500"><span class="sd">      ...</span>
+</span><span id="line-501"><span class="sd">    ValueError: Incompatible voice profile type: csm</span>
+</span><span id="line-502"><span class="sd">    """</span>
+</span><span id="line-503">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="line-504">        <span class="k">return</span> <span class="n">voice</span>
+</span><span id="line-505">    <span class="k">if</span> <span class="n">voice</span><span class="o">.</span><span class="n">model_type</span> <span class="o">!=</span> <span class="n">ELEVENLABS_MODEL_TYPE</span><span class="p">:</span>
+</span><span id="line-506">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Incompatible voice profile type: </span><span class="si">{</span><span class="n">voice</span><span class="o">.</span><span class="n">model_type</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-507">    <span class="k">return</span> <span class="n">voice</span><span class="o">.</span><span class="n">segment</span>
+</span><span id="line-508">
+</span><span id="line-509">
+</span><span id="line-510"><span class="k">def</span><span class="w"> </span><span class="nf">_write_bytes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-511">    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)),</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-512">    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="line-513">        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 </span></code></pre></div>
     </div></div>
           </main>
@@ -709,7 +714,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+    <script src="../../_static/documentation_options.js?v=282f96c0"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

@@ -149,7 +149,9 @@ model = create_speech_model("elevenlabs")
 profile = model.clone_voice(["clip1.wav", "clip2.m4a"], name="my-voice")
 print(profile.segment)  # the ElevenLabs voice_id
 
-audio = model.generate_speech("Hello from my cloned voice.", profile, output_path="hello.wav")
+audio = model.generate_speech(
+    "Hello from my cloned voice.", profile, output_path="hello.wav"
+)
 
 # Later sessions: rebuild the profile from the id, no re-upload.
 profile = model.voice_profile("<voice_id>")
@@ -158,6 +160,21 @@ profile = model.voice_profile("<voice_id>")
 `generate_speech` returns a tensor for `pcm_*`/`wav_*` output formats (default `pcm_24000`); `synthesize_bytes` returns the raw payload in any format (e.g. `mp3_44100_128`). `delete_voice` removes a clone from the account. ElevenLabs requires that you have the right, and the voice owner’s consent, to clone a voice.
 
 Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `VOXY_LIVE_ELEVENLABS_SAMPLE=<audio you may clone>` also clones, speaks and deletes.
+
+### The voice library: clone once, reuse by name
+
+voxy keeps voice data in stores (`MutableMapping`s) under `$VOXY_DATA_DIR` (default `~/.local/share/voxy`): `voices/{name}.json` records (with each backend’s saved profile, e.g. the ElevenLabs `voice_id`), `samples/{name}/` (audio a clone is made from), `sources/{name}/` (raw media). Every library function takes its stores as arguments (`voices=`, `samples=`), so any `MutableMapping` (another folder, S3) can stand in.
+
+```python
+from voxy import samples_store, clone_from_samples, load_voice, create_speech_model
+
+samples = samples_store("ada")
+samples["clip1.wav"] = open("clip1.wav", "rb").read()
+clone_from_samples("ada")                      # uploads the samples, saves the profile
+
+model = create_speech_model("elevenlabs")
+model.generate_speech("Hi!", load_voice("ada"), output_path="hi.wav")
+```
 
 ## Configuration
 

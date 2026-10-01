@@ -1,0 +1,15 @@
+voxy.library
+============
+
+.. automodule:: voxy.library
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      clone_from_samples
+      load_voice
+      profile_to_dict
+      save_voice
+   

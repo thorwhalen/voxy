@@ -1,0 +1,18 @@
+voxy.stores
+===========
+
+.. automodule:: voxy.stores
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      audio_store
+      check_voice_name
+      kind_dir
+      samples_store
+      sources_store
+      voices_store
+      voxy_data_dir
+   

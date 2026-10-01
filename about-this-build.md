@@ -2,18 +2,18 @@
 
 # About this build
 
-This documentation was built on **2026-10-01 05:55 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/76d4782cbda023f162153a4aaea53c63094e39b8"><code>76d4782</code></a> on branch <code>main</code>, for **voxy 0.0.4** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-01 08:31 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/67b416be825983003cd117332ae68a23f57e6cde"><code>67b416b</code></a> on branch <code>main</code>, for **voxy 0.0.5** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.4) is behind the latest release on PyPI (0.0.5): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.5) is behind the latest release on PyPI (0.0.6): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/76d4782cbda023f162153a4aaea53c63094e39b8"><code>76d4782cbda023f162153a4aaea53c63094e39b8</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/67b416be825983003cd117332ae68a23f57e6cde"><code>67b416be825983003cd117332ae68a23f57e6cde</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -24,9 +24,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/36821821150">36821821150</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/36836436290">36836436290</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>76d4782cbda023f162153a4aaea53c63094e39b8</code> (in the history of the built commit) |
+| Event commit | <code>67b416be825983003cd117332ae68a23f57e6cde</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -51,13 +51,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.5/">0.0.5</a>, newer than the documented version (0.0.4).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.6/">0.0.6</a>, newer than the documented version (0.0.5).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 76d4782cbda023f162153a4aaea53c63094e39b8
+git checkout 67b416be825983003cd117332ae68a23f57e6cde
 pip install "epythet==0.2.12"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
