@@ -27,18 +27,18 @@ Bases: [`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel)
 macOS `say` as a voxy backend.
 
 * **Parameters:**
-  * **voice** (`str`) – Default system voice.
-  * **sample_rate** (`int`) – Output WAV sample rate.
-  * **run** (`Callable` | `None`) – `subprocess.run`-like callable (tests inject a fake).
+  * **voice** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Default system voice.
+  * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Output WAV sample rate.
+  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `subprocess.run`-like callable (tests inject a fake).
 
 #### list_voices()
 
 The voices this backend offers.
 
 * **Return type:**
-  `list`[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
 
-#### name *: str* *= 'say'*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'say'*
 
 Registry name of the backend (also each profile’s `model_type`).
 
@@ -54,7 +54,7 @@ WAV speech from `say` (`voice`: a system voice name or profile).
 Parse `say -v '?'` output.
 
 * **Return type:**
-  `list`[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
 
 ```pycon
 >>> [v.name for v in parse_say_voices("Albert              en_US    # Hello!\n"

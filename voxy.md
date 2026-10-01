@@ -1,4 +1,4 @@
-> built 2026-10-01 09:48 UTC from e6f5701 (main) · voxy 0.0.6. Details: build_info.json
+> built 2026-10-01 12:28 UTC from 795e328 (main) · voxy 0.0.7. Details: build_info.json
 
 # index.html.md
 
@@ -13,26 +13,34 @@ To install:	`pip install voxy` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'vox
 ```python
 import voxy
 
-voxy.text_to_speech("Hello!", voice="cora").save("hi.mp3")          # a named voice from the library
-voxy.text_to_speech("A quick draft.", voice="Daniel", backend="say")  # free local voice (macOS)
-voxy.list_voices()                # our named voices
-voxy.list_voices("elevenlabs")    # a service's voices
+voxy.text_to_speech("Hello!", voice="ada").save(
+    "hi.mp3"
+)  # a named voice from the library
+voxy.text_to_speech(
+    "A quick draft.", voice="Daniel", backend="say"
+)  # free local voice (macOS)
+voxy.list_voices()  # our named voices
+voxy.list_voices("elevenlabs")  # a service's voices
 ```
 
 Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
 
-Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice cora -o out.mp3`.
+Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice ada -o out.mp3`.
 
 ## Designing a voice from a description
 
 ```python
 model = voxy.get_speech_model("elevenlabs")
-line = ("Once upon a time, in a village at the edge of a very old forest, there lived a "
-        "baker who could hear the bread singing as it rose.")  # 100-1000 characters
+line = (
+    "Once upon a time, in a village at the edge of a very old forest, there lived a "
+    "baker who could hear the bread singing as it rose."
+)  # 100-1000 characters
 previews = model.design_voice_previews("a warm, slow, elderly storyteller", text=line)
 for i, p in enumerate(previews):
-    p.save(f"preview_{i}.mp3")          # listen, then pick one
-voxy.design_from_description("storyteller", "a warm, slow, elderly storyteller", preview=previews[1])
+    p.save(f"preview_{i}.mp3")  # listen, then pick one
+voxy.design_from_description(
+    "storyteller", "a warm, slow, elderly storyteller", preview=previews[1]
+)
 ```
 
 ## Features
@@ -304,18 +312,18 @@ Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
 aix/LiteLLM text-to-speech as a voxy backend.
 
 * **Parameters:**
-  * **model** (`str` | `None`) – TTS model (None: aix’s configured default).
-  * **response_format** (`str`) – ‘mp3’, ‘opus’, ‘aac’, ‘flac’, ‘wav’…
-  * **tts** (`Callable` | `None`) – `(text, **kw) -> GeneratedAudio` (tests inject a fake).
+  * **model** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – TTS model (None: aix’s configured default).
+  * **response_format** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – ‘mp3’, ‘opus’, ‘aac’, ‘flac’, ‘wav’…
+  * **tts** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(text, **kw) -> GeneratedAudio` (tests inject a fake).
 
 #### list_voices()
 
 OpenAI’s built-in voices (other LiteLLM providers have their own).
 
 * **Return type:**
-  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
 
-#### name *: str* *= 'aix'*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'aix'*
 
 Registry name of the backend (also each profile’s `model_type`).
 
@@ -376,10 +384,10 @@ Speech model implementation using Sesame’s CSM-1B model.
 Create a voice profile from an audio sample and its transcript.
 
 * **Parameters:**
-  * **audio_input** (`str` | `bytes` | `BinaryIO` | `Tensor` | `ndarray`) – Audio in various formats
-  * **transcript** (`str` | `None`) – Text transcription of the audio (if None, auto-transcribed)
-  * **speaker_id** (`int`) – Unique ID for this voice
-  * **cleanup_audio_fn** (`Callable` | `None`) – Function to clean up audio (None to skip)
+  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Text transcription of the audio (if None, auto-transcribed)
+  * **speaker_id** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Unique ID for this voice
+  * **cleanup_audio_fn** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Function to clean up audio (None to skip)
 * **Returns:**
   A packaged voice profile
 * **Return type:**
@@ -390,28 +398,28 @@ Create a voice profile from an audio sample and its transcript.
 Generate speech using a voice profile.
 
 * **Parameters:**
-  * **text** (`str` | `bytes` | `TextIOBase`) – Text to synthesize
-  * **voice_profile** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | `None`) – Voice profile from clone_voice()
-  * **output_path** (`str` | `None`) – Path to save the audio (optional)
-  * **max_length_ms** (`int`) – Maximum audio length in milliseconds
-  * **temperature** (`float`) – Sampling temperature (lower = more deterministic)
-  * **topk** (`int`) – Top-k sampling parameter
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`TextIOBase`](https://docs.python.org/3/library/io.html#io.TextIOBase)) – Text to synthesize
+  * **voice_profile** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice profile from clone_voice()
+  * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Path to save the audio (optional)
+  * **max_length_ms** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Maximum audio length in milliseconds
+  * **temperature** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Sampling temperature (lower = more deterministic)
+  * **topk** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Top-k sampling parameter
 * **Return type:**
   `Tensor`
 * **Returns:**
   Generated audio tensor
 
-#### name *: str* *= 'csm'*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'csm'*
 
 Registry name of the backend (also each profile’s `model_type`).
 
-#### *property* sample_rate *: int*
+#### *property* sample_rate *: [int](https://docs.python.org/3/builtins/functions.html#int)*
 
 Sample rate of the generated audio (loads the model).
 
 ### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None)
 
-Bases: `object`
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Synthesized speech: encoded audio plus what produced it.
 
@@ -428,11 +436,11 @@ b'RIFF'
 Write the audio to `path` (folders created) and return the path.
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### *class* voxy.base.SpeechModel(device='cpu')
 
-Bases: `object`
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Base class for speech backends (local models or services).
 
@@ -451,10 +459,10 @@ A backend implements whichever capabilities it has; the rest raise
 Create a voice profile from an audio sample and its transcript.
 
 * **Parameters:**
-  * **audio_input** (`str` | `bytes` | `BinaryIO` | `Tensor` | `ndarray`) – Audio in various formats
-  * **transcript** (`str` | `None`) – Text transcription of the audio (if None, auto-transcribed)
-  * **speaker_id** (`int`) – Unique ID for this voice
-  * **cleanup_audio_fn** (`Callable` | `None`) – Function to clean up audio (None to skip)
+  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Text transcription of the audio (if None, auto-transcribed)
+  * **speaker_id** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Unique ID for this voice
+  * **cleanup_audio_fn** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Function to clean up audio (None to skip)
 * **Returns:**
   A packaged voice profile
 * **Return type:**
@@ -467,7 +475,7 @@ Create a new voice from a text description.
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
 
-#### dflt_voice *: str | None* *= None*
+#### dflt_voice *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
 
 the caller must).
 
@@ -479,10 +487,10 @@ the caller must).
 Generate speech using a voice profile.
 
 * **Parameters:**
-  * **text** (`str` | `bytes` | `TextIOBase`) – Text to synthesize
-  * **voice_profile** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | `None`) – Voice profile from clone_voice()
-  * **output_path** (`str` | `None`) – Path to save the audio (optional)
-  * **max_length_ms** (`int`) – Maximum audio length in milliseconds
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`TextIOBase`](https://docs.python.org/3/library/io.html#io.TextIOBase)) – Text to synthesize
+  * **voice_profile** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice profile from clone_voice()
+  * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Path to save the audio (optional)
+  * **max_length_ms** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Maximum audio length in milliseconds
   * **\*\*kwargs** – Additional model-specific parameters
 * **Return type:**
   `Tensor`
@@ -494,9 +502,9 @@ Generate speech using a voice profile.
 The voices this backend offers.
 
 * **Return type:**
-  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
 
-#### name *: str* *= ''*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= ''*
 
 Registry name of the backend (also each profile’s `model_type`).
 
@@ -512,13 +520,13 @@ This default (for tensor-producing models such as CSM) needs a
 
 ### *class* voxy.base.VoiceInfo(voice_id, name, backend, description='', labels=None)
 
-Bases: `object`
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A voice a backend offers (stock, designed, or cloned).
 
 ### *class* voxy.base.VoiceProfile(segment, speaker_id, model_type, sample_rate, metadata=None)
 
-Bases: `object`
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Data class to store voice cloning information.
 
@@ -527,20 +535,20 @@ Data class to store voice cloning information.
 Transcribe audio to text using Whisper.
 
 * **Parameters:**
-  * **audio_input** (`str` | `bytes` | `BinaryIO` | `Tensor` | `ndarray`) – Audio in various formats
-  * **model_size** (`str`) – Whisper model size (‘tiny’, ‘base’, ‘small’, ‘medium’, ‘large’)
-  * **sample_rate** (`int` | `None`) – Sample rate of `audio_input` when it is a raw tensor or
+  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **model_size** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Whisper model size (‘tiny’, ‘base’, ‘small’, ‘medium’, ‘large’)
+  * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Sample rate of `audio_input` when it is a raw tensor or
     numpy array. Required for correct transcription of raw audio that
     is not at `DFLT_ASSUMED_SAMPLE_RATE`; ignored when the input is a
     path, bytes or file-like object (those carry their own rate).
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 * **Returns:**
   Transcribed text
 * **Raises:**
-  **ImportError** – If whisper is not installed
+  [**ImportError**](https://docs.python.org/3/builtins/exceptions.html#ImportError) – If whisper is not installed
 
-### voxy.base.backend_aliases *: dict[str, str]* *= {'csm-1b': 'csm'}*
+### voxy.base.backend_aliases *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]* *= {'csm-1b': 'csm'}*
 
 Other names for a backend -> its registry name (one model, one profile type).
 
@@ -549,7 +557,7 @@ Other names for a backend -> its registry name (one model, one profile type).
 The registry name of backend `name` (lowercased, aliases resolved).
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ```pycon
 >>> canonical_backend("ElevenLabs"), canonical_backend("CSM-1B")
@@ -562,11 +570,11 @@ Clean up audio by normalizing volume and removing silence.
 
 * **Parameters:**
   * **audio** (`Tensor`) – Audio tensor [channels, samples] or [samples]
-  * **sample_rate** (`int`) – Sample rate of the audio
-  * **normalize** (`bool`) – Whether to normalize the audio volume
-  * **remove_silence** (`bool`) – Whether to remove silence
-  * **silence_threshold** (`float`) – Threshold for silence detection (0.0-1.0)
-  * **min_silence_duration** (`float`) – Minimum silence duration in seconds
+  * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Sample rate of the audio
+  * **normalize** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Whether to normalize the audio volume
+  * **remove_silence** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Whether to remove silence
+  * **silence_threshold** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Threshold for silence detection (0.0-1.0)
+  * **min_silence_duration** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Minimum silence duration in seconds
 * **Return type:**
   `Tensor`
 * **Returns:**
@@ -597,7 +605,7 @@ Stereo input is mixed down to mono:
 Create a speech model of the specified type.
 
 * **Parameters:**
-  * **model_type** (`str`) – A key of `speech_model_factories` (‘csm’, ‘csm-1b’,
+  * **model_type** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – A key of `speech_model_factories` (‘csm’, ‘csm-1b’,
     ‘elevenlabs’, ‘aix’, ‘fal’, ‘say’, or any registered); case-insensitive,
     aliases in `backend_aliases` accepted.
   * **\*\*kwargs** – Additional model-specific parameters
@@ -606,7 +614,7 @@ Create a speech model of the specified type.
 * **Returns:**
   SpeechModel instance
 * **Raises:**
-  **ValueError** – If the model type is not supported
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If the model type is not supported
 
 The returned model loads its (large) weights lazily, on first use:
 
@@ -629,7 +637,7 @@ Register a backend (a class or `**kwargs -> SpeechModel` callable).
 Returns `factory`, so it also works as a class decorator via `functools.partial`.
 
 * **Return type:**
-  `Callable`[`...`, [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]
 
 ```pycon
 >>> class Echo(SpeechModel):
@@ -644,7 +652,7 @@ ValueError: A speech backend named 'echo' is already registered (pass overwrite=
 >>> del speech_model_factories["echo"]
 ```
 
-### voxy.base.speech_model_factories *: dict[str, Callable[[...], [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>}*
+### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[...], [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>}*
 
 Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
@@ -655,7 +663,7 @@ Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
 Integer tensors are taken as PCM and scaled to [-1, 1] first.
 
 * **Return type:**
-  `bytes`
+  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
 
 ```pycon
 >>> data = tensor_to_wav_bytes(torch.zeros(160), 16000)
@@ -711,13 +719,13 @@ Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
 Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).
 
 * **Parameters:**
-  * **api_key** (`str` | `None`) – ElevenLabs key; defaults to `ELEVEN_API_KEY` / `ELEVENLABS_API_KEY`.
-  * **model_id** (`str`) – TTS model used by `generate_speech`.
-  * **output_format** (`str`) – ElevenLabs output format. `pcm_*` and `wav_*` formats
+  * **api_key** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – ElevenLabs key; defaults to `ELEVEN_API_KEY` / `ELEVENLABS_API_KEY`.
+  * **model_id** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – TTS model used by `generate_speech`.
+  * **output_format** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – ElevenLabs output format. `pcm_*` and `wav_*` formats
     decode to a tensor with no extra dependency.
-  * **client_factory** (`Callable`[[`str`], `Any`] | `None`) – `api_key -> client`. Defaults to the official SDK; tests
+  * **client_factory** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `api_key -> client`. Defaults to the official SDK; tests
     inject a fake so nothing reaches the API.
-  * **device** (`str`) – Device the returned tensors are placed on.
+  * **device** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Device the returned tensors are placed on.
 
 #### *property* client
 
@@ -732,21 +740,21 @@ total (at least 1, at most about 3); how it is split across files does
 not matter.
 
 * **Parameters:**
-  * **audio_input** (`str` | `PathLike` | `bytes` | `BinaryIO` | `Tensor` | `ndarray` | `list`[`str` | `PathLike` | `bytes` | `BinaryIO` | `Tensor` | `ndarray`] | `tuple`[`str` | `PathLike` | `bytes` | `BinaryIO` | `Tensor` | `ndarray`, `...`]) – One audio input, or an iterable of them (paths, bytes,
+  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray` | [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`] | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`, [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – One audio input, or an iterable of them (paths, bytes,
     file-likes, tensors, arrays).
-  * **transcript** (`str` | `None`) – Ignored: IVC needs no transcript. Kept so every voxy
+  * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Ignored: IVC needs no transcript. Kept so every voxy
     backend shares one `clone_voice` signature.
-  * **speaker_id** (`int`) – Carried on the profile, and used in the default name.
-  * **cleanup_audio_fn** (`Callable` | `None`) – Optional `(audio, sample_rate) -> audio` applied
+  * **speaker_id** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Carried on the profile, and used in the default name.
+  * **cleanup_audio_fn** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Optional `(audio, sample_rate) -> audio` applied
     before upload. Off by default: ElevenLabs does its own processing,
     and voxy’s silence trimmer can chop soft speech.
-  * **name** (`str` | `None`) – Voice name shown in ElevenLabs (default `voxy-<speaker_id>`).
-  * **description** (`str` | `None`) – Voice description.
-  * **labels** (`Mapping`[`str`, `str`] | `None`) – Voice labels (keys such as language, accent, gender, age).
-  * **remove_background_noise** (`bool` | `None`) – Ask ElevenLabs to isolate the voice. Can
+  * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice name shown in ElevenLabs (default `voxy-<speaker_id>`).
+  * **description** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice description.
+  * **labels** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice labels (keys such as language, accent, gender, age).
+  * **remove_background_noise** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Ask ElevenLabs to isolate the voice. Can
     make clean samples worse.
-  * **assumed_sample_rate** (`int`) – Sample rate of raw tensor/array inputs.
-  * **max_files** (`int` | `None`) – Refuse, before uploading anything, more samples than
+  * **assumed_sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Sample rate of raw tensor/array inputs.
+  * **max_files** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Refuse, before uploading anything, more samples than
     ElevenLabs accepts per voice (`None` to skip the check).
     Concatenate short clips to stay under it.
 * **Return type:**
@@ -760,19 +768,19 @@ not matter.
 Delete a voice from the ElevenLabs account.
 
 * **Return type:**
-  `None`
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 #### design_voice(description, , preview=None, name=None, labels=None, speaker_id=999, \*\*preview_kwargs)
 
 Create a voice from a text `description` and return its profile.
 
 * **Parameters:**
-  * **description** (`str`) – What the voice sounds like (age, accent, tone, pace…).
-  * **preview** ([`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview) | `str` | `None`) – The chosen preview (or its `generated_voice_id`) from
+  * **description** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What the voice sounds like (age, accent, tone, pace…).
+  * **preview** ([`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The chosen preview (or its `generated_voice_id`) from
     `design_voice_previews`. If omitted, previews are generated
     and the first is used.
-  * **name** (`str` | `None`) – Voice name in ElevenLabs (default `voxy-<speaker_id>`).
-  * **labels** (`Mapping`[`str`, `str`] | `None`) – Voice labels (language, accent, gender, age…).
+  * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice name in ElevenLabs (default `voxy-<speaker_id>`).
+  * **labels** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice labels (language, accent, gender, age…).
   * **\*\*preview_kwargs** – Passed to `design_voice_previews` when
     `preview` is omitted.
 * **Return type:**
@@ -787,19 +795,19 @@ ElevenLabs writes a fitting line. Nothing is added to the account until
 one preview is passed to `design_voice`.
 
 * **Return type:**
-  `list`[[`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview)]
 
 #### generate_speech(text, voice_profile=None, output_path=None, max_length_ms=10000, \*\*kwargs)
 
 Synthesize `text` in a cloned (or stock) ElevenLabs voice.
 
 * **Parameters:**
-  * **text** (`str` | `bytes` | `TextIOBase`) – Text to synthesize.
-  * **voice_profile** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | `str` | `None`) – From `clone_voice` or `voice_profile`, or a bare
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`TextIOBase`](https://docs.python.org/3/library/io.html#io.TextIOBase)) – Text to synthesize.
+  * **voice_profile** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – From `clone_voice` or `voice_profile`, or a bare
     voice id. Required: ElevenLabs has no voiceless default.
-  * **output_path** (`str` | `None`) – If given, save the audio there (WAV for pcm/wav formats,
+  * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – If given, save the audio there (WAV for pcm/wav formats,
     the raw payload otherwise).
-  * **max_length_ms** (`int`) – Ignored; ElevenLabs sizes the audio to the text.
+  * **max_length_ms** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Ignored; ElevenLabs sizes the audio to the text.
   * **\*\*kwargs** – Passed to `synthesize_bytes`.
 * **Return type:**
   `Tensor`
@@ -813,13 +821,13 @@ Voices in the account and its library (`voice_type`: e.g. ‘default’,
 ‘personal’, ‘cloned’, ‘generated’).
 
 * **Return type:**
-  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
 
-#### name *: str* *= 'elevenlabs'*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'elevenlabs'*
 
 Registry name of the backend (also each profile’s `model_type`).
 
-#### *property* sample_rate *: int*
+#### *property* sample_rate *: [int](https://docs.python.org/3/builtins/functions.html#int)*
 
 Sample rate of the audio `generate_speech` returns.
 
@@ -838,7 +846,7 @@ Extra keyword arguments (`voice_settings`, `seed`, `language_code`…)
 go straight to `client.text_to_speech.convert`.
 
 * **Return type:**
-  `bytes`
+  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
 
 #### voice_profile(voice_id, , speaker_id=999, metadata=None)
 
@@ -855,7 +863,7 @@ A profile for an existing ElevenLabs voice (a past clone, or a stock voice).
 
 ### *class* voxy.elevenlabs_model.VoiceDesignPreview(generated_voice_id, audio, text='', duration_s=None)
 
-Bases: `object`
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One candidate voice from `design_voice_previews`: listen, then pick.
 
@@ -868,7 +876,7 @@ Build the official SDK client (imported lazily).
 The explicit `api_key` if given, else the first set env var, else None.
 
 * **Return type:**
-  `str` | `None`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ```pycon
 >>> resolve_elevenlabs_api_key("explicit")
@@ -886,11 +894,11 @@ Voice generation in one call, whatever the service behind it.
 
 ```pycon
 >>> import voxy
->>> voxy.text_to_speech("Hello!", voice="cora").save("hi.mp3")
+>>> voxy.text_to_speech("Hello!", voice="ada").save("hi.mp3")
 >>> voxy.text_to_speech("Hello!", voice="Daniel", backend="say")
 >>> voxy.list_voices()               # the library: our named voices
 >>> voxy.list_voices("elevenlabs")   # a backend's own voices
->>> voxy.voice_id("coco")            # 'rcrK...' (aliases work)
+>>> voxy.voice_id("addie")            # 'xY12...' (aliases work)
 ```
 
 How `voice` is understood, first match wins:
@@ -925,14 +933,14 @@ Backends are entries of `voxy.speech_model_factories`; add one with
 Forget cached models (e.g. after changing keys or settings).
 
 * **Return type:**
-  `None`
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### voxy.facade.dflt_tts_backend()
 
 `$VOXY_TTS_BACKEND`, else ‘elevenlabs’ (read on every call).
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### voxy.facade.get_speech_model(backend=None, , models=None)
 
@@ -946,13 +954,13 @@ The (cached) model for `backend`; `models` replaces the shared cache.
 Our named voices (`backend=None`), or the voices a backend offers.
 
 * **Return type:**
-  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
 
 ```pycon
->>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "description": "d",
+>>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "description": "d",
 ...                 "profiles": {"elevenlabs": {"segment": "v1"}}}}
 >>> [(v.name, v.labels["backends"]) for v in list_voices(voices=lib)]
-[('cora', ['elevenlabs'])]
+[('ada', ['elevenlabs'])]
 ```
 
 ### voxy.facade.resolve_voice(voice, , backend=None, voices=None, use_library=True)
@@ -960,13 +968,13 @@ Our named voices (`backend=None`), or the voices a backend offers.
 `(backend, voice)` to synthesize with (see the module docstring for the rules).
 
 * **Return type:**
-  `tuple`[`str`, [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | `str` | `None`]
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
 
 ```pycon
->>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "profiles": {
+>>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {
 ...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",
 ...                    "sample_rate": 24000}}}}
->>> b, v = resolve_voice("coco", voices=lib)
+>>> b, v = resolve_voice("addie", voices=lib)
 >>> b, v.segment
 ('elevenlabs', 'v1')
 >>> resolve_voice("Daniel", backend="say", voices=lib)
@@ -978,16 +986,16 @@ Our named voices (`backend=None`), or the voices a backend offers.
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
 * **Parameters:**
-  * **text** (`str`) – What to say.
-  * **voice** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | `str` | `None`) – A library name or alias (‘cora’, ‘Coco’), a backend’s own voice
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to say.
+  * **voice** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A library name or alias (‘ada’, ‘Addie’), a backend’s own voice
     (‘nova’, ‘Daniel’, an ElevenLabs id), a `VoiceProfile`, or None.
-  * **backend** (`str` | `None`) – Service to use (‘elevenlabs’, ‘say’, ‘aix’, ‘fal’, ‘csm’, or
+  * **backend** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Service to use (‘elevenlabs’, ‘say’, ‘aix’, ‘fal’, ‘csm’, or
     any registered). Inferred from library voices.
-  * **output_path** (`str` | `None`) – Also save the audio there.
-  * **voices** (`Mapping` | `None`) – Voice library store (default `voxy.voices_store()`).
-  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | `None`) – A ready model to use (its backend is then the backend).
-  * **models** (`MutableMapping` | `None`) – Model cache to use instead of the shared one.
-  * **use_library** (`bool`) – Look `voice` up in the library first (False: always
+  * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Also save the audio there.
+  * **voices** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice library store (default `voxy.voices_store()`).
+  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready model to use (its backend is then the backend).
+  * **models** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Model cache to use instead of the shared one.
+  * **use_library** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Look `voice` up in the library first (False: always
     the backend’s own voice of that name).
   * **\*\*kwargs** – Backend-specific options (e.g. `output_format=` for
     ElevenLabs, `speed=` for aix, `quality=` for fal).
@@ -999,13 +1007,13 @@ Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 The provider’s id for library voice `name` (for code that calls a provider).
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ```pycon
->>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "profiles": {
+>>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {
 ...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",
 ...                    "sample_rate": 24000}}}}
->>> voice_id("Coco", voices=lib)
+>>> voice_id("Addie", voices=lib)
 'v1'
 ```
 
@@ -1037,12 +1045,12 @@ Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
 fal.ai text-to-speech (through falaw) as a voxy backend.
 
 * **Parameters:**
-  * **quality** (`str`) – falaw quality tier used to pick a model.
-  * **model_id** (`str` | `None`) – A specific fal model (overrides `quality`).
-  * **tts** (`Callable` | `None`) – `(text, **kw) -> falaw.Result` (tests inject a fake).
-  * **fetch** (`Callable`[[`str`], `bytes`] | `None`) – `url -> bytes` to download the result.
+  * **quality** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – falaw quality tier used to pick a model.
+  * **model_id** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A specific fal model (overrides `quality`).
+  * **tts** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(text, **kw) -> falaw.Result` (tests inject a fake).
+  * **fetch** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `url -> bytes` to download the result.
 
-#### name *: str* *= 'fal'*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'fal'*
 
 Registry name of the backend (also each profile’s `model_type`).
 
@@ -1122,16 +1130,16 @@ saved; a local model’s in-memory segment (CSM) cannot.
 Clone the voice `name` from its stored samples and save the profile.
 
 * **Parameters:**
-  * **name** (`str`) – Voice name: the key in the samples and voices stores.
-  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | `None`) – A speech model; defaults to `create_speech_model(model_type)`.
-  * **model_type** (`str`) – Backend used when `model` is not given.
-  * **samples** (`Mapping`[`str`, `bytes`] | `None`) – `filename -> bytes`; defaults to `samples_store(name)`. Only
+  * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Voice name: the key in the samples and voices stores.
+  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A speech model; defaults to `create_speech_model(model_type)`.
+  * **model_type** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Backend used when `model` is not given.
+  * **samples** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `filename -> bytes`; defaults to `samples_store(name)`. Only
     its top-level audio files are uploaded.
-  * **voices** (`MutableMapping` | `None`) – Voice records store; defaults to `voices_store()`.
-  * **record_fields** (`Mapping`[`str`, `Any`] | `None`) – Extra fields for the voice record (aliases, consent…).
-  * **overwrite** (`bool`) – Replace an existing profile of this backend for `name`
+  * **voices** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice records store; defaults to `voices_store()`.
+  * **record_fields** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra fields for the voice record (aliases, consent…).
+  * **overwrite** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Replace an existing profile of this backend for `name`
     (otherwise refused before anything is uploaded).
-  * **\*\*clone_kwargs** (`Any`) – Passed to `model.clone_voice` (e.g. `labels=`,
+  * **\*\*clone_kwargs** ([`Any`](https://docs.python.org/3/library/typing.html#typing.Any)) – Passed to `model.clone_voice` (e.g. `labels=`,
     `remove_background_noise=`). `name=` defaults to `name`.
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
@@ -1141,15 +1149,15 @@ Clone the voice `name` from its stored samples and save the profile.
 Design a new voice from a text `description` and save it as `name`.
 
 * **Parameters:**
-  * **name** (`str`) – Library name for the voice.
-  * **description** (`str`) – What it sounds like (age, accent, tone, pace, character).
+  * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Library name for the voice.
+  * **description** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What it sounds like (age, accent, tone, pace, character).
   * **preview** – The chosen preview (or its id) from the model’s
     `design_voice_previews`; if omitted, the first generated one.
-  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | `None`) – A speech model that can design voices (default: `model_type`’s).
-  * **record_fields** (`Mapping`[`str`, `Any`] | `None`) – Extra fields for the voice record (aliases…).
-  * **overwrite** (`bool`) – Replace an existing profile of this backend for `name`
+  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A speech model that can design voices (default: `model_type`’s).
+  * **record_fields** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra fields for the voice record (aliases…).
+  * **overwrite** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Replace an existing profile of this backend for `name`
     (otherwise refused before any paid call).
-  * **\*\*design_kwargs** (`Any`) – Passed to `model.design_voice` (`labels=`, `seed=`…).
+  * **\*\*design_kwargs** ([`Any`](https://docs.python.org/3/library/typing.html#typing.Any)) – Passed to `model.design_voice` (`labels=`, `seed=`…).
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
 
@@ -1158,12 +1166,12 @@ Design a new voice from a text `description` and save it as `name`.
 The library key of the voice called `name` (case-insensitive, aliases too).
 
 * **Return type:**
-  `str` | `None`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ```pycon
->>> lib = {"cora": {"aliases": ["Cora", "Coco"]}, "vanessa": {"aliases": ["Ness"]}}
->>> find_voice("coco", voices=lib), find_voice("Vanessa", voices=lib), find_voice("x", voices=lib)
-('cora', 'vanessa', None)
+>>> lib = {"ada": {"aliases": ["Ada", "Addie"]}, "grace": {"aliases": ["Gracie"]}}
+>>> find_voice("addie", voices=lib), find_voice("Grace", voices=lib), find_voice("x", voices=lib)
+('ada', 'grace', None)
 ```
 
 ### voxy.library.load_voice(name, , model_type='elevenlabs', voices=None)
@@ -1190,7 +1198,7 @@ the record’s `default_backend`, else its first.
 A JSON-ready dict of `profile`; refuses segments that aren’t plain data.
 
 * **Return type:**
-  `dict`
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 ### voxy.library.save_voice(name, profile, , voices=None, \*\*record_fields)
 
@@ -1200,7 +1208,7 @@ Save `profile` under `name` (merged into any existing record) and return the rec
 the record itself. Aliases must not already name another voice.
 
 * **Return type:**
-  `dict`
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 
 # _autosummary/voxy.say_model.html.md
@@ -1234,18 +1242,18 @@ Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
 macOS `say` as a voxy backend.
 
 * **Parameters:**
-  * **voice** (`str`) – Default system voice.
-  * **sample_rate** (`int`) – Output WAV sample rate.
-  * **run** (`Callable` | `None`) – `subprocess.run`-like callable (tests inject a fake).
+  * **voice** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Default system voice.
+  * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Output WAV sample rate.
+  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `subprocess.run`-like callable (tests inject a fake).
 
 #### list_voices()
 
 The voices this backend offers.
 
 * **Return type:**
-  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
 
-#### name *: str* *= 'say'*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'say'*
 
 Registry name of the backend (also each profile’s `model_type`).
 
@@ -1261,7 +1269,7 @@ WAV speech from `say` (`voice`: a system voice name or profile).
 Parse `say -v '?'` output.
 
 * **Return type:**
-  `list`[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
 
 ```pycon
 >>> [v.name for v in parse_say_voices("Albert              en_US    # Hello!\n"
@@ -1316,18 +1324,18 @@ means passing a different `MutableMapping`. Folders are created on first write.
 Audio files of one voice and kind, `filename -> bytes`.
 
 * **Return type:**
-  `MutableMapping`
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
 
 ### voxy.stores.check_voice_name(name)
 
 Return `name` if it can name a voice (one path segment), else raise.
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ```pycon
->>> check_voice_name("cora")
-'cora'
+>>> check_voice_name("ada")
+'ada'
 >>> check_voice_name("../x")
 Traceback (most recent call last):
   ...
@@ -1339,7 +1347,7 @@ ValueError: Invalid voice name '../x': use one non-empty segment without '/', '\
 The folder for one kind of data, optionally a subfolder (not created here).
 
 * **Return type:**
-  `Path`
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 ```pycon
 >>> import tempfile
@@ -1353,28 +1361,28 @@ The folder for one kind of data, optionally a subfolder (not created here).
 The prepared samples a clone of `voice` is made from.
 
 * **Return type:**
-  `MutableMapping`
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
 
 ### voxy.stores.sources_store(voice, , rootdir=None)
 
 The raw source media `voice`’s samples were cut from.
 
 * **Return type:**
-  `MutableMapping`
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
 
 ### voxy.stores.voices_store(, rootdir=None)
 
 Voice records, `name -> dict`, as `voices/{name}.json` (other files ignored).
 
 * **Return type:**
-  `MutableMapping`
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
 
 ### voxy.stores.voxy_data_dir()
 
 The data root: `$VOXY_DATA_DIR` if set, else the platform’s app-data folder.
 
 * **Return type:**
-  `Path`
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 
 # about-this-build.html.md
@@ -1383,18 +1391,18 @@ The data root: `$VOXY_DATA_DIR` if set, else the platform’s app-data folder.
 
 # About this build
 
-This documentation was built on **2026-10-01 09:48 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/e6f5701397ad2c6cda14dbf9fa64f6502353e741"><code>e6f5701</code></a> on branch <code>main</code>, for **voxy 0.0.6** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-01 12:28 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/795e328dbc3566f0802f713dad2fcc6251b87e6a"><code>795e328</code></a> on branch <code>main</code>, for **voxy 0.0.7** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.6) is behind the latest release on PyPI (0.0.7): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.7) is behind the latest release on PyPI (0.0.8): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/e6f5701397ad2c6cda14dbf9fa64f6502353e741"><code>e6f5701397ad2c6cda14dbf9fa64f6502353e741</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/795e328dbc3566f0802f713dad2fcc6251b87e6a"><code>795e328dbc3566f0802f713dad2fcc6251b87e6a</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -1405,9 +1413,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/36844740220">36844740220</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/36861445637">36861445637</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>e6f5701397ad2c6cda14dbf9fa64f6502353e741</code> (in the history of the built commit) |
+| Event commit | <code>795e328dbc3566f0802f713dad2fcc6251b87e6a</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -1432,13 +1440,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.7/">0.0.7</a>, newer than the documented version (0.0.6).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.8/">0.0.8</a>, newer than the documented version (0.0.7).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout e6f5701397ad2c6cda14dbf9fa64f6502353e741
+git checkout 795e328dbc3566f0802f713dad2fcc6251b87e6a
 pip install "epythet==0.2.12"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

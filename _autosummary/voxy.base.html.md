@@ -41,10 +41,10 @@ Speech model implementation using Sesame’s CSM-1B model.
 Create a voice profile from an audio sample and its transcript.
 
 * **Parameters:**
-  * **audio_input** (`str` | `bytes` | `BinaryIO` | `Tensor` | `ndarray`) – Audio in various formats
-  * **transcript** (`str` | `None`) – Text transcription of the audio (if None, auto-transcribed)
-  * **speaker_id** (`int`) – Unique ID for this voice
-  * **cleanup_audio_fn** (`Callable` | `None`) – Function to clean up audio (None to skip)
+  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Text transcription of the audio (if None, auto-transcribed)
+  * **speaker_id** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Unique ID for this voice
+  * **cleanup_audio_fn** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Function to clean up audio (None to skip)
 * **Returns:**
   A packaged voice profile
 * **Return type:**
@@ -55,28 +55,28 @@ Create a voice profile from an audio sample and its transcript.
 Generate speech using a voice profile.
 
 * **Parameters:**
-  * **text** (`str` | `bytes` | `TextIOBase`) – Text to synthesize
-  * **voice_profile** ([`VoiceProfile`](#voxy.base.VoiceProfile) | `None`) – Voice profile from clone_voice()
-  * **output_path** (`str` | `None`) – Path to save the audio (optional)
-  * **max_length_ms** (`int`) – Maximum audio length in milliseconds
-  * **temperature** (`float`) – Sampling temperature (lower = more deterministic)
-  * **topk** (`int`) – Top-k sampling parameter
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`TextIOBase`](https://docs.python.org/3/library/io.html#io.TextIOBase)) – Text to synthesize
+  * **voice_profile** ([`VoiceProfile`](#voxy.base.VoiceProfile) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice profile from clone_voice()
+  * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Path to save the audio (optional)
+  * **max_length_ms** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Maximum audio length in milliseconds
+  * **temperature** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Sampling temperature (lower = more deterministic)
+  * **topk** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Top-k sampling parameter
 * **Return type:**
   `Tensor`
 * **Returns:**
   Generated audio tensor
 
-#### name *: str* *= 'csm'*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'csm'*
 
 Registry name of the backend (also each profile’s `model_type`).
 
-#### *property* sample_rate *: int*
+#### *property* sample_rate *: [int](https://docs.python.org/3/builtins/functions.html#int)*
 
 Sample rate of the generated audio (loads the model).
 
 ### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None)
 
-Bases: `object`
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Synthesized speech: encoded audio plus what produced it.
 
@@ -93,11 +93,11 @@ b'RIFF'
 Write the audio to `path` (folders created) and return the path.
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### *class* voxy.base.SpeechModel(device='cpu')
 
-Bases: `object`
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Base class for speech backends (local models or services).
 
@@ -116,10 +116,10 @@ A backend implements whichever capabilities it has; the rest raise
 Create a voice profile from an audio sample and its transcript.
 
 * **Parameters:**
-  * **audio_input** (`str` | `bytes` | `BinaryIO` | `Tensor` | `ndarray`) – Audio in various formats
-  * **transcript** (`str` | `None`) – Text transcription of the audio (if None, auto-transcribed)
-  * **speaker_id** (`int`) – Unique ID for this voice
-  * **cleanup_audio_fn** (`Callable` | `None`) – Function to clean up audio (None to skip)
+  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Text transcription of the audio (if None, auto-transcribed)
+  * **speaker_id** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Unique ID for this voice
+  * **cleanup_audio_fn** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Function to clean up audio (None to skip)
 * **Returns:**
   A packaged voice profile
 * **Return type:**
@@ -132,7 +132,7 @@ Create a new voice from a text description.
 * **Return type:**
   [`VoiceProfile`](#voxy.base.VoiceProfile)
 
-#### dflt_voice *: str | None* *= None*
+#### dflt_voice *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
 
 the caller must).
 
@@ -144,10 +144,10 @@ the caller must).
 Generate speech using a voice profile.
 
 * **Parameters:**
-  * **text** (`str` | `bytes` | `TextIOBase`) – Text to synthesize
-  * **voice_profile** ([`VoiceProfile`](#voxy.base.VoiceProfile) | `None`) – Voice profile from clone_voice()
-  * **output_path** (`str` | `None`) – Path to save the audio (optional)
-  * **max_length_ms** (`int`) – Maximum audio length in milliseconds
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`TextIOBase`](https://docs.python.org/3/library/io.html#io.TextIOBase)) – Text to synthesize
+  * **voice_profile** ([`VoiceProfile`](#voxy.base.VoiceProfile) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice profile from clone_voice()
+  * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Path to save the audio (optional)
+  * **max_length_ms** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Maximum audio length in milliseconds
   * **\*\*kwargs** – Additional model-specific parameters
 * **Return type:**
   `Tensor`
@@ -159,9 +159,9 @@ Generate speech using a voice profile.
 The voices this backend offers.
 
 * **Return type:**
-  `list`[[`VoiceInfo`](#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](#voxy.base.VoiceInfo)]
 
-#### name *: str* *= ''*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= ''*
 
 Registry name of the backend (also each profile’s `model_type`).
 
@@ -177,13 +177,13 @@ This default (for tensor-producing models such as CSM) needs a
 
 ### *class* voxy.base.VoiceInfo(voice_id, name, backend, description='', labels=None)
 
-Bases: `object`
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A voice a backend offers (stock, designed, or cloned).
 
 ### *class* voxy.base.VoiceProfile(segment, speaker_id, model_type, sample_rate, metadata=None)
 
-Bases: `object`
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 Data class to store voice cloning information.
 
@@ -192,20 +192,20 @@ Data class to store voice cloning information.
 Transcribe audio to text using Whisper.
 
 * **Parameters:**
-  * **audio_input** (`str` | `bytes` | `BinaryIO` | `Tensor` | `ndarray`) – Audio in various formats
-  * **model_size** (`str`) – Whisper model size (‘tiny’, ‘base’, ‘small’, ‘medium’, ‘large’)
-  * **sample_rate** (`int` | `None`) – Sample rate of `audio_input` when it is a raw tensor or
+  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **model_size** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Whisper model size (‘tiny’, ‘base’, ‘small’, ‘medium’, ‘large’)
+  * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Sample rate of `audio_input` when it is a raw tensor or
     numpy array. Required for correct transcription of raw audio that
     is not at `DFLT_ASSUMED_SAMPLE_RATE`; ignored when the input is a
     path, bytes or file-like object (those carry their own rate).
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 * **Returns:**
   Transcribed text
 * **Raises:**
-  **ImportError** – If whisper is not installed
+  [**ImportError**](https://docs.python.org/3/builtins/exceptions.html#ImportError) – If whisper is not installed
 
-### voxy.base.backend_aliases *: dict[str, str]* *= {'csm-1b': 'csm'}*
+### voxy.base.backend_aliases *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]* *= {'csm-1b': 'csm'}*
 
 Other names for a backend -> its registry name (one model, one profile type).
 
@@ -214,7 +214,7 @@ Other names for a backend -> its registry name (one model, one profile type).
 The registry name of backend `name` (lowercased, aliases resolved).
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ```pycon
 >>> canonical_backend("ElevenLabs"), canonical_backend("CSM-1B")
@@ -227,11 +227,11 @@ Clean up audio by normalizing volume and removing silence.
 
 * **Parameters:**
   * **audio** (`Tensor`) – Audio tensor [channels, samples] or [samples]
-  * **sample_rate** (`int`) – Sample rate of the audio
-  * **normalize** (`bool`) – Whether to normalize the audio volume
-  * **remove_silence** (`bool`) – Whether to remove silence
-  * **silence_threshold** (`float`) – Threshold for silence detection (0.0-1.0)
-  * **min_silence_duration** (`float`) – Minimum silence duration in seconds
+  * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Sample rate of the audio
+  * **normalize** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Whether to normalize the audio volume
+  * **remove_silence** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Whether to remove silence
+  * **silence_threshold** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Threshold for silence detection (0.0-1.0)
+  * **min_silence_duration** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Minimum silence duration in seconds
 * **Return type:**
   `Tensor`
 * **Returns:**
@@ -262,7 +262,7 @@ Stereo input is mixed down to mono:
 Create a speech model of the specified type.
 
 * **Parameters:**
-  * **model_type** (`str`) – A key of `speech_model_factories` (‘csm’, ‘csm-1b’,
+  * **model_type** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – A key of `speech_model_factories` (‘csm’, ‘csm-1b’,
     ‘elevenlabs’, ‘aix’, ‘fal’, ‘say’, or any registered); case-insensitive,
     aliases in `backend_aliases` accepted.
   * **\*\*kwargs** – Additional model-specific parameters
@@ -271,7 +271,7 @@ Create a speech model of the specified type.
 * **Returns:**
   SpeechModel instance
 * **Raises:**
-  **ValueError** – If the model type is not supported
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – If the model type is not supported
 
 The returned model loads its (large) weights lazily, on first use:
 
@@ -294,7 +294,7 @@ Register a backend (a class or `**kwargs -> SpeechModel` callable).
 Returns `factory`, so it also works as a class decorator via `functools.partial`.
 
 * **Return type:**
-  `Callable`[`...`, [`SpeechModel`](#voxy.base.SpeechModel)]
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`SpeechModel`](#voxy.base.SpeechModel)]
 
 ```pycon
 >>> class Echo(SpeechModel):
@@ -309,7 +309,7 @@ ValueError: A speech backend named 'echo' is already registered (pass overwrite=
 >>> del speech_model_factories["echo"]
 ```
 
-### voxy.base.speech_model_factories *: dict[str, Callable[[...], [SpeechModel](#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>}*
+### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[...], [SpeechModel](#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>}*
 
 Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
@@ -320,7 +320,7 @@ Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
 Integer tensors are taken as PCM and scaled to [-1, 1] first.
 
 * **Return type:**
-  `bytes`
+  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
 
 ```pycon
 >>> data = tensor_to_wav_bytes(torch.zeros(160), 16000)

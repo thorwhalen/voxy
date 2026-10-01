@@ -42,18 +42,18 @@ means passing a different `MutableMapping`. Folders are created on first write.
 Audio files of one voice and kind, `filename -> bytes`.
 
 * **Return type:**
-  `MutableMapping`
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
 
 ### voxy.stores.check_voice_name(name)
 
 Return `name` if it can name a voice (one path segment), else raise.
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ```pycon
->>> check_voice_name("cora")
-'cora'
+>>> check_voice_name("ada")
+'ada'
 >>> check_voice_name("../x")
 Traceback (most recent call last):
   ...
@@ -65,7 +65,7 @@ ValueError: Invalid voice name '../x': use one non-empty segment without '/', '\
 The folder for one kind of data, optionally a subfolder (not created here).
 
 * **Return type:**
-  `Path`
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 ```pycon
 >>> import tempfile
@@ -79,25 +79,25 @@ The folder for one kind of data, optionally a subfolder (not created here).
 The prepared samples a clone of `voice` is made from.
 
 * **Return type:**
-  `MutableMapping`
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
 
 ### voxy.stores.sources_store(voice, , rootdir=None)
 
 The raw source media `voice`’s samples were cut from.
 
 * **Return type:**
-  `MutableMapping`
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
 
 ### voxy.stores.voices_store(, rootdir=None)
 
 Voice records, `name -> dict`, as `voices/{name}.json` (other files ignored).
 
 * **Return type:**
-  `MutableMapping`
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
 
 ### voxy.stores.voxy_data_dir()
 
 The data root: `$VOXY_DATA_DIR` if set, else the platform’s app-data folder.
 
 * **Return type:**
-  `Path`
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

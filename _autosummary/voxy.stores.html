@@ -177,7 +177,7 @@ means passing a different <code class="docutils literal notranslate"><span class
 <dd><p>Audio files of one voice and kind, <code class="docutils literal notranslate"><span class="pre">filename</span> <span class="pre">-&gt;</span> <span class="pre">bytes</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">MutableMapping</span></code></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping" rel="nofollow noopener" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">MutableMapping</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -187,11 +187,11 @@ means passing a different <code class="docutils literal notranslate"><span class
 <dd><p>Return <code class="docutils literal notranslate"><span class="pre">name</span></code> if it can name a voice (one path segment), else raise.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
 </dd>
 </dl>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">check_voice_name</span><span class="p">(</span><span class="s2">"cora"</span><span class="p">)</span>
-</span><span id="line-2"><span class="go">'cora'</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">check_voice_name</span><span class="p">(</span><span class="s2">"ada"</span><span class="p">)</span>
+</span><span id="line-2"><span class="go">'ada'</span>
 </span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="n">check_voice_name</span><span class="p">(</span><span class="s2">"../x"</span><span class="p">)</span>
 </span><span id="line-4"><span class="gt">Traceback (most recent call last):</span>
 </span><span id="line-5"><span class="w">  </span><span class="c">...</span>
@@ -205,7 +205,7 @@ means passing a different <code class="docutils literal notranslate"><span class
 <dd><p>The folder for one kind of data, optionally a subfolder (not created here).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" rel="nofollow noopener" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
 </dd>
 </dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
@@ -221,7 +221,7 @@ means passing a different <code class="docutils literal notranslate"><span class
 <dd><p>The prepared samples a clone of <code class="docutils literal notranslate"><span class="pre">voice</span></code> is made from.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">MutableMapping</span></code></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping" rel="nofollow noopener" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">MutableMapping</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -231,7 +231,7 @@ means passing a different <code class="docutils literal notranslate"><span class
 <dd><p>The raw source media <code class="docutils literal notranslate"><span class="pre">voice</span></code>’s samples were cut from.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">MutableMapping</span></code></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping" rel="nofollow noopener" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">MutableMapping</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -241,7 +241,7 @@ means passing a different <code class="docutils literal notranslate"><span class
 <dd><p>Voice records, <code class="docutils literal notranslate"><span class="pre">name</span> <span class="pre">-&gt;</span> <span class="pre">dict</span></code>, as <code class="docutils literal notranslate"><span class="pre">voices/{name}.json</span></code> (other files ignored).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">MutableMapping</span></code></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping" rel="nofollow noopener" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">MutableMapping</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -251,7 +251,7 @@ means passing a different <code class="docutils literal notranslate"><span class
 <dd><p>The data root: <code class="docutils literal notranslate"><span class="pre">$VOXY_DATA_DIR</span></code> if set, else the platform’s app-data folder.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" rel="nofollow noopener" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -279,7 +279,7 @@ means passing a different <code class="docutils literal notranslate"><span class
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=1fd71caa"></script>
+<script src="../_static/documentation_options.js?v=bbaf98b3"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

@@ -4,11 +4,11 @@ Voice generation in one call, whatever the service behind it.
 
 ```pycon
 >>> import voxy
->>> voxy.text_to_speech("Hello!", voice="cora").save("hi.mp3")
+>>> voxy.text_to_speech("Hello!", voice="ada").save("hi.mp3")
 >>> voxy.text_to_speech("Hello!", voice="Daniel", backend="say")
 >>> voxy.list_voices()               # the library: our named voices
 >>> voxy.list_voices("elevenlabs")   # a backend's own voices
->>> voxy.voice_id("coco")            # 'rcrK...' (aliases work)
+>>> voxy.voice_id("addie")            # 'xY12...' (aliases work)
 ```
 
 How `voice` is understood, first match wins:
@@ -43,14 +43,14 @@ Backends are entries of `voxy.speech_model_factories`; add one with
 Forget cached models (e.g. after changing keys or settings).
 
 * **Return type:**
-  `None`
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### voxy.facade.dflt_tts_backend()
 
 `$VOXY_TTS_BACKEND`, else ‘elevenlabs’ (read on every call).
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### voxy.facade.get_speech_model(backend=None, , models=None)
 
@@ -64,13 +64,13 @@ The (cached) model for `backend`; `models` replaces the shared cache.
 Our named voices (`backend=None`), or the voices a backend offers.
 
 * **Return type:**
-  `list`[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
 
 ```pycon
->>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "description": "d",
+>>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "description": "d",
 ...                 "profiles": {"elevenlabs": {"segment": "v1"}}}}
 >>> [(v.name, v.labels["backends"]) for v in list_voices(voices=lib)]
-[('cora', ['elevenlabs'])]
+[('ada', ['elevenlabs'])]
 ```
 
 ### voxy.facade.resolve_voice(voice, , backend=None, voices=None, use_library=True)
@@ -78,13 +78,13 @@ Our named voices (`backend=None`), or the voices a backend offers.
 `(backend, voice)` to synthesize with (see the module docstring for the rules).
 
 * **Return type:**
-  `tuple`[`str`, [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | `str` | `None`]
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
 
 ```pycon
->>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "profiles": {
+>>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {
 ...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",
 ...                    "sample_rate": 24000}}}}
->>> b, v = resolve_voice("coco", voices=lib)
+>>> b, v = resolve_voice("addie", voices=lib)
 >>> b, v.segment
 ('elevenlabs', 'v1')
 >>> resolve_voice("Daniel", backend="say", voices=lib)
@@ -96,16 +96,16 @@ Our named voices (`backend=None`), or the voices a backend offers.
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
 * **Parameters:**
-  * **text** (`str`) – What to say.
-  * **voice** ([`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | `str` | `None`) – A library name or alias (‘cora’, ‘Coco’), a backend’s own voice
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to say.
+  * **voice** ([`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A library name or alias (‘ada’, ‘Addie’), a backend’s own voice
     (‘nova’, ‘Daniel’, an ElevenLabs id), a `VoiceProfile`, or None.
-  * **backend** (`str` | `None`) – Service to use (‘elevenlabs’, ‘say’, ‘aix’, ‘fal’, ‘csm’, or
+  * **backend** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Service to use (‘elevenlabs’, ‘say’, ‘aix’, ‘fal’, ‘csm’, or
     any registered). Inferred from library voices.
-  * **output_path** (`str` | `None`) – Also save the audio there.
-  * **voices** (`Mapping` | `None`) – Voice library store (default `voxy.voices_store()`).
-  * **model** ([`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel) | `None`) – A ready model to use (its backend is then the backend).
-  * **models** (`MutableMapping` | `None`) – Model cache to use instead of the shared one.
-  * **use_library** (`bool`) – Look `voice` up in the library first (False: always
+  * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Also save the audio there.
+  * **voices** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice library store (default `voxy.voices_store()`).
+  * **model** ([`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready model to use (its backend is then the backend).
+  * **models** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Model cache to use instead of the shared one.
+  * **use_library** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Look `voice` up in the library first (False: always
     the backend’s own voice of that name).
   * **\*\*kwargs** – Backend-specific options (e.g. `output_format=` for
     ElevenLabs, `speed=` for aix, `quality=` for fal).
@@ -117,12 +117,12 @@ Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 The provider’s id for library voice `name` (for code that calls a provider).
 
 * **Return type:**
-  `str`
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ```pycon
->>> lib = {"cora": {"name": "cora", "aliases": ["Coco"], "profiles": {
+>>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {
 ...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",
 ...                    "sample_rate": 24000}}}}
->>> voice_id("Coco", voices=lib)
+>>> voice_id("Addie", voices=lib)
 'v1'
 ```

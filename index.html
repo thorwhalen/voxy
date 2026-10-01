@@ -115,23 +115,31 @@
 <p>To install:	<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">voxy</span></code> (add <code class="docutils literal notranslate"><span class="pre">'voxy[elevenlabs]'</span></code>, <code class="docutils literal notranslate"><span class="pre">'voxy[aix]'</span></code> or <code class="docutils literal notranslate"><span class="pre">'voxy[fal]'</span></code> for those services)</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">import</span><span class="w"> </span><span class="nn">voxy</span>
 </span><span id="line-2">
-</span><span id="line-3"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span><span class="s2">"Hello!"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"cora"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"hi.mp3"</span><span class="p">)</span>          <span class="c1"># a named voice from the library</span>
-</span><span id="line-4"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span><span class="s2">"A quick draft."</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"Daniel"</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"say"</span><span class="p">)</span>  <span class="c1"># free local voice (macOS)</span>
-</span><span id="line-5"><span class="n">voxy</span><span class="o">.</span><span class="n">list_voices</span><span class="p">()</span>                <span class="c1"># our named voices</span>
-</span><span id="line-6"><span class="n">voxy</span><span class="o">.</span><span class="n">list_voices</span><span class="p">(</span><span class="s2">"elevenlabs"</span><span class="p">)</span>    <span class="c1"># a service's voices</span>
+</span><span id="line-3"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span><span class="s2">"Hello!"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"ada"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
+</span><span id="line-4">    <span class="s2">"hi.mp3"</span>
+</span><span id="line-5"><span class="p">)</span>  <span class="c1"># a named voice from the library</span>
+</span><span id="line-6"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span>
+</span><span id="line-7">    <span class="s2">"A quick draft."</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"Daniel"</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"say"</span>
+</span><span id="line-8"><span class="p">)</span>  <span class="c1"># free local voice (macOS)</span>
+</span><span id="line-9"><span class="n">voxy</span><span class="o">.</span><span class="n">list_voices</span><span class="p">()</span>  <span class="c1"># our named voices</span>
+</span><span id="line-10"><span class="n">voxy</span><span class="o">.</span><span class="n">list_voices</span><span class="p">(</span><span class="s2">"elevenlabs"</span><span class="p">)</span>  <span class="c1"># a service's voices</span>
 </span></code></pre></div>
 </div>
 <p>Backends: <code class="docutils literal notranslate"><span class="pre">elevenlabs</span></code> (cloning, voice design, TTS), <code class="docutils literal notranslate"><span class="pre">say</span></code> (macOS, offline), <code class="docutils literal notranslate"><span class="pre">aix</span></code> (OpenAI voices and other LiteLLM providers), <code class="docutils literal notranslate"><span class="pre">fal</span></code> (fal.ai models via falaw), <code class="docutils literal notranslate"><span class="pre">csm</span></code> (local Sesame CSM-1B). Register more with <code class="docutils literal notranslate"><span class="pre">voxy.register_speech_model(name,</span> <span class="pre">factory)</span></code>.</p>
-<p>Command line: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">voxy</span> <span class="pre">voices</span> <span class="pre">[--backend</span> <span class="pre">X]</span></code> and <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">voxy</span> <span class="pre">speak</span> <span class="pre">"text"</span> <span class="pre">--voice</span> <span class="pre">cora</span> <span class="pre">-o</span> <span class="pre">out.mp3</span></code>.</p>
+<p>Command line: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">voxy</span> <span class="pre">voices</span> <span class="pre">[--backend</span> <span class="pre">X]</span></code> and <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">voxy</span> <span class="pre">speak</span> <span class="pre">"text"</span> <span class="pre">--voice</span> <span class="pre">ada</span> <span class="pre">-o</span> <span class="pre">out.mp3</span></code>.</p>
 <section id="designing-a-voice-from-a-description">
 <h2>Designing a voice from a description<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#designing-a-voice-from-a-description" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#designing-a-voice-from-a-description'">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">model</span> <span class="o">=</span> <span class="n">voxy</span><span class="o">.</span><span class="n">get_speech_model</span><span class="p">(</span><span class="s2">"elevenlabs"</span><span class="p">)</span>
-</span><span id="line-2"><span class="n">line</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Once upon a time, in a village at the edge of a very old forest, there lived a "</span>
-</span><span id="line-3">        <span class="s2">"baker who could hear the bread singing as it rose."</span><span class="p">)</span>  <span class="c1"># 100-1000 characters</span>
-</span><span id="line-4"><span class="n">previews</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">design_voice_previews</span><span class="p">(</span><span class="s2">"a warm, slow, elderly storyteller"</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">line</span><span class="p">)</span>
-</span><span id="line-5"><span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">previews</span><span class="p">):</span>
-</span><span id="line-6">    <span class="n">p</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">"preview_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">.mp3"</span><span class="p">)</span>          <span class="c1"># listen, then pick one</span>
-</span><span id="line-7"><span class="n">voxy</span><span class="o">.</span><span class="n">design_from_description</span><span class="p">(</span><span class="s2">"storyteller"</span><span class="p">,</span> <span class="s2">"a warm, slow, elderly storyteller"</span><span class="p">,</span> <span class="n">preview</span><span class="o">=</span><span class="n">previews</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</span><span id="line-2"><span class="n">line</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-3">    <span class="s2">"Once upon a time, in a village at the edge of a very old forest, there lived a "</span>
+</span><span id="line-4">    <span class="s2">"baker who could hear the bread singing as it rose."</span>
+</span><span id="line-5"><span class="p">)</span>  <span class="c1"># 100-1000 characters</span>
+</span><span id="line-6"><span class="n">previews</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">design_voice_previews</span><span class="p">(</span><span class="s2">"a warm, slow, elderly storyteller"</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">line</span><span class="p">)</span>
+</span><span id="line-7"><span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">previews</span><span class="p">):</span>
+</span><span id="line-8">    <span class="n">p</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">"preview_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">.mp3"</span><span class="p">)</span>  <span class="c1"># listen, then pick one</span>
+</span><span id="line-9"><span class="n">voxy</span><span class="o">.</span><span class="n">design_from_description</span><span class="p">(</span>
+</span><span id="line-10">    <span class="s2">"storyteller"</span><span class="p">,</span> <span class="s2">"a warm, slow, elderly storyteller"</span><span class="p">,</span> <span class="n">preview</span><span class="o">=</span><span class="n">previews</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</span><span id="line-11"><span class="p">)</span>
 </span></code></pre></div>
 </div>
 </section>
@@ -369,7 +377,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-01 09:48 UTC from <a href="https://github.com/thorwhalen/voxy/commit/e6f5701397ad2c6cda14dbf9fa64f6502353e741">e6f5701</a> (main) · voxy 0.0.6 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-01 12:28 UTC from <a href="https://github.com/thorwhalen/voxy/commit/795e328dbc3566f0802f713dad2fcc6251b87e6a">795e328</a> (main) · voxy 0.0.7 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -412,7 +420,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=1fd71caa"></script>
+<script src="_static/documentation_options.js?v=bbaf98b3"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

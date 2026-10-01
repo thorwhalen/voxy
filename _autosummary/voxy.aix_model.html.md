@@ -28,18 +28,18 @@ Bases: [`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel)
 aix/LiteLLM text-to-speech as a voxy backend.
 
 * **Parameters:**
-  * **model** (`str` | `None`) – TTS model (None: aix’s configured default).
-  * **response_format** (`str`) – ‘mp3’, ‘opus’, ‘aac’, ‘flac’, ‘wav’…
-  * **tts** (`Callable` | `None`) – `(text, **kw) -> GeneratedAudio` (tests inject a fake).
+  * **model** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – TTS model (None: aix’s configured default).
+  * **response_format** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – ‘mp3’, ‘opus’, ‘aac’, ‘flac’, ‘wav’…
+  * **tts** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(text, **kw) -> GeneratedAudio` (tests inject a fake).
 
 #### list_voices()
 
 OpenAI’s built-in voices (other LiteLLM providers have their own).
 
 * **Return type:**
-  `list`[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
 
-#### name *: str* *= 'aix'*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'aix'*
 
 Registry name of the backend (also each profile’s `model_type`).
 

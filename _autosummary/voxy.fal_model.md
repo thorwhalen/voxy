@@ -23,12 +23,12 @@ Bases: [`SpeechModel`](voxy.base.md#voxy.base.SpeechModel)
 fal.ai text-to-speech (through falaw) as a voxy backend.
 
 * **Parameters:**
-  * **quality** (`str`) – falaw quality tier used to pick a model.
-  * **model_id** (`str` | `None`) – A specific fal model (overrides `quality`).
-  * **tts** (`Callable` | `None`) – `(text, **kw) -> falaw.Result` (tests inject a fake).
-  * **fetch** (`Callable`[[`str`], `bytes`] | `None`) – `url -> bytes` to download the result.
+  * **quality** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – falaw quality tier used to pick a model.
+  * **model_id** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A specific fal model (overrides `quality`).
+  * **tts** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(text, **kw) -> falaw.Result` (tests inject a fake).
+  * **fetch** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `url -> bytes` to download the result.
 
-#### name *: str* *= 'fal'*
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'fal'*
 
 Registry name of the backend (also each profile’s `model_type`).
 
