@@ -711,7 +711,8 @@ def create_speech_model(model_type: str = DFLT_VOXY_MODEL, **kwargs) -> SpeechMo
       ...
     ValueError: Unsupported model type: no-such-model (supported: csm, csm-1b, elevenlabs)
     """
-    factory = speech_model_factories.get(model_type.lower())
+    factories = {k.lower(): v for k, v in speech_model_factories.items()}
+    factory = factories.get(model_type.lower())
     if factory is None:
         raise ValueError(
             f"Unsupported model type: {model_type} "

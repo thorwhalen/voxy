@@ -135,14 +135,14 @@ voice_profile4 = model.clone_voice(
 
 ### ElevenLabs backend
 
-Install with `pip install voxy[elevenlabs]` and set `ELEVENLABS_API_KEY` (or `ELEVEN_API_KEY`), or pass `api_key=`.
+Install with `pip install 'voxy[elevenlabs]'` and set `ELEVEN_API_KEY` or `ELEVENLABS_API_KEY` (checked in that order), or pass `api_key=`.
 
 ```python
 from voxy import create_speech_model
 
 model = create_speech_model("elevenlabs")
 
-# Instant voice clone: one sample or a list of them (paths, bytes, file-likes, tensors).
+# Instant voice clone: one sample or several (paths, bytes, file-likes, tensors), at most 25 files.
 # ElevenLabs recommends 1-2 minutes of clean single-speaker audio in total (at most ~3).
 profile = model.clone_voice(["clip1.wav", "clip2.m4a"], name="my-voice")
 print(profile.segment)  # the ElevenLabs voice_id

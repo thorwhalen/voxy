@@ -184,3 +184,35 @@ def test_live_clone_synthesize_delete():
         assert audio.numel() > model.sample_rate // 2
     finally:
         model.delete_voice(profile)
+
+
+def test_clone_refuses_too_many_files_before_upload(model, client):
+    with pytest.raises(ValueError, match="at most 3"):
+        model.clone_voice([b"a"] * 4, max_files=3)
+    assert client.calls == []
+    model.clone_voice([b"a"] * 4, max_files=None)
+    assert len(client.calls[-1][1]["files"]) == 4
+
+
+def test_clone_accepts_generators_and_int_arrays(model, client, tmp_path):
+    for i in range(2):
+        (tmp_path / f"c{i}.wav").write_bytes(b"RIFF....WAVE")
+    model.clone_voice(sorted(tmp_path.glob("*.wav")))
+    assert [n for n, _ in client.calls[-1][1]["files"]] == ["c0.wav", "c1.wav"]
+    model.clone_voice(np.full(800, 16000, dtype=np.int16), assumed_sample_rate=8000)
+    (name, content), = client.calls[-1][1]["files"]
+    assert content[:4] == b"RIFF" and b"\x00\x00" * 4 not in content[-8:]
+
+
+def test_bytes_uploads_get_a_sniffed_suffix(model, client):
+    model.clone_voice([b"ID3rest", b"\x00\x00\x00\x18ftypM4A "])
+    assert [n for n, _ in client.calls[-1][1]["files"]] == ["sample_000.mp3", "sample_001.m4a"]
+
+
+def test_streamed_wav_with_placeholder_size_decodes(model, client):
+    wav = bytearray(_wav_bytes(torch.zeros(6), 22050))
+    data_at = wav.index(b"data")
+    wav[data_at + 4 : data_at + 8] = (0xFFFFFFFF).to_bytes(4, "little")
+    client._convert = lambda voice_id, **kw: iter([bytes(wav)])
+    client.text_to_speech.convert = client._convert
+    assert model.generate_speech("Hi", "vid", output_format="wav_22050").shape == (6,)
