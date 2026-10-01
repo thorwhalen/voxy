@@ -7,7 +7,7 @@ To install:	```pip install voxy``` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `
 ```python
 import voxy
 
-voxy.text_to_speech("Hello!", voice="cora").save(
+voxy.text_to_speech("Hello!", voice="ada").save(
     "hi.mp3"
 )  # a named voice from the library
 voxy.text_to_speech(
@@ -19,7 +19,7 @@ voxy.list_voices("elevenlabs")  # a service's voices
 
 Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
 
-Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice cora -o out.mp3`.
+Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice ada -o out.mp3`.
 
 ### Designing a voice from a description
 

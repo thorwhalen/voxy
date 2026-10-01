@@ -40,8 +40,8 @@ AUDIO_EXTS = (".wav", ".mp3", ".m4a", ".flac", ".ogg", ".opus", ".webm", ".aac")
 def check_voice_name(name: str) -> str:
     """Return ``name`` if it can name a voice (one path segment), else raise.
 
-    >>> check_voice_name("cora")
-    'cora'
+    >>> check_voice_name("ada")
+    'ada'
     >>> check_voice_name("../x")
     Traceback (most recent call last):
       ...

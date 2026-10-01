@@ -76,12 +76,12 @@ def test_clone_uploads_every_sample_and_returns_profile(model, client, tmp_path)
     path.write_bytes(b"encoded-audio")
     profile = model.clone_voice(
         [str(path), b"raw-bytes", io.BytesIO(b"filelike"), np.zeros(1600)],
-        name="cora",
+        name="ada",
         labels={"language": "en"},
     )
     (op, kwargs), = client.calls
     assert op == "ivc.create"
-    assert kwargs["name"] == "cora"
+    assert kwargs["name"] == "ada"
     assert json.loads(kwargs["labels"]) == {"language": "en"}  # multipart needs text
     assert "description" not in kwargs  # unset options are not sent
     names = [n for n, _ in kwargs["files"]]

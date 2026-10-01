@@ -10,8 +10,8 @@ One call speaks text in any voice, on any registered service. Cloning and design
 ```python
 import voxy
 
-# a library voice (aliases work: "Coco")
-voxy.text_to_speech("Hello!", voice="cora").save("hi.mp3")
+# a library voice (aliases work: "Addie")
+voxy.text_to_speech("Hello!", voice="ada").save("hi.mp3")
 # free local preview (macOS)
 voxy.text_to_speech("Draft line", voice="Daniel", backend="say")
 # our named voices: name, aliases, backends
@@ -19,14 +19,14 @@ voxy.list_voices()
 # a service's own voices
 voxy.list_voices("elevenlabs")
 # provider id, for code that must call a provider itself
-voxy.voice_id("cora")
+voxy.voice_id("ada")
 ```
 
-CLI: `python -m voxy voices [--backend X]`, `python -m voxy speak "text" --voice cora -o out.mp3`.
+CLI: `python -m voxy voices [--backend X]`, `python -m voxy speak "text" --voice ada -o out.mp3`.
 
 ## 1. Settle the voice first
 
-- A person or one of "our" voices (Cora, Maman, ov...): `voxy.list_voices()`; use the name. Never paste a provider voice id into code.
+- A person or one of "our" voices (Ada, Gran, ov...): `voxy.list_voices()`; use the name. Never paste a provider voice id into code.
 - A service's stock voice: `voxy.list_voices("elevenlabs")` (or `say`, `aix`), then pass its id or name with `backend=`.
 - Characters in a scene: give each character one voice and keep it. In `an`, a character's `voice_ref` points into the project's voices store; for a library voice, use `voxy.voice_id(name)` as its `voice_id`.
 - Nothing specified: ask, or use the project's default narrator.

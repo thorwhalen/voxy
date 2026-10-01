@@ -45,21 +45,21 @@ class Recorder(SpeechModel):
 @pytest.fixture
 def library(tmp_path):
     voices = voices_store(rootdir=tmp_path)
-    save_voice("cora", VoiceProfile("el-cora", 1, "elevenlabs", 24000), voices=voices, aliases=["Cora", "Coco"])
-    save_voice("cora", VoiceProfile("Kathy", 1, "rec", 22050), voices=voices)
+    save_voice("ada", VoiceProfile("el-ada", 1, "elevenlabs", 24000), voices=voices, aliases=["Ada", "Addie"])
+    save_voice("ada", VoiceProfile("Kathy", 1, "rec", 22050), voices=voices)
     return voices
 
 
 def test_library_voice_uses_its_saved_backend(library):
     model = Recorder()
-    speech = text_to_speech("Hi", "coco", voices=library, model=model, backend="rec")
+    speech = text_to_speech("Hi", "addie", voices=library, model=model, backend="rec")
     (text, voice, _), = model.calls
     assert (text, voice.segment, speech.voice) == ("Hi", "Kathy", "Kathy")
 
 
 def test_library_voice_missing_backend_profile_is_explained(library):
     with pytest.raises(KeyError, match="no 'say' profile"):
-        text_to_speech("Hi", "cora", backend="say", voices=library)
+        text_to_speech("Hi", "ada", backend="say", voices=library)
 
 
 def test_native_voice_and_default_voice(library):
@@ -87,8 +87,8 @@ def test_output_path_and_registered_backend(library, tmp_path):
 
 def test_list_voices_library_and_voice_id(library):
     (info,) = list_voices(voices=library)
-    assert info.name == "cora" and info.labels == {"aliases": ["Cora", "Coco"], "backends": ["elevenlabs", "rec"]}
-    assert voice_id("Coco", voices=library) == "el-cora"
+    assert info.name == "ada" and info.labels == {"aliases": ["Ada", "Addie"], "backends": ["elevenlabs", "rec"]}
+    assert voice_id("Addie", voices=library) == "el-ada"
     with pytest.raises(KeyError, match="No voice named"):
         voice_id("nobody", voices=library)
 
@@ -187,37 +187,37 @@ def test_fal_backend_downloads_first_asset():
 def test_cli_lists_library_voices(library, monkeypatch, capsys, tmp_path):
     monkeypatch.setenv("VOXY_DATA_DIR", str(tmp_path))
     assert main(["voices"]) == 0
-    assert capsys.readouterr().out.startswith("cora\tCora, Coco\televenlabs, rec")
+    assert capsys.readouterr().out.startswith("ada\tAda, Addie\televenlabs, rec")
 
 
 def test_given_model_decides_the_backend(library):
     model = Recorder()
-    text_to_speech("Hi", "cora", voices=library, model=model)  # no backend=
-    assert model.calls[-1][1].segment == "Kathy"  # cora's 'rec' profile, not ElevenLabs
+    text_to_speech("Hi", "ada", voices=library, model=model)  # no backend=
+    assert model.calls[-1][1].segment == "Kathy"  # ada's 'rec' profile, not ElevenLabs
 
 
 def test_use_library_false_reaches_a_shadowed_backend_voice(library):
     model = Recorder()
-    text_to_speech("Hi", "Coco", backend="rec", voices=library, model=model, use_library=False)
-    assert model.calls[-1][1] == "Coco"
+    text_to_speech("Hi", "Addie", backend="rec", voices=library, model=model, use_library=False)
+    assert model.calls[-1][1] == "Addie"
 
 
 def test_library_voice_prefers_the_default_backend(library, monkeypatch):
     monkeypatch.setenv("VOXY_TTS_BACKEND", "rec")
-    backend, profile = voxy.resolve_voice("cora", voices=library)
+    backend, profile = voxy.resolve_voice("ada", voices=library)
     assert (backend, profile.segment) == ("rec", "Kathy")
-    monkeypatch.setenv("VOXY_TTS_BACKEND", "say")  # cora has no 'say' profile
-    assert voxy.resolve_voice("cora", voices=library)[0] == "elevenlabs"  # first saved
+    monkeypatch.setenv("VOXY_TTS_BACKEND", "say")  # ada has no 'say' profile
+    assert voxy.resolve_voice("ada", voices=library)[0] == "elevenlabs"  # first saved
 
 
 def test_find_voice_prefers_names_over_aliases_and_returns_stored_key(tmp_path):
     voices = voices_store(rootdir=tmp_path)
-    save_voice("ness", VoiceProfile("a", 1, "elevenlabs", 1), voices=voices)
-    save_voice("vanessa", VoiceProfile("b", 1, "elevenlabs", 1), voices=voices, aliases=["Maman"])
-    assert voxy.find_voice("NESS", voices=voices) == "ness"
-    assert voxy.find_voice("maman", voices=voices) == "vanessa"
-    with pytest.raises(ValueError, match="already refers to voice 'ness'"):
-        save_voice("vanessa", VoiceProfile("b", 1, "elevenlabs", 1), voices=voices, aliases=["Ness"])
+    save_voice("gracie", VoiceProfile("a", 1, "elevenlabs", 1), voices=voices)
+    save_voice("grace", VoiceProfile("b", 1, "elevenlabs", 1), voices=voices, aliases=["Gran"])
+    assert voxy.find_voice("GRACIE", voices=voices) == "gracie"
+    assert voxy.find_voice("gran", voices=voices) == "grace"
+    with pytest.raises(ValueError, match="already refers to voice 'gracie'"):
+        save_voice("grace", VoiceProfile("b", 1, "elevenlabs", 1), voices=voices, aliases=["Gracie"])
 
 
 def test_existing_profiles_are_not_replaced_without_overwrite(tmp_path):
@@ -239,7 +239,7 @@ def test_design_with_preview_refuses_preview_only_arguments():
 
 
 def test_backend_names_are_canonical(library):
-    assert voice_id("cora", backend="ElevenLabs", voices=library) == "el-cora"
+    assert voice_id("ada", backend="ElevenLabs", voices=library) == "el-ada"
     assert voxy.canonical_backend("csm-1b") == "csm"
     models = {}
     assert voxy.get_speech_model("CSM-1B", models=models) is voxy.get_speech_model("csm", models=models)
