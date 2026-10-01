@@ -4,7 +4,7 @@ Facade for voice cloning and speech synthesis
 
 To install:	```pip install voxy```
 
-Voxy is a flexible Python module for speech synthesis and voice cloning, with initial support for the Sesame CSM-1B model. It provides a plugin architecture that can be extended to support other models in the future.
+Voxy is a flexible Python module for speech synthesis and voice cloning, with two backends: the local Sesame CSM-1B model and the ElevenLabs API (instant voice cloning). You pick the backend with one keyword: `create_speech_model("csm")` or `create_speech_model("elevenlabs")`; new backends are entries in `voxy.speech_model_factories`.
 
 ## Features
 
@@ -132,6 +132,30 @@ voice_profile4 = model.clone_voice(
     audio_input=audio_tensor, transcript="Text transcript."
 )
 ```
+
+### ElevenLabs backend
+
+Install with `pip install 'voxy[elevenlabs]'` and set `ELEVEN_API_KEY` or `ELEVENLABS_API_KEY` (checked in that order), or pass `api_key=`.
+
+```python
+from voxy import create_speech_model
+
+model = create_speech_model("elevenlabs")
+
+# Instant voice clone: one sample or several (paths, bytes, file-likes, tensors), at most 25 files.
+# ElevenLabs recommends 1-2 minutes of clean single-speaker audio in total (at most ~3).
+profile = model.clone_voice(["clip1.wav", "clip2.m4a"], name="my-voice")
+print(profile.segment)  # the ElevenLabs voice_id
+
+audio = model.generate_speech("Hello from my cloned voice.", profile, output_path="hello.wav")
+
+# Later sessions: rebuild the profile from the id, no re-upload.
+profile = model.voice_profile("<voice_id>")
+```
+
+`generate_speech` returns a tensor for `pcm_*`/`wav_*` output formats (default `pcm_24000`); `synthesize_bytes` returns the raw payload in any format (e.g. `mp3_44100_128`). `delete_voice` removes a clone from the account. ElevenLabs requires that you have the right, and the voice owner's consent, to clone a voice.
+
+Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `VOXY_LIVE_ELEVENLABS_SAMPLE=<audio you may clone>` also clones, speaks and deletes.
 
 ## Configuration
 

@@ -19,6 +19,7 @@ keywords = [
     "tts",
     "voice-cloning",
     "csm",
+    "elevenlabs",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -57,6 +58,10 @@ Issues = "https://github.com/thorwhalen/voxy/issues"
 # cloning without an explicit transcript).
 transcription = [
     "openai-whisper",
+]
+# The ElevenLabs backend (create_speech_model("elevenlabs")); imported lazily.
+elevenlabs = [
+    "elevenlabs>=2",
 ]
 dev = [
     "pytest>=7.0",
