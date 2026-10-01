@@ -21,6 +21,7 @@ the voice's owner (or their guardian) to do so.
 """
 
 import io
+import json
 import os
 import wave
 from collections.abc import Callable, Iterable, Mapping
@@ -370,7 +371,8 @@ class ElevenLabsSpeechModel(SpeechModel):
         name = name or DFLT_CLONE_NAME_TEMPLATE.format(speaker_id=speaker_id)
         optional = {
             "description": description,
-            "labels": dict(labels) if labels is not None else None,
+            # A multipart form can't carry a dict: the API takes labels as JSON text.
+            "labels": json.dumps(dict(labels)) if labels is not None else None,
             "remove_background_noise": remove_background_noise,
         }
         response = self.client.voices.ivc.create(
