@@ -1,4 +1,4 @@
-> built 2026-10-01 14:33 UTC from 6827ade (main) · voxy 0.0.8. Details: build_info.json
+> built 2026-10-03 07:58 UTC from ffa1b74 (main) · voxy 0.0.9. Details: build_info.json
 
 # index.html.md
 
@@ -1391,18 +1391,18 @@ The data root: `$VOXY_DATA_DIR` if set, else the platform’s app-data folder.
 
 # About this build
 
-This documentation was built on **2026-10-01 14:33 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/6827adeeefe48eceef12772dbd693722ddd499b7"><code>6827ade</code></a> on branch <code>main</code>, for **voxy 0.0.8** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-03 07:58 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/ffa1b74206cb2cd24360266d0a74bde9cbe2160a"><code>ffa1b74</code></a> on branch <code>main</code>, for **voxy 0.0.9** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.8) is behind the latest release on PyPI (0.0.9): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.9) is behind the latest release on PyPI (0.0.10): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/6827adeeefe48eceef12772dbd693722ddd499b7"><code>6827adeeefe48eceef12772dbd693722ddd499b7</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/ffa1b74206cb2cd24360266d0a74bde9cbe2160a"><code>ffa1b74206cb2cd24360266d0a74bde9cbe2160a</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -1413,9 +1413,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/36876789920">36876789920</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/37107932431">37107932431</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>6827adeeefe48eceef12772dbd693722ddd499b7</code> (in the history of the built commit) |
+| Event commit | <code>ffa1b74206cb2cd24360266d0a74bde9cbe2160a</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -1440,13 +1440,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.9/">0.0.9</a>, newer than the documented version (0.0.8).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.10/">0.0.10</a>, newer than the documented version (0.0.9).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 6827adeeefe48eceef12772dbd693722ddd499b7
+git checkout ffa1b74206cb2cd24360266d0a74bde9cbe2160a
 pip install "epythet==0.2.12"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
