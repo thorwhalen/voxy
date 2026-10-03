@@ -72,7 +72,7 @@ aix = [
 ]
 # The "fal" backend (fal.ai TTS models via falaw); imported lazily.
 fal = [
-    "falaw",
+    "falaw[fal]",
 ]
 dev = [
     "pytest>=7.0",
