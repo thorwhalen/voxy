@@ -2,7 +2,7 @@
 Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
 
 >>> import voxy
->>> {'elevenlabs', 'say', 'aix', 'fal', 'csm'} <= set(voxy.speech_model_factories)
+>>> {'elevenlabs', 'say', 'aix', 'fal', 'voicestudio', 'csm'} <= set(voxy.speech_model_factories)
 True
 """
 

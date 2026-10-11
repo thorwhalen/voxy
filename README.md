@@ -17,7 +17,7 @@ voxy.list_voices()  # our named voices
 voxy.list_voices("elevenlabs")  # a service's voices
 ```
 
-Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
+Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
 
 Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice ada -o out.mp3`.
 
