@@ -14,6 +14,7 @@
 - [voxy.library](voxy.library.html.md): A persistent voice library: clone a voice once, then use it by name.
 - [voxy.say_model](voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
 - [voxy.stores](voxy.stores.html.md): Where voxy keeps its data: voice records and audio, as &#96;MutableMapping&#96; stores.
+- [voxy.voicestudio_model](voxy.voicestudio_model.html.md): Local description-prompted speech through VoiceStudio (Parler-TTS and friends).
 
 ## Optional
 

@@ -1,0 +1,12 @@
+voxy.voicestudio\_model
+=======================
+
+.. automodule:: voxy.voicestudio_model
+
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      VoiceStudioSpeechModel
+   

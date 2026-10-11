@@ -121,6 +121,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.library.html">voxy.library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.stores.html">voxy.stores</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.voicestudio_model.html">voxy.voicestudio_model</a></li>
 </ul>
 </li>
 </ul>
@@ -1033,95 +1034,96 @@
 </span><span id="line-815">    <span class="s2">"aix"</span><span class="p">:</span> <span class="n">_lazy_factory</span><span class="p">(</span><span class="s2">"voxy.aix_model"</span><span class="p">,</span> <span class="s2">"AixSpeechModel"</span><span class="p">),</span>
 </span><span id="line-816">    <span class="s2">"fal"</span><span class="p">:</span> <span class="n">_lazy_factory</span><span class="p">(</span><span class="s2">"voxy.fal_model"</span><span class="p">,</span> <span class="s2">"FalSpeechModel"</span><span class="p">),</span>
 </span><span id="line-817">    <span class="s2">"say"</span><span class="p">:</span> <span class="n">_lazy_factory</span><span class="p">(</span><span class="s2">"voxy.say_model"</span><span class="p">,</span> <span class="s2">"SaySpeechModel"</span><span class="p">),</span>
-</span><span id="line-818"><span class="p">}</span>
-</span><span id="line-819">
+</span><span id="line-818">    <span class="s2">"voicestudio"</span><span class="p">:</span> <span class="n">_lazy_factory</span><span class="p">(</span><span class="s2">"voxy.voicestudio_model"</span><span class="p">,</span> <span class="s2">"VoiceStudioSpeechModel"</span><span class="p">),</span>
+</span><span id="line-819"><span class="p">}</span>
 </span><span id="line-820">
-</span><span id="line-821"><span class="c1">#: Other names for a backend -&gt; its registry name (one model, one profile type).</span>
-</span><span id="line-822"><span class="n">backend_aliases</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"csm-1b"</span><span class="p">:</span> <span class="s2">"csm"</span><span class="p">}</span>
-</span><span id="line-823">
+</span><span id="line-821">
+</span><span id="line-822"><span class="c1">#: Other names for a backend -&gt; its registry name (one model, one profile type).</span>
+</span><span id="line-823"><span class="n">backend_aliases</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"csm-1b"</span><span class="p">:</span> <span class="s2">"csm"</span><span class="p">}</span>
 </span><span id="line-824">
+</span><span id="line-825">
 <div class="viewcode-block" id="canonical_backend">
 <a class="viewcode-back" href="../../_autosummary/voxy.base.html#voxy.base.canonical_backend">[docs]</a>
-</span><span id="line-825"><span class="k">def</span><span class="w"> </span><span class="nf">canonical_backend</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-826"><span class="w">    </span><span class="sd">"""The registry name of backend ``name`` (lowercased, aliases resolved).</span>
-</span><span id="line-827">
-</span><span id="line-828"><span class="sd">    &gt;&gt;&gt; canonical_backend("ElevenLabs"), canonical_backend("CSM-1B")</span>
-</span><span id="line-829"><span class="sd">    ('elevenlabs', 'csm')</span>
-</span><span id="line-830"><span class="sd">    """</span>
-</span><span id="line-831">    <span class="n">key</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-</span><span id="line-832">    <span class="k">return</span> <span class="n">backend_aliases</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span></div>
+</span><span id="line-826"><span class="k">def</span><span class="w"> </span><span class="nf">canonical_backend</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-827"><span class="w">    </span><span class="sd">"""The registry name of backend ``name`` (lowercased, aliases resolved).</span>
+</span><span id="line-828">
+</span><span id="line-829"><span class="sd">    &gt;&gt;&gt; canonical_backend("ElevenLabs"), canonical_backend("CSM-1B")</span>
+</span><span id="line-830"><span class="sd">    ('elevenlabs', 'csm')</span>
+</span><span id="line-831"><span class="sd">    """</span>
+</span><span id="line-832">    <span class="n">key</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</span><span id="line-833">    <span class="k">return</span> <span class="n">backend_aliases</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span></div>
 
-</span><span id="line-833">
 </span><span id="line-834">
+</span><span id="line-835">
 <div class="viewcode-block" id="register_speech_model">
 <a class="viewcode-back" href="../../_autosummary/voxy.base.html#voxy.base.register_speech_model">[docs]</a>
-</span><span id="line-835"><span class="k">def</span><span class="w"> </span><span class="nf">register_speech_model</span><span class="p">(</span>
-</span><span id="line-836">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">SpeechModel</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-</span><span id="line-837"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">SpeechModel</span><span class="p">]:</span>
-</span><span id="line-838"><span class="w">    </span><span class="sd">"""Register a backend (a class or ``**kwargs -&gt; SpeechModel`` callable).</span>
-</span><span id="line-839">
-</span><span id="line-840"><span class="sd">    Returns ``factory``, so it also works as a class decorator via ``functools.partial``.</span>
-</span><span id="line-841">
-</span><span id="line-842"><span class="sd">    &gt;&gt;&gt; class Echo(SpeechModel):</span>
-</span><span id="line-843"><span class="sd">    ...     name = "echo"</span>
-</span><span id="line-844"><span class="sd">    &gt;&gt;&gt; _ = register_speech_model("echo", Echo)</span>
-</span><span id="line-845"><span class="sd">    &gt;&gt;&gt; type(create_speech_model("echo")).__name__</span>
-</span><span id="line-846"><span class="sd">    'Echo'</span>
-</span><span id="line-847"><span class="sd">    &gt;&gt;&gt; register_speech_model("echo", Echo)</span>
-</span><span id="line-848"><span class="sd">    Traceback (most recent call last):</span>
-</span><span id="line-849"><span class="sd">      ...</span>
-</span><span id="line-850"><span class="sd">    ValueError: A speech backend named 'echo' is already registered (pass overwrite=True)</span>
-</span><span id="line-851"><span class="sd">    &gt;&gt;&gt; del speech_model_factories["echo"]</span>
-</span><span id="line-852"><span class="sd">    """</span>
-</span><span id="line-853">    <span class="n">key</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-</span><span id="line-854">    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">speech_model_factories</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">overwrite</span><span class="p">:</span>
-</span><span id="line-855">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-856">            <span class="sa">f</span><span class="s2">"A speech backend named </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is already registered "</span>
-</span><span id="line-857">            <span class="s2">"(pass overwrite=True)"</span>
-</span><span id="line-858">        <span class="p">)</span>
-</span><span id="line-859">    <span class="n">speech_model_factories</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
-</span><span id="line-860">    <span class="k">return</span> <span class="n">factory</span></div>
+</span><span id="line-836"><span class="k">def</span><span class="w"> </span><span class="nf">register_speech_model</span><span class="p">(</span>
+</span><span id="line-837">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">SpeechModel</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="line-838"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">SpeechModel</span><span class="p">]:</span>
+</span><span id="line-839"><span class="w">    </span><span class="sd">"""Register a backend (a class or ``**kwargs -&gt; SpeechModel`` callable).</span>
+</span><span id="line-840">
+</span><span id="line-841"><span class="sd">    Returns ``factory``, so it also works as a class decorator via ``functools.partial``.</span>
+</span><span id="line-842">
+</span><span id="line-843"><span class="sd">    &gt;&gt;&gt; class Echo(SpeechModel):</span>
+</span><span id="line-844"><span class="sd">    ...     name = "echo"</span>
+</span><span id="line-845"><span class="sd">    &gt;&gt;&gt; _ = register_speech_model("echo", Echo)</span>
+</span><span id="line-846"><span class="sd">    &gt;&gt;&gt; type(create_speech_model("echo")).__name__</span>
+</span><span id="line-847"><span class="sd">    'Echo'</span>
+</span><span id="line-848"><span class="sd">    &gt;&gt;&gt; register_speech_model("echo", Echo)</span>
+</span><span id="line-849"><span class="sd">    Traceback (most recent call last):</span>
+</span><span id="line-850"><span class="sd">      ...</span>
+</span><span id="line-851"><span class="sd">    ValueError: A speech backend named 'echo' is already registered (pass overwrite=True)</span>
+</span><span id="line-852"><span class="sd">    &gt;&gt;&gt; del speech_model_factories["echo"]</span>
+</span><span id="line-853"><span class="sd">    """</span>
+</span><span id="line-854">    <span class="n">key</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</span><span id="line-855">    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">speech_model_factories</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">overwrite</span><span class="p">:</span>
+</span><span id="line-856">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-857">            <span class="sa">f</span><span class="s2">"A speech backend named </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is already registered "</span>
+</span><span id="line-858">            <span class="s2">"(pass overwrite=True)"</span>
+</span><span id="line-859">        <span class="p">)</span>
+</span><span id="line-860">    <span class="n">speech_model_factories</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
+</span><span id="line-861">    <span class="k">return</span> <span class="n">factory</span></div>
 
-</span><span id="line-861">
 </span><span id="line-862">
+</span><span id="line-863">
 <div class="viewcode-block" id="create_speech_model">
 <a class="viewcode-back" href="../../_autosummary/voxy.base.html#voxy.base.create_speech_model">[docs]</a>
-</span><span id="line-863"><span class="k">def</span><span class="w"> </span><span class="nf">create_speech_model</span><span class="p">(</span><span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_VOXY_MODEL</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpeechModel</span><span class="p">:</span>
-</span><span id="line-864"><span class="w">    </span><span class="sd">"""</span>
-</span><span id="line-865"><span class="sd">    Create a speech model of the specified type.</span>
-</span><span id="line-866">
-</span><span id="line-867"><span class="sd">    Args:</span>
-</span><span id="line-868"><span class="sd">        model_type: A key of ``speech_model_factories`` ('csm', 'csm-1b',</span>
-</span><span id="line-869"><span class="sd">            'elevenlabs', 'aix', 'fal', 'say', or any registered); case-insensitive,</span>
-</span><span id="line-870"><span class="sd">            aliases in ``backend_aliases`` accepted.</span>
-</span><span id="line-871"><span class="sd">        **kwargs: Additional model-specific parameters</span>
-</span><span id="line-872">
-</span><span id="line-873"><span class="sd">    Returns:</span>
-</span><span id="line-874"><span class="sd">        SpeechModel instance</span>
-</span><span id="line-875">
-</span><span id="line-876"><span class="sd">    Raises:</span>
-</span><span id="line-877"><span class="sd">        ValueError: If the model type is not supported</span>
-</span><span id="line-878">
-</span><span id="line-879"><span class="sd">    The returned model loads its (large) weights lazily, on first use:</span>
-</span><span id="line-880">
-</span><span id="line-881"><span class="sd">    &gt;&gt;&gt; model = create_speech_model("csm")</span>
-</span><span id="line-882"><span class="sd">    &gt;&gt;&gt; type(model).__name__</span>
-</span><span id="line-883"><span class="sd">    'CSMSpeechModel'</span>
-</span><span id="line-884"><span class="sd">    &gt;&gt;&gt; type(create_speech_model("elevenlabs", api_key="unused")).__name__</span>
-</span><span id="line-885"><span class="sd">    'ElevenLabsSpeechModel'</span>
-</span><span id="line-886"><span class="sd">    &gt;&gt;&gt; create_speech_model("no-such-model")</span>
-</span><span id="line-887"><span class="sd">    Traceback (most recent call last):</span>
-</span><span id="line-888"><span class="sd">      ...</span>
-</span><span id="line-889"><span class="sd">    ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say)</span>
-</span><span id="line-890"><span class="sd">    """</span>
-</span><span id="line-891">    <span class="n">factories</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">speech_model_factories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-</span><span id="line-892">    <span class="n">factory</span> <span class="o">=</span> <span class="n">factories</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">canonical_backend</span><span class="p">(</span><span class="n">model_type</span><span class="p">))</span>
-</span><span id="line-893">    <span class="k">if</span> <span class="n">factory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-894">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-895">            <span class="sa">f</span><span class="s2">"Unsupported model type: </span><span class="si">{</span><span class="n">model_type</span><span class="si">}</span><span class="s2"> "</span>
-</span><span id="line-896">            <span class="sa">f</span><span class="s2">"(supported: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">speech_model_factories</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
-</span><span id="line-897">        <span class="p">)</span>
-</span><span id="line-898">    <span class="k">return</span> <span class="n">factory</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+</span><span id="line-864"><span class="k">def</span><span class="w"> </span><span class="nf">create_speech_model</span><span class="p">(</span><span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_VOXY_MODEL</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpeechModel</span><span class="p">:</span>
+</span><span id="line-865"><span class="w">    </span><span class="sd">"""</span>
+</span><span id="line-866"><span class="sd">    Create a speech model of the specified type.</span>
+</span><span id="line-867">
+</span><span id="line-868"><span class="sd">    Args:</span>
+</span><span id="line-869"><span class="sd">        model_type: A key of ``speech_model_factories`` ('csm', 'csm-1b',</span>
+</span><span id="line-870"><span class="sd">            'elevenlabs', 'aix', 'fal', 'say', 'voicestudio', or any registered); case-insensitive,</span>
+</span><span id="line-871"><span class="sd">            aliases in ``backend_aliases`` accepted.</span>
+</span><span id="line-872"><span class="sd">        **kwargs: Additional model-specific parameters</span>
+</span><span id="line-873">
+</span><span id="line-874"><span class="sd">    Returns:</span>
+</span><span id="line-875"><span class="sd">        SpeechModel instance</span>
+</span><span id="line-876">
+</span><span id="line-877"><span class="sd">    Raises:</span>
+</span><span id="line-878"><span class="sd">        ValueError: If the model type is not supported</span>
+</span><span id="line-879">
+</span><span id="line-880"><span class="sd">    The returned model loads its (large) weights lazily, on first use:</span>
+</span><span id="line-881">
+</span><span id="line-882"><span class="sd">    &gt;&gt;&gt; model = create_speech_model("csm")</span>
+</span><span id="line-883"><span class="sd">    &gt;&gt;&gt; type(model).__name__</span>
+</span><span id="line-884"><span class="sd">    'CSMSpeechModel'</span>
+</span><span id="line-885"><span class="sd">    &gt;&gt;&gt; type(create_speech_model("elevenlabs", api_key="unused")).__name__</span>
+</span><span id="line-886"><span class="sd">    'ElevenLabsSpeechModel'</span>
+</span><span id="line-887"><span class="sd">    &gt;&gt;&gt; create_speech_model("no-such-model")</span>
+</span><span id="line-888"><span class="sd">    Traceback (most recent call last):</span>
+</span><span id="line-889"><span class="sd">      ...</span>
+</span><span id="line-890"><span class="sd">    ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say, voicestudio)</span>
+</span><span id="line-891"><span class="sd">    """</span>
+</span><span id="line-892">    <span class="n">factories</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">speech_model_factories</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+</span><span id="line-893">    <span class="n">factory</span> <span class="o">=</span> <span class="n">factories</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">canonical_backend</span><span class="p">(</span><span class="n">model_type</span><span class="p">))</span>
+</span><span id="line-894">    <span class="k">if</span> <span class="n">factory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-895">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-896">            <span class="sa">f</span><span class="s2">"Unsupported model type: </span><span class="si">{</span><span class="n">model_type</span><span class="si">}</span><span class="s2"> "</span>
+</span><span id="line-897">            <span class="sa">f</span><span class="s2">"(supported: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">speech_model_factories</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
+</span><span id="line-898">        <span class="p">)</span>
+</span><span id="line-899">    <span class="k">return</span> <span class="n">factory</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -1136,7 +1138,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=f7cdbf68"></script>
+    <script src="../../_static/documentation_options.js?v=a83ce22a"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

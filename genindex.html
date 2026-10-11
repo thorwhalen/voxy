@@ -121,6 +121,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.library.html">voxy.library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.stores.html">voxy.stores</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.voicestudio_model.html">voxy.voicestudio_model</a></li>
 </ul>
 </li>
 </ul>
@@ -237,6 +238,8 @@
       <ul style="list-style-type:none">
         <li><a href="_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.ElevenLabsSpeechModel.design_voice">(voxy.elevenlabs_model.ElevenLabsSpeechModel method)</a>
 </li>
+        <li><a href="_autosummary/voxy.voicestudio_model.html#voxy.voicestudio_model.VoiceStudioSpeechModel.design_voice">(voxy.voicestudio_model.VoiceStudioSpeechModel method)</a>
+</li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
@@ -245,7 +248,11 @@
       <li><a href="_autosummary/voxy.facade.html#voxy.facade.dflt_tts_backend">dflt_tts_backend() (in module voxy.facade)</a>
 </li>
       <li><a href="_autosummary/voxy.base.html#voxy.base.SpeechModel.dflt_voice">dflt_voice (voxy.base.SpeechModel attribute)</a>
+
+      <ul style="list-style-type:none">
+        <li><a href="_autosummary/voxy.voicestudio_model.html#voxy.voicestudio_model.VoiceStudioSpeechModel.dflt_voice">(voxy.voicestudio_model.VoiceStudioSpeechModel attribute)</a>
 </li>
+      </ul></li>
   </ul></td>
   </tr>
       </table>
@@ -348,6 +355,8 @@
 </li>
         <li><a href="_autosummary/voxy.stores.html#module-voxy.stores">voxy.stores</a>
 </li>
+        <li><a href="_autosummary/voxy.voicestudio_model.html#module-voxy.voicestudio_model">voxy.voicestudio_model</a>
+</li>
       </ul></li>
   </ul></td>
   </tr>
@@ -368,6 +377,8 @@
         <li><a href="_autosummary/voxy.fal_model.html#voxy.fal_model.FalSpeechModel.name">(voxy.fal_model.FalSpeechModel attribute)</a>
 </li>
         <li><a href="_autosummary/voxy.say_model.html#voxy.say_model.SaySpeechModel.name">(voxy.say_model.SaySpeechModel attribute)</a>
+</li>
+        <li><a href="_autosummary/voxy.voicestudio_model.html#voxy.voicestudio_model.VoiceStudioSpeechModel.name">(voxy.voicestudio_model.VoiceStudioSpeechModel attribute)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -451,6 +462,8 @@
 </li>
         <li><a href="_autosummary/voxy.say_model.html#voxy.say_model.SaySpeechModel.synthesize">(voxy.say_model.SaySpeechModel method)</a>
 </li>
+        <li><a href="_autosummary/voxy.voicestudio_model.html#voxy.voicestudio_model.VoiceStudioSpeechModel.synthesize">(voxy.voicestudio_model.VoiceStudioSpeechModel method)</a>
+</li>
       </ul></li>
       <li><a href="_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.ElevenLabsSpeechModel.synthesize_bytes">synthesize_bytes() (voxy.elevenlabs_model.ElevenLabsSpeechModel method)</a>
 </li>
@@ -486,6 +499,8 @@
 </li>
       <li><a href="_autosummary/voxy.stores.html#voxy.stores.voices_store">voices_store() (in module voxy.stores)</a>
 </li>
+      <li><a href="_autosummary/voxy.voicestudio_model.html#voxy.voicestudio_model.VoiceStudioSpeechModel">VoiceStudioSpeechModel (class in voxy.voicestudio_model)</a>
+</li>
       <li>
     voxy
 
@@ -507,8 +522,6 @@
         <li><a href="_autosummary/voxy.base.html#module-voxy.base">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li>
     voxy.elevenlabs_model
 
@@ -516,6 +529,8 @@
         <li><a href="_autosummary/voxy.elevenlabs_model.html#module-voxy.elevenlabs_model">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li>
     voxy.facade
 
@@ -551,6 +566,13 @@
         <li><a href="_autosummary/voxy.stores.html#module-voxy.stores">module</a>
 </li>
       </ul></li>
+      <li>
+    voxy.voicestudio_model
+
+      <ul style="list-style-type:none">
+        <li><a href="_autosummary/voxy.voicestudio_model.html#module-voxy.voicestudio_model">module</a>
+</li>
+      </ul></li>
       <li><a href="_autosummary/voxy.stores.html#voxy.stores.voxy_data_dir">voxy_data_dir() (in module voxy.stores)</a>
 </li>
   </ul></td>
@@ -575,7 +597,7 @@
 </footer>
     </div>
     
-    <script src="_static/documentation_options.js?v=f7cdbf68"></script>
+    <script src="_static/documentation_options.js?v=a83ce22a"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>

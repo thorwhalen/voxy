@@ -1,4 +1,4 @@
-> built 2026-10-03 07:58 UTC from ffa1b74 (main) · voxy 0.0.9. Details: build_info.json
+> built 2026-10-11 13:21 UTC from af2f6fc (main) · voxy 0.0.10. Details: build_info.json
 
 # index.html.md
 
@@ -23,7 +23,7 @@ voxy.list_voices()  # our named voices
 voxy.list_voices("elevenlabs")  # a service's voices
 ```
 
-Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
+Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
 
 Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice ada -o out.mp3`.
 
@@ -606,7 +606,7 @@ Create a speech model of the specified type.
 
 * **Parameters:**
   * **model_type** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – A key of `speech_model_factories` (‘csm’, ‘csm-1b’,
-    ‘elevenlabs’, ‘aix’, ‘fal’, ‘say’, or any registered); case-insensitive,
+    ‘elevenlabs’, ‘aix’, ‘fal’, ‘say’, ‘voicestudio’, or any registered); case-insensitive,
     aliases in `backend_aliases` accepted.
   * **\*\*kwargs** – Additional model-specific parameters
 * **Return type:**
@@ -627,7 +627,7 @@ The returned model loads its (large) weights lazily, on first use:
 >>> create_speech_model("no-such-model")
 Traceback (most recent call last):
   ...
-ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say)
+ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say, voicestudio)
 ```
 
 ### voxy.base.register_speech_model(name, factory, , overwrite=False)
@@ -652,7 +652,7 @@ ValueError: A speech backend named 'echo' is already registered (pass overwrite=
 >>> del speech_model_factories["echo"]
 ```
 
-### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[...], [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>}*
+### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[...], [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>, 'voicestudio': <function \_lazy_factory.<locals>.factory>}*
 
 Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
@@ -1070,21 +1070,22 @@ Facade for voice generation: speech synthesis in any voice, cloning and designin
 
 ```pycon
 >>> import voxy
->>> {'elevenlabs', 'say', 'aix', 'fal', 'csm'} <= set(voxy.speech_model_factories)
+>>> {'elevenlabs', 'say', 'aix', 'fal', 'voicestudio', 'csm'} <= set(voxy.speech_model_factories)
 True
 ```
 
 ### Modules
 
-| [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)               | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.   |
-|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                         | Voxy: A flexible speech synthesis and voice cloning module.                                 |
-| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model) | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.           |
-| [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                     | Voice generation in one call, whatever the service behind it.                               |
-| [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)               | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.           |
-| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                   | A persistent voice library: clone a voice once, then use it by name.                        |
-| [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)               | Local speech with the macOS `say` command: free, offline, no API key, no deps.              |
-| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                     | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.             |
+| [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.   |
+|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                 |
+| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model)   | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.           |
+| [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                       | Voice generation in one call, whatever the service behind it.                               |
+| [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)                 | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.           |
+| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                        |
+| [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.              |
+| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.             |
+| [`voicestudio_model`](_autosummary/voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).             |
 
 
 # _autosummary/voxy.library.html.md
@@ -1385,24 +1386,87 @@ The data root: `$VOXY_DATA_DIR` if set, else the platform’s app-data folder.
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 
+# _autosummary/voxy.voicestudio_model.html.md
+
+# voxy.voicestudio_model
+
+Local description-prompted speech through VoiceStudio (Parler-TTS and friends).
+
+A voice here is a *text description* (“a warm, low female voice, close to the
+microphone”), not a recording: `voice` may be that string or a `VoiceProfile`
+made by `design_voice`. Nothing is uploaded; weights run locally (CPU works,
+slowly) and are fetched from Hugging Face on first use (`model_id=`; the default
+is several GB, so `pip install 'voxy[voicestudio]'` does not download them).
+
+The model call is a seam: `generate(text, description) -> (waveform, sample_rate)`
+is injectable, so tests (and other VoiceStudio architectures) never load weights.
+
+```pycon
+>>> model = VoiceStudioSpeechModel(generate=lambda text, description: ([0.0] * 8, 8000))
+>>> model.synthesize("Hi", "a calm voice").format
+'wav'
+```
+
+### Classes
+
+| [`VoiceStudioSpeechModel`](_autosummary/voxy.voicestudio_model.html.md#voxy.voicestudio_model.VoiceStudioSpeechModel)(\*[, model_id, ...])   | VoiceStudio (description-prompted TTS) as a voxy backend.   |
+|------------------------------------------------------------------------------------------------|-------------------------------------------------------------|
+
+### *class* voxy.voicestudio_model.VoiceStudioSpeechModel(, model_id='parler-tts/parler-tts-mini-v1', device='cpu', generate=None)
+
+Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
+
+VoiceStudio (description-prompted TTS) as a voxy backend.
+
+* **Parameters:**
+  * **model_id** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Hugging Face id of the base model (default Parler-TTS mini).
+  * **device** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Torch device for the default `generate`.
+  * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(text, description) -> (waveform, sample_rate)` (tests inject a fake).
+
+#### design_voice(description, , speaker_id=0, \*\*\_)
+
+A profile for a voice described in words (no model call, nothing stored remotely).
+
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+#### dflt_voice *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= 'A clear, natural voice speaking at a moderate pace with very clean audio.'*
+
+the caller must).
+
+* **Type:**
+  Voice used when the caller names none (`None`
+
+#### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= 'voicestudio'*
+
+Registry name of the backend (also each profile’s `model_type`).
+
+#### synthesize(text, voice=None, \*\*kwargs)
+
+Speech in the voice described by `voice` (a description or a profile).
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+
 # about-this-build.html.md
 
 <!-- generated by epythet -->
 
 # About this build
 
-This documentation was built on **2026-10-03 07:58 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/ffa1b74206cb2cd24360266d0a74bde9cbe2160a"><code>ffa1b74</code></a> on branch <code>main</code>, for **voxy 0.0.9** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-11 13:21 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/af2f6fcf6bf33ad18afa94ac187b36ade99502cf"><code>af2f6fc</code></a> on branch <code>main</code>, for **voxy 0.0.10** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.9) is behind the latest release on PyPI (0.0.10): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.10) is behind the latest release on PyPI (0.0.11): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/ffa1b74206cb2cd24360266d0a74bde9cbe2160a"><code>ffa1b74206cb2cd24360266d0a74bde9cbe2160a</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/af2f6fcf6bf33ad18afa94ac187b36ade99502cf"><code>af2f6fcf6bf33ad18afa94ac187b36ade99502cf</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -1413,9 +1477,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/37107932431">37107932431</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/38142616893">38142616893</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>ffa1b74206cb2cd24360266d0a74bde9cbe2160a</code> (in the history of the built commit) |
+| Event commit | <code>af2f6fcf6bf33ad18afa94ac187b36ade99502cf</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -1424,7 +1488,7 @@ The documentation and the package may be misaligned:
 | epythet  | 0.2.12  |
 | Sphinx   | 9.1.0   |
 | docutils | 0.22.4  |
-| Python   | 3.12.14 |
+| Python   | 3.12.15 |
 
 ## Configuration as resolved
 
@@ -1440,13 +1504,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.10/">0.0.10</a>, newer than the documented version (0.0.9).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.11/">0.0.11</a>, newer than the documented version (0.0.10).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout ffa1b74206cb2cd24360266d0a74bde9cbe2160a
+git checkout af2f6fcf6bf33ad18afa94ac187b36ade99502cf
 pip install "epythet==0.2.12"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
