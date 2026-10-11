@@ -23,7 +23,9 @@ from voxy.base import Speech, SpeechModel, VoiceProfile, _resolve_text_input
 
 VOICESTUDIO_MODEL_TYPE = "voicestudio"
 DFLT_VOICESTUDIO_MODEL_ID = "parler-tts/parler-tts-mini-v1"
-DFLT_DESCRIPTION = "A clear, natural voice speaking at a moderate pace with very clean audio."
+DFLT_DESCRIPTION = (
+    "A clear, natural voice speaking at a moderate pace with very clean audio."
+)
 PCM_SAMPLE_WIDTH_BYTES = 2
 PCM_MAX = 32767
 
@@ -64,7 +66,9 @@ def _parler_generate(model_id: str, device: str) -> Callable:
             state["model"] = AutoModel.from_pretrained(model_id).to(device)
             state["tokenizer"] = AutoTokenizer.from_pretrained(model_id)
         model, tokenizer = state["model"], state["tokenizer"]
-        description_ids = tokenizer(description, return_tensors="pt").input_ids.to(device)
+        description_ids = tokenizer(description, return_tensors="pt").input_ids.to(
+            device
+        )
         prompt_ids = tokenizer(text, return_tensors="pt").input_ids.to(device)
         audio = model.generate(input_ids=description_ids, prompt_input_ids=prompt_ids)
         return audio.cpu().float().numpy().squeeze(), model.config.sampling_rate
@@ -95,9 +99,13 @@ class VoiceStudioSpeechModel(SpeechModel):
         self.model_id = model_id
         self._generate = generate or _parler_generate(model_id, device)
 
-    def design_voice(self, description: str, *, speaker_id: int = 0, **_) -> VoiceProfile:
+    def design_voice(
+        self, description: str, *, speaker_id: int = 0, **_
+    ) -> VoiceProfile:
         """A profile for a voice described in words (no model call, nothing stored remotely)."""
-        return VoiceProfile(description, speaker_id, self.name, 0, {"description": description})
+        return VoiceProfile(
+            description, speaker_id, self.name, 0, {"description": description}
+        )
 
     def synthesize(
         self, text, voice: VoiceProfile | str | None = None, **kwargs
