@@ -40,6 +40,7 @@ CLI: `python -m voxy voices [--backend X]`, `python -m voxy speak "text" --voice
 | `say` | free, offline drafts and previews (macOS voices) | macOS |
 | `aix` | OpenAI voices (nova, onyx...) and other LiteLLM providers | `voxy[aix]` + provider key |
 | `fal` | fal.ai TTS models picked by quality tier | `voxy[fal]` + `FAL_KEY` |
+| `voicestudio` | local; a voice is a text description (Parler-TTS), no cloning | `voxy[voicestudio]` + model weights (GBs) |
 | `csm` | local Sesame CSM-1B (GPU) | torch, the CSM repo |
 
 Add a service with `voxy.register_speech_model("name", factory)`: a `SpeechModel` subclass implementing `synthesize(text, voice) -> Speech` (and optionally `list_voices`, `clone_voice`, `design_voice`). Synthesis costs credits: draft with `say`, render the final with the real voice.

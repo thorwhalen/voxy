@@ -283,3 +283,22 @@ def test_fal_puts_model_arguments_in_extra():
 
     FalSpeechModel(tts=tts, fetch=lambda url: b"x").synthesize("Hi", speed=1.1, extra={"a": 1})
     assert seen["extra"] == {"a": 1, "speed": 1.1} and "speed" not in seen
+
+
+def test_voicestudio_backend_uses_description_as_voice(tmp_path):
+    from voxy.voicestudio_model import VoiceStudioSpeechModel
+
+    calls = []
+
+    def fake(text, description):
+        calls.append((text, description))
+        return [0.0, 0.5, -0.5], 8000
+
+    model = VoiceStudioSpeechModel(generate=fake)
+    out = tmp_path / "hi.wav"
+    speech = text_to_speech("Hi", "a deep calm voice", backend="voicestudio", model=model, output_path=str(out))
+    assert calls == [("Hi", "a deep calm voice")]
+    assert (speech.format, speech.sample_rate, out.read_bytes()[:4]) == ("wav", 8000, b"RIFF")
+    profile = model.design_voice("a bright voice")
+    assert model.synthesize("Yo", profile).voice == "a bright voice"
+    assert model.synthesize("Yo").voice == model.dflt_voice

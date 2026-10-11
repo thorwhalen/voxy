@@ -815,6 +815,7 @@ speech_model_factories: dict[str, Callable[..., SpeechModel]] = {
     "aix": _lazy_factory("voxy.aix_model", "AixSpeechModel"),
     "fal": _lazy_factory("voxy.fal_model", "FalSpeechModel"),
     "say": _lazy_factory("voxy.say_model", "SaySpeechModel"),
+    "voicestudio": _lazy_factory("voxy.voicestudio_model", "VoiceStudioSpeechModel"),
 }
 
 
@@ -866,7 +867,7 @@ def create_speech_model(model_type: str = DFLT_VOXY_MODEL, **kwargs) -> SpeechMo
 
     Args:
         model_type: A key of ``speech_model_factories`` ('csm', 'csm-1b',
-            'elevenlabs', 'aix', 'fal', 'say', or any registered); case-insensitive,
+            'elevenlabs', 'aix', 'fal', 'say', 'voicestudio', or any registered); case-insensitive,
             aliases in ``backend_aliases`` accepted.
         **kwargs: Additional model-specific parameters
 
@@ -886,7 +887,7 @@ def create_speech_model(model_type: str = DFLT_VOXY_MODEL, **kwargs) -> SpeechMo
     >>> create_speech_model("no-such-model")
     Traceback (most recent call last):
       ...
-    ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say)
+    ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say, voicestudio)
     """
     factories = {k.lower(): v for k, v in speech_model_factories.items()}
     factory = factories.get(canonical_backend(model_type))
