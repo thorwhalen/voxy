@@ -187,111 +187,125 @@
 </span><span id="line-16"><span class="sd">"""</span>
 </span><span id="line-17">
 </span><span id="line-18"><span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
-</span><span id="line-19"><span class="kn">import</span><span class="w"> </span><span class="nn">wave</span>
-</span><span id="line-20"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Sequence</span>
-</span><span id="line-21">
-</span><span id="line-22"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Speech</span><span class="p">,</span> <span class="n">SpeechModel</span><span class="p">,</span> <span class="n">VoiceProfile</span><span class="p">,</span> <span class="n">_resolve_text_input</span>
-</span><span id="line-23">
-</span><span id="line-24"><span class="n">VOICESTUDIO_MODEL_TYPE</span> <span class="o">=</span> <span class="s2">"voicestudio"</span>
-</span><span id="line-25"><span class="n">DFLT_VOICESTUDIO_MODEL_ID</span> <span class="o">=</span> <span class="s2">"parler-tts/parler-tts-mini-v1"</span>
-</span><span id="line-26"><span class="n">DFLT_DESCRIPTION</span> <span class="o">=</span> <span class="s2">"A clear, natural voice speaking at a moderate pace with very clean audio."</span>
-</span><span id="line-27"><span class="n">PCM_SAMPLE_WIDTH_BYTES</span> <span class="o">=</span> <span class="mi">2</span>
-</span><span id="line-28"><span class="n">PCM_MAX</span> <span class="o">=</span> <span class="mi">32767</span>
-</span><span id="line-29">
-</span><span id="line-30">
-</span><span id="line-31"><span class="k">def</span><span class="w"> </span><span class="nf">_pcm_wav</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-</span><span id="line-32"><span class="w">    </span><span class="sd">"""Mono 16-bit WAV bytes from floats in [-1, 1].</span>
+</span><span id="line-19"><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+</span><span id="line-20"><span class="kn">import</span><span class="w"> </span><span class="nn">wave</span>
+</span><span id="line-21"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Sequence</span>
+</span><span id="line-22">
+</span><span id="line-23"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Speech</span><span class="p">,</span> <span class="n">SpeechModel</span><span class="p">,</span> <span class="n">VoiceProfile</span><span class="p">,</span> <span class="n">_resolve_text_input</span>
+</span><span id="line-24">
+</span><span id="line-25"><span class="n">VOICESTUDIO_MODEL_TYPE</span> <span class="o">=</span> <span class="s2">"voicestudio"</span>
+</span><span id="line-26"><span class="n">DFLT_VOICESTUDIO_MODEL_ID</span> <span class="o">=</span> <span class="s2">"parler-tts/parler-tts-mini-v1"</span>
+</span><span id="line-27"><span class="n">DFLT_DESCRIPTION</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-28">    <span class="s2">"A clear, natural voice speaking at a moderate pace with very clean audio."</span>
+</span><span id="line-29"><span class="p">)</span>
+</span><span id="line-30"><span class="n">PCM_SAMPLE_WIDTH_BYTES</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span id="line-31"><span class="n">PCM_MAX</span> <span class="o">=</span> <span class="mi">32767</span>
+</span><span id="line-32">
 </span><span id="line-33">
-</span><span id="line-34"><span class="sd">    &gt;&gt;&gt; _pcm_wav([0.0, 1.0], 8000)[:4]</span>
-</span><span id="line-35"><span class="sd">    b'RIFF'</span>
-</span><span id="line-36"><span class="sd">    """</span>
-</span><span id="line-37">    <span class="n">frames</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-</span><span id="line-38">        <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">)))</span> <span class="o">*</span> <span class="n">PCM_MAX</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">,</span> <span class="n">signed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-39">        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">samples</span>
-</span><span id="line-40">    <span class="p">)</span>
-</span><span id="line-41">    <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
-</span><span id="line-42">    <span class="k">with</span> <span class="n">wave</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">wav</span><span class="p">:</span>
-</span><span id="line-43">        <span class="n">wav</span><span class="o">.</span><span class="n">setnchannels</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="line-44">        <span class="n">wav</span><span class="o">.</span><span class="n">setsampwidth</span><span class="p">(</span><span class="n">PCM_SAMPLE_WIDTH_BYTES</span><span class="p">)</span>
-</span><span id="line-45">        <span class="n">wav</span><span class="o">.</span><span class="n">setframerate</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">)</span>
-</span><span id="line-46">        <span class="n">wav</span><span class="o">.</span><span class="n">writeframes</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
-</span><span id="line-47">    <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
-</span><span id="line-48">
-</span><span id="line-49">
-</span><span id="line-50"><span class="k">def</span><span class="w"> </span><span class="nf">_parler_generate</span><span class="p">(</span><span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
-</span><span id="line-51"><span class="w">    </span><span class="sd">"""The default ``generate``: Parler-TTS through voicestudio, loaded on first call."""</span>
-</span><span id="line-52">    <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-53">
-</span><span id="line-54">    <span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
-</span><span id="line-55">        <span class="k">if</span> <span class="ow">not</span> <span class="n">state</span><span class="p">:</span>
-</span><span id="line-56">            <span class="k">try</span><span class="p">:</span>
-</span><span id="line-57">                <span class="kn">import</span><span class="w"> </span><span class="nn">voicestudio.models.parler_tts</span>  <span class="c1"># noqa: F401 (registers the classes)</span>
-</span><span id="line-58">                <span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModel</span><span class="p">,</span> <span class="n">AutoTokenizer</span>
-</span><span id="line-59">            <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="line-60">                <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
-</span><span id="line-61">                    <span class="s2">"The 'voicestudio' backend needs voicestudio and torch "</span>
-</span><span id="line-62">                    <span class="s2">"(pip install 'voxy[voicestudio]')."</span>
-</span><span id="line-63">                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-</span><span id="line-64">            <span class="n">state</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span> <span class="o">=</span> <span class="n">AutoModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_id</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-</span><span id="line-65">            <span class="n">state</span><span class="p">[</span><span class="s2">"tokenizer"</span><span class="p">]</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_id</span><span class="p">)</span>
-</span><span id="line-66">        <span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"model"</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="s2">"tokenizer"</span><span class="p">]</span>
-</span><span id="line-67">        <span class="n">description_ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">"pt"</span><span class="p">)</span><span class="o">.</span><span class="n">input_ids</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-</span><span id="line-68">        <span class="n">prompt_ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">"pt"</span><span class="p">)</span><span class="o">.</span><span class="n">input_ids</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-</span><span id="line-69">        <span class="n">audio</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">input_ids</span><span class="o">=</span><span class="n">description_ids</span><span class="p">,</span> <span class="n">prompt_input_ids</span><span class="o">=</span><span class="n">prompt_ids</span><span class="p">)</span>
-</span><span id="line-70">        <span class="k">return</span> <span class="n">audio</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(),</span> <span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">sampling_rate</span>
-</span><span id="line-71">
-</span><span id="line-72">    <span class="k">return</span> <span class="n">generate</span>
-</span><span id="line-73">
-</span><span id="line-74">
+</span><span id="line-34"><span class="k">def</span><span class="w"> </span><span class="nf">_pcm_wav</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+</span><span id="line-35"><span class="w">    </span><span class="sd">"""Mono 16-bit WAV bytes from floats in [-1, 1].</span>
+</span><span id="line-36">
+</span><span id="line-37"><span class="sd">    &gt;&gt;&gt; _pcm_wav([0.0, 1.0], 8000)[:4]</span>
+</span><span id="line-38"><span class="sd">    b'RIFF'</span>
+</span><span id="line-39"><span class="sd">    """</span>
+</span><span id="line-40">    <span class="n">frames</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+</span><span id="line-41">        <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">)))</span> <span class="o">*</span> <span class="n">PCM_MAX</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">,</span> <span class="n">signed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-42">        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">samples</span>
+</span><span id="line-43">    <span class="p">)</span>
+</span><span id="line-44">    <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+</span><span id="line-45">    <span class="k">with</span> <span class="n">wave</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">wav</span><span class="p">:</span>
+</span><span id="line-46">        <span class="n">wav</span><span class="o">.</span><span class="n">setnchannels</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="line-47">        <span class="n">wav</span><span class="o">.</span><span class="n">setsampwidth</span><span class="p">(</span><span class="n">PCM_SAMPLE_WIDTH_BYTES</span><span class="p">)</span>
+</span><span id="line-48">        <span class="n">wav</span><span class="o">.</span><span class="n">setframerate</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">)</span>
+</span><span id="line-49">        <span class="n">wav</span><span class="o">.</span><span class="n">writeframes</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+</span><span id="line-50">    <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+</span><span id="line-51">
+</span><span id="line-52">
+</span><span id="line-53"><span class="k">def</span><span class="w"> </span><span class="nf">_parler_generate</span><span class="p">(</span><span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
+</span><span id="line-54"><span class="w">    </span><span class="sd">"""The default ``generate``: Parler-TTS through voicestudio, loaded on first call."""</span>
+</span><span id="line-55">    <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-56">    <span class="n">lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>  <span class="c1"># several threads must not each load the multi-GB weights</span>
+</span><span id="line-57">
+</span><span id="line-58">    <span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>
+</span><span id="line-59">        <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
+</span><span id="line-60">            <span class="n">_load</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+</span><span id="line-61">        <span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"model"</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="s2">"tokenizer"</span><span class="p">]</span>
+</span><span id="line-62">        <span class="n">description_ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">"pt"</span><span class="p">)</span><span class="o">.</span><span class="n">input_ids</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+</span><span id="line-63">            <span class="n">device</span>
+</span><span id="line-64">        <span class="p">)</span>
+</span><span id="line-65">        <span class="n">prompt_ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">"pt"</span><span class="p">)</span><span class="o">.</span><span class="n">input_ids</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+</span><span id="line-66">        <span class="n">audio</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">input_ids</span><span class="o">=</span><span class="n">description_ids</span><span class="p">,</span> <span class="n">prompt_input_ids</span><span class="o">=</span><span class="n">prompt_ids</span><span class="p">)</span>
+</span><span id="line-67">        <span class="k">return</span> <span class="n">audio</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(),</span> <span class="n">model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">sampling_rate</span>
+</span><span id="line-68">
+</span><span id="line-69">    <span class="k">def</span><span class="w"> </span><span class="nf">_load</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+</span><span id="line-70">        <span class="k">if</span> <span class="ow">not</span> <span class="n">state</span><span class="p">:</span>
+</span><span id="line-71">            <span class="k">try</span><span class="p">:</span>
+</span><span id="line-72">                <span class="kn">import</span><span class="w"> </span><span class="nn">voicestudio.models.parler_tts</span>  <span class="c1"># noqa: F401 (registers the classes)</span>
+</span><span id="line-73">                <span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModel</span><span class="p">,</span> <span class="n">AutoTokenizer</span>
+</span><span id="line-74">            <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="line-75">                <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+</span><span id="line-76">                    <span class="s2">"The 'voicestudio' backend needs voicestudio and torch "</span>
+</span><span id="line-77">                    <span class="s2">"(pip install 'voxy[voicestudio]')."</span>
+</span><span id="line-78">                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+</span><span id="line-79">            <span class="n">state</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span> <span class="o">=</span> <span class="n">AutoModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_id</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+</span><span id="line-80">            <span class="n">state</span><span class="p">[</span><span class="s2">"tokenizer"</span><span class="p">]</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_id</span><span class="p">)</span>
+</span><span id="line-81">
+</span><span id="line-82">    <span class="k">return</span> <span class="n">generate</span>
+</span><span id="line-83">
+</span><span id="line-84">
 <div class="viewcode-block" id="VoiceStudioSpeechModel">
 <a class="viewcode-back" href="../../_autosummary/voxy.voicestudio_model.html#voxy.voicestudio_model.VoiceStudioSpeechModel">[docs]</a>
-</span><span id="line-75"><span class="k">class</span><span class="w"> </span><span class="nc">VoiceStudioSpeechModel</span><span class="p">(</span><span class="n">SpeechModel</span><span class="p">):</span>
-</span><span id="line-76"><span class="w">    </span><span class="sd">"""VoiceStudio (description-prompted TTS) as a voxy backend.</span>
-</span><span id="line-77">
-</span><span id="line-78"><span class="sd">    Args:</span>
-</span><span id="line-79"><span class="sd">        model_id: Hugging Face id of the base model (default Parler-TTS mini).</span>
-</span><span id="line-80"><span class="sd">        device: Torch device for the default ``generate``.</span>
-</span><span id="line-81"><span class="sd">        generate: ``(text, description) -&gt; (waveform, sample_rate)`` (tests inject a fake).</span>
-</span><span id="line-82"><span class="sd">    """</span>
-</span><span id="line-83">
-</span><span id="line-84">    <span class="n">name</span> <span class="o">=</span> <span class="n">VOICESTUDIO_MODEL_TYPE</span>
-</span><span id="line-85">    <span class="n">dflt_voice</span> <span class="o">=</span> <span class="n">DFLT_DESCRIPTION</span>
-</span><span id="line-86">
-</span><span id="line-87">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="line-88">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-89">        <span class="o">*</span><span class="p">,</span>
-</span><span id="line-90">        <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_VOICESTUDIO_MODEL_ID</span><span class="p">,</span>
-</span><span id="line-91">        <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span>
-</span><span id="line-92">        <span class="n">generate</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-93">    <span class="p">):</span>
-</span><span id="line-94">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-</span><span id="line-95">        <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span> <span class="o">=</span> <span class="n">model_id</span>
-</span><span id="line-96">        <span class="bp">self</span><span class="o">.</span><span class="n">_generate</span> <span class="o">=</span> <span class="n">generate</span> <span class="ow">or</span> <span class="n">_parler_generate</span><span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
-</span><span id="line-97">
+</span><span id="line-85"><span class="k">class</span><span class="w"> </span><span class="nc">VoiceStudioSpeechModel</span><span class="p">(</span><span class="n">SpeechModel</span><span class="p">):</span>
+</span><span id="line-86"><span class="w">    </span><span class="sd">"""VoiceStudio (description-prompted TTS) as a voxy backend.</span>
+</span><span id="line-87">
+</span><span id="line-88"><span class="sd">    Args:</span>
+</span><span id="line-89"><span class="sd">        model_id: Hugging Face id of the base model (default Parler-TTS mini).</span>
+</span><span id="line-90"><span class="sd">        device: Torch device for the default ``generate``.</span>
+</span><span id="line-91"><span class="sd">        generate: ``(text, description) -&gt; (waveform, sample_rate)`` (tests inject a fake).</span>
+</span><span id="line-92"><span class="sd">    """</span>
+</span><span id="line-93">
+</span><span id="line-94">    <span class="n">name</span> <span class="o">=</span> <span class="n">VOICESTUDIO_MODEL_TYPE</span>
+</span><span id="line-95">    <span class="n">dflt_voice</span> <span class="o">=</span> <span class="n">DFLT_DESCRIPTION</span>
+</span><span id="line-96">
+</span><span id="line-97">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="line-98">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-99">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-100">        <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_VOICESTUDIO_MODEL_ID</span><span class="p">,</span>
+</span><span id="line-101">        <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span>
+</span><span id="line-102">        <span class="n">generate</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-103">    <span class="p">):</span>
+</span><span id="line-104">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+</span><span id="line-105">        <span class="bp">self</span><span class="o">.</span><span class="n">model_id</span> <span class="o">=</span> <span class="n">model_id</span>
+</span><span id="line-106">        <span class="bp">self</span><span class="o">.</span><span class="n">_generate</span> <span class="o">=</span> <span class="n">generate</span> <span class="ow">or</span> <span class="n">_parler_generate</span><span class="p">(</span><span class="n">model_id</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+</span><span id="line-107">
 <div class="viewcode-block" id="VoiceStudioSpeechModel.design_voice">
 <a class="viewcode-back" href="../../_autosummary/voxy.voicestudio_model.html#voxy.voicestudio_model.VoiceStudioSpeechModel.design_voice">[docs]</a>
-</span><span id="line-98">    <span class="k">def</span><span class="w"> </span><span class="nf">design_voice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">speaker_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">_</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
-</span><span id="line-99"><span class="w">        </span><span class="sd">"""A profile for a voice described in words (no model call, nothing stored remotely)."""</span>
-</span><span id="line-100">        <span class="k">return</span> <span class="n">VoiceProfile</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">speaker_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">{</span><span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">})</span></div>
+</span><span id="line-108">    <span class="k">def</span><span class="w"> </span><span class="nf">design_voice</span><span class="p">(</span>
+</span><span id="line-109">        <span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">speaker_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">_</span>
+</span><span id="line-110">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-111"><span class="w">        </span><span class="sd">"""A profile for a voice described in words (no model call, nothing stored remotely)."""</span>
+</span><span id="line-112">        <span class="k">return</span> <span class="n">VoiceProfile</span><span class="p">(</span>
+</span><span id="line-113">            <span class="n">description</span><span class="p">,</span> <span class="n">speaker_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">{</span><span class="s2">"description"</span><span class="p">:</span> <span class="n">description</span><span class="p">}</span>
+</span><span id="line-114">        <span class="p">)</span></div>
 
-</span><span id="line-101">
+</span><span id="line-115">
 <div class="viewcode-block" id="VoiceStudioSpeechModel.synthesize">
 <a class="viewcode-back" href="../../_autosummary/voxy.voicestudio_model.html#voxy.voicestudio_model.VoiceStudioSpeechModel.synthesize">[docs]</a>
-</span><span id="line-102">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span>
-</span><span id="line-103">        <span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
-</span><span id="line-104">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-105"><span class="w">        </span><span class="sd">"""Speech in the voice described by ``voice`` (a description or a profile)."""</span>
-</span><span id="line-106">        <span class="n">text</span> <span class="o">=</span> <span class="n">_resolve_text_input</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-</span><span id="line-107">        <span class="n">description</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="s2">"segment"</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">dflt_voice</span>
-</span><span id="line-108">        <span class="n">waveform</span><span class="p">,</span> <span class="n">sample_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="line-109">        <span class="k">return</span> <span class="n">Speech</span><span class="p">(</span>
-</span><span id="line-110">            <span class="n">_pcm_wav</span><span class="p">(</span><span class="n">waveform</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">),</span>
-</span><span id="line-111">            <span class="nb">format</span><span class="o">=</span><span class="s2">"wav"</span><span class="p">,</span>
-</span><span id="line-112">            <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-</span><span id="line-113">            <span class="n">voice</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
-</span><span id="line-114">            <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
-</span><span id="line-115">            <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
-</span><span id="line-116">        <span class="p">)</span></div>
+</span><span id="line-116">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span>
+</span><span id="line-117">        <span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+</span><span id="line-118">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-119"><span class="w">        </span><span class="sd">"""Speech in the voice described by ``voice`` (a description or a profile)."""</span>
+</span><span id="line-120">        <span class="n">text</span> <span class="o">=</span> <span class="n">_resolve_text_input</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+</span><span id="line-121">        <span class="n">description</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="s2">"segment"</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">dflt_voice</span>
+</span><span id="line-122">        <span class="n">waveform</span><span class="p">,</span> <span class="n">sample_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="line-123">        <span class="k">return</span> <span class="n">Speech</span><span class="p">(</span>
+</span><span id="line-124">            <span class="n">_pcm_wav</span><span class="p">(</span><span class="n">waveform</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">),</span>
+</span><span id="line-125">            <span class="nb">format</span><span class="o">=</span><span class="s2">"wav"</span><span class="p">,</span>
+</span><span id="line-126">            <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="line-127">            <span class="n">voice</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+</span><span id="line-128">            <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
+</span><span id="line-129">            <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+</span><span id="line-130">        <span class="p">)</span></div>
 </div>
 
 </span></code></pre></div>
@@ -307,7 +321,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=a83ce22a"></script>
+    <script src="../../_static/documentation_options.js?v=0c446633"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

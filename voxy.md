@@ -1,4 +1,4 @@
-> built 2026-10-11 13:21 UTC from af2f6fc (main) · voxy 0.0.10. Details: build_info.json
+> built 2026-10-13 07:35 UTC from 2a515c3 (main) · voxy 0.0.11. Details: build_info.json
 
 # index.html.md
 
@@ -1455,18 +1455,18 @@ Speech in the voice described by `voice` (a description or a profile).
 
 # About this build
 
-This documentation was built on **2026-10-11 13:21 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/af2f6fcf6bf33ad18afa94ac187b36ade99502cf"><code>af2f6fc</code></a> on branch <code>main</code>, for **voxy 0.0.10** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-13 07:35 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/2a515c3d460c83ad6fa61ec98a2411f771c89c28"><code>2a515c3</code></a> on branch <code>main</code>, for **voxy 0.0.11** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.10) is behind the latest release on PyPI (0.0.11): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.11) is behind the latest release on PyPI (0.0.12): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/af2f6fcf6bf33ad18afa94ac187b36ade99502cf"><code>af2f6fcf6bf33ad18afa94ac187b36ade99502cf</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/2a515c3d460c83ad6fa61ec98a2411f771c89c28"><code>2a515c3d460c83ad6fa61ec98a2411f771c89c28</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -1477,15 +1477,15 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/38142616893">38142616893</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/38363199604">38363199604</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>af2f6fcf6bf33ad18afa94ac187b36ade99502cf</code> (in the history of the built commit) |
+| Event commit | <code>2a515c3d460c83ad6fa61ec98a2411f771c89c28</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.12  |
+| epythet  | 0.2.15  |
 | Sphinx   | 9.1.0   |
 | docutils | 0.22.4  |
 | Python   | 3.12.15 |
@@ -1504,14 +1504,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.11/">0.0.11</a>, newer than the documented version (0.0.10).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.12/">0.0.12</a>, newer than the documented version (0.0.11).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout af2f6fcf6bf33ad18afa94ac187b36ade99502cf
-pip install "epythet==0.2.12"
+git checkout 2a515c3d460c83ad6fa61ec98a2411f771c89c28
+pip install "epythet==0.2.15"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 
