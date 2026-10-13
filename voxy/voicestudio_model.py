@@ -16,6 +16,7 @@ is injectable, so tests (and other VoiceStudio architectures) never load weights
 """
 
 import io
+import threading
 import wave
 from collections.abc import Callable, Sequence
 
@@ -52,8 +53,20 @@ def _pcm_wav(samples: Sequence[float], sample_rate: int) -> bytes:
 def _parler_generate(model_id: str, device: str) -> Callable:
     """The default ``generate``: Parler-TTS through voicestudio, loaded on first call."""
     state: dict = {}
+    lock = threading.Lock()  # several threads must not each load the multi-GB weights
 
     def generate(text, description):
+        with lock:
+            _load(state)
+        model, tokenizer = state["model"], state["tokenizer"]
+        description_ids = tokenizer(description, return_tensors="pt").input_ids.to(
+            device
+        )
+        prompt_ids = tokenizer(text, return_tensors="pt").input_ids.to(device)
+        audio = model.generate(input_ids=description_ids, prompt_input_ids=prompt_ids)
+        return audio.cpu().float().numpy().squeeze(), model.config.sampling_rate
+
+    def _load(state):
         if not state:
             try:
                 import voicestudio.models.parler_tts  # noqa: F401 (registers the classes)
@@ -65,13 +78,6 @@ def _parler_generate(model_id: str, device: str) -> Callable:
                 ) from e
             state["model"] = AutoModel.from_pretrained(model_id).to(device)
             state["tokenizer"] = AutoTokenizer.from_pretrained(model_id)
-        model, tokenizer = state["model"], state["tokenizer"]
-        description_ids = tokenizer(description, return_tensors="pt").input_ids.to(
-            device
-        )
-        prompt_ids = tokenizer(text, return_tensors="pt").input_ids.to(device)
-        audio = model.generate(input_ids=description_ids, prompt_input_ids=prompt_ids)
-        return audio.cpu().float().numpy().squeeze(), model.config.sampling_rate
 
     return generate
 
