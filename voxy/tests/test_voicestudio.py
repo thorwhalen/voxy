@@ -102,3 +102,42 @@ def test_default_generate_loads_once_and_uses_both_prompts(monkeypatch):
     generate("again", "a voice")
     assert loads == ["some/model"]  # weights loaded once
     assert model.last == (("a voice", "cpu"), ("again", "cpu"))
+
+
+def test_default_generate_loads_once_across_threads(monkeypatch):
+    import threading
+    import time
+
+    loads = []
+
+    def slow_from_pretrained(mid):
+        loads.append(mid)
+        time.sleep(0.1)
+        return SimpleNamespace(
+            to=lambda device: SimpleNamespace(
+                config=SimpleNamespace(sampling_rate=8000),
+                generate=lambda **kw: SimpleNamespace(
+                    cpu=lambda: SimpleNamespace(
+                        float=lambda: SimpleNamespace(
+                            numpy=lambda: SimpleNamespace(squeeze=lambda: [0.0])
+                        )
+                    )
+                ),
+            )
+        )
+
+    ids = SimpleNamespace(input_ids=SimpleNamespace(to=lambda d: d))
+    transformers = ModuleType("transformers")
+    transformers.AutoModel = SimpleNamespace(from_pretrained=slow_from_pretrained)
+    transformers.AutoTokenizer = SimpleNamespace(
+        from_pretrained=lambda mid: lambda text, return_tensors: ids
+    )
+    for name in ("voicestudio", "voicestudio.models", "voicestudio.models.parler_tts"):
+        monkeypatch.setitem(sys.modules, name, ModuleType(name))
+    monkeypatch.setitem(sys.modules, "transformers", transformers)
+
+    generate = _parler_generate("m", "cpu")
+    threads = [threading.Thread(target=generate, args=("t", "d")) for _ in range(4)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert loads == ["m"]
