@@ -1,0 +1,19 @@
+voxy.textsplit
+==============
+
+.. automodule:: voxy.textsplit
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      ABBREVIATIONS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      split_sentences
+      split_text
+   

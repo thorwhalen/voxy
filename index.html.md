@@ -192,6 +192,38 @@ profile = model.voice_profile("<voice_id>")
 
 Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `VOXY_LIVE_ELEVENLABS_SAMPLE=<audio you may clone>` also clones, speaks and deletes.
 
+### Local voice cloning (no service, CPU works)
+
+Five local models clone a voice from one clean clip and its transcript: `voxcpm` (VoxCPM2), `qwen3tts` (Qwen3-TTS), `chatterbox`, `f5tts` (F5-TTS) and `xtts` (XTTS-v2). Each runs in its own Python environment, built on first use with [uv](https://docs.astral.sh/uv/) under `$VOXY_DATA_DIR/envs/` (weights under `$VOXY_DATA_DIR/models/`), so their clashing torch/transformers pins never touch yours. Requirements: `uv` and `ffmpeg` on the PATH.
+
+```python
+import voxy
+from voxy.local_clone import reference_profile
+
+model = voxy.create_speech_model("voxcpm")          # or qwen3tts, chatterbox, f5tts, xtts
+voice = reference_profile("ref.wav", "Exactly what the clip says.")
+model.synthesize(chapter_text, voice, cfg_value=2.0).save("chapter1.wav")
+model.close()                                        # free the model's memory
+```
+
+Long text is split into paragraphs and sentence-packed chunks, each spoken separately and joined with controlled pauses (`gap_ms=`, `paragraph_gap_ms=`). Model parameters are keyword arguments of `synthesize` (see `voxy.local_clone.LOCAL_CLONE_BACKENDS[name].params`); model options (a variant, a fine-tuned checkpoint) are keyword arguments of `create_speech_model`. Threads are capped at `$VOXY_NUM_THREADS` (default 8). Licences differ: F5-TTS and XTTS-v2 weights are non-commercial (XTTS needs `accept_licence=True`); VoxCPM2, Qwen3-TTS and Chatterbox are Apache-2.0/MIT.
+
+```bash
+python -m voxy setup voxcpm qwen3tts      # build environments ahead of time
+python -m voxy prep ada tape1.m4a tape2.mp3 --language en
+python -m voxy diagnose spec.json --out renders/first-listen --publish
+```
+
+**Reference preparation** (`voxy.refprep.prepare_reference`): converts any recording to mono WAV, denoises and normalises loudness (ffmpeg), transcribes locally with Whisper (scribed’s faster-whisper backend) with word timings, cuts clips of 3-12 s at sentence boundaries, and scores each clip (signal-to-noise, clipping, level, ASR confidence, speaking rate). Clips and `manifest.jsonl` go to the voice’s samples store; `best_references(manifest)` picks reference clips and `voxy.finetune.export_dataset` writes training sets (LJSpeech or F5-TTS layout).
+
+**Diagnosis pages** (`voxy.diagnosis`): render one text through a grid of models and parameters, then build one page with a player per variant, its parameters, generation time and real-time factor. Each variant has a stable ID (e.g. `VX-7KQ2`) derived from its configuration, not the text, so listeners can say “use VX-7KQ2” across pages and chapters; each listener can rate and annotate variants and copy their notes. A spec:
+
+```json
+{"title": "First listen", "text_file": "excerpt.txt", "voice": "ada", "n_references": 1,
+ "grid": [{"backend": "voxcpm", "params": {"cfg_value": [1.5, 2.0, 2.5]}},
+          {"backend": "chatterbox", "params": {"exaggeration": [0.3, 0.6]}}]}
+```
+
 ### The voice library: clone once, reuse by name
 
 voxy keeps voice data in stores (`MutableMapping`s) under `$VOXY_DATA_DIR` (default `~/.local/share/voxy`): `voices/{name}.json` records (with each backend’s saved profile, e.g. the ElevenLabs `voice_id`), `samples/{name}/` (audio a clone is made from), `sources/{name}/` (raw media). Every library function takes its stores as arguments (`voices=`, `samples=`), so any `MutableMapping` (another folder, S3) can stand in.

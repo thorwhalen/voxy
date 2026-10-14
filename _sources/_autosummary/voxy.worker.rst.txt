@@ -1,0 +1,18 @@
+voxy.worker
+===========
+
+.. automodule:: voxy.worker
+
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Worker
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      WorkerError
+   

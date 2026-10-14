@@ -1,0 +1,13 @@
+voxy.workers.xtts\_adapter
+==========================
+
+.. automodule:: voxy.workers.xtts_adapter
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      load
+      synthesize
+   

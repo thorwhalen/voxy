@@ -1,0 +1,31 @@
+voxy.envs
+=========
+
+.. automodule:: voxy.envs
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DFLT_NUM_THREADS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      ensure_env
+      env_dir
+      env_python
+      is_env_ready
+      models_dir
+      num_threads
+      remove_env
+      worker_environ
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      EnvSpec
+   

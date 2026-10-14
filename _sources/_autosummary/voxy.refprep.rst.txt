@@ -1,0 +1,29 @@
+voxy.refprep
+============
+
+.. automodule:: voxy.refprep
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DENOISE_FILTERS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      best_references
+      close_asr
+      condition
+      conditioning_filters
+      load_manifest
+      partial_transcribe
+      plan_clips
+      prepare_reference
+      score_clip
+      summarize
+      transcribe
+      transcribe_text
+   

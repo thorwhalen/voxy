@@ -1,0 +1,13 @@
+voxy.workers.voxcpm\_adapter
+============================
+
+.. automodule:: voxy.workers.voxcpm_adapter
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      load
+      synthesize
+   

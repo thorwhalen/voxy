@@ -1,0 +1,13 @@
+voxy.workers.f5tts\_adapter
+===========================
+
+.. automodule:: voxy.workers.f5tts_adapter
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      load
+      synthesize
+   

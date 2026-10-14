@@ -12,10 +12,19 @@
 
    aix_model
    base
+   diagnosis
    elevenlabs_model
+   envs
    facade
    fal_model
+   finetune
    library
+   local_clone
+   refprep
    say_model
    stores
+   textsplit
    voicestudio_model
+   wavutil
+   worker
+   workers

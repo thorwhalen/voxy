@@ -1,0 +1,13 @@
+voxy.workers.asr\_adapter
+=========================
+
+.. automodule:: voxy.workers.asr_adapter
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      load
+      transcribe
+   

@@ -205,7 +205,7 @@ Transcribe audio to text using Whisper.
 * **Raises:**
   [**ImportError**](https://docs.python.org/3/builtins/exceptions.html#ImportError) – If whisper is not installed
 
-### voxy.base.backend_aliases *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]* *= {'csm-1b': 'csm'}*
+### voxy.base.backend_aliases *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]* *= {'csm-1b': 'csm', 'f5-tts': 'f5tts', 'qwen3-tts': 'qwen3tts', 'voxcpm2': 'voxcpm', 'xtts-v2': 'xtts', 'xtts_v2': 'xtts'}*
 
 Other names for a backend -> its registry name (one model, one profile type).
 
@@ -284,7 +284,7 @@ The returned model loads its (large) weights lazily, on first use:
 >>> create_speech_model("no-such-model")
 Traceback (most recent call last):
   ...
-ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say, voicestudio)
+ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say, voicestudio, f5tts, chatterbox, xtts, voxcpm, qwen3tts)
 ```
 
 ### voxy.base.register_speech_model(name, factory, , overwrite=False)
@@ -309,7 +309,7 @@ ValueError: A speech backend named 'echo' is already registered (pass overwrite=
 >>> del speech_model_factories["echo"]
 ```
 
-### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[...], [SpeechModel](#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>, 'voicestudio': <function \_lazy_factory.<locals>.factory>}*
+### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[...], [SpeechModel](#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'chatterbox': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'f5tts': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'qwen3tts': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>, 'voicestudio': <function \_lazy_factory.<locals>.factory>, 'voxcpm': <function \_lazy_factory.<locals>.factory>, 'xtts': <function \_lazy_factory.<locals>.factory>}*
 
 Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 

@@ -10,15 +10,31 @@
 - [voxy](_autosummary/voxy.html.md): Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
 - [voxy.aix_model](_autosummary/voxy.aix_model.html.md): Speech through aix (LiteLLM): OpenAI’s TTS voices and the other providers LiteLLM routes.
 - [voxy.base](_autosummary/voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
+- [voxy.diagnosis](_autosummary/voxy.diagnosis.html.md): Diagnosis pages: render one text through a grid of (model x parameters), listen side by side.
 - [voxy.elevenlabs_model](_autosummary/voxy.elevenlabs_model.html.md): ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.
+- [voxy.envs](_autosummary/voxy.envs.html.md): Isolated Python environments for backends whose dependencies clash with yours.
 - [voxy.facade](_autosummary/voxy.facade.html.md): Voice generation in one call, whatever the service behind it.
 - [voxy.fal_model](_autosummary/voxy.fal_model.html.md): Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.
+- [voxy.finetune](_autosummary/voxy.finetune.html.md): Fine-tuning datasets from prepared clips: one export per training recipe.
 - [voxy.library](_autosummary/voxy.library.html.md): A persistent voice library: clone a voice once, then use it by name.
+- [voxy.local_clone](_autosummary/voxy.local_clone.html.md): Local voice cloning: speak any text in a voice learned from a short reference clip.
+- [voxy.refprep](_autosummary/voxy.refprep.html.md): Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
 - [voxy.say_model](_autosummary/voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
 - [voxy.stores](_autosummary/voxy.stores.html.md): Where voxy keeps its data: voice records and audio, as &#96;MutableMapping&#96; stores.
+- [voxy.textsplit](_autosummary/voxy.textsplit.html.md): Split long text (a chapter) into chunks a speech model can say in one breath.
 - [voxy.voicestudio_model](_autosummary/voxy.voicestudio_model.html.md): Local description-prompted speech through VoiceStudio (Parler-TTS and friends).
+- [voxy.wavutil](_autosummary/voxy.wavutil.html.md): Mono PCM WAV in and out as float arrays, plus the few edits narration needs.
+- [voxy.worker](_autosummary/voxy.worker.html.md): Talk to a model running in another Python environment, as if it were local.
+- [voxy.workers](_autosummary/voxy.workers.html.md): Backend adapters run by &#96;voxy.worker&#96; inside each backend’s own environment.
+- [voxy.workers.asr_adapter](_autosummary/voxy.workers.asr_adapter.html.md): Speech recognition with timed words (scribed’s faster-whisper backend), for reference prep.
+- [voxy.workers.chatterbox_adapter](_autosummary/voxy.workers.chatterbox_adapter.html.md): Chatterbox (Resemble AI): ‘original’ (emotion exaggeration, CFG) or ‘turbo’ (faster).
+- [voxy.workers.f5tts_adapter](_autosummary/voxy.workers.f5tts_adapter.html.md): F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).
+- [voxy.workers.qwen3tts_adapter](_autosummary/voxy.workers.qwen3tts_adapter.html.md): Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).
+- [voxy.workers.serve](_autosummary/voxy.workers.serve.html.md): Worker entry point: run a backend adapter inside its own environment.
+- [voxy.workers.voxcpm_adapter](_autosummary/voxy.workers.voxcpm_adapter.html.md): VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.
+- [voxy.workers.xtts_adapter](_autosummary/voxy.workers.xtts_adapter.html.md): XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.
 - [For AI agents](ai-agents.html.md): &#96;voxy&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-13 07:35 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-14 13:55 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
 
 ## Optional
 

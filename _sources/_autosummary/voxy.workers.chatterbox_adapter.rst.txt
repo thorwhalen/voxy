@@ -1,0 +1,13 @@
+voxy.workers.chatterbox\_adapter
+================================
+
+.. automodule:: voxy.workers.chatterbox_adapter
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      load
+      synthesize
+   

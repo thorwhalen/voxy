@@ -1,0 +1,13 @@
+voxy.workers.qwen3tts\_adapter
+==============================
+
+.. automodule:: voxy.workers.qwen3tts_adapter
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      load
+      synthesize
+   

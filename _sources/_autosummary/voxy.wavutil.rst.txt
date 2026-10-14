@@ -1,0 +1,17 @@
+voxy.wavutil
+============
+
+.. automodule:: voxy.wavutil
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      frame_db
+      read_wav
+      resample
+      silence
+      trim_silence
+      write_wav
+   

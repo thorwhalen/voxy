@@ -1,0 +1,27 @@
+voxy.local\_clone
+=================
+
+.. automodule:: voxy.local_clone
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      reference_profile
+      register_local_clone_backend
+      voxy_cache_dir
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      ChatterboxSpeechModel
+      F5TTSSpeechModel
+      LocalCloneBackend
+      LocalCloneSpeechModel
+      Qwen3TTSSpeechModel
+      VoxCPMSpeechModel
+      WorkerGenerate
+      XTTSSpeechModel
+   

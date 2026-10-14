@@ -1,0 +1,12 @@
+voxy.workers.serve
+==================
+
+.. automodule:: voxy.workers.serve
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      main
+   

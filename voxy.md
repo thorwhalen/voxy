@@ -1,4 +1,4 @@
-> built 2026-10-13 07:35 UTC from 2a515c3 (main) · voxy 0.0.11. Details: build_info.json
+> built 2026-10-14 13:55 UTC from bbd5151 (main) · voxy 0.0.12. Details: build_info.json
 
 # index.html.md
 
@@ -195,6 +195,38 @@ profile = model.voice_profile("<voice_id>")
 `generate_speech` returns a tensor for `pcm_*`/`wav_*` output formats (default `pcm_24000`); `synthesize_bytes` returns the raw payload in any format (e.g. `mp3_44100_128`). `delete_voice` removes a clone from the account. ElevenLabs requires that you have the right, and the voice owner’s consent, to clone a voice.
 
 Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `VOXY_LIVE_ELEVENLABS_SAMPLE=<audio you may clone>` also clones, speaks and deletes.
+
+### Local voice cloning (no service, CPU works)
+
+Five local models clone a voice from one clean clip and its transcript: `voxcpm` (VoxCPM2), `qwen3tts` (Qwen3-TTS), `chatterbox`, `f5tts` (F5-TTS) and `xtts` (XTTS-v2). Each runs in its own Python environment, built on first use with [uv](https://docs.astral.sh/uv/) under `$VOXY_DATA_DIR/envs/` (weights under `$VOXY_DATA_DIR/models/`), so their clashing torch/transformers pins never touch yours. Requirements: `uv` and `ffmpeg` on the PATH.
+
+```python
+import voxy
+from voxy.local_clone import reference_profile
+
+model = voxy.create_speech_model("voxcpm")          # or qwen3tts, chatterbox, f5tts, xtts
+voice = reference_profile("ref.wav", "Exactly what the clip says.")
+model.synthesize(chapter_text, voice, cfg_value=2.0).save("chapter1.wav")
+model.close()                                        # free the model's memory
+```
+
+Long text is split into paragraphs and sentence-packed chunks, each spoken separately and joined with controlled pauses (`gap_ms=`, `paragraph_gap_ms=`). Model parameters are keyword arguments of `synthesize` (see `voxy.local_clone.LOCAL_CLONE_BACKENDS[name].params`); model options (a variant, a fine-tuned checkpoint) are keyword arguments of `create_speech_model`. Threads are capped at `$VOXY_NUM_THREADS` (default 8). Licences differ: F5-TTS and XTTS-v2 weights are non-commercial (XTTS needs `accept_licence=True`); VoxCPM2, Qwen3-TTS and Chatterbox are Apache-2.0/MIT.
+
+```bash
+python -m voxy setup voxcpm qwen3tts      # build environments ahead of time
+python -m voxy prep ada tape1.m4a tape2.mp3 --language en
+python -m voxy diagnose spec.json --out renders/first-listen --publish
+```
+
+**Reference preparation** (`voxy.refprep.prepare_reference`): converts any recording to mono WAV, denoises and normalises loudness (ffmpeg), transcribes locally with Whisper (scribed’s faster-whisper backend) with word timings, cuts clips of 3-12 s at sentence boundaries, and scores each clip (signal-to-noise, clipping, level, ASR confidence, speaking rate). Clips and `manifest.jsonl` go to the voice’s samples store; `best_references(manifest)` picks reference clips and `voxy.finetune.export_dataset` writes training sets (LJSpeech or F5-TTS layout).
+
+**Diagnosis pages** (`voxy.diagnosis`): render one text through a grid of models and parameters, then build one page with a player per variant, its parameters, generation time and real-time factor. Each variant has a stable ID (e.g. `VX-7KQ2`) derived from its configuration, not the text, so listeners can say “use VX-7KQ2” across pages and chapters; each listener can rate and annotate variants and copy their notes. A spec:
+
+```json
+{"title": "First listen", "text_file": "excerpt.txt", "voice": "ada", "n_references": 1,
+ "grid": [{"backend": "voxcpm", "params": {"cfg_value": [1.5, 2.0, 2.5]}},
+          {"backend": "chatterbox", "params": {"exaggeration": [0.3, 0.6]}}]}
+```
 
 ### The voice library: clone once, reuse by name
 
@@ -548,7 +580,7 @@ Transcribe audio to text using Whisper.
 * **Raises:**
   [**ImportError**](https://docs.python.org/3/builtins/exceptions.html#ImportError) – If whisper is not installed
 
-### voxy.base.backend_aliases *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]* *= {'csm-1b': 'csm'}*
+### voxy.base.backend_aliases *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]* *= {'csm-1b': 'csm', 'f5-tts': 'f5tts', 'qwen3-tts': 'qwen3tts', 'voxcpm2': 'voxcpm', 'xtts-v2': 'xtts', 'xtts_v2': 'xtts'}*
 
 Other names for a backend -> its registry name (one model, one profile type).
 
@@ -627,7 +659,7 @@ The returned model loads its (large) weights lazily, on first use:
 >>> create_speech_model("no-such-model")
 Traceback (most recent call last):
   ...
-ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say, voicestudio)
+ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say, voicestudio, f5tts, chatterbox, xtts, voxcpm, qwen3tts)
 ```
 
 ### voxy.base.register_speech_model(name, factory, , overwrite=False)
@@ -652,7 +684,7 @@ ValueError: A speech backend named 'echo' is already registered (pass overwrite=
 >>> del speech_model_factories["echo"]
 ```
 
-### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[...], [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>, 'voicestudio': <function \_lazy_factory.<locals>.factory>}*
+### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[...], [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'chatterbox': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'f5tts': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'qwen3tts': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>, 'voicestudio': <function \_lazy_factory.<locals>.factory>, 'voxcpm': <function \_lazy_factory.<locals>.factory>, 'xtts': <function \_lazy_factory.<locals>.factory>}*
 
 Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
@@ -672,6 +704,147 @@ Integer tensors are taken as PCM and scaled to [-1, 1] first.
 >>> tensor_to_wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]
 b'\xff\x7f'
 ```
+
+
+# _autosummary/voxy.diagnosis.html.md
+
+# voxy.diagnosis
+
+Diagnosis pages: render one text through a grid of (model x parameters), listen side by side.
+
+```pycon
+>>> from voxy import diagnosis
+>>> variants = diagnosis.expand_grid([
+...     {"backend": "f5tts", "params": {"nfe_step": [16, 32], "cfg_strength": 2}},
+...     {"backend": "chatterbox", "params": {"exaggeration": [0.3, 0.6]}},
+... ])
+>>> results = diagnosis.render_grid(text, references, variants, "out/")
+>>> diagnosis.build_page(results, "out/", title="First listen")
+```
+
+Or from a spec file: `python -m voxy diagnose spec.json --out DIR --publish`.
+
+Every variant has a stable ID (`F5-7KQ2`) computed from its backend, model
+options, parameters and reference clip, never from the text, so “use F5-7KQ2”
+means the same configuration on every page and every chapter. The page shows,
+per variant, the ID, an audio player, the parameters (those that differ from the
+model’s defaults in bold), generation time and real-time factor, and lets each
+listener rate it (1-5) and write a note. Ratings stay in the listener’s browser;
+“Copy my notes” turns them into a text block to paste into a message.
+
+### Module Attributes
+
+| [`BACKEND_PREFIXES`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.BACKEND_PREFIXES)   | Short, readable ID prefixes (other backends use their first two letters).   |
+|---------------------------------------------------------------------|-----------------------------------------------------------------------------|
+
+### Functions
+
+| [`build_page`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.build_page)(results, out_dir, \*[, title, ...])   | Write `out_dir/index.html`: one card per variant, grouped by backend.                 |
+|---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| [`expand_grid`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.expand_grid)(grid, \*[, references])              | Variants from grid rows: list values are swept (cartesian product), scalars fixed.    |
+| [`page_id`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.page_id)(results, title)                          | A short ID for the page (its notes are stored under it).                              |
+| [`references_from_spec`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.references_from_spec)(spec, out_dir, \*[, log])   | `(voices, shown)`: reference voices for rendering, and their page entries.            |
+| [`render_grid`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.render_grid)(text, references, variants, ...)     | Render every variant to `out_dir/audio/<id>.<format>`; return (and save) the results. |
+| [`run_spec`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.run_spec)(spec, out_dir, \*[, log])               | Render a spec's grid and build its page; return the page path.                        |
+
+### Classes
+
+| [`Variant`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.Variant)(backend[, params, init, reference, ...])   | One configuration to render: a backend, its model options and parameters.   |
+|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+
+### voxy.diagnosis.BACKEND_PREFIXES *= {'chatterbox': 'CB', 'elevenlabs': 'EL', 'f5tts': 'F5', 'qwen3tts': 'QW', 'voxcpm': 'VX', 'xtts': 'XT'}*
+
+Short, readable ID prefixes (other backends use their first two letters).
+
+### *class* voxy.diagnosis.Variant(backend, params=<factory>, init=<factory>, reference='', label='')
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One configuration to render: a backend, its model options and parameters.
+
+#### *property* id *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
+
+Stable ID from backend, init, params and reference (not the text).
+
+```pycon
+>>> Variant("f5tts", {"nfe_step": 32}, reference="r1").id
+'F5-...'
+>>> Variant("f5tts", {"nfe_step": 32}).id == Variant("f5tts", {"nfe_step": 32}).id
+True
+```
+
+### voxy.diagnosis.build_page(results, out_dir, , title='Voice diagnosis', text='', references=None, intro='')
+
+Write `out_dir/index.html`: one card per variant, grouped by backend.
+
+`references`: name -> `{"audio": relative path, "text": ..., ...}` shown
+at the top so listeners can compare with the real voice.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.diagnosis.expand_grid(grid, , references=('',))
+
+Variants from grid rows: list values are swept (cartesian product), scalars fixed.
+
+A row: `{"backend": ..., "params": {...}, "init": {...}, "label": ...}`.
+`init` values may be lists too (e.g. `{"variant": ["original", "turbo"]}`).
+Every variant is rendered once per reference name.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Variant`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.Variant)]
+
+```pycon
+>>> vs = expand_grid([{"backend": "f5tts", "params": {"nfe_step": [16, 32], "speed": 1}}])
+>>> [(v.backend, v.params) for v in vs]
+[('f5tts', {'nfe_step': 16, 'speed': 1}), ('f5tts', {'nfe_step': 32, 'speed': 1})]
+```
+
+### voxy.diagnosis.page_id(results, title)
+
+A short ID for the page (its notes are stored under it).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.diagnosis.references_from_spec(spec, out_dir, \*, log=<built-in function print>)
+
+`(voices, shown)`: reference voices for rendering, and their page entries.
+
+The spec names references directly (`"references": {name: {ref_audio, ref_text}}`)
+or picks the best clips of a prepared voice (`"voice": name, "n_references": k`).
+Reference audio is copied next to the page so listeners can play it.
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict), [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### voxy.diagnosis.render_grid(text, references, variants, out_dir, \*, model_factory=None, audio_format='mp3', resume=True, log=<built-in function print>)
+
+Render every variant to `out_dir/audio/<id>.<format>`; return (and save) the results.
+
+Models are built one backend configuration at a time and closed before the
+next, so only one model is in memory. With `resume`, variants already in
+`results.json` (without error) are not rendered again.
+
+* **Parameters:**
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What every variant says.
+  * **references** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)) – Reference name -> voice (a `VoiceProfile` or `{"ref_audio", "ref_text"}`).
+  * **variants** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Variant`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.Variant)]) – From `expand_grid` (their `reference` names key `references`).
+  * **model_factory** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(backend, **init) -> SpeechModel` (default `create_speech_model`).
+  * **audio_format** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – ‘mp3’ (default, small) or ‘wav’.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### voxy.diagnosis.run_spec(spec, out_dir, \*, log=<built-in function print>)
+
+Render a spec’s grid and build its page; return the page path.
+
+Spec keys: `title`, `text` (or `text_file`), `references` or `voice`
+(+ `n_references`), `grid` (rows for `expand_grid`), optional `intro`,
+`audio_format`.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 
 # _autosummary/voxy.elevenlabs_model.html.md
@@ -886,6 +1059,155 @@ True
 ```
 
 
+# _autosummary/voxy.envs.html.md
+
+# voxy.envs
+
+Isolated Python environments for backends whose dependencies clash with yours.
+
+Local voice-cloning models each pin their own torch, transformers and numpy, so
+they can’t share one environment (or yours). A backend declares an `EnvSpec`;
+`ensure_env` builds it once with `uv` under the data root and returns its
+interpreter, which `voxy.worker` then runs the model in:
+
+> envs/{name}/            one virtual environment per backend
+> models/hf/              model weights (`HF_HOME` of every worker)
+> models/{name}/          a backend’s other weights (e.g. Coqui’s `TTS_HOME`)
+
+Nothing here is downloaded at import time; building an environment is explicit
+(`ensure_env`, or `python -m voxy setup <backend>`).
+
+```pycon
+>>> spec = EnvSpec("demo", ("numpy",))
+>>> spec.digest() == EnvSpec("demo", ("numpy",)).digest()
+True
+>>> env_dir(spec, rootdir="/data").as_posix()
+'/data/envs/demo'
+```
+
+### Module Attributes
+
+| [`DFLT_NUM_THREADS`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_NUM_THREADS)   | a shared machine keeps headroom for others.   |
+|---------------------------------------------------------------------|-----------------------------------------------|
+
+### Functions
+
+| [`ensure_env`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_env)(spec, \*[, rootdir, run, log])          | Build `spec`'s environment if missing or stale, and return its interpreter.      |
+|-----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`env_dir`](_autosummary/voxy.envs.html.md#voxy.envs.env_dir)(spec, \*[, rootdir])                       | The folder of `spec`'s environment (not created here).                           |
+| [`env_python`](_autosummary/voxy.envs.html.md#voxy.envs.env_python)(spec, \*[, rootdir])                    | The interpreter of `spec`'s environment (it may not exist yet).                  |
+| [`is_env_ready`](_autosummary/voxy.envs.html.md#voxy.envs.is_env_ready)(spec, \*[, rootdir])                  | True if the environment exists and was built from this exact spec.               |
+| [`models_dir`](_autosummary/voxy.envs.html.md#voxy.envs.models_dir)(\*parts[, rootdir])                     | Where weights live (`models/`, or a subfolder of it).                            |
+| [`num_threads`](_autosummary/voxy.envs.html.md#voxy.envs.num_threads)([threads])                             | `threads`, else `$VOXY_NUM_THREADS`, else `DFLT_NUM_THREADS`.                    |
+| [`remove_env`](_autosummary/voxy.envs.html.md#voxy.envs.remove_env)(spec, \*[, rootdir])                    | Delete `spec`'s environment (weights are kept).                                  |
+| [`worker_environ`](_autosummary/voxy.envs.html.md#voxy.envs.worker_environ)(spec, \*[, threads, rootdir, base]) | Environment variables for a worker: weights under the data root, threads capped. |
+
+### Classes
+
+| [`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds.   |
+|-----------------------------------------------------------------------------------------------|---------------------------------------|
+
+### voxy.envs.DFLT_NUM_THREADS *= 8*
+
+a shared machine keeps headroom for others.
+
+* **Type:**
+  Torch/ONNX threads per worker
+
+### *class* voxy.envs.EnvSpec(name, requirements, python='3.11', torch_backend='cpu', env_vars=<factory>)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What a backend’s environment holds.
+
+* **Parameters:**
+  * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Folder name under `envs/` (usually the backend name).
+  * **requirements** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – `uv pip install` arguments (packages, pins, extras).
+  * **python** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Python version for `uv venv`.
+  * **torch_backend** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `uv`’s `--torch-backend` (‘cpu’ keeps CUDA wheels out;
+    None leaves the index alone).
+  * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – Extra environment variables for the worker process (values may
+    use `{models}`, the backend’s own weights folder).
+
+#### digest()
+
+A short hash of what is installed (env vars excluded: they don’t need a rebuild).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.envs.ensure_env(spec, \*, rootdir=None, run=<function run>, log=<built-in function print>)
+
+Build `spec`’s environment if missing or stale, and return its interpreter.
+
+The host’s `UV_CONSTRAINT` is cleared for the install: its pins are for the
+host environment, and an isolated environment exists precisely to differ.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.envs.env_dir(spec, , rootdir=None)
+
+The folder of `spec`’s environment (not created here).
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.envs.env_python(spec, , rootdir=None)
+
+The interpreter of `spec`’s environment (it may not exist yet).
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.envs.is_env_ready(spec, , rootdir=None)
+
+True if the environment exists and was built from this exact spec.
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### voxy.envs.models_dir(\*parts, rootdir=None)
+
+Where weights live (`models/`, or a subfolder of it).
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.envs.num_threads(threads=None)
+
+`threads`, else `$VOXY_NUM_THREADS`, else `DFLT_NUM_THREADS`.
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int)
+
+```pycon
+>>> num_threads(4)
+4
+```
+
+### voxy.envs.remove_env(spec, , rootdir=None)
+
+Delete `spec`’s environment (weights are kept).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.envs.worker_environ(spec, , threads=None, rootdir=None, base=None)
+
+Environment variables for a worker: weights under the data root, threads capped.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+```pycon
+>>> env = worker_environ(EnvSpec("x", (), env_vars={"TTS_HOME": "{models}"}),
+...                      threads=2, rootdir="/d", base={})
+>>> env["OMP_NUM_THREADS"], env["HF_HOME"], env["TTS_HOME"]
+('2', '/d/models/hf', '/d/models/x')
+```
+
+
 # _autosummary/voxy.facade.html.md
 
 # voxy.facade
@@ -1062,6 +1384,70 @@ Speech from fal; other keyword arguments go to the model (falaw’s `extra`).
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
 
+# _autosummary/voxy.finetune.html.md
+
+# voxy.finetune
+
+Fine-tuning datasets from prepared clips: one export per training recipe.
+
+`voxy.refprep.prepare_reference` leaves scored, transcribed clips and a
+manifest; `export_dataset` writes the subset worth training on in the layout a
+recipe expects:
+
+- `ljspeech`: `wavs/{id}.wav` + `metadata.csv` (`id|text|text`, no header).
+  Read by Coqui’s XTTS-v2 GPT fine-tuning (formatter `ljspeech`), StyleTTS2 and
+  most community recipes (Chatterbox fine-tuning included).
+- `f5tts`: `wavs/` + `metadata.csv` with an `audio_file|text` header and
+  absolute paths, the input of `f5-tts_prepare_csv_wavs` then `f5-tts_finetune-cli`.
+
+Plus `train.txt` / `eval.txt` (a deterministic split) for recipes that want one.
+Commands to run each recipe on a rented GPU are in `finetune_commands`.
+
+```pycon
+>>> rows = [{"key": "clips/a.wav", "text": "Hi there.", "score": 0.9, "duration": 4.0},
+...         {"key": "clips/b.wav", "text": "Noisy.", "score": 0.2, "duration": 3.0}]
+>>> [r["key"] for r in select_clips(rows, min_score=0.5)]
+['clips/a.wav']
+```
+
+### Functions
+
+| [`export_dataset`](_autosummary/voxy.finetune.html.md#voxy.finetune.export_dataset)(manifest, samples, out_dir, \*)     | Write the training set to `out_dir` and return a summary.                        |
+|-----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`finetune_commands`](_autosummary/voxy.finetune.html.md#voxy.finetune.finetune_commands)(backend, dataset_dir, \*[, ...]) | Shell commands to fine-tune `backend` on an exported dataset (run on a GPU box). |
+| [`select_clips`](_autosummary/voxy.finetune.html.md#voxy.finetune.select_clips)(manifest, \*[, min_score, ...])       | Clips good enough to train on (score and length within bounds).                  |
+
+### voxy.finetune.export_dataset(manifest, samples, out_dir, , format='ljspeech', min_score=0.5, min_seconds=1.5, max_seconds=15.0, eval_fraction=0.05)
+
+Write the training set to `out_dir` and return a summary.
+
+* **Parameters:**
+  * **manifest** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]) – From `prepare_reference` (or `refprep.load_manifest`).
+  * **samples** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)) – The store the clips are in (`key -> wav bytes`).
+  * **format** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – One of `FORMATS`.
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### voxy.finetune.finetune_commands(backend, dataset_dir, , name='voice')
+
+Shell commands to fine-tune `backend` on an exported dataset (run on a GPU box).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+```pycon
+>>> "f5-tts_finetune-cli" in finetune_commands("f5tts", "/data/ds")
+True
+```
+
+### voxy.finetune.select_clips(manifest, , min_score=0.5, min_seconds=1.5, max_seconds=15.0)
+
+Clips good enough to train on (score and length within bounds).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+
 # _autosummary/voxy.html.md
 
 # voxy
@@ -1076,16 +1462,25 @@ True
 
 ### Modules
 
-| [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.   |
-|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                 |
-| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model)   | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.           |
-| [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                       | Voice generation in one call, whatever the service behind it.                               |
-| [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)                 | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.           |
-| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                        |
-| [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.              |
-| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.             |
-| [`voicestudio_model`](_autosummary/voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).             |
+| [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.     |
+|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                   |
+| [`diagnosis`](_autosummary/voxy.diagnosis.html.md#module-voxy.diagnosis)                 | Diagnosis pages: render one text through a grid of (model x parameters), listen side by side. |
+| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model)   | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.             |
+| [`envs`](_autosummary/voxy.envs.html.md#module-voxy.envs)                           | Isolated Python environments for backends whose dependencies clash with yours.                |
+| [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                       | Voice generation in one call, whatever the service behind it.                                 |
+| [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)                 | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.             |
+| [`finetune`](_autosummary/voxy.finetune.html.md#module-voxy.finetune)                   | Fine-tuning datasets from prepared clips: one export per training recipe.                     |
+| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                          |
+| [`local_clone`](_autosummary/voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.           |
+| [`refprep`](_autosummary/voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.    |
+| [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                |
+| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.               |
+| [`textsplit`](_autosummary/voxy.textsplit.html.md#module-voxy.textsplit)                 | Split long text (a chapter) into chunks a speech model can say in one breath.                 |
+| [`voicestudio_model`](_autosummary/voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).               |
+| [`wavutil`](_autosummary/voxy.wavutil.html.md#module-voxy.wavutil)                     | Mono PCM WAV in and out as float arrays, plus the few edits narration needs.                  |
+| [`worker`](_autosummary/voxy.worker.html.md#module-voxy.worker)                       | Talk to a model running in another Python environment, as if it were local.                   |
+| [`workers`](_autosummary/voxy.workers.html.md#module-voxy.workers)                     | Backend adapters run by `voxy.worker` inside each backend's own environment.                  |
 
 
 # _autosummary/voxy.library.html.md
@@ -1210,6 +1605,410 @@ the record itself. Aliases must not already name another voice.
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+
+# _autosummary/voxy.local_clone.html.md
+
+# voxy.local_clone
+
+Local voice cloning: speak any text in a voice learned from a short reference clip.
+
+Each backend here (F5-TTS, Chatterbox, XTTS-v2, …) is a model that runs on your
+own machine, CPU included. A *voice* is a reference: a clean clip of the speaker
+plus its transcript, as a `VoiceProfile` whose segment is plain data
+(`{"ref_audio": path, "ref_text": text}`), so it can be saved in the voice
+library and reused by every local backend.
+
+```pycon
+>>> import voxy
+>>> model = voxy.create_speech_model("f5tts")
+>>> voice = model.clone_voice("ref.wav", "What the clip says.")
+>>> model.synthesize(chapter_text, voice, nfe_step=32).save("ch1.wav")
+```
+
+Long text is split into paragraphs and sentence-packed chunks (`voxy.textsplit`),
+each chunk is synthesized, trimmed of edge silence, and joined with `gap_ms` of
+pause (`paragraph_gap_ms` between paragraphs).
+
+Seams (keyword arguments of every model):
+
+- `generate(text, *, ref_audio, ref_text, **params) -> (samples, sample_rate)`: the
+  model call. Default: a `voxy.worker.Worker` running the backend’s adapter in its
+  own environment (built on first use under `$VOXY_DATA_DIR/envs`). Tests inject a fake.
+- `chunker(text) -> [[chunk, ...], ...]`: default `split_text` at the backend’s
+  `max_chars`.
+
+```pycon
+>>> import numpy as np
+>>> fake = lambda text, **kw: (np.full(800, 0.1, dtype=np.float32), 8000)
+>>> model = LocalCloneSpeechModel("f5tts", generate=fake)
+>>> voice = reference_profile("ref.wav", "Hello there.", backend="f5tts")
+>>> speech = model.synthesize("One. Two.\n\nThree.", voice)
+>>> speech.format, speech.sample_rate, speech.backend
+('wav', 8000, 'f5tts')
+```
+
+### Functions
+
+| [`reference_profile`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.reference_profile)(ref_audio, ref_text, \*[, ...])   | A voice for local backends: a reference clip (or clips) and what it says.         |
+|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`register_local_clone_backend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.register_local_clone_backend)(backend)               | Add (or replace) a local cloning backend description.                             |
+| [`voxy_cache_dir`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.voxy_cache_dir)(\*parts)                             | Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`. |
+
+### Classes
+
+| [`ChatterboxSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.ChatterboxSpeechModel)([backend, generate, ...])   | Chatterbox: expressive zero-shot cloning (`variant='original'|'turbo'`).                  |
+|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| [`F5TTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.F5TTSSpeechModel)([backend, generate, ...])        | F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed...).     |
+| [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)(name, env[, init, params, ...]) | What voxy knows about one local cloning model.                                            |
+| [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)([backend, generate, ...])   | A local voice-cloning model as a voxy backend.                                            |
+| [`Qwen3TTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.Qwen3TTSSpeechModel)([backend, generate, ...])     | Qwen3-TTS Base: stable cloning (`init`: model_id 1.7B or 0.6B).                           |
+| [`VoxCPMSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.VoxCPMSpeechModel)([backend, generate, ...])       | VoxCPM2: high-similarity cloning (`params`: cfg_value, inference_timesteps, prompt_mode). |
+| [`WorkerGenerate`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.WorkerGenerate)(backend, \*[, init, threads, ...]) | The default `generate`: the backend's adapter in its own environment.                     |
+| [`XTTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.XTTSSpeechModel)(\*args[, accept_licence])         | XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).               |
+
+### *class* voxy.local_clone.ChatterboxSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+
+Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
+
+Chatterbox: expressive zero-shot cloning (`variant='original'|'turbo'`).
+
+### *class* voxy.local_clone.F5TTSSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+
+Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
+
+F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed…).
+
+### *class* voxy.local_clone.LocalCloneBackend(name, env, init=<factory>, params=<factory>, max_chars=300, licence='', notes='')
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What voxy knows about one local cloning model.
+
+* **Parameters:**
+  * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Registry name (also the adapter’s name, `workers/{name}_adapter.py`).
+  * **env** ([`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)) – The environment it runs in.
+  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)) – Default keyword arguments of the adapter’s `load` (model variant,
+    checkpoint, device); override per model with `init=` or `**init`.
+  * **params** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)) – Documented synthesis parameters and their defaults (pass any of
+    them to `synthesize`; the diagnosis grid sweeps them).
+  * **max_chars** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Chunk size for long text.
+  * **licence** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Code and weights licences (flag non-commercial ones).
+  * **notes** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – One line on strengths and caveats.
+
+### *class* voxy.local_clone.LocalCloneSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+
+Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
+
+A local voice-cloning model as a voxy backend.
+
+* **Parameters:**
+  * **backend** ([`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalCloneBackend` or its name (subclasses fix it).
+  * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (see the module docstring); default: worker.
+  * **chunker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> [[chunk, ...], ...]`; default `split_text`.
+  * **gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between chunks of a paragraph.
+  * **paragraph_gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between paragraphs.
+  * **trim** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Trim each chunk’s leading and trailing silence before joining.
+  * **threads** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Torch threads of the worker (default `$VOXY_NUM_THREADS` or 8).
+  * **rootdir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Data root for environments and weights (default `$VOXY_DATA_DIR`).
+  * **auto_setup** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Build the environment on first use (else raise if missing).
+  * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra environment variables for the worker.
+  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments of the model’s loader (e.g. `variant='turbo'`).
+
+#### clone_voice(audio_input, transcript=None, speaker_id=0, \*\*metadata)
+
+A reference voice from a clip (path, or WAV bytes) and its transcript.
+
+Without `transcript` the clip is transcribed locally (`voxy.refprep`).
+
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+#### close()
+
+Free the model’s memory (the next call reloads it).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### synthesize(text, voice=None, \*\*params)
+
+Speak `text` (any length) in the reference `voice`.
+
+`params` go to the model (see `self.backend.params` for the knobs).
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### *class* voxy.local_clone.Qwen3TTSSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+
+Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
+
+Qwen3-TTS Base: stable cloning (`init`: model_id 1.7B or 0.6B).
+
+### *class* voxy.local_clone.VoxCPMSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+
+Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
+
+VoxCPM2: high-similarity cloning (`params`: cfg_value, inference_timesteps, prompt_mode).
+
+### *class* voxy.local_clone.WorkerGenerate(backend, , init=None, threads=None, rootdir=None, env_vars=None, auto_setup=True)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+The default `generate`: the backend’s adapter in its own environment.
+
+Builds the environment on first call (`auto_setup`), starts one worker,
+keeps it (and the weights) alive until `close()`.
+
+#### close()
+
+Stop the worker and free its memory.
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### *class* voxy.local_clone.XTTSSpeechModel(\*args, accept_licence=None, \*\*kwargs)
+
+Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
+
+XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).
+
+The weights’ licence must be accepted once: `accept_licence=True` or
+`$VOXY_ACCEPT_COQUI_CPML=1` (else loading would stop to ask on a terminal).
+
+#### synthesize(text, voice=None, \*\*params)
+
+As `LocalCloneSpeechModel.synthesize`, once the licence is accepted.
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### voxy.local_clone.reference_profile(ref_audio, ref_text, , backend='f5tts', sample_rate=24000, \*\*metadata)
+
+A voice for local backends: a reference clip (or clips) and what it says.
+
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+```pycon
+>>> reference_profile("ref.wav", "Hi.", backend="xtts").segment
+{'ref_audio': 'ref.wav', 'ref_text': 'Hi.'}
+```
+
+### voxy.local_clone.register_local_clone_backend(backend)
+
+Add (or replace) a local cloning backend description.
+
+* **Return type:**
+  [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)
+
+### voxy.local_clone.voxy_cache_dir(\*parts)
+
+Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+
+# _autosummary/voxy.refprep.html.md
+
+# voxy.refprep
+
+Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
+
+```pycon
+>>> from voxy import refprep
+>>> clips = refprep.prepare_reference(["tape1.m4a", "tape2.mp3"], voice="ada")
+>>> ref = refprep.best_references(clips)[0]
+>>> ref["path"], ref["text"], ref["score"]
+```
+
+The steps, each a function you can call alone or replace:
+
+1. `condition` (ffmpeg): any format to mono PCM WAV at `sample_rate`, with a
+   high-pass, optional denoising (`denoise=`: ‘afftdn’, ‘anlmdn’, or None) and
+   loudness normalisation (EBU R128, `loudness_lufs`).
+2. `transcribe`: timed segments and words from a local Whisper (scribed’s
+   faster-whisper backend, in its own environment, see `voxy.envs`).
+3. `plan_clips`: cut points at sentence/segment boundaries, so each clip is
+   `min_seconds`-`max_seconds` long and carries its exact text.
+4. `score_clip`: duration, signal-to-noise estimate, clipping, level, ASR
+   confidence and speaking rate, folded into a `score` in [0, 1].
+
+`prepare_reference` runs them all and saves the clips plus `manifest.jsonl` in
+the voice’s samples store (`voxy.stores.samples_store`), so any backend (a
+reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same data.
+
+### Module Attributes
+
+| [`DENOISE_FILTERS`](_autosummary/voxy.refprep.html.md#voxy.refprep.DENOISE_FILTERS)   | no denoising).   |
+|--------------------------------------------------------------------|------------------|
+
+### Functions
+
+| [`best_references`](_autosummary/voxy.refprep.html.md#voxy.refprep.best_references)(manifest, \*[, n, ...])            | The `n` best clips for zero-shot reference (length in range, best score first).         |
+|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| [`close_asr`](_autosummary/voxy.refprep.html.md#voxy.refprep.close_asr)()                                        | Stop the transcription workers (free their memory).                                     |
+| [`condition`](_autosummary/voxy.refprep.html.md#voxy.refprep.condition)(src, dst, \*[, sample_rate, start, ...]) | Convert `src` (any format ffmpeg reads) to clean mono 16-bit WAV at `dst`.              |
+| [`conditioning_filters`](_autosummary/voxy.refprep.html.md#voxy.refprep.conditioning_filters)(\*[, denoise, ...])           | The ffmpeg audio filter chain for `condition`.                                          |
+| [`load_manifest`](_autosummary/voxy.refprep.html.md#voxy.refprep.load_manifest)(samples)                             | The manifest saved by `prepare_reference` in a samples store.                           |
+| [`partial_transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.partial_transcribe)([rootdir])                      | The default transcriber, bound to a data root.                                          |
+| [`plan_clips`](_autosummary/voxy.refprep.html.md#voxy.refprep.plan_clips)(segments, \*[, min_seconds, ...])       | Clips `[{start, end, text, words}]` cut between words, ending sentences where possible. |
+| [`prepare_reference`](_autosummary/voxy.refprep.html.md#voxy.refprep.prepare_reference)(sources, \*[, voice, ...])       | Condition, transcribe, cut and score `sources`; save clips and manifest; return it.     |
+| [`score_clip`](_autosummary/voxy.refprep.html.md#voxy.refprep.score_clip)(samples, sample_rate, \*[, words, ...]) | Quality measures of a clip, and their combination `score` in [0, 1].                    |
+| [`summarize`](_autosummary/voxy.refprep.html.md#voxy.refprep.summarize)(manifest)                                | Totals for a manifest: clips, minutes, minutes above score thresholds.                  |
+| [`transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe)(audio, \*[, language, model, ...])      | Timed segments `[{start, end, text, confidence, words: [...]}, ...]` of `audio`.        |
+| [`transcribe_text`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe_text)(audio, \*\*kwargs)                 | The transcript of `audio` as one string.                                                |
+
+### voxy.refprep.DENOISE_FILTERS *= {'afftdn': ['afftdn=nr=12:nf=-50:tn=1'], 'anlmdn': ['anlmdn=s=0.0005'], None: []}*
+
+no denoising).
+
+* **Type:**
+  ffmpeg filters for each `denoise` strategy (None
+
+### voxy.refprep.best_references(manifest, , n=3, min_seconds=5.0, max_seconds=12.0, min_score=0.0)
+
+The `n` best clips for zero-shot reference (length in range, best score first).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+```pycon
+>>> m = [{"duration": 8, "score": 0.7}, {"duration": 2, "score": 0.9},
+...      {"duration": 10, "score": 0.8}]
+>>> [c["score"] for c in best_references(m, n=2)]
+[0.8, 0.7]
+```
+
+### voxy.refprep.close_asr()
+
+Stop the transcription workers (free their memory).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.refprep.condition(src, dst, \*, sample_rate=24000, start=None, duration=None, filters=None, run=<function run>)
+
+Convert `src` (any format ffmpeg reads) to clean mono 16-bit WAV at `dst`.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.refprep.conditioning_filters(, denoise='afftdn', loudness_lufs=-20.0, highpass_hz=70)
+
+The ffmpeg audio filter chain for `condition`.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+```pycon
+>>> conditioning_filters(denoise=None, loudness_lufs=-20, highpass_hz=70)
+['highpass=f=70', 'loudnorm=I=-20:TP=-1.5:LRA=11']
+```
+
+### voxy.refprep.load_manifest(samples)
+
+The manifest saved by `prepare_reference` in a samples store.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### voxy.refprep.partial_transcribe(rootdir=None)
+
+The default transcriber, bound to a data root.
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]]
+
+### voxy.refprep.plan_clips(segments, , min_seconds=3.0, max_seconds=12.0, pad_seconds=0.12, total_seconds=None)
+
+Clips `[{start, end, text, words}]` cut between words, ending sentences where possible.
+
+Words accumulate until the clip passes `min_seconds` and a word ends a
+sentence (or the next word would push it past `max_seconds`). Cuts fall in
+the pause between two words, padded by up to `pad_seconds`.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+```pycon
+>>> w = lambda s, e, t: {"start": s, "end": e, "text": t, "confidence": 0.9}
+>>> segs = [{"words": [w(0, 1, "One"), w(1.1, 2, "two."), w(3, 4, "Three"),
+...                    w(4.1, 5, "four.")], "start": 0, "end": 5, "text": ""}]
+>>> [c["text"] for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]
+['One two.', 'Three four.']
+```
+
+### voxy.refprep.prepare_reference(sources, \*, voice=None, samples=None, sample_rate=24000, denoise='afftdn', loudness_lufs=-20.0, min_seconds=3.0, max_seconds=12.0, language=None, transcriber=None, conditioner=None, rootdir=None, log=<built-in function print>)
+
+Condition, transcribe, cut and score `sources`; save clips and manifest; return it.
+
+* **Parameters:**
+  * **sources** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike)]) – Recordings, any format ffmpeg reads.
+  * **voice** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice name: clips go to `samples_store(voice)`.
+  * **samples** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A store to write to instead (`filename -> bytes`).
+  * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Conditioning (see `condition`).
+  * **denoise** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Conditioning (see `condition`).
+  * **loudness_lufs** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Conditioning (see `condition`).
+  * **min_seconds** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Clip length bounds.
+  * **max_seconds** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Clip length bounds.
+  * **language** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Force the ASR language (default: detected).
+  * **transcriber** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(wav_path, language=) -> segments` (default `transcribe`).
+  * **conditioner** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(src, dst, sample_rate=, filters=) -> path` (default `condition`).
+* **Returns:**
+  one dict per clip (`key`, `path` if on disk, `text`,
+  `source`, `start`, `end`, and the `score_clip` measures), best first.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### voxy.refprep.score_clip(samples, sample_rate, , words=(), text='', min_seconds=3.0, max_seconds=12.0)
+
+Quality measures of a clip, and their combination `score` in [0, 1].
+
+- `snr_db`: loud-frame level minus quiet-frame level (speech vs floor).
+- `clipped`: fraction of samples at full scale.
+- `level_db`: level of the loud frames.
+- `asr_confidence`: mean Whisper word probability (low: mumbling, noise, music).
+- `chars_per_second`: speaking rate (outliers: bad alignment).
+
+```pycon
+>>> rng = np.random.default_rng(0)
+>>> speechy = np.concatenate([0.3 * rng.standard_normal(40000), 0.001 * rng.standard_normal(8000)])
+>>> s = score_clip(speechy, 8000, text="x" * 70)
+>>> s["snr_db"] > 30, 0 < s["score"] <= 1
+(True, True)
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### voxy.refprep.summarize(manifest)
+
+Totals for a manifest: clips, minutes, minutes above score thresholds.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+```pycon
+>>> summarize([{"duration": 60, "score": 0.9}, {"duration": 30, "score": 0.4}])
+{'clips': 2, 'minutes': 1.5, 'minutes_score_0.5+': 1.0, 'minutes_score_0.7+': 1.0}
+```
+
+### voxy.refprep.transcribe(audio, , language=None, model='large-v3-turbo', threads=None, rootdir=None)
+
+Timed segments `[{start, end, text, confidence, words: [...]}, ...]` of `audio`.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### voxy.refprep.transcribe_text(audio, \*\*kwargs)
+
+The transcript of `audio` as one string.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 
 # _autosummary/voxy.say_model.html.md
@@ -1386,6 +2185,58 @@ The data root: `$VOXY_DATA_DIR` if set, else the platform’s app-data folder.
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 
+# _autosummary/voxy.textsplit.html.md
+
+# voxy.textsplit
+
+Split long text (a chapter) into chunks a speech model can say in one breath.
+
+Local cloning models drift, rush or hallucinate past roughly 20-40 seconds of
+speech, so long text is spoken chunk by chunk and the audio joined with
+controlled pauses. Paragraphs are kept apart (they get a longer pause); inside a
+paragraph, whole sentences are packed into chunks of at most `max_chars`, and
+only a sentence longer than that is cut, at a clause break if it has one.
+
+```pycon
+>>> split_text("One. Two!\n\nThree is a longer sentence, with a clause.", max_chars=20)
+[['One. Two!'], ['Three is a longer', 'sentence,', 'with a clause.']]
+```
+
+### Module Attributes
+
+| [`ABBREVIATIONS`](_autosummary/voxy.textsplit.html.md#voxy.textsplit.ABBREVIATIONS)   | Words ending in a period that don't end a sentence ("Mr.   |
+|------------------------------------------------------------------|------------------------------------------------------------|
+
+### Functions
+
+| [`split_sentences`](_autosummary/voxy.textsplit.html.md#voxy.textsplit.split_sentences)(paragraph)        | The sentences of `paragraph` (whitespace normalised).                        |
+|------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| [`split_text`](_autosummary/voxy.textsplit.html.md#voxy.textsplit.split_text)(text, \*[, max_chars]) | Paragraphs of chunks: `[[chunk, ...], ...]`, each chunk at most `max_chars`. |
+
+### voxy.textsplit.ABBREVIATIONS *= frozenset({'capt', 'ch', 'col', 'dr', 'etc', 'fig', 'gen', 'jr', 'lt', 'mr', 'mrs', 'ms', 'mt', 'no', 'prof', 'rev', 'sgt', 'sr', 'st', 'vol', 'vs'})*
+
+Words ending in a period that don’t end a sentence (“Mr. Darcy”).
+
+### voxy.textsplit.split_sentences(paragraph)
+
+The sentences of `paragraph` (whitespace normalised).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+```pycon
+>>> split_sentences('He said "Go." Then   Mr. Darcy left.')
+['He said "Go."', 'Then Mr. Darcy left.']
+```
+
+### voxy.textsplit.split_text(text, , max_chars=300)
+
+Paragraphs of chunks: `[[chunk, ...], ...]`, each chunk at most `max_chars`.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
+
+
 # _autosummary/voxy.voicestudio_model.html.md
 
 # voxy.voicestudio_model
@@ -1449,24 +2300,330 @@ Speech in the voice described by `voice` (a description or a profile).
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
 
+# _autosummary/voxy.wavutil.html.md
+
+# voxy.wavutil
+
+Mono PCM WAV in and out as float arrays, plus the few edits narration needs.
+
+Every local backend and the reference-prep step exchange 16-bit PCM WAV files;
+this module turns them into `float32` arrays in `[-1, 1]` and back, trims
+silence, and joins pieces with pauses, using only numpy and the standard library.
+
+```pycon
+>>> import numpy as np
+>>> data = write_wav(np.array([0.0, 0.5, -0.5], dtype=np.float32), 8000)
+>>> samples, sr = read_wav(data)
+>>> sr, np.round(samples, 3).tolist()
+(8000, [0.0, 0.5, -0.5])
+```
+
+### Functions
+
+| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                |
+|---------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a PCM WAV (path or bytes), channels averaged.         |
+| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).  |
+| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                     |
+| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`). |
+| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                     |
+
+### voxy.wavutil.frame_db(samples, sample_rate, , frame_ms=10)
+
+RMS level (dBFS) of consecutive `frame_ms` frames.
+
+```pycon
+>>> frame_db(np.zeros(160), 8000).round().tolist()
+[-100.0, -100.0]
+```
+
+### voxy.wavutil.read_wav(source)
+
+`(samples, sample_rate)` of a PCM WAV (path or bytes), channels averaged.
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)]
+
+### voxy.wavutil.resample(samples, from_rate, to_rate)
+
+Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).
+
+* **Return type:**
+  `ndarray`
+
+```pycon
+>>> len(resample(np.zeros(100), 8000, 16000))
+200
+```
+
+### voxy.wavutil.silence(ms, sample_rate)
+
+`ms` milliseconds of silence.
+
+* **Return type:**
+  `ndarray`
+
+```pycon
+>>> len(silence(250, 8000))
+2000
+```
+
+### voxy.wavutil.trim_silence(samples, sample_rate, , threshold_db=-45.0, keep_ms=60)
+
+Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).
+
+* **Return type:**
+  `ndarray`
+
+```pycon
+>>> x = np.concatenate([np.zeros(800), 0.5 * np.ones(800), np.zeros(800)])
+>>> len(trim_silence(x, 8000, keep_ms=0))
+800
+```
+
+### voxy.wavutil.write_wav(samples, sample_rate)
+
+Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).
+
+* **Return type:**
+  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
+
+
+# _autosummary/voxy.worker.html.md
+
+# voxy.worker
+
+Talk to a model running in another Python environment, as if it were local.
+
+`Worker` starts `voxy/workers/serve.py` with an environment’s interpreter,
+keeps it alive (weights load once), and turns each call into one JSON line each
+way. Its stderr (model logs, progress bars) goes to a log file, so a chatty
+library can’t fill a pipe and hang the call.
+
+```pycon
+>>> import sys, tempfile, pathlib
+>>> adapter = pathlib.Path(tempfile.mkdtemp()) / "echo_adapter.py"
+>>> _ = adapter.write_text("def load(**kw): return kw\ndef echo(state, **kw): return {**state, **kw}")
+>>> with Worker(sys.executable, adapter, init={"a": 1}) as w:
+...     w.call("echo", b=2)
+{'a': 1, 'b': 2}
+```
+
+### Classes
+
+| [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)(python, adapter, \*[, init, env, ...])   | A long-lived adapter process: `call(op, **request) -> dict`.   |
+|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------|
+
+### Exceptions
+
+| [`WorkerError`](_autosummary/voxy.worker.html.md#voxy.worker.WorkerError)   | An operation failed inside the worker (the message carries its traceback tail).   |
+|----------------------------------------------------------------|-----------------------------------------------------------------------------------|
+
+### *class* voxy.worker.Worker(python, adapter, , init=None, env=None, log_path=None, cwd=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A long-lived adapter process: `call(op, **request) -> dict`.
+
+* **Parameters:**
+  * **python** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike)) – Interpreter of the environment to run in.
+  * **adapter** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike)) – The adapter file (`load` plus operations).
+  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments for the adapter’s `load` (sent on start).
+  * **env** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Environment variables of the process (default: inherited).
+  * **log_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Where the process’s stderr goes (default: a temp file).
+  * **cwd** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Working directory (default: a neutral temp dir, so nothing in the
+    caller’s folder shadows the environment’s imports).
+
+#### call(op, \*\*request)
+
+Run `op` in the worker (starting it, and loading the model, on first use).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+#### close()
+
+Stop the process (its memory goes back to the machine).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### *property* running *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
+
+True while the process is alive.
+
+### *exception* voxy.worker.WorkerError
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+An operation failed inside the worker (the message carries its traceback tail).
+
+
+# _autosummary/voxy.workers.asr_adapter.html.md
+
+# voxy.workers.asr_adapter
+
+Speech recognition with timed words (scribed’s faster-whisper backend), for reference prep.
+
+### Functions
+
+| `load`(\*[, model, compute_type, device])   |    |
+|---------------------------------------------|----|
+| `transcribe`(state, \*, audio[, language])  |    |
+
+
+# _autosummary/voxy.workers.chatterbox_adapter.html.md
+
+# voxy.workers.chatterbox_adapter
+
+Chatterbox (Resemble AI): ‘original’ (emotion exaggeration, CFG) or ‘turbo’ (faster).
+
+### Functions
+
+| `load`(\*[, variant, device])                        |    |
+|------------------------------------------------------|----|
+| `synthesize`(state, \*, text, ref_audio, ...[, ...]) |    |
+
+
+# _autosummary/voxy.workers.f5tts_adapter.html.md
+
+# voxy.workers.f5tts_adapter
+
+F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).
+
+### Functions
+
+| `load`(\*[, model, ckpt_file, vocab_file, device])   |    |
+|------------------------------------------------------|----|
+| `synthesize`(state, \*, text, ref_audio, ...[, ...]) |    |
+
+
+# _autosummary/voxy.workers.html.md
+
+# voxy.workers
+
+Backend adapters run by `voxy.worker` inside each backend’s own environment.
+
+`serve.py` is the entry point; each `*_adapter.py` wraps one model library
+with `load(**init)` and `synthesize(state, *, text, ref_audio, ref_text,
+out_path, \*\*params)`. These files are executed by other interpreters, so they
+import nothing from voxy.
+
+### Functions
+
+| [`adapter_path`](_autosummary/voxy.workers.html.md#voxy.workers.adapter_path)(name)   | The adapter file for `name` (e.g. 'f5tts' -> `f5tts_adapter.py`).   |
+|-----------------------------------------------------------------------|---------------------------------------------------------------------|
+
+### voxy.workers.adapter_path(name)
+
+The adapter file for `name` (e.g. ‘f5tts’ -> `f5tts_adapter.py`).
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+```pycon
+>>> adapter_path("f5tts").name
+'f5tts_adapter.py'
+```
+
+### Modules
+
+| [`asr_adapter`](_autosummary/voxy.workers.asr_adapter.html.md#module-voxy.workers.asr_adapter)               | Speech recognition with timed words (scribed's faster-whisper backend), for reference prep.   |
+|------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| [`chatterbox_adapter`](_autosummary/voxy.workers.chatterbox_adapter.html.md#module-voxy.workers.chatterbox_adapter) | Chatterbox (Resemble AI): 'original' (emotion exaggeration, CFG) or 'turbo' (faster).         |
+| [`f5tts_adapter`](_autosummary/voxy.workers.f5tts_adapter.html.md#module-voxy.workers.f5tts_adapter)           | F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).                 |
+| [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).             |
+| [`serve`](_autosummary/voxy.workers.serve.html.md#module-voxy.workers.serve)                           | Worker entry point: run a backend adapter inside its own environment.                         |
+| [`voxcpm_adapter`](_autosummary/voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.            |
+| [`xtts_adapter`](_autosummary/voxy.workers.xtts_adapter.html.md#module-voxy.workers.xtts_adapter)             | XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.       |
+
+
+# _autosummary/voxy.workers.qwen3tts_adapter.html.md
+
+# voxy.workers.qwen3tts_adapter
+
+Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).
+
+### Functions
+
+| `load`(\*[, model_id, device, dtype])                |    |
+|------------------------------------------------------|----|
+| `synthesize`(state, \*, text, ref_audio, ...[, ...]) |    |
+
+
+# _autosummary/voxy.workers.serve.html.md
+
+# voxy.workers.serve
+
+Worker entry point: run a backend adapter inside its own environment.
+
+Started by `voxy.worker.Worker` with the environment’s interpreter, as
+`python serve.py <adapter.py>`. It imports nothing from voxy (the environment
+need not have voxy installed), loads the adapter file, then answers one JSON
+request per stdin line with one JSON reply per line on the original stdout.
+Everything the model libraries print goes to stderr (the worker’s log), so it
+can’t corrupt the replies.
+
+An adapter is a plain module with `load(**init) -> state` and any number of
+operations `op(state, **request) -> dict` (JSON-ready), e.g. `synthesize`.
+Request: `{"op": "load", ...}` or `{"op": "<name>", ...}`.
+Reply: `{"ok": true, "result": {...}}` or `{"ok": false, "error": "...", "traceback": "..."}`.
+
+### Functions
+
+| `main`([argv])   |    |
+|------------------|----|
+
+
+# _autosummary/voxy.workers.voxcpm_adapter.html.md
+
+# voxy.workers.voxcpm_adapter
+
+VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.
+
+### Functions
+
+| `load`(\*[, model_id, device, optimize, ...])                                                       |                                                                                                               |
+|-----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| [`synthesize`](_autosummary/voxy.workers.voxcpm_adapter.html.md#voxy.workers.voxcpm_adapter.synthesize)(state, \*, text, ref_audio, ...[, ...]) | `prompt_mode`: 'continuation' (clip + its text: closest match), 'reference' (clip only, isolated), or 'both'. |
+
+### voxy.workers.voxcpm_adapter.synthesize(state, , text, ref_audio, ref_text, out_path, seed=None, prompt_mode='continuation', \*\*params)
+
+`prompt_mode`: ‘continuation’ (clip + its text: closest match), ‘reference’
+(clip only, isolated), or ‘both’.
+
+
+# _autosummary/voxy.workers.xtts_adapter.html.md
+
+# voxy.workers.xtts_adapter
+
+XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.
+
+### Functions
+
+| `load`(\*[, model_name, model_path, ...])            |    |
+|------------------------------------------------------|----|
+| `synthesize`(state, \*, text, ref_audio, ...[, ...]) |    |
+
+
 # about-this-build.html.md
 
 <!-- generated by epythet -->
 
 # About this build
 
-This documentation was built on **2026-10-13 07:35 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/2a515c3d460c83ad6fa61ec98a2411f771c89c28"><code>2a515c3</code></a> on branch <code>main</code>, for **voxy 0.0.11** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-14 13:55 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/bbd5151fa29ad0ca3f0c3e8ee945ddb93f915186"><code>bbd5151</code></a> on branch <code>main</code>, for **voxy 0.0.12** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.11) is behind the latest release on PyPI (0.0.12): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.12) is behind the latest release on PyPI (0.0.13): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/2a515c3d460c83ad6fa61ec98a2411f771c89c28"><code>2a515c3d460c83ad6fa61ec98a2411f771c89c28</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/bbd5151fa29ad0ca3f0c3e8ee945ddb93f915186"><code>bbd5151fa29ad0ca3f0c3e8ee945ddb93f915186</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -1477,15 +2634,15 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/38363199604">38363199604</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/38575356870">38575356870</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>2a515c3d460c83ad6fa61ec98a2411f771c89c28</code> (in the history of the built commit) |
+| Event commit | <code>bbd5151fa29ad0ca3f0c3e8ee945ddb93f915186</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.15  |
+| epythet  | 0.2.17  |
 | Sphinx   | 9.1.0   |
 | docutils | 0.22.4  |
 | Python   | 3.12.15 |
@@ -1504,14 +2661,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.12/">0.0.12</a>, newer than the documented version (0.0.11).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.13/">0.0.13</a>, newer than the documented version (0.0.12).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 2a515c3d460c83ad6fa61ec98a2411f771c89c28
-pip install "epythet==0.2.15"
+git checkout bbd5151fa29ad0ca3f0c3e8ee945ddb93f915186
+pip install "epythet==0.2.17"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 
