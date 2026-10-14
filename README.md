@@ -198,10 +198,10 @@ Five local models clone a voice from one clean clip and its transcript: `voxcpm`
 import voxy
 from voxy.local_clone import reference_profile
 
-model = voxy.create_speech_model("voxcpm")          # or qwen3tts, chatterbox, f5tts, xtts
+model = voxy.create_speech_model("voxcpm")  # or qwen3tts, chatterbox, f5tts, xtts
 voice = reference_profile("ref.wav", "Exactly what the clip says.")
 model.synthesize(chapter_text, voice, cfg_value=2.0).save("chapter1.wav")
-model.close()                                        # free the model's memory
+model.close()  # free the model's memory
 ```
 
 Long text is split into paragraphs and sentence-packed chunks, each spoken separately and joined with controlled pauses (`gap_ms=`, `paragraph_gap_ms=`). Model parameters are keyword arguments of `synthesize` (see `voxy.local_clone.LOCAL_CLONE_BACKENDS[name].params`); model options (a variant, a fine-tuned checkpoint) are keyword arguments of `create_speech_model`. Threads are capped at `$VOXY_NUM_THREADS` (default 8). Licences differ: F5-TTS and XTTS-v2 weights are non-commercial (XTTS needs `accept_licence=True`); VoxCPM2, Qwen3-TTS and Chatterbox are Apache-2.0/MIT.
