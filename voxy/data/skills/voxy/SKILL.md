@@ -41,6 +41,7 @@ CLI: `python -m voxy voices [--backend X]`, `python -m voxy speak "text" --voice
 | `aix` | OpenAI voices (nova, onyx...) and other LiteLLM providers | `voxy[aix]` + provider key |
 | `fal` | fal.ai TTS models picked by quality tier | `voxy[fal]` + `FAL_KEY` |
 | `voicestudio` | local; a voice is a text description (Parler-TTS), no cloning | `voxy[voicestudio]` + model weights (GBs) |
+| `voxcpm`, `qwen3tts`, `chatterbox`, `f5tts`, `xtts` | local cloning from one reference clip + transcript, CPU OK (slow: RTF > 1); long text chunked | `uv`, `ffmpeg`; env + weights built on first use under `$VOXY_DATA_DIR` |
 | `csm` | local Sesame CSM-1B (GPU) | torch, the CSM repo |
 
 Add a service with `voxy.register_speech_model("name", factory)`: a `SpeechModel` subclass implementing `synthesize(text, voice) -> Speech` (and optionally `list_voices`, `clone_voice`, `design_voice`). Synthesis costs credits: draft with `say`, render the final with the real voice.
@@ -49,6 +50,8 @@ Add a service with `voxy.register_speech_model("name", factory)`: a `SpeechModel
 
 - **Clone** a real person, only with their consent (a parent for a child), never a public figure or creator who hasn't agreed: put 1-2 min of clean, single-speaker audio in `voxy.samples_store(name)`, then `voxy.clone_from_samples(name, record_fields={"aliases": [...], "consent": "..."})`. Prepare samples first: separate the voice from music (Demucs), keep only the target speaker (VAD + speaker embeddings), at most 25 files. Show the user the sample summary before uploading.
 - **Design** a voice from a description (no real person): `model = voxy.get_speech_model("elevenlabs")`, `previews = model.design_voice_previews(description, text=...)` (text: 100-1000 characters, or omit it), save each `preview.save(path)` for the user to listen to, then `voxy.design_from_description(name, description, preview=chosen)`.
+
+- **Local clone** (no service, e.g. a voice that can't be enrolled with ElevenLabs): `voxy.refprep.prepare_reference(recordings, voice=name)` cleans, transcribes and scores clips; `voxy.local_clone.reference_profile(clip_path, clip_text)` is the voice; compare models and parameters with a diagnosis page (`python -m voxy diagnose spec.json --out DIR --publish`) before rendering long text. F5-TTS and XTTS weights are non-commercial.
 
 ## Where the data lives
 

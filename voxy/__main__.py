@@ -1,12 +1,17 @@
 """
-Command line for voxy: ``python -m voxy voices`` / ``python -m voxy speak``.
+Command line for voxy: voices, speech, local model setup, reference prep, diagnosis pages.
 
     python -m voxy voices                       # our named voices
     python -m voxy voices --backend say         # a backend's voices
     python -m voxy speak "Hello" --voice ada -o hello.mp3
+    python -m voxy setup f5tts chatterbox       # build local models' environments
+    python -m voxy prep ada tape1.m4a tape2.mp3 # clean, cut, transcribe, score clips
+    python -m voxy diagnose spec.json --out DIR --publish
 """
 
 import argparse
+import json
+import subprocess
 import sys
 
 from voxy.facade import list_voices, text_to_speech
@@ -22,7 +27,62 @@ def main(argv=None) -> int:
     speak.add_argument("--voice", help="library name/alias or the backend's voice")
     speak.add_argument("--backend", help="service to use")
     speak.add_argument("-o", "--output", required=True, help="audio file to write")
+    setup = commands.add_parser("setup", help="build local backends' environments")
+    setup.add_argument("backends", nargs="*", help="default: all local backends")
+    prep = commands.add_parser("prep", help="prepare a voice's reference clips")
+    prep.add_argument("voice", help="voice name (clips go to its samples store)")
+    prep.add_argument("sources", nargs="+", help="recordings, any format")
+    prep.add_argument("--language", help="force the ASR language (e.g. en)")
+    prep.add_argument("--denoise", default="afftdn", help="afftdn, anlmdn or none")
+    diagnose = commands.add_parser("diagnose", help="render a grid, build its page")
+    diagnose.add_argument("spec", help="JSON spec (see voxy.diagnosis.run_spec)")
+    diagnose.add_argument("--out", required=True, help="output folder")
+    diagnose.add_argument("--publish", action="store_true", help="annals publish it")
+    diagnose.add_argument("--session", default=None, help="annals --session name")
     args = parser.parse_args(argv)
+
+    if args.command == "setup":
+        from voxy.envs import ensure_env
+        from voxy.local_clone import LOCAL_CLONE_BACKENDS
+        from voxy.refprep import ASR_ENV
+
+        envs = {name: b.env for name, b in LOCAL_CLONE_BACKENDS.items()}
+        envs["asr"] = ASR_ENV
+        for name in args.backends or list(envs):
+            print(f"{name}\t{ensure_env(envs[name])}")
+        return 0
+    if args.command == "prep":
+        from voxy import refprep
+
+        manifest = refprep.prepare_reference(
+            args.sources,
+            voice=args.voice,
+            language=args.language,
+            denoise=None if args.denoise == "none" else args.denoise,
+        )
+        print(json.dumps(refprep.summarize(manifest)))
+        for clip in refprep.best_references(manifest):
+            print(f"{clip['key']}\t{clip['duration']}\t{clip['score']}\t{clip['text']}")
+        return 0
+    if args.command == "diagnose":
+        from voxy.diagnosis import run_spec
+
+        with open(args.spec) as f:
+            spec = json.load(f)
+        page = run_spec(spec, args.out)
+        print(page)
+        if args.publish:
+            cmd = [
+                "annals",
+                "publish",
+                str(page.parent),
+                "--title",
+                spec.get("title", "Voice diagnosis"),
+            ]
+            if args.session:
+                cmd += ["--session", args.session]
+            subprocess.run(cmd, check=True)
+        return 0
 
     if args.command == "voices":
         for v in list_voices(args.backend):
