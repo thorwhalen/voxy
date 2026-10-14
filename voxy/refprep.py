@@ -189,6 +189,19 @@ def _words(segments: Iterable[Mapping]) -> list[dict]:
     return words
 
 
+def _join_words(words: Iterable[Mapping]) -> str:
+    """The words' text, keeping Whisper's own spacing (its words carry a leading space).
+
+    >>> _join_words([{"text": " cypress"}, {"text": "-hooded"}, {"text": " hill."}])
+    'cypress-hooded hill.'
+    >>> _join_words([{"text": "One"}, {"text": "two."}])
+    'One two.'
+    """
+    texts = [w["text"] for w in words]
+    whisper_style = any(t[:1].isspace() for t in texts)
+    return ("" if whisper_style else " ").join(texts).strip()
+
+
 def plan_clips(
     segments: Iterable[Mapping],
     *,
@@ -226,7 +239,7 @@ def plan_clips(
             {
                 "start": round(start, 3),
                 "end": round(end, 3),
-                "text": " ".join(x["text"].strip() for x in current).strip(),
+                "text": _join_words(current),
                 "words": list(current),
             }
         )

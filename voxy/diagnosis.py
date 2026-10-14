@@ -46,6 +46,8 @@ BACKEND_PREFIXES = {
     "f5tts": "F5",
     "chatterbox": "CB",
     "xtts": "XT",
+    "voxcpm": "VX",
+    "qwen3tts": "QW",
     "elevenlabs": "EL",
 }
 

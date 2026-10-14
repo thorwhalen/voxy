@@ -117,7 +117,11 @@ register_local_clone_backend(
 register_local_clone_backend(
     LocalCloneBackend(
         "chatterbox",
-        EnvSpec("chatterbox", ("chatterbox-tts==0.1.7", "soundfile")),
+        EnvSpec(
+            "chatterbox",
+            # setuptools<81: the watermarker still imports pkg_resources
+            ("chatterbox-tts==0.1.7", "soundfile", "setuptools<81"),
+        ),
         init={"variant": "original"},
         params={
             "exaggeration": 0.5,
@@ -162,6 +166,46 @@ register_local_clone_backend(
         max_chars=240,
         licence="code MPL-2.0; weights Coqui Public Model Licence (non-commercial)",
         notes="Mature fine-tuning recipe; several reference clips can be given at once.",
+    )
+)
+
+
+register_local_clone_backend(
+    LocalCloneBackend(
+        "voxcpm",
+        EnvSpec("voxcpm", ("voxcpm==2.0.3", "soundfile")),
+        init={"model_id": "openbmb/VoxCPM2"},
+        params={
+            "cfg_value": 2.0,
+            "inference_timesteps": 10,
+            "prompt_mode": "continuation",
+            "retry_badcase": True,
+            "seed": None,
+        },
+        max_chars=220,
+        licence="code and weights Apache-2.0",
+        notes="Best similarity among permissive models with a CPU path; 48 kHz; "
+        "distorts past ~300 characters, so chunks stay short.",
+    )
+)
+register_local_clone_backend(
+    LocalCloneBackend(
+        "qwen3tts",
+        EnvSpec("qwen3tts", ("qwen-tts==0.1.1", "soundfile")),
+        init={"model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base", "dtype": "float32"},
+        params={
+            "temperature": 0.9,
+            "top_k": 50,
+            "top_p": 1.0,
+            "repetition_penalty": 1.05,
+            "non_streaming_mode": True,
+            "language": "English",
+            "seed": None,
+        },
+        max_chars=300,
+        licence="code and weights Apache-2.0",
+        notes="Most stable permissive cloner (lowest word errors); "
+        "model_id ...-0.6B-Base for speed.",
     )
 )
 
@@ -401,6 +445,18 @@ class ChatterboxSpeechModel(LocalCloneSpeechModel):
     """Chatterbox: expressive zero-shot cloning (``variant='original'|'turbo'``)."""
 
     backend_name = "chatterbox"
+
+
+class VoxCPMSpeechModel(LocalCloneSpeechModel):
+    """VoxCPM2: high-similarity cloning (``params``: cfg_value, inference_timesteps, prompt_mode)."""
+
+    backend_name = "voxcpm"
+
+
+class Qwen3TTSSpeechModel(LocalCloneSpeechModel):
+    """Qwen3-TTS Base: stable cloning (``init``: model_id 1.7B or 0.6B)."""
+
+    backend_name = "qwen3tts"
 
 
 class XTTSSpeechModel(LocalCloneSpeechModel):
