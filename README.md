@@ -206,6 +206,13 @@ model.close()                                        # free the model's memory
 
 Long text is split into paragraphs and sentence-packed chunks, each spoken separately and joined with controlled pauses (`gap_ms=`, `paragraph_gap_ms=`). Model parameters are keyword arguments of `synthesize` (see `voxy.local_clone.LOCAL_CLONE_BACKENDS[name].params`); model options (a variant, a fine-tuned checkpoint) are keyword arguments of `create_speech_model`. Threads are capped at `$VOXY_NUM_THREADS` (default 8). Licences differ: F5-TTS and XTTS-v2 weights are non-commercial (XTTS needs `accept_licence=True`); VoxCPM2, Qwen3-TTS and Chatterbox are Apache-2.0/MIT.
 
+Languages: VoxCPM2 (30 languages), Qwen3-TTS (10, pass `language="French"` etc.), XTTS-v2 (17, `language="fr"`) and Chatterbox with `variant="multilingual"` (23, `language="fr"`) speak beyond English; Chatterbox's `original` and `turbo` variants and the F5-TTS base model are English (F5 also Chinese).
+
+```python
+model = voxy.create_speech_model("chatterbox", variant="multilingual")
+speech = model.synthesize("Bonjour à tous.", voice, language="fr")
+```
+
 ```bash
 python -m voxy setup voxcpm qwen3tts      # build environments ahead of time
 python -m voxy prep ada tape1.m4a tape2.mp3 --language en

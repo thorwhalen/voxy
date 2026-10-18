@@ -130,11 +130,15 @@ register_local_clone_backend(
             "repetition_penalty": 1.2,
             "min_p": 0.05,
             "top_p": 1.0,
+            "language": "en",
             "seed": None,
         },
         max_chars=300,
         licence="code and weights MIT (outputs carry a Perth watermark)",
-        notes="Natural prosody; 'exaggeration' sets expressiveness; variant='turbo' is faster.",
+        notes=(
+            "Natural prosody; 'exaggeration' sets expressiveness; variant='turbo' is faster;"
+            " variant='multilingual' speaks 23 languages (params language='fr', ...)."
+        ),
     )
 )
 register_local_clone_backend(
