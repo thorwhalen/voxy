@@ -248,3 +248,36 @@ def test_export_dataset_writes_each_recipe_layout(tmp_path):
     lines = (tmp_path / "f5/metadata.csv").read_text().splitlines()
     assert lines[0] == "audio_file|text" and lines[1].endswith("a.wav|Good , clip.")
     assert f5["clips"] == 1
+
+
+def test_chatterbox_adapter_routes_language_by_variant(tmp_path):
+    import importlib.util
+
+    from voxy.workers import adapter_path
+
+    spec = importlib.util.spec_from_file_location("cb_adapter", adapter_path("chatterbox"))
+    adapter = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(adapter)
+    pytest.importorskip("torch")
+    pytest.importorskip("soundfile")
+    import torch
+
+    class ChatterboxMultilingualTTS:
+        sr = SR
+
+        def generate(self, text, **kwargs):
+            self.kwargs = kwargs
+            return torch.zeros(1, SR // 10)
+
+    class ChatterboxTTS(ChatterboxMultilingualTTS):
+        pass
+
+    multi = ChatterboxMultilingualTTS()
+    kw = dict(text="Bonjour.", ref_audio="r.wav", ref_text="x", out_path=str(tmp_path / "o.wav"))
+    adapter.synthesize(multi, language="fr", **kw)
+    assert multi.kwargs["language_id"] == "fr"
+    english_only = ChatterboxTTS()
+    with pytest.raises(ValueError, match="multilingual"):
+        adapter.synthesize(english_only, language="fr", **kw)
+    adapter.synthesize(english_only, **kw)
+    assert "language_id" not in english_only.kwargs

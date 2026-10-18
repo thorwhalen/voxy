@@ -164,7 +164,8 @@ def worker_environ(
 
     >>> env = worker_environ(EnvSpec("x", (), env_vars={"TTS_HOME": "{models}"}),
     ...                      threads=2, rootdir="/d", base={})
-    >>> env["OMP_NUM_THREADS"], env["HF_HOME"], env["TTS_HOME"]
+    >>> from pathlib import Path
+    >>> env["OMP_NUM_THREADS"], Path(env["HF_HOME"]).as_posix(), Path(env["TTS_HOME"]).as_posix()
     ('2', '/d/models/hf', '/d/models/x')
     """
     env = dict(os.environ if base is None else base)
