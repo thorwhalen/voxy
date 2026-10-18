@@ -48,9 +48,6 @@ Audio files of one voice and kind, `filename -> bytes`.
 
 Return `name` if it can name a voice (one path segment), else raise.
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> check_voice_name("ada")
 'ada'
@@ -60,12 +57,12 @@ Traceback (most recent call last):
 ValueError: Invalid voice name '../x': use one non-empty segment without '/', '\' or '..'
 ```
 
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
 ### voxy.stores.kind_dir(kind, \*parts, rootdir=None)
 
 The folder for one kind of data, optionally a subfolder (not created here).
-
-* **Return type:**
-  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 ```pycon
 >>> import tempfile
@@ -73,6 +70,9 @@ The folder for one kind of data, optionally a subfolder (not created here).
 >>> kind_dir("samples", "ada", rootdir=root).relative_to(root).as_posix()
 'samples/ada'
 ```
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 ### voxy.stores.samples_store(voice, , rootdir=None)
 

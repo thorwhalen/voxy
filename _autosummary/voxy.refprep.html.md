@@ -57,15 +57,15 @@ no denoising).
 
 The `n` best clips for zero-shot reference (length in range, best score first).
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
-
 ```pycon
 >>> m = [{"duration": 8, "score": 0.7}, {"duration": 2, "score": 0.9},
 ...      {"duration": 10, "score": 0.8}]
 >>> [c["score"] for c in best_references(m, n=2)]
 [0.8, 0.7]
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
 ### voxy.refprep.close_asr()
 
@@ -85,13 +85,13 @@ Convert `src` (any format ffmpeg reads) to clean mono 16-bit WAV at `dst`.
 
 The ffmpeg audio filter chain for `condition`.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
-
 ```pycon
 >>> conditioning_filters(denoise=None, loudness_lufs=-20, highpass_hz=70)
 ['highpass=f=70', 'loudnorm=I=-20:TP=-1.5:LRA=11']
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ### voxy.refprep.load_manifest(samples)
 
@@ -115,9 +115,6 @@ Words accumulate until the clip passes `min_seconds` and a word ends a
 sentence (or the next word would push it past `max_seconds`). Cuts fall in
 the pause between two words, padded by up to `pad_seconds`.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
-
 ```pycon
 >>> w = lambda s, e, t: {"start": s, "end": e, "text": t, "confidence": 0.9}
 >>> segs = [{"words": [w(0, 1, "One"), w(1.1, 2, "two."), w(3, 4, "Three"),
@@ -125,6 +122,9 @@ the pause between two words, padded by up to `pad_seconds`.
 >>> [c["text"] for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]
 ['One two.', 'Three four.']
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
 ### voxy.refprep.prepare_reference(sources, \*, voice=None, samples=None, sample_rate=24000, denoise='afftdn', loudness_lufs=-20.0, min_seconds=3.0, max_seconds=12.0, language=None, transcriber=None, conditioner=None, rootdir=None, log=<built-in function print>)
 
@@ -173,13 +173,13 @@ Quality measures of a clip, and their combination `score` in [0, 1].
 
 Totals for a manifest: clips, minutes, minutes above score thresholds.
 
-* **Return type:**
-  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
-
 ```pycon
 >>> summarize([{"duration": 60, "score": 0.9}, {"duration": 30, "score": 0.4}])
 {'clips': 2, 'minutes': 1.5, 'minutes_score_0.5+': 1.0, 'minutes_score_0.7+': 1.0}
 ```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 ### voxy.refprep.transcribe(audio, , language=None, model='large-v3-turbo', threads=None, rootdir=None)
 

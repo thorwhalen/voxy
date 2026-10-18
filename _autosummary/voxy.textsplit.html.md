@@ -32,13 +32,13 @@ Words ending in a period that don’t end a sentence (“Mr. Darcy”).
 
 The sentences of `paragraph` (whitespace normalised).
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
-
 ```pycon
 >>> split_sentences('He said "Go." Then   Mr. Darcy left.')
 ['He said "Go."', 'Then Mr. Darcy left.']
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ### voxy.textsplit.split_text(text, , max_chars=300)
 

@@ -53,11 +53,11 @@ WAV speech from `say` (`voice`: a system voice name or profile).
 
 Parse `say -v '?'` output.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
-
 ```pycon
 >>> [v.name for v in parse_say_voices("Albert              en_US    # Hello!\n"
 ...                                     "Eddy (English (US)) en_US    # Hi!\n")]
 ['Albert', 'Eddy (English (US))']
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]

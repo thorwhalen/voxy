@@ -30,6 +30,7 @@
   <meta name="twitter:title" content="voxy.envs | voxy" />
   <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d75fae25" />
   <link rel="stylesheet" type="text/css" href="../../_static/theme.css?v=d6d7c91b" />
+  <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
   <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
   <link rel="stylesheet" type="text/css" href="../../_static/epythet.css?v=22887b56" />
   <link rel="search" title="Search" href="../../search.html" />
@@ -370,26 +371,27 @@
 </span><span id="line-164">
 </span><span id="line-165"><span class="sd">    &gt;&gt;&gt; env = worker_environ(EnvSpec("x", (), env_vars={"TTS_HOME": "{models}"}),</span>
 </span><span id="line-166"><span class="sd">    ...                      threads=2, rootdir="/d", base={})</span>
-</span><span id="line-167"><span class="sd">    &gt;&gt;&gt; env["OMP_NUM_THREADS"], env["HF_HOME"], env["TTS_HOME"]</span>
-</span><span id="line-168"><span class="sd">    ('2', '/d/models/hf', '/d/models/x')</span>
-</span><span id="line-169"><span class="sd">    """</span>
-</span><span id="line-170">    <span class="n">env</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="k">if</span> <span class="n">base</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">base</span><span class="p">)</span>
-</span><span id="line-171">    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"VIRTUAL_ENV"</span><span class="p">,</span> <span class="s2">"PYTHONPATH"</span><span class="p">,</span> <span class="s2">"PYTHONHOME"</span><span class="p">):</span>
-</span><span id="line-172">        <span class="n">env</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-173">    <span class="n">n</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_threads</span><span class="p">(</span><span class="n">threads</span><span class="p">))</span>
-</span><span id="line-174">    <span class="n">env</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">var</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">THREAD_ENVVARS</span><span class="p">})</span>
-</span><span id="line-175">    <span class="n">env</span><span class="p">[</span><span class="s2">"HF_HOME"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">models_dir</span><span class="p">(</span><span class="n">HF_SUBDIR</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">))</span>
-</span><span id="line-176">    <span class="n">own</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">models_dir</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">))</span>
-</span><span id="line-177">    <span class="n">env</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">models</span><span class="o">=</span><span class="n">own</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">env_vars</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
-</span><span id="line-178">    <span class="k">return</span> <span class="n">env</span></div>
+</span><span id="line-167"><span class="sd">    &gt;&gt;&gt; from pathlib import Path</span>
+</span><span id="line-168"><span class="sd">    &gt;&gt;&gt; env["OMP_NUM_THREADS"], Path(env["HF_HOME"]).as_posix(), Path(env["TTS_HOME"]).as_posix()</span>
+</span><span id="line-169"><span class="sd">    ('2', '/d/models/hf', '/d/models/x')</span>
+</span><span id="line-170"><span class="sd">    """</span>
+</span><span id="line-171">    <span class="n">env</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="k">if</span> <span class="n">base</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">base</span><span class="p">)</span>
+</span><span id="line-172">    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"VIRTUAL_ENV"</span><span class="p">,</span> <span class="s2">"PYTHONPATH"</span><span class="p">,</span> <span class="s2">"PYTHONHOME"</span><span class="p">):</span>
+</span><span id="line-173">        <span class="n">env</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-174">    <span class="n">n</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_threads</span><span class="p">(</span><span class="n">threads</span><span class="p">))</span>
+</span><span id="line-175">    <span class="n">env</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">var</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">THREAD_ENVVARS</span><span class="p">})</span>
+</span><span id="line-176">    <span class="n">env</span><span class="p">[</span><span class="s2">"HF_HOME"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">models_dir</span><span class="p">(</span><span class="n">HF_SUBDIR</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">))</span>
+</span><span id="line-177">    <span class="n">own</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">models_dir</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">))</span>
+</span><span id="line-178">    <span class="n">env</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">models</span><span class="o">=</span><span class="n">own</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">env_vars</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+</span><span id="line-179">    <span class="k">return</span> <span class="n">env</span></div>
 
-</span><span id="line-179">
 </span><span id="line-180">
+</span><span id="line-181">
 <div class="viewcode-block" id="remove_env">
 <a class="viewcode-back" href="../../_autosummary/voxy.envs.html#voxy.envs.remove_env">[docs]</a>
-</span><span id="line-181"><span class="k">def</span><span class="w"> </span><span class="nf">remove_env</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-182"><span class="w">    </span><span class="sd">"""Delete ``spec``'s environment (weights are kept)."""</span>
-</span><span id="line-183">    <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">env_dir</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+</span><span id="line-182"><span class="k">def</span><span class="w"> </span><span class="nf">remove_env</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-183"><span class="w">    </span><span class="sd">"""Delete ``spec``'s environment (weights are kept)."""</span>
+</span><span id="line-184">    <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">env_dir</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -404,7 +406,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=3bbcec59"></script>
+    <script src="../../_static/documentation_options.js?v=9fc46840"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

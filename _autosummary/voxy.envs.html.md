@@ -51,7 +51,7 @@ a shared machine keeps headroom for others.
 * **Type:**
   Torch/ONNX threads per worker
 
-### *class* voxy.envs.EnvSpec(name, requirements, python='3.11', torch_backend='cpu', env_vars=<factory>)
+### *class* voxy.envs.EnvSpec(name, requirements, python='3.11', torch_backend='cpu', env_vars=dict())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -115,13 +115,13 @@ Where weights live (`models/`, or a subfolder of it).
 
 `threads`, else `$VOXY_NUM_THREADS`, else `DFLT_NUM_THREADS`.
 
-* **Return type:**
-  [`int`](https://docs.python.org/3/builtins/functions.html#int)
-
 ```pycon
 >>> num_threads(4)
 4
 ```
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int)
 
 ### voxy.envs.remove_env(spec, , rootdir=None)
 
@@ -134,12 +134,13 @@ Delete `spec`’s environment (weights are kept).
 
 Environment variables for a worker: weights under the data root, threads capped.
 
-* **Return type:**
-  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
-
 ```pycon
 >>> env = worker_environ(EnvSpec("x", (), env_vars={"TTS_HOME": "{models}"}),
 ...                      threads=2, rootdir="/d", base={})
->>> env["OMP_NUM_THREADS"], env["HF_HOME"], env["TTS_HOME"]
+>>> from pathlib import Path
+>>> env["OMP_NUM_THREADS"], Path(env["HF_HOME"]).as_posix(), Path(env["TTS_HOME"]).as_posix()
 ('2', '/d/models/hf', '/d/models/x')
 ```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]

@@ -44,13 +44,13 @@ Write the training set to `out_dir` and return a summary.
 
 Shell commands to fine-tune `backend` on an exported dataset (run on a GPU box).
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> "f5-tts_finetune-cli" in finetune_commands("f5tts", "/data/ds")
 True
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### voxy.finetune.select_clips(manifest, , min_score=0.5, min_seconds=1.5, max_seconds=15.0)
 

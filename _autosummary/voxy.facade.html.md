@@ -63,9 +63,6 @@ The (cached) model for `backend`; `models` replaces the shared cache.
 
 Our named voices (`backend=None`), or the voices a backend offers.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
-
 ```pycon
 >>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "description": "d",
 ...                 "profiles": {"elevenlabs": {"segment": "v1"}}}}
@@ -73,12 +70,12 @@ Our named voices (`backend=None`), or the voices a backend offers.
 [('ada', ['elevenlabs'])]
 ```
 
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](voxy.base.html.md#voxy.base.VoiceInfo)]
+
 ### voxy.facade.resolve_voice(voice, , backend=None, voices=None, use_library=True)
 
 `(backend, voice)` to synthesize with (see the module docstring for the rules).
-
-* **Return type:**
-  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
 
 ```pycon
 >>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {
@@ -90,6 +87,9 @@ Our named voices (`backend=None`), or the voices a backend offers.
 >>> resolve_voice("Daniel", backend="say", voices=lib)
 ('say', 'Daniel')
 ```
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
 
 ### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
 
@@ -116,9 +116,6 @@ Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
 The provider’s id for library voice `name` (for code that calls a provider).
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {
 ...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",
@@ -126,3 +123,6 @@ The provider’s id for library voice `name` (for code that calls a provider).
 >>> voice_id("Addie", voices=lib)
 'v1'
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)

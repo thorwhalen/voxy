@@ -174,14 +174,14 @@ go straight to `client.text_to_speech.convert`.
 
 A profile for an existing ElevenLabs voice (a past clone, or a stock voice).
 
-* **Return type:**
-  [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
-
 ```pycon
 >>> model = ElevenLabsSpeechModel(api_key="unused")
 >>> model.voice_profile("abc123").segment
 'abc123'
 ```
+
+* **Return type:**
+  [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
 
 ### *class* voxy.elevenlabs_model.VoiceDesignPreview(generated_voice_id, audio, text='', duration_s=None)
 
@@ -197,12 +197,12 @@ Build the official SDK client (imported lazily).
 
 The explicit `api_key` if given, else the first set env var, else None.
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
-
 ```pycon
 >>> resolve_elevenlabs_api_key("explicit")
 'explicit'
 >>> resolve_elevenlabs_api_key(envvars=["VOXY_SURELY_UNSET_VAR"]) is None
 True
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)

@@ -44,38 +44,38 @@ RMS level (dBFS) of consecutive `frame_ms` frames.
 
 Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).
 
-* **Return type:**
-  `ndarray`
-
 ```pycon
 >>> len(resample(np.zeros(100), 8000, 16000))
 200
 ```
 
+* **Return type:**
+  `ndarray`
+
 ### voxy.wavutil.silence(ms, sample_rate)
 
 `ms` milliseconds of silence.
-
-* **Return type:**
-  `ndarray`
 
 ```pycon
 >>> len(silence(250, 8000))
 2000
 ```
 
+* **Return type:**
+  `ndarray`
+
 ### voxy.wavutil.trim_silence(samples, sample_rate, , threshold_db=-45.0, keep_ms=60)
 
 Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).
-
-* **Return type:**
-  `ndarray`
 
 ```pycon
 >>> x = np.concatenate([np.zeros(800), 0.5 * np.ones(800), np.zeros(800)])
 >>> len(trim_silence(x, 8000, keep_ms=0))
 800
 ```
+
+* **Return type:**
+  `ndarray`
 
 ### voxy.wavutil.write_wav(samples, sample_rate)
 

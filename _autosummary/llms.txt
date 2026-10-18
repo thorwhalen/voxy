@@ -25,7 +25,7 @@
 - [voxy.worker](voxy.worker.html.md): Talk to a model running in another Python environment, as if it were local.
 - [voxy.workers](voxy.workers.html.md): Backend adapters run by &#96;voxy.worker&#96; inside each backend’s own environment.
 - [voxy.workers.asr_adapter](voxy.workers.asr_adapter.html.md): Speech recognition with timed words (scribed’s faster-whisper backend), for reference prep.
-- [voxy.workers.chatterbox_adapter](voxy.workers.chatterbox_adapter.html.md): Chatterbox (Resemble AI): ‘original’ (emotion exaggeration, CFG) or ‘turbo’ (faster).
+- [voxy.workers.chatterbox_adapter](voxy.workers.chatterbox_adapter.html.md): Chatterbox (Resemble AI): ‘original’ (emotion exaggeration, CFG), ‘turbo’ (faster), or
 - [voxy.workers.f5tts_adapter](voxy.workers.f5tts_adapter.html.md): F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).
 - [voxy.workers.qwen3tts_adapter](voxy.workers.qwen3tts_adapter.html.md): Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).
 - [voxy.workers.serve](voxy.workers.serve.html.md): Worker entry point: run a backend adapter inside its own environment.

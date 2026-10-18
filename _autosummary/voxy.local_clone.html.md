@@ -68,7 +68,7 @@ Bases: [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)
 
 F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed…).
 
-### *class* voxy.local_clone.LocalCloneBackend(name, env, init=<factory>, params=<factory>, max_chars=300, licence='', notes='')
+### *class* voxy.local_clone.LocalCloneBackend(name, env, init=dict(), params=dict(), max_chars=300, licence='', notes='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -177,13 +177,13 @@ As `LocalCloneSpeechModel.synthesize`, once the licence is accepted.
 
 A voice for local backends: a reference clip (or clips) and what it says.
 
-* **Return type:**
-  [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
-
 ```pycon
 >>> reference_profile("ref.wav", "Hi.", backend="xtts").segment
 {'ref_audio': 'ref.wav', 'ref_text': 'Hi.'}
 ```
+
+* **Return type:**
+  [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
 
 ### voxy.local_clone.register_local_clone_backend(backend)
 

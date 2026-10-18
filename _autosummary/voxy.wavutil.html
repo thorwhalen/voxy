@@ -30,6 +30,7 @@
 <meta content="voxy.wavutil | voxy" name="twitter:title"/>
 <link href="../_static/pygments.css?v=d75fae25" rel="stylesheet" type="text/css"/>
 <link href="../_static/theme.css?v=d6d7c91b" rel="stylesheet" type="text/css"/>
+<link href="../_static/sphinx_autodoc_typehints.css?v=057ac668" rel="stylesheet" type="text/css"/>
 <link href="../_static/copybutton.css?v=76b2166b" rel="stylesheet" type="text/css"/>
 <link href="../_static/epythet.css?v=22887b56" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
@@ -191,44 +192,44 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 <dt class="sig sig-object py" id="voxy.wavutil.resample">
 <span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">resample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/wavutil.html#resample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.resample" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.resample'">¶</a></dt>
 <dd><p>Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="mi">8000</span><span class="p">,</span> <span class="mi">16000</span><span class="p">))</span>
+</span><span id="line-2"><span class="go">200</span>
+</span></code></pre></div>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></span></p>
 </dd>
 </dl>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="mi">8000</span><span class="p">,</span> <span class="mi">16000</span><span class="p">))</span>
-</span><span id="line-2"><span class="go">200</span>
-</span></code></pre></div>
-</div>
 </dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.wavutil.silence">
 <span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">silence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/wavutil.html#silence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.silence" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.silence'">¶</a></dt>
 <dd><p><code class="docutils literal notranslate"><span class="pre">ms</span></code> milliseconds of silence.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">silence</span><span class="p">(</span><span class="mi">250</span><span class="p">,</span> <span class="mi">8000</span><span class="p">))</span>
+</span><span id="line-2"><span class="go">2000</span>
+</span></code></pre></div>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></span></p>
 </dd>
 </dl>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">silence</span><span class="p">(</span><span class="mi">250</span><span class="p">,</span> <span class="mi">8000</span><span class="p">))</span>
-</span><span id="line-2"><span class="go">2000</span>
-</span></code></pre></div>
-</div>
 </dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.wavutil.trim_silence">
 <span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">trim_silence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-45.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/wavutil.html#trim_silence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.trim_silence" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.trim_silence'">¶</a></dt>
 <dd><p>Drop leading and trailing frames quieter than <code class="docutils literal notranslate"><span class="pre">threshold_db</span></code> (keeping <code class="docutils literal notranslate"><span class="pre">keep_ms</span></code>).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></span></p>
-</dd>
-</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">800</span><span class="p">),</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">800</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">800</span><span class="p">)])</span>
 </span><span id="line-2"><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">trim_silence</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">8000</span><span class="p">,</span> <span class="n">keep_ms</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
 </span><span id="line-3"><span class="go">800</span>
 </span></code></pre></div>
 </div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></span></p>
+</dd>
+</dl>
 </dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.wavutil.write_wav">
@@ -263,7 +264,7 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=3bbcec59"></script>
+<script src="../_static/documentation_options.js?v=9fc46840"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

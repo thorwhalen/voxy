@@ -213,13 +213,13 @@ Other names for a backend -> its registry name (one model, one profile type).
 
 The registry name of backend `name` (lowercased, aliases resolved).
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
-
 ```pycon
 >>> canonical_backend("ElevenLabs"), canonical_backend("CSM-1B")
 ('elevenlabs', 'csm')
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### voxy.base.cleanup_audio(audio, sample_rate, normalize=True, remove_silence=True, silence_threshold=0.02, min_silence_duration=0.2)
 
@@ -293,9 +293,6 @@ Register a backend (a class or `**kwargs -> SpeechModel` callable).
 
 Returns `factory`, so it also works as a class decorator via `functools.partial`.
 
-* **Return type:**
-  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`SpeechModel`](#voxy.base.SpeechModel)]
-
 ```pycon
 >>> class Echo(SpeechModel):
 ...     name = "echo"
@@ -309,7 +306,10 @@ ValueError: A speech backend named 'echo' is already registered (pass overwrite=
 >>> del speech_model_factories["echo"]
 ```
 
-### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[...], [SpeechModel](#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'chatterbox': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'f5tts': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'qwen3tts': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>, 'voicestudio': <function \_lazy_factory.<locals>.factory>, 'voxcpm': <function \_lazy_factory.<locals>.factory>, 'xtts': <function \_lazy_factory.<locals>.factory>}*
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`SpeechModel`](#voxy.base.SpeechModel)]
+
+### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[..., [SpeechModel](#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'chatterbox': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'f5tts': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'qwen3tts': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>, 'voicestudio': <function \_lazy_factory.<locals>.factory>, 'voxcpm': <function \_lazy_factory.<locals>.factory>, 'xtts': <function \_lazy_factory.<locals>.factory>}*
 
 Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
@@ -319,9 +319,6 @@ Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
 
 Integer tensors are taken as PCM and scaled to [-1, 1] first.
 
-* **Return type:**
-  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
-
 ```pycon
 >>> data = tensor_to_wav_bytes(torch.zeros(160), 16000)
 >>> data[:4], len(data)
@@ -329,3 +326,6 @@ Integer tensors are taken as PCM and scaled to [-1, 1] first.
 >>> tensor_to_wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]
 b'\xff\x7f'
 ```
+
+* **Return type:**
+  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)

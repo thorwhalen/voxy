@@ -46,7 +46,7 @@ listener rate it (1-5) and write a note. Ratings stay in the listener’s browse
 
 Short, readable ID prefixes (other backends use their first two letters).
 
-### *class* voxy.diagnosis.Variant(backend, params=<factory>, init=<factory>, reference='', label='')
+### *class* voxy.diagnosis.Variant(backend, params=dict(), init=dict(), reference='', label='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -81,14 +81,14 @@ A row: `{"backend": ..., "params": {...}, "init": {...}, "label": ...}`.
 `init` values may be lists too (e.g. `{"variant": ["original", "turbo"]}`).
 Every variant is rendered once per reference name.
 
-* **Return type:**
-  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Variant`](#voxy.diagnosis.Variant)]
-
 ```pycon
 >>> vs = expand_grid([{"backend": "f5tts", "params": {"nfe_step": [16, 32], "speed": 1}}])
 >>> [(v.backend, v.params) for v in vs]
 [('f5tts', {'nfe_step': 16, 'speed': 1}), ('f5tts', {'nfe_step': 32, 'speed': 1})]
 ```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Variant`](#voxy.diagnosis.Variant)]
 
 ### voxy.diagnosis.page_id(results, title)
 

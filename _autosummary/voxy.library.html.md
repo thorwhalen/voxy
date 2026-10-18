@@ -74,14 +74,14 @@ Design a new voice from a text `description` and save it as `name`.
 
 The library key of the voice called `name` (case-insensitive, aliases too).
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
-
 ```pycon
 >>> lib = {"ada": {"aliases": ["Ada", "Addie"]}, "grace": {"aliases": ["Gracie"]}}
 >>> find_voice("addie", voices=lib), find_voice("Grace", voices=lib), find_voice("x", voices=lib)
 ('ada', 'grace', None)
 ```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### voxy.library.load_voice(name, , model_type='elevenlabs', voices=None)
 
