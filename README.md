@@ -229,6 +229,8 @@ python -m voxy diagnose spec.json --out renders/first-listen --publish
           {"backend": "chatterbox", "params": {"exaggeration": [0.3, 0.6]}}]}
 ```
 
+Cards are titled with readable names (the backend, then the settings that vary, e.g. "Chatterbox 0.3"). For a page you share with other listeners, optional spec keys help: `references` (named clips, e.g. a raw and a denoised one, each with a `label`), `appendix` (reference name → a note: those variants go in a collapsed section at the end), `imported` (clips rendered elsewhere, such as a cloud service, with their `backend`, `label` and `audio_file`), `backend_notes`, `noindex`, and `notes_sink` + `page_url`, which save every rating, note, name and clip play as they happen to an [annoquest](https://github.com/i2mint/annoquest) server (`{"kind": "annoquest", "url": "/api/annoquest", "request": "<id>"}`). The page says so, and `annoquest-request.json` is written next to it for registering on that server; add `?reader=<name>` to the link you send each listener to tell them apart.
+
 ### The voice library: clone once, reuse by name
 
 voxy keeps voice data in stores (`MutableMapping`s) under `$VOXY_DATA_DIR` (default `~/.local/share/voxy`): `voices/{name}.json` records (with each backend's saved profile, e.g. the ElevenLabs `voice_id`), `samples/{name}/` (audio a clone is made from), `sources/{name}/` (raw media). Every library function takes its stores as arguments (`voices=`, `samples=`), so any `MutableMapping` (another folder, S3) can stand in.
