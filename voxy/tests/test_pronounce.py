@@ -5,9 +5,14 @@ import math
 import numpy as np
 import pytest
 
+from voxy.base import Speech
 from voxy.pronounce import (
     Verdict,
+    checks_by_line,
     checks_from_risks,
+    load_readings,
+    render_verified,
+    speech_renderer,
     ctc_log_likelihood,
     failing,
     log_probs_from_path,
@@ -119,3 +124,81 @@ def test_the_phoneme_adapter_imports_nothing_from_voxy():
 
     source = adapter_path("phonemes").read_text()
     assert "voxy" not in source.split('"""', 2)[-1]
+
+
+# re-rendering ---------------------------------------------------------------
+
+
+def _emitter_hearing(takes):
+    """A fake recogniser that hears, in each take's audio, the reading listed for it."""
+
+    def emit(audio, start, end):
+        return log_probs_from_path(_ids(takes[audio]), vocab_size=len(VOCAB)), VOCAB
+
+    return emit
+
+
+def _words(audio):
+    return [{"start": 0.0, "end": 0.3, "text": "Est"}]
+
+
+def test_render_verified_stops_at_max_attempts_and_keeps_the_least_bad_take():
+    heard = {}
+
+    def render(text, line, attempt):
+        audio = f"{line}-{attempt}"
+        heard[audio] = "ɛ"  # every take says the verb
+        return audio
+
+    checks = {2: [("Est", READINGS, "noun")]}
+    first, second = render_verified(
+        ["plain line", "à l'Est"],
+        checks,
+        render=render,
+        emitter=_emitter_hearing(heard),
+        words_of=_words,
+        max_attempts=3,
+    )
+    assert [t.audio for t in first.takes] == ["1-0"]  # no checks: rendered once
+    assert first.verified and first.chosen.verdicts == ()
+    assert [t.attempt for t in second.takes] == [0, 1, 2]
+    assert not second.verified and second.chosen.attempt == 0
+
+
+def test_render_verified_validates_max_attempts():
+    with pytest.raises(ValueError, match="max_attempts"):
+        render_verified([], {}, render=None, emitter=None, max_attempts=0)
+
+
+def test_checks_by_line_groups_risks_with_known_readings():
+    risks = flag_risks("Il est là\nEst ou ouest\nrien",heteronyms={"est": ()})
+    checks = checks_by_line(risks, readings={"est": READINGS}, expected={"est": "verb"})
+    assert sorted(checks) == [1, 2]
+    assert checks[2] == [("Est", READINGS, "verb")]
+
+
+def test_speech_renderer_saves_each_take_and_passes_the_attempt(tmp_path):
+    calls = []
+
+    class FakeModel:
+        def synthesize(self, text, voice=None, **kwargs):
+            calls.append((text, voice, kwargs))
+            return Speech(b"RIFF", format="wav")
+
+    render = speech_renderer(FakeModel(), "v", outdir=tmp_path, take_kwarg="seed")
+    path = render("hello", 3, 1)
+    assert path == str(tmp_path / "0003-1.wav") and open(path, "rb").read() == b"RIFF"
+    assert calls == [("hello", "v", {"seed": 1})]
+
+
+def test_load_readings_from_tsv_and_json(tmp_path):
+    tsv = tmp_path / "h.tsv"
+    tsv.write_text("# word\tname\tipa\nest\tverb\tɛ\n\nest\tnoun\tɛst\n", "utf-8")
+    assert load_readings(tsv) == {"est": READINGS}
+    js = tmp_path / "h.json"
+    js.write_text('{"est": {"verb": "ɛ", "noun": "ɛst"}}', "utf-8")
+    assert load_readings(js) == {"est": READINGS}
+    bad = tmp_path / "bad.tsv"
+    bad.write_text("est\tverb\n", "utf-8")
+    with pytest.raises(ValueError, match="bad.tsv:1"):
+        load_readings(bad)
