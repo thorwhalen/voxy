@@ -2,6 +2,7 @@
 
 import json
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -281,3 +282,90 @@ def test_chatterbox_adapter_routes_language_by_variant(tmp_path):
         adapter.synthesize(english_only, language="fr", **kw)
     adapter.synthesize(english_only, **kw)
     assert "language_id" not in english_only.kwargs
+
+
+def test_deepfilternet_is_a_known_denoise_with_no_ffmpeg_filter():
+    assert refprep.DENOISE_FILTERS["deepfilternet"] == []
+    assert refprep.conditioning_filters(denoise="deepfilternet", highpass_hz=70) == [
+        "highpass=f=70",
+        "loudnorm=I=-20:TP=-1.5:LRA=11",
+    ]
+
+
+def test_with_deepfilternet_runs_ffmpeg_df_ffmpeg_in_order(tmp_path):
+    calls = []
+
+    def conditioner(src, dst, *, sample_rate, filters):
+        calls.append(("ffmpeg", sample_rate, list(filters)))
+        dst.write_bytes(b"x")
+        return dst
+
+    def denoiser(src, dst):
+        calls.append(("df",))
+        dst.write_bytes(b"y")
+        return dst
+
+    chain = refprep.with_deepfilternet(conditioner, denoiser=denoiser)
+    out = chain("in.m4a", tmp_path / "out.wav", sample_rate=24000, filters=["highpass=f=70"])
+    assert calls == [
+        ("ffmpeg", refprep.DF_SAMPLE_RATE, []),
+        ("df",),
+        ("ffmpeg", 24000, ["highpass=f=70"]),
+    ]
+    assert out == tmp_path / "out.wav"
+
+
+def test_deepfilternet_denoise_calls_the_env_command_and_copies_the_result(tmp_path):
+    seen = {}
+
+    def ensure(spec, *, rootdir=None):
+        seen["spec"] = spec
+        return tmp_path / "envs" / "deepfilternet" / "bin" / "python"
+
+    def run(cmd, check, env):
+        seen["cmd"] = cmd
+        out_dir = cmd[cmd.index("-o") + 1]
+        (Path(out_dir) / "wide_DeepFilterNet3.wav").write_bytes(b"clean")
+
+    wide = tmp_path / "wide.wav"
+    wide.write_bytes(b"in")
+    dst = refprep.deepfilternet_denoise(wide, tmp_path / "x" / "clean.wav", run=run, ensure=ensure)
+    assert dst.read_bytes() == b"clean"
+    assert seen["cmd"][0].endswith("deepFilter") and seen["spec"] is refprep.DF_ENV
+    assert "torch==2.0.1" in refprep.DF_ENV.requirements
+
+
+def test_prepare_reference_with_deepfilternet_wraps_the_conditioner(tmp_path, monkeypatch):
+    steps = []
+
+    def conditioner(src, dst, *, sample_rate, filters):
+        steps.append(sample_rate)
+        dst.write_bytes(write_wav(np.zeros(sample_rate, np.float32), sample_rate))
+        return dst
+
+    monkeypatch.setattr(
+        refprep, "deepfilternet_denoise", lambda s, d, **k: (d.write_bytes(s.read_bytes()), d)[1]
+    )
+    refprep.prepare_reference(
+        ["a.wav"],
+        samples={},
+        denoise="deepfilternet",
+        conditioner=conditioner,
+        transcriber=lambda path, language=None: [],
+        log=lambda *a: None,
+    )
+    assert steps == [refprep.DF_SAMPLE_RATE, refprep.DFLT_SAMPLE_RATE]
+
+
+@pytest.mark.skipif(
+    not is_env_ready(refprep.DF_ENV), reason="the deepfilternet env is not built (python -m voxy setup)"
+)
+def test_deepfilternet_lowers_noise_for_real(tmp_path):
+    rng = np.random.default_rng(0)
+    sr = refprep.DF_SAMPLE_RATE
+    noisy = (0.02 * rng.standard_normal(sr * 2)).astype(np.float32)
+    src, dst = tmp_path / "in.wav", tmp_path / "out.wav"
+    src.write_bytes(write_wav(noisy, sr))
+    refprep.deepfilternet_denoise(src, dst)
+    cleaned, _ = read_wav(dst)
+    assert np.sqrt(np.mean(cleaned**2)) < np.sqrt(np.mean(noisy**2))
