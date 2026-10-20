@@ -267,8 +267,10 @@ def checks_from_risks(
 
     ``readings`` maps a word (case-insensitively) to ``{name: IPA}``, e.g. from a
     Lexique-derived heteronym list the caller supplies; ``expected`` names the
-    reading each word should have. Words with no entry are skipped. Each word is
-    checked once: ``verify_words`` finds every place it is spoken.
+    reading each word should have, and otherwise a risk's own ``expected`` (what a
+    detector such as ``voxy.speechtext.pos_detector`` found) is used. Words with no
+    entry are skipped. Each word is checked once: ``verify_words`` finds every place
+    it is spoken.
     """
     table = {k.casefold(): v for k, v in readings.items()}
     wanted = {k.casefold(): v for k, v in (expected or {}).items()}
@@ -277,7 +279,8 @@ def checks_from_risks(
         key = risk.word.casefold()
         if key in table and key not in seen:
             seen.add(key)
-            checks.append((risk.word, table[key], wanted.get(key)))
+            reading = wanted.get(key, getattr(risk, "expected", None))
+            checks.append((risk.word, table[key], reading))
     return checks
 
 

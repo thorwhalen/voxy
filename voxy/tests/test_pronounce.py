@@ -220,3 +220,15 @@ def test_load_readings_from_tsv_and_json(tmp_path):
     bad.write_text("est\tverb\n", "utf-8")
     with pytest.raises(ValueError, match="bad.tsv:1"):
         load_readings(bad)
+
+
+def test_checks_by_line_takes_a_detectors_expected_reading():
+    from voxy.speechtext import Risk
+
+    risks = [Risk(1, "est", "pos", expected="verb"), Risk(2, "Est", "pos", expected="noun")]
+    checks = checks_by_line(risks, readings={"est": READINGS})
+    assert checks == {1: [("est", READINGS, "verb")], 2: [("Est", READINGS, "noun")]}
+    # an explicit `expected` still wins
+    assert checks_by_line(risks[:1], readings={"est": READINGS}, expected={"est": "noun"}) == {
+        1: [("est", READINGS, "noun")]
+    }

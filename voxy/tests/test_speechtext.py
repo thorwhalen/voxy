@@ -67,3 +67,47 @@ def test_local_clone_model_applies_text_prep_before_chunking():
     )
     model.synthesize("Mon frere\nEst parti", voice={"ref_audio": "r.wav", "ref_text": "t"})
     assert any("est parti" in h for h in heard) and not any("Est parti" in h for h in heard)
+
+
+def _fake_tagger(tags):
+    """A tagger that tags each listed word with its POS, and every other word X."""
+
+    def tag(text):
+        import re
+
+        return [
+            (m.start(), m.group(0), tags.get(m.group(0).casefold(), "X"))
+            for m in re.finditer(r"[^\W\d_][\w'-]*", text)
+        ]
+
+    return tag
+
+
+def test_pos_detector_names_the_reading_the_part_of_speech_picks():
+    from voxy.speechtext import pos_detector
+
+    detect = pos_detector(tagger=_fake_tagger({"est": "AUX"}))
+    risks = flag_risks("Mon frere\nest parti\nrien", extra=[detect])
+    assert [(r.line, r.word, r.expected) for r in risks] == [(2, "est", "verb")]
+    assert set(risks[0].readings) == {"verb", "noun"}
+
+
+def test_pos_detector_keeps_a_heteronym_with_an_unmapped_tag_unresolved():
+    from voxy.speechtext import pos_detector
+
+    detect = pos_detector({"est": {"NOUN": "noun"}}, tagger=_fake_tagger({"est": "SYM"}))
+    (risk,) = detect("vers est")
+    assert risk.expected is None and "picks no known reading" in risk.reason
+
+
+def test_spacy_tagger_says_how_to_install_spacy():
+    import importlib.util
+
+    import pytest
+
+    from voxy.speechtext import spacy_tagger
+
+    if importlib.util.find_spec("spacy"):
+        pytest.skip("spaCy is installed here")
+    with pytest.raises(ImportError, match=r"voxy\[pos\]"):
+        spacy_tagger()("est")
