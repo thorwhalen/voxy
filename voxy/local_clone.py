@@ -330,6 +330,8 @@ class LocalCloneSpeechModel(SpeechModel):
         backend: A ``LocalCloneBackend`` or its name (subclasses fix it).
         generate: The model call (see the module docstring); default: worker.
         chunker: ``text -> [[chunk, ...], ...]``; default ``split_text``.
+        text_prep: ``text -> text`` applied before chunking (e.g.
+            ``lambda t: prepare_speech_text(t, ...).speech``, see ``voxy.speechtext``).
         gap_ms: Pause between chunks of a paragraph.
         paragraph_gap_ms: Pause between paragraphs.
         trim: Trim each chunk's leading and trailing silence before joining.
@@ -348,6 +350,7 @@ class LocalCloneSpeechModel(SpeechModel):
         *,
         generate: Callable | None = None,
         chunker: Callable | None = None,
+        text_prep: Callable[[str], str] | None = None,
         gap_ms: float = DFLT_GAP_MS,
         paragraph_gap_ms: float = DFLT_PARAGRAPH_GAP_MS,
         trim: bool = True,
@@ -377,6 +380,7 @@ class LocalCloneSpeechModel(SpeechModel):
             auto_setup=auto_setup,
         )
         self.chunker = chunker or partial(split_text, max_chars=self.backend.max_chars)
+        self.text_prep = text_prep
         self.gap_ms, self.paragraph_gap_ms, self.trim = gap_ms, paragraph_gap_ms, trim
 
     def clone_voice(
@@ -408,6 +412,8 @@ class LocalCloneSpeechModel(SpeechModel):
         ``params`` go to the model (see ``self.backend.params`` for the knobs).
         """
         text = _resolve_text_input(text)
+        if self.text_prep is not None:
+            text = self.text_prep(text)
         reference = _reference(voice)
         pieces, sample_rate = [], None
         for p, paragraph in enumerate(self.chunker(text)):
