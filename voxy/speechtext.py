@@ -362,7 +362,9 @@ def _proposed_risk(item, lines: list[str]) -> Risk | None:
     if not isinstance(item, dict):
         return None
     line, word = item.get("line"), item.get("word")
-    if not (isinstance(line, int) and isinstance(word, str) and 1 <= line <= len(lines)):
+    if not (
+        isinstance(line, int) and isinstance(word, str) and 1 <= line <= len(lines)
+    ):
         return None
     on_line = {
         part.casefold()
@@ -377,10 +379,13 @@ def _proposed_risk(item, lines: list[str]) -> Risk | None:
     return Risk(
         line,
         word,
-        f"proposed by a language model: {why}" if isinstance(why, str) and why
+        f"proposed by a language model: {why}"
+        if isinstance(why, str) and why
         else "proposed by a language model",
         readings,
-        expected=expected if isinstance(expected, str) and expected in readings else None,
+        expected=expected
+        if isinstance(expected, str) and expected in readings
+        else None,
     )
 
 
