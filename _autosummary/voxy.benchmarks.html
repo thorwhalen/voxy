@@ -141,10 +141,10 @@ price, watermark per backend id such as <code class="docutils literal notranslat
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">{model, benchmark, metric, value, higher_is_better, source_url, self_reported, retrieved, note?}
 </span></code></pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">misc/docs/benchmarks.md</span></code> holds the prose; its tables and charts are generated between markers
+<p><code class="docutils literal notranslate"><span class="pre">docs/benchmarks.md</span></code> holds the prose; its tables and charts are generated between markers
 (<code class="docutils literal notranslate"><span class="pre">&lt;!--</span> <span class="pre">voxy-benchmarks:NAME</span> <span class="pre">--&gt;</span></code> … <code class="docutils literal notranslate"><span class="pre">&lt;!--</span> <span class="pre">/voxy-benchmarks</span> <span class="pre">--&gt;</span></code>) by <code class="docutils literal notranslate"><span class="pre">render_docs</span></code>, from the
 <code class="docutils literal notranslate"><span class="pre">TABLES</span></code> and <code class="docutils literal notranslate"><span class="pre">CHARTS</span></code> specs below. To update: edit the JSON (add rows, keep every source URL),
-then <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">voxy</span> <span class="pre">benchmarks</span> <span class="pre">misc/docs/benchmarks.md</span></code>.</p>
+then <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">voxy</span> <span class="pre">benchmarks</span> <span class="pre">docs/benchmarks.md</span></code>.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">rows</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"model"</span><span class="p">:</span> <span class="s2">"a"</span><span class="p">,</span> <span class="s2">"benchmark"</span><span class="p">:</span> <span class="s2">"B"</span><span class="p">,</span> <span class="s2">"metric"</span><span class="p">:</span> <span class="s2">"WER %"</span><span class="p">,</span> <span class="s2">"value"</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s2">"self_reported"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
 </span><span id="line-2"><span class="gp">... </span>         <span class="s2">"source_url"</span><span class="p">:</span> <span class="s2">"https://x.org/p"</span><span class="p">}]</span>
 </span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">results_table</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="p">[(</span><span class="s2">"B"</span><span class="p">,</span> <span class="s2">"WER %"</span><span class="p">)],</span> <span class="n">models</span><span class="o">=</span><span class="p">{</span><span class="s2">"a"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Model A"</span><span class="p">}}))</span>
@@ -263,7 +263,7 @@ then <code class="docutils literal notranslate"><span class="pre">python</span> 
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=f0357c94"></script>
+<script src="../_static/documentation_options.js?v=c7cdf6fe"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

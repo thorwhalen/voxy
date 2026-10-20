@@ -1,4 +1,4 @@
-> built 2026-10-20 08:18 UTC from 6b59cd9 (main) · voxy 0.0.15. Details: build_info.json
+> built 2026-10-20 08:35 UTC from 941df3c (main) · voxy 0.0.16. Details: build_info.json
 
 # index.html.md
 
@@ -214,7 +214,7 @@ Long text is split into paragraphs and sentence-packed chunks, each spoken separ
 
 Languages: VoxCPM2 (30 languages), Qwen3-TTS (10, pass `language="French"` etc.), XTTS-v2 (17, `language="fr"`) and Chatterbox with `variant="multilingual"` (23, `language="fr"`) speak beyond English; Chatterbox’s `original` and `turbo` variants and the F5-TTS base model are English (F5 also Chinese).
 
-**Which backend?** [misc/docs/benchmarks.md]() compares the cloning backends on published benchmarks (French and English accuracy, voice likeness rated by people, arenas, licence, price, watermark), with tables, charts and a link to every source. The data is `voxy/data/benchmarks.json`; `python -m voxy benchmarks misc/docs/benchmarks.md` regenerates the tables and charts after you edit it.
+**Which backend?** [docs/benchmarks.md]() compares the cloning backends on published benchmarks (French and English accuracy, voice likeness rated by people, arenas, licence, price, watermark), with tables, charts and a link to every source. The data is `voxy/data/benchmarks.json`; `python -m voxy benchmarks docs/benchmarks.md` regenerates the tables and charts after you edit it.
 
 ```python
 model = voxy.create_speech_model("chatterbox", variant="multilingual")
@@ -731,10 +731,10 @@ price, watermark per backend id such as `"qwen3tts"` or `"elevenlabs/eleven_v3"`
 {model, benchmark, metric, value, higher_is_better, source_url, self_reported, retrieved, note?}
 ```
 
-`misc/docs/benchmarks.md` holds the prose; its tables and charts are generated between markers
+`docs/benchmarks.md` holds the prose; its tables and charts are generated between markers
 (`<!-- voxy-benchmarks:NAME -->` … `<!-- /voxy-benchmarks -->`) by `render_docs`, from the
 `TABLES` and `CHARTS` specs below. To update: edit the JSON (add rows, keep every source URL),
-then `python -m voxy benchmarks misc/docs/benchmarks.md`.
+then `python -m voxy benchmarks docs/benchmarks.md`.
 
 ```pycon
 >>> rows = [{"model": "a", "benchmark": "B", "metric": "WER %", "value": 2.0, "self_reported": True,
@@ -2792,18 +2792,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-20 08:18 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/6b59cd94e9ad4aaca90111b3ccddc17a1fea0746"><code>6b59cd9</code></a> on branch <code>main</code>, for **voxy 0.0.15** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-20 08:35 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/941df3c1a2948cd41be8d3914f17b76a94225bc0"><code>941df3c</code></a> on branch <code>main</code>, for **voxy 0.0.16** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.15) is behind the latest release on PyPI (0.0.16): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.16) is behind the latest release on PyPI (0.0.17): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/6b59cd94e9ad4aaca90111b3ccddc17a1fea0746"><code>6b59cd94e9ad4aaca90111b3ccddc17a1fea0746</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/941df3c1a2948cd41be8d3914f17b76a94225bc0"><code>941df3c1a2948cd41be8d3914f17b76a94225bc0</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -2814,9 +2814,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39392064105">39392064105</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39394109975">39394109975</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>6b59cd94e9ad4aaca90111b3ccddc17a1fea0746</code> (in the history of the built commit) |
+| Event commit | <code>941df3c1a2948cd41be8d3914f17b76a94225bc0</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -2841,13 +2841,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.16/">0.0.16</a>, newer than the documented version (0.0.15).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.17/">0.0.17</a>, newer than the documented version (0.0.16).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 6b59cd94e9ad4aaca90111b3ccddc17a1fea0746
+git checkout 941df3c1a2948cd41be8d3914f17b76a94225bc0
 pip install "epythet==0.2.18"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
