@@ -7,7 +7,7 @@ Command line for voxy: voices, speech, local model setup, reference prep, diagno
     python -m voxy setup f5tts chatterbox       # build local models' environments
     python -m voxy prep ada tape1.m4a tape2.mp3 # clean, cut, transcribe, score clips
     python -m voxy diagnose spec.json --out DIR --publish
-    python -m voxy benchmarks misc/docs/benchmarks.md # regenerate the comparison tables/charts
+    python -m voxy benchmarks docs/benchmarks.md # regenerate the comparison tables/charts
 """
 
 import argparse
