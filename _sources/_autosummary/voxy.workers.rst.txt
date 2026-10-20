@@ -19,6 +19,7 @@ voxy.workers
    asr_adapter
    chatterbox_adapter
    f5tts_adapter
+   phonemes_adapter
    qwen3tts_adapter
    serve
    voxcpm_adapter

@@ -17,6 +17,7 @@
 - [voxy.finetune](voxy.finetune.html.md): Fine-tuning datasets from prepared clips: one export per training recipe.
 - [voxy.library](voxy.library.html.md): A persistent voice library: clone a voice once, then use it by name.
 - [voxy.local_clone](voxy.local_clone.html.md): Local voice cloning: speak any text in a voice learned from a short reference clip.
+- [voxy.pronounce](voxy.pronounce.html.md): Checking, in the audio, which reading of a flagged word a render used.
 - [voxy.refprep](voxy.refprep.html.md): Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
 - [voxy.say_model](voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
 - [voxy.speechtext](voxy.speechtext.html.md): Display text vs speech text, and spotting words a model may misread.
@@ -29,6 +30,7 @@
 - [voxy.workers.asr_adapter](voxy.workers.asr_adapter.html.md): Speech recognition with timed words (scribed’s faster-whisper backend), for reference prep.
 - [voxy.workers.chatterbox_adapter](voxy.workers.chatterbox_adapter.html.md): Chatterbox (Resemble AI): ‘original’ (emotion exaggeration, CFG), ‘turbo’ (faster), or
 - [voxy.workers.f5tts_adapter](voxy.workers.f5tts_adapter.html.md): F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).
+- [voxy.workers.phonemes_adapter](voxy.workers.phonemes_adapter.html.md): Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop.
 - [voxy.workers.qwen3tts_adapter](voxy.workers.qwen3tts_adapter.html.md): Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).
 - [voxy.workers.serve](voxy.workers.serve.html.md): Worker entry point: run a backend adapter inside its own environment.
 - [voxy.workers.voxcpm_adapter](voxy.workers.voxcpm_adapter.html.md): VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.

@@ -95,6 +95,7 @@
 <li class="toctree-l3"><a class="reference internal" href="voxy.finetune.html">voxy.finetune</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.local_clone.html">voxy.local_clone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.pronounce.html">voxy.pronounce</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">voxy.speechtext</a></li>
@@ -154,7 +155,7 @@ ones sit where the capital trigger bites.</p></li>
 <p>Engines differ in what they accept: for several local models text is the only lever
 (they take no phonemes or SSML), so this is a text-level step; it plugs into
 <code class="docutils literal notranslate"><span class="pre">LocalCloneSpeechModel(text_prep=...)</span></code>. Verifying the audio itself (phoneme
-recognition) is a separate step, not in this module.</p>
+recognition of the flagged words) is <a class="reference internal" href="voxy.pronounce.html#module-voxy.pronounce" title="voxy.pronounce"><code class="xref py py-mod docutils literal notranslate"><span class="pre">voxy.pronounce</span></code></a>.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">text</span> <span class="o">=</span> <span class="s2">"Mon frere</span><span class="se">\n</span><span class="s2">Est parti</span><span class="se">\n</span><span class="s2">Loin d'ici."</span>
 </span><span id="line-2"><span class="gp">&gt;&gt;&gt; </span><span class="n">prepare_speech_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">speech</span>
 </span><span id="line-3"><span class="go">"Mon frere\nest parti\nloin d'ici."</span>
@@ -301,7 +302,7 @@ a language’s ambiguous forms written unambiguously).</p></li>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=8bafd125"></script>
+<script src="../_static/documentation_options.js?v=2fd7553c"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

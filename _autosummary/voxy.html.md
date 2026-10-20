@@ -22,6 +22,7 @@ True
 | [`finetune`](voxy.finetune.html.md#module-voxy.finetune)                   | Fine-tuning datasets from prepared clips: one export per training recipe.                     |
 | [`library`](voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                          |
 | [`local_clone`](voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.           |
+| [`pronounce`](voxy.pronounce.html.md#module-voxy.pronounce)                 | Checking, in the audio, which reading of a flagged word a render used.                        |
 | [`refprep`](voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.    |
 | [`say_model`](voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                |
 | [`speechtext`](voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                          |

@@ -1,0 +1,13 @@
+voxy.workers.phonemes\_adapter
+==============================
+
+.. automodule:: voxy.workers.phonemes_adapter
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      emissions
+      load
+   

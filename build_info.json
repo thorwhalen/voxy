@@ -1,36 +1,36 @@
 {
   "schema_version": 1,
-  "built_at": "2026-10-20T12:55:50Z",
+  "built_at": "2026-10-20T16:21:33Z",
   "package": {
     "name": "voxy",
-    "version": "0.0.18",
+    "version": "0.0.19",
     "display_name": "voxy",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "3dcde91ab189fa7eab47b33871e6f5ef967a0e81",
-    "short_commit": "3dcde91",
+    "commit": "fb9f3e4dfde1759644f32d1baaf955555983b92a",
+    "short_commit": "fb9f3e4",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/thorwhalen/voxy",
-    "commit_url": "https://github.com/thorwhalen/voxy/commit/3dcde91ab189fa7eab47b33871e6f5ef967a0e81",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/fb9f3e4dfde1759644f32d1baaf955555983b92a",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "thorwhalen/voxy",
-    "sha": "3dcde91ab189fa7eab47b33871e6f5ef967a0e81",
+    "sha": "fb9f3e4dfde1759644f32d1baaf955555983b92a",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "39425652134",
-    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/39425652134",
+    "run_id": "39456194135",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/39456194135",
     "server_url": "https://github.com"
   },
   "tools": {
-    "epythet": "0.2.20",
+    "epythet": "0.2.21",
     "sphinx": "9.1.1",
     "docutils": "0.22.4",
     "python": "3.12.15"
@@ -55,21 +55,21 @@
     "docs_dir": "docsrc"
   },
   "site": {
-    "modules_documented": 28,
-    "objects_documented": 168
+    "modules_documented": 30,
+    "objects_documented": 188
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.19",
+    "latest": "0.0.20",
     "relation": "behind",
     "error": null
   },
-  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 3dcde91ab189fa7eab47b33871e6f5ef967a0e81\npip install \"epythet==0.2.20\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout fb9f3e4dfde1759644f32d1baaf955555983b92a\npip install \"epythet==0.2.21\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": false,
     "notes": [
-      "The documented version (0.0.18) is behind the latest release on PyPI (0.0.19): `pip install voxy` gives newer code than these docs describe."
+      "The documented version (0.0.19) is behind the latest release on PyPI (0.0.20): `pip install voxy` gives newer code than these docs describe."
     ]
   }
 }

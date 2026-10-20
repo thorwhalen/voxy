@@ -1,0 +1,38 @@
+voxy.pronounce
+==============
+
+.. automodule:: voxy.pronounce
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DFLT_PHONEME_MODEL
+      PHONEME_ENV
+      DFLT_CROP_PADDING
+      DFLT_MARGIN
+      BLANK_SYMBOL
+      Emitter
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      best_reading
+      checks_from_risks
+      ctc_log_likelihood
+      failing
+      log_probs_from_path
+      phoneme_emitter
+      score_readings
+      tokenize_phonemes
+      verify_words
+      word_spans
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Verdict
+   

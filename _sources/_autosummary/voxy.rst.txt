@@ -21,6 +21,7 @@
    finetune
    library
    local_clone
+   pronounce
    refprep
    say_model
    speechtext
