@@ -13,7 +13,9 @@ ASR checks cannot catch this (Whisper hears "est" either way), so the fix is ups
    respelling table and proper-name aliases, and returns every change it made.
 2. :func:`flag_risks` lists the words of a text a model may misread (heteronyms you
    supply, e.g. from Lexique; more detectors plug in through ``extra``), saying which
-   ones sit where the capital trigger bites.
+   ones sit where the capital trigger bites. :func:`pos_detector` is one such
+   detector: it tags the text and, for heteronyms whose part of speech picks the
+   reading (French "est": verb /ɛ/, noun /ɛst/), names the ``expected`` reading.
 
 Engines differ in what they accept: for several local models text is the only lever
 (they take no phonemes or SSML), so this is a text-level step; it plugs into
@@ -70,6 +72,8 @@ class Risk:
     reason: str
     readings: tuple[str, ...] = ()
     line_initial_capital: bool = False
+    #: The reading the context picks (a name among ``readings``), when a detector knows it.
+    expected: str | None = None
 
 
 def _starts_sentence(previous_line: str | None) -> bool:
@@ -217,3 +221,96 @@ def flag_risks(
     for detector in extra:
         risks += list(detector(text))
     return sorted(risks, key=lambda r: r.line)
+
+
+# Part-of-speech detector ------------------------------------------------------------
+
+#: A tagger: ``text -> (char offset, token, universal POS tag)`` for every token.
+Tagger = Callable[[str], Iterable[tuple[int, str, str]]]
+
+#: The spaCy model :func:`spacy_tagger` loads by default (French).
+DFLT_SPACY_MODEL = "fr_core_news_sm"
+
+#: French heteronyms whose part of speech picks the reading: ``{word: {UPOS: reading}}``.
+#: The reading names are the keys of the IPA table given to ``voxy.pronounce``.
+FRENCH_POS_HETERONYMS: Mapping[str, Mapping[str, str]] = {
+    "est": {"AUX": "verb", "VERB": "verb", "NOUN": "noun", "PROPN": "noun", "ADJ": "noun"},
+}
+
+
+def spacy_tagger(model: str = DFLT_SPACY_MODEL) -> Tagger:
+    """A :data:`Tagger` over a spaCy pipeline, loaded on first use.
+
+    Needs ``pip install 'voxy[pos]'`` and the model itself
+    (``python -m spacy download fr_core_news_sm``).
+    """
+    nlp = None
+
+    def tag(text: str) -> Iterable[tuple[int, str, str]]:
+        nonlocal nlp
+        if nlp is None:
+            try:
+                import spacy
+            except ImportError as error:
+                raise ImportError(
+                    "the part-of-speech detector needs spaCy: pip install 'voxy[pos]'"
+                ) from error
+            try:
+                nlp = spacy.load(model)
+            except OSError as error:
+                raise OSError(
+                    f"spaCy model {model!r} is not installed: "
+                    f"python -m spacy download {model}"
+                ) from error
+        return [(t.idx, t.text, t.pos_) for t in nlp(text)]
+
+    return tag
+
+
+def pos_detector(
+    rules: Mapping[str, Mapping[str, str]] = FRENCH_POS_HETERONYMS,
+    *,
+    tagger: Tagger | None = None,
+) -> Callable[[str], list[Risk]]:
+    """A :func:`flag_risks` ``extra`` detector: heteronyms whose part of speech picks the reading.
+
+    Run it on the *speech* text (:func:`prepare_speech_text`): a stray verse-initial
+    capital fools the tagger the same way it fools the speech model.
+
+    Args:
+        rules: ``{word: {UPOS tag: reading name}}``, words matched case-insensitively
+            (default :data:`FRENCH_POS_HETERONYMS`).
+        tagger: ``text -> (offset, token, UPOS)``; default :func:`spacy_tagger`
+            (French), loaded on first use.
+
+    >>> fake = lambda text: [(0, "Il", "PRON"), (3, "est", "AUX"), (7, "parti", "VERB")]
+    >>> [(r.word, r.expected) for r in pos_detector(tagger=fake)("Il est parti")]
+    [('est', 'verb')]
+    """
+    table = {w.casefold(): dict(by_tag) for w, by_tag in rules.items()}
+    tag = tagger
+
+    def detect(text: str) -> list[Risk]:
+        nonlocal tag
+        if tag is None:
+            tag = spacy_tagger()
+        risks = []
+        for offset, token, pos in tag(text):
+            by_tag = table.get(token.casefold())
+            if not by_tag:
+                continue
+            reading = by_tag.get(pos)
+            risks.append(
+                Risk(
+                    text.count("\n", 0, offset) + 1,
+                    token,
+                    f"tagged {pos}: its part of speech picks the reading"
+                    if reading
+                    else f"tagged {pos}, which picks no known reading",
+                    tuple(dict.fromkeys(by_tag.values())),
+                    expected=reading,
+                )
+            )
+        return risks
+
+    return detect

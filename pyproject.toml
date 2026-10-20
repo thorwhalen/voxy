@@ -79,6 +79,11 @@ fal = [
 voicestudio = [
     "voicestudio",
 ]
+# The part-of-speech heteronym detector (voxy.speechtext.pos_detector); imported
+# lazily. Also needs the model: python -m spacy download fr_core_news_sm
+pos = [
+    "spacy>=3",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",

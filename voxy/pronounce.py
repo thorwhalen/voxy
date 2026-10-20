@@ -267,17 +267,29 @@ def checks_from_risks(
 
     ``readings`` maps a word (case-insensitively) to ``{name: IPA}``, e.g. from a
     Lexique-derived heteronym list the caller supplies; ``expected`` names the
-    reading each word should have. Words with no entry are skipped. Each word is
-    checked once: ``verify_words`` finds every place it is spoken.
+    reading each word should have, and otherwise the risks' own ``expected`` (what a
+    detector such as ``voxy.speechtext.pos_detector`` found) is used. Words with no
+    entry are skipped. Each word is checked once: ``verify_words`` finds every place
+    it is spoken, so a word whose risks name *different* readings gets none here
+    (group the risks by line with :func:`checks_by_line` to check each one).
     """
     table = {k.casefold(): v for k, v in readings.items()}
     wanted = {k.casefold(): v for k, v in (expected or {}).items()}
-    seen, checks = set(), []
+    words, found = {}, {}  # first spelling seen; the risks' expected readings
     for risk in risks:
         key = risk.word.casefold()
-        if key in table and key not in seen:
-            seen.add(key)
-            checks.append((risk.word, table[key], wanted.get(key)))
+        if key in table:
+            words.setdefault(key, risk.word)
+            if (reading := getattr(risk, "expected", None)) is not None:
+                found.setdefault(key, set()).add(reading)
+
+    def reading_of(key):
+        if key in wanted:
+            return wanted[key]
+        named = found.get(key, ())
+        return next(iter(named)) if len(named) == 1 else None
+
+    checks = [(word, table[key], reading_of(key)) for key, word in words.items()]
     return checks
 
 
