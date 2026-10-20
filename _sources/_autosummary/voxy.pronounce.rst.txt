@@ -14,18 +14,25 @@ voxy.pronounce
       DFLT_MARGIN
       BLANK_SYMBOL
       Emitter
+      DFLT_MAX_ATTEMPTS
+      Check
    
    .. rubric:: Functions
 
    .. autosummary::
    
       best_reading
+      checks_by_line
       checks_from_risks
       ctc_log_likelihood
       failing
+      load_readings
       log_probs_from_path
       phoneme_emitter
+      render_verified
       score_readings
+      speech_renderer
+      timed_words
       tokenize_phonemes
       verify_words
       word_spans
@@ -34,5 +41,7 @@ voxy.pronounce
 
    .. autosummary::
    
+      LineTakes
+      Take
       Verdict
    
