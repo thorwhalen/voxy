@@ -18,7 +18,7 @@ ASR checks cannot catch this (Whisper hears "est" either way), so the fix is ups
 Engines differ in what they accept: for several local models text is the only lever
 (they take no phonemes or SSML), so this is a text-level step; it plugs into
 ``LocalCloneSpeechModel(text_prep=...)``. Verifying the audio itself (phoneme
-recognition) is a separate step, not in this module.
+recognition of the flagged words) is :mod:`voxy.pronounce`.
 
 >>> text = "Mon frere\\nEst parti\\nLoin d'ici."
 >>> prepare_speech_text(text).speech
