@@ -34,7 +34,11 @@ def main(argv=None) -> int:
     prep.add_argument("voice", help="voice name (clips go to its samples store)")
     prep.add_argument("sources", nargs="+", help="recordings, any format")
     prep.add_argument("--language", help="force the ASR language (e.g. en)")
-    prep.add_argument("--denoise", default="afftdn", help="afftdn, anlmdn, deepfilternet (own env, needs uv) or none")
+    prep.add_argument(
+        "--denoise",
+        default="afftdn",
+        help="afftdn, anlmdn, deepfilternet (own env, needs uv) or none",
+    )
     diagnose = commands.add_parser("diagnose", help="render a grid, build its page")
     diagnose.add_argument("spec", help="JSON spec (see voxy.diagnosis.run_spec)")
     diagnose.add_argument("--out", required=True, help="output folder")
