@@ -7,10 +7,10 @@ price, watermark per backend id such as ``"qwen3tts"`` or ``"elevenlabs/eleven_v
 
     {model, benchmark, metric, value, higher_is_better, source_url, self_reported, retrieved, note?}
 
-``misc/docs/benchmarks.md`` holds the prose; its tables and charts are generated between markers
+``docs/benchmarks.md`` holds the prose; its tables and charts are generated between markers
 (``<!-- voxy-benchmarks:NAME -->`` ... ``<!-- /voxy-benchmarks -->``) by ``render_docs``, from the
 ``TABLES`` and ``CHARTS`` specs below. To update: edit the JSON (add rows, keep every source URL),
-then ``python -m voxy benchmarks misc/docs/benchmarks.md``.
+then ``python -m voxy benchmarks docs/benchmarks.md``.
 
 >>> rows = [{"model": "a", "benchmark": "B", "metric": "WER %", "value": 2.0, "self_reported": True,
 ...          "source_url": "https://x.org/p"}]

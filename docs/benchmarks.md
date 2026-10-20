@@ -101,7 +101,7 @@ Each cell links to its source; several sources are separated by `·`; `—` mean
 Edit `voxy/data/benchmarks.json`: add a row per published number (`model` is a voxy backend id such as `qwen3tts` or `elevenlabs/eleven_v3`; keep `source_url`, `self_reported` and `retrieved`), or change a model's facts. Then regenerate the tables and charts:
 
 ```bash
-python -m voxy benchmarks misc/docs/benchmarks.md
+python -m voxy benchmarks docs/benchmarks.md
 ```
 
 New tables or charts are entries in `TABLES` and `CHARTS` in `voxy/benchmarks.py`, placed in this page with a `<!-- voxy-benchmarks:NAME -->` block.

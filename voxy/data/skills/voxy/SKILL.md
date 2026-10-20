@@ -44,7 +44,7 @@ CLI: `python -m voxy voices [--backend X]`, `python -m voxy speak "text" --voice
 | `voxcpm`, `qwen3tts`, `chatterbox`, `f5tts`, `xtts` | local cloning from one reference clip + transcript, CPU OK (slow: RTF > 1); long text chunked | `uv`, `ffmpeg`; env + weights built on first use under `$VOXY_DATA_DIR` |
 | `csm` | local Sesame CSM-1B (GPU) | torch, the CSM repo |
 
-To choose between cloning backends on evidence (French and English accuracy, voice likeness judged by people, arenas, licence, price, watermark), read `misc/docs/benchmarks.md` in the voxy repo; its data is `voxy/data/benchmarks.json` (`voxy.benchmarks.load_benchmarks()`), every number with its source. When you find a newer published result, add a row and run `python -m voxy benchmarks misc/docs/benchmarks.md`.
+To choose between cloning backends on evidence (French and English accuracy, voice likeness judged by people, arenas, licence, price, watermark), read `docs/benchmarks.md` in the voxy repo; its data is `voxy/data/benchmarks.json` (`voxy.benchmarks.load_benchmarks()`), every number with its source. When you find a newer published result, add a row and run `python -m voxy benchmarks docs/benchmarks.md`.
 
 To put music under a narration (an audiobook bed, ducked under speech and swelling between sections, or synced to phrases), make the music with `arioso` and read its note on scoring a narration (https://github.com/thorwhalen/arioso/blob/main/misc/docs/research/general/scoring-narration.md). Narrate one file per section with known durations so the gaps can be chosen to fit the music.
 
