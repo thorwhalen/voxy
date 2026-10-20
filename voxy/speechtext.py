@@ -234,7 +234,13 @@ DFLT_SPACY_MODEL = "fr_core_news_sm"
 #: French heteronyms whose part of speech picks the reading: ``{word: {UPOS: reading}}``.
 #: The reading names are the keys of the IPA table given to ``voxy.pronounce``.
 FRENCH_POS_HETERONYMS: Mapping[str, Mapping[str, str]] = {
-    "est": {"AUX": "verb", "VERB": "verb", "NOUN": "noun", "PROPN": "noun", "ADJ": "noun"},
+    "est": {
+        "AUX": "verb",
+        "VERB": "verb",
+        "NOUN": "noun",
+        "PROPN": "noun",
+        "ADJ": "noun",
+    },
 }
 
 
