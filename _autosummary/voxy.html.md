@@ -24,6 +24,7 @@ True
 | [`local_clone`](voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.           |
 | [`refprep`](voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.    |
 | [`say_model`](voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                |
+| [`speechtext`](voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                          |
 | [`stores`](voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.               |
 | [`textsplit`](voxy.textsplit.html.md#module-voxy.textsplit)                 | Split long text (a chapter) into chunks a speech model can say in one breath.                 |
 | [`voicestudio_model`](voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).               |

@@ -23,6 +23,7 @@
    local_clone
    refprep
    say_model
+   speechtext
    stores
    textsplit
    voicestudio_model

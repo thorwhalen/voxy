@@ -1,0 +1,27 @@
+voxy.speechtext
+===============
+
+.. automodule:: voxy.speechtext
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      SENTENCE_END
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      flag_risks
+      prepare_speech_text
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Change
+      Risk
+      SpeechText
+   

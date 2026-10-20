@@ -21,6 +21,7 @@
 - [voxy.local_clone](_autosummary/voxy.local_clone.html.md): Local voice cloning: speak any text in a voice learned from a short reference clip.
 - [voxy.refprep](_autosummary/voxy.refprep.html.md): Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
 - [voxy.say_model](_autosummary/voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
+- [voxy.speechtext](_autosummary/voxy.speechtext.html.md): Display text vs speech text, and spotting words a model may misread.
 - [voxy.stores](_autosummary/voxy.stores.html.md): Where voxy keeps its data: voice records and audio, as &#96;MutableMapping&#96; stores.
 - [voxy.textsplit](_autosummary/voxy.textsplit.html.md): Split long text (a chapter) into chunks a speech model can say in one breath.
 - [voxy.voicestudio_model](_autosummary/voxy.voicestudio_model.html.md): Local description-prompted speech through VoiceStudio (Parler-TTS and friends).
@@ -35,7 +36,7 @@
 - [voxy.workers.voxcpm_adapter](_autosummary/voxy.workers.voxcpm_adapter.html.md): VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.
 - [voxy.workers.xtts_adapter](_autosummary/voxy.workers.xtts_adapter.html.md): XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.
 - [For AI agents](ai-agents.html.md): &#96;voxy&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-20 12:51 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-20 12:55 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
 
 ## Optional
 

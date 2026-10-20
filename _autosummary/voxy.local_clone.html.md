@@ -56,13 +56,13 @@ Seams (keyword arguments of every model):
 | [`WorkerGenerate`](#voxy.local_clone.WorkerGenerate)(backend, \*[, init, threads, ...]) | The default `generate`: the backend's adapter in its own environment.                     |
 | [`XTTSSpeechModel`](#voxy.local_clone.XTTSSpeechModel)(\*args[, accept_licence])         | XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).               |
 
-### *class* voxy.local_clone.ChatterboxSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.ChatterboxSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)
 
 Chatterbox: expressive zero-shot cloning (`variant='original'|'turbo'`).
 
-### *class* voxy.local_clone.F5TTSSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.F5TTSSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)
 
@@ -85,7 +85,7 @@ What voxy knows about one local cloning model.
   * **licence** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Code and weights licences (flag non-commercial ones).
   * **notes** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – One line on strengths and caveats.
 
-### *class* voxy.local_clone.LocalCloneSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.LocalCloneSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel)
 
@@ -95,6 +95,8 @@ A local voice-cloning model as a voxy backend.
   * **backend** ([`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalCloneBackend` or its name (subclasses fix it).
   * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (see the module docstring); default: worker.
   * **chunker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> [[chunk, ...], ...]`; default `split_text`.
+  * **text_prep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> text` applied before chunking (e.g.
+    `lambda t: prepare_speech_text(t, ...).speech`, see `voxy.speechtext`).
   * **gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between chunks of a paragraph.
   * **paragraph_gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between paragraphs.
   * **trim** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Trim each chunk’s leading and trailing silence before joining.
@@ -129,13 +131,13 @@ Speak `text` (any length) in the reference `voice`.
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)
 
-### *class* voxy.local_clone.Qwen3TTSSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.Qwen3TTSSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)
 
 Qwen3-TTS Base: stable cloning (`init`: model_id 1.7B or 0.6B).
 
-### *class* voxy.local_clone.VoxCPMSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.VoxCPMSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)
 

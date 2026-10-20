@@ -127,6 +127,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.local_clone.html">voxy.local_clone</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.say_model.html">voxy.say_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.speechtext.html">voxy.speechtext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.stores.html">voxy.stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.textsplit.html">voxy.textsplit</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.voicestudio_model.html">voxy.voicestudio_model</a></li>
@@ -226,6 +227,8 @@
       <li><a href="_autosummary/voxy.worker.html#voxy.worker.Worker.call">call() (voxy.worker.Worker method)</a>
 </li>
       <li><a href="_autosummary/voxy.base.html#voxy.base.canonical_backend">canonical_backend() (in module voxy.base)</a>
+</li>
+      <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.Change">Change (class in voxy.speechtext)</a>
 </li>
       <li><a href="_autosummary/voxy.benchmarks.html#voxy.benchmarks.chart">chart() (in module voxy.benchmarks)</a>
 </li>
@@ -356,6 +359,8 @@
 </li>
       <li><a href="_autosummary/voxy.finetune.html#voxy.finetune.finetune_commands">finetune_commands() (in module voxy.finetune)</a>
 </li>
+      <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.flag_risks">flag_risks() (in module voxy.speechtext)</a>
+</li>
       <li><a href="_autosummary/voxy.wavutil.html#voxy.wavutil.frame_db">frame_db() (in module voxy.wavutil)</a>
 </li>
   </ul></td>
@@ -473,6 +478,8 @@
 </li>
         <li><a href="_autosummary/voxy.say_model.html#module-voxy.say_model">voxy.say_model</a>
 </li>
+        <li><a href="_autosummary/voxy.speechtext.html#module-voxy.speechtext">voxy.speechtext</a>
+</li>
         <li><a href="_autosummary/voxy.stores.html#module-voxy.stores">voxy.stores</a>
 </li>
         <li><a href="_autosummary/voxy.textsplit.html#module-voxy.textsplit">voxy.textsplit</a>
@@ -549,11 +556,13 @@
 </li>
       <li><a href="_autosummary/voxy.refprep.html#voxy.refprep.partial_transcribe">partial_transcribe() (in module voxy.refprep)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li><a href="_autosummary/voxy.refprep.html#voxy.refprep.plan_clips">plan_clips() (in module voxy.refprep)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li><a href="_autosummary/voxy.refprep.html#voxy.refprep.prepare_reference">prepare_reference() (in module voxy.refprep)</a>
+</li>
+      <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.prepare_speech_text">prepare_speech_text() (in module voxy.speechtext)</a>
 </li>
       <li><a href="_autosummary/voxy.library.html#voxy.library.profile_from_record">profile_from_record() (in module voxy.library)</a>
 </li>
@@ -601,6 +610,8 @@
 </li>
       <li><a href="_autosummary/voxy.benchmarks.html#voxy.benchmarks.results_table">results_table() (in module voxy.benchmarks)</a>
 </li>
+      <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.Risk">Risk (class in voxy.speechtext)</a>
+</li>
       <li><a href="_autosummary/voxy.diagnosis.html#voxy.diagnosis.run_spec">run_spec() (in module voxy.diagnosis)</a>
 </li>
       <li><a href="_autosummary/voxy.worker.html#voxy.worker.Worker.running">running (voxy.worker.Worker property)</a>
@@ -632,6 +643,8 @@
 </li>
       <li><a href="_autosummary/voxy.finetune.html#voxy.finetune.select_clips">select_clips() (in module voxy.finetune)</a>
 </li>
+      <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.SENTENCE_END">SENTENCE_END (in module voxy.speechtext)</a>
+</li>
       <li><a href="_autosummary/voxy.wavutil.html#voxy.wavutil.silence">silence() (in module voxy.wavutil)</a>
 </li>
       <li><a href="_autosummary/voxy.stores.html#voxy.stores.sources_store">sources_store() (in module voxy.stores)</a>
@@ -643,6 +656,8 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li><a href="_autosummary/voxy.base.html#voxy.base.SpeechModel">SpeechModel (class in voxy.base)</a>
+</li>
+      <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.SpeechText">SpeechText (class in voxy.speechtext)</a>
 </li>
       <li><a href="_autosummary/voxy.textsplit.html#voxy.textsplit.split_sentences">split_sentences() (in module voxy.textsplit)</a>
 </li>
@@ -819,6 +834,13 @@
 </li>
       </ul></li>
       <li>
+    voxy.speechtext
+
+      <ul style="list-style-type:none">
+        <li><a href="_autosummary/voxy.speechtext.html#module-voxy.speechtext">module</a>
+</li>
+      </ul></li>
+      <li>
     voxy.stores
 
       <ul style="list-style-type:none">
@@ -965,7 +987,7 @@
 </footer>
     </div>
     
-    <script src="_static/documentation_options.js?v=63b572e7"></script>
+    <script src="_static/documentation_options.js?v=8bafd125"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>

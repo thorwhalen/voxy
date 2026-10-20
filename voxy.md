@@ -1,4 +1,4 @@
-> built 2026-10-20 12:51 UTC from 8ecbcce (main) · voxy 0.0.17. Details: build_info.json
+> built 2026-10-20 12:55 UTC from 3dcde91 (main) · voxy 0.0.18. Details: build_info.json
 
 # index.html.md
 
@@ -1654,6 +1654,7 @@ True
 | [`local_clone`](_autosummary/voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.           |
 | [`refprep`](_autosummary/voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.    |
 | [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                |
+| [`speechtext`](_autosummary/voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                          |
 | [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.               |
 | [`textsplit`](_autosummary/voxy.textsplit.html.md#module-voxy.textsplit)                 | Split long text (a chapter) into chunks a speech model can say in one breath.                 |
 | [`voicestudio_model`](_autosummary/voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).               |
@@ -1846,13 +1847,13 @@ Seams (keyword arguments of every model):
 | [`WorkerGenerate`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.WorkerGenerate)(backend, \*[, init, threads, ...]) | The default `generate`: the backend's adapter in its own environment.                     |
 | [`XTTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.XTTSSpeechModel)(\*args[, accept_licence])         | XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).               |
 
-### *class* voxy.local_clone.ChatterboxSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.ChatterboxSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
 
 Chatterbox: expressive zero-shot cloning (`variant='original'|'turbo'`).
 
-### *class* voxy.local_clone.F5TTSSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.F5TTSSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
 
@@ -1875,7 +1876,7 @@ What voxy knows about one local cloning model.
   * **licence** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Code and weights licences (flag non-commercial ones).
   * **notes** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – One line on strengths and caveats.
 
-### *class* voxy.local_clone.LocalCloneSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.LocalCloneSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
 
@@ -1885,6 +1886,8 @@ A local voice-cloning model as a voxy backend.
   * **backend** ([`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalCloneBackend` or its name (subclasses fix it).
   * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (see the module docstring); default: worker.
   * **chunker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> [[chunk, ...], ...]`; default `split_text`.
+  * **text_prep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> text` applied before chunking (e.g.
+    `lambda t: prepare_speech_text(t, ...).speech`, see `voxy.speechtext`).
   * **gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between chunks of a paragraph.
   * **paragraph_gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between paragraphs.
   * **trim** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Trim each chunk’s leading and trailing silence before joining.
@@ -1919,13 +1922,13 @@ Speak `text` (any length) in the reference `voice`.
 * **Return type:**
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
-### *class* voxy.local_clone.Qwen3TTSSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.Qwen3TTSSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
 
 Qwen3-TTS Base: stable cloning (`init`: model_id 1.7B or 0.6B).
 
-### *class* voxy.local_clone.VoxCPMSpeechModel(backend=None, , generate=None, chunker=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.VoxCPMSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
 Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
 
@@ -2284,6 +2287,121 @@ Parse `say -v '?'` output.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+
+# _autosummary/voxy.speechtext.html.md
+
+# voxy.speechtext
+
+Display text vs speech text, and spotting words a model may misread.
+
+A text a person reads and the text a model should be given are not always the same.
+Measured case (French, a Qwen3-TTS clone): a verse line starting with a capitalised
+verb, “Est parti” after a line “Mon frere”, was read as the noun /est/ (“l’Est”) in 4
+of 4 takes; lowercased (“est parti”) it was read correctly in 4 of 4. The capital, not
+the line break, is the trigger: line-initial “Est” tokenises like the noun in “l’Est”.
+ASR checks cannot catch this (Whisper hears “est” either way), so the fix is upstream:
+
+1. [`prepare_speech_text()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.prepare_speech_text) turns display text into speech text: it lowercases a
+   *verse-initial* capital that does not start a sentence (keeping deliberate capitals:
+   words also capitalised mid-line, or named in `keep`), then applies a per-language
+   respelling table and proper-name aliases, and returns every change it made.
+2. [`flag_risks()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.flag_risks) lists the words of a text a model may misread (heteronyms you
+   supply, e.g. from Lexique; more detectors plug in through `extra`), saying which
+   ones sit where the capital trigger bites.
+
+Engines differ in what they accept: for several local models text is the only lever
+(they take no phonemes or SSML), so this is a text-level step; it plugs into
+`LocalCloneSpeechModel(text_prep=...)`. Verifying the audio itself (phoneme
+recognition) is a separate step, not in this module.
+
+```pycon
+>>> text = "Mon frere\nEst parti\nLoin d'ici."
+>>> prepare_speech_text(text).speech
+"Mon frere\nest parti\nloin d'ici."
+>>> prepare_speech_text(text, keep={"Est", "Loin"}).speech == text
+True
+```
+
+### Module Attributes
+
+| [`SENTENCE_END`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.SENTENCE_END)   | the next line's capital then starts a new one.   |
+|-----------------------------------------------------------------|--------------------------------------------------|
+
+### Functions
+
+| [`flag_risks`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra])   | Words of `text` a model may misread, in text order.              |
+|----------------------------------------------------------------------------------------------|------------------------------------------------------------------|
+| [`prepare_speech_text`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.prepare_speech_text)(text, \*[, ...])        | Display text in, speech text out, with a record of every change. |
+
+### Classes
+
+| [`Change`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Change)(line, original, replacement, reason)   | One edit [`prepare_speech_text()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.prepare_speech_text) made (`line` counts from 1).   |
+|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| [`Risk`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Risk)(line, word, reason[, readings, ...])     | A word a model may misread: where it is, why it is flagged, its known readings.                                |
+| [`SpeechText`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.SpeechText)(display, speech[, changes])        | The text to show (`display`), the text to speak (`speech`) and what changed.                                   |
+
+### *class* voxy.speechtext.Change(line, original, replacement, reason)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One edit [`prepare_speech_text()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.prepare_speech_text) made (`line` counts from 1).
+
+### *class* voxy.speechtext.Risk(line, word, reason, readings=(), line_initial_capital=False)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A word a model may misread: where it is, why it is flagged, its known readings.
+
+### voxy.speechtext.SENTENCE_END *= re.compile('[.!?…][\\'\\\\"”’»)\\\\]]\*\\\\s\*$')*
+
+the next line’s capital then starts a new one.
+
+* **Type:**
+  What closes a sentence
+
+### *class* voxy.speechtext.SpeechText(display, speech, changes=())
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+The text to show (`display`), the text to speak (`speech`) and what changed.
+
+### voxy.speechtext.flag_risks(text, , heteronyms=(), extra=())
+
+Words of `text` a model may misread, in text order.
+
+* **Parameters:**
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The text that will be spoken (run it through [`prepare_speech_text()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.prepare_speech_text)
+    first to see what is left).
+  * **heteronyms** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]] | [`Collection`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – Words with more than one reading, as a collection or as
+    `{word: readings}` (e.g. from Lexique). Matched case-insensitively.
+  * **extra** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Risk`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Risk)]]]) – More detectors, each `text -> risks` (a part-of-speech rule, an LLM
+    proposer). Their risks are merged in by line.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Risk`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Risk)]
+
+A heteronym that is capitalised at a line start where no sentence begins is flagged
+with `line_initial_capital=True`: that is where the capital trigger bites.
+
+### voxy.speechtext.prepare_speech_text(text, , lowercase_verse_initial=True, keep=(), respellings=None, aliases=None, transforms=())
+
+Display text in, speech text out, with a record of every change.
+
+* **Parameters:**
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The text as a reader sees it (lines may be verse lines).
+  * **lowercase_verse_initial** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Lowercase a line-initial capital that does not start
+    a sentence (the first line of a paragraph, or a line after one ending in
+    `. ! ? …`, keeps its capital).
+  * **keep** ([`Collection`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – Words whose capital is deliberate and stays (compared exactly). Words
+    also capitalised elsewhere in a line are kept automatically.
+  * **respellings** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Word -> same-sound spelling, whole words, case-insensitive (e.g.
+    a language’s ambiguous forms written unambiguously).
+  * **aliases** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Proper name -> pronounceable spelling, whole words, case-insensitive.
+  * **transforms** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – Extra `text -> text` steps applied last, over the whole text.
+* **Return type:**
+  [`SpeechText`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.SpeechText)
+* **Returns:**
+  A [`SpeechText`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.SpeechText).
 
 
 # _autosummary/voxy.stores.html.md
@@ -2821,18 +2939,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-20 12:51 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/8ecbccef40db39a6d6e01dfddf786a1e983cec36"><code>8ecbcce</code></a> on branch <code>main</code>, for **voxy 0.0.17** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-20 12:55 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/3dcde91ab189fa7eab47b33871e6f5ef967a0e81"><code>3dcde91</code></a> on branch <code>main</code>, for **voxy 0.0.18** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.17) is behind the latest release on PyPI (0.0.18): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.18) is behind the latest release on PyPI (0.0.19): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/8ecbccef40db39a6d6e01dfddf786a1e983cec36"><code>8ecbccef40db39a6d6e01dfddf786a1e983cec36</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/3dcde91ab189fa7eab47b33871e6f5ef967a0e81"><code>3dcde91ab189fa7eab47b33871e6f5ef967a0e81</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -2843,9 +2961,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39425102429">39425102429</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39425652134">39425652134</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>8ecbccef40db39a6d6e01dfddf786a1e983cec36</code> (in the history of the built commit) |
+| Event commit | <code>3dcde91ab189fa7eab47b33871e6f5ef967a0e81</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -2870,13 +2988,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.18/">0.0.18</a>, newer than the documented version (0.0.17).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.19/">0.0.19</a>, newer than the documented version (0.0.18).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 8ecbccef40db39a6d6e01dfddf786a1e983cec36
+git checkout 3dcde91ab189fa7eab47b33871e6f5ef967a0e81
 pip install "epythet==0.2.20"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
