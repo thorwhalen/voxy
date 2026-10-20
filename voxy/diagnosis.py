@@ -66,7 +66,9 @@ BACKEND_NAMES = {
     "elevenlabs": "ElevenLabs",
 }
 ANNOQUEST_REQUEST_FILE = "annoquest-request.json"
-DFLT_RATING_PROMPT = "How much does this sound like the real voice, and how natural is it?"
+DFLT_RATING_PROMPT = (
+    "How much does this sound like the real voice, and how natural is it?"
+)
 
 
 @dataclass
@@ -375,12 +377,20 @@ def variant_labels(results: Iterable[Mapping]) -> dict[str, str]:
         group = [settings[r["id"]] for r in results if r["backend"] == backend]
         keys = sorted({k for g in group for k in g})
         varying[backend] = [
-            k for k in keys if len({json.dumps(g.get(k), sort_keys=True) for g in group}) > 1
+            k
+            for k in keys
+            if len({json.dumps(g.get(k), sort_keys=True) for g in group}) > 1
         ]
     labels = {}
     for r in results:
-        values = [str(settings[r["id"]][k]) for k in varying[r["backend"]] if k in settings[r["id"]]]
-        labels[r["id"]] = r.get("label") or " ".join([backend_name(r["backend"]), *values])
+        values = [
+            str(settings[r["id"]][k])
+            for k in varying[r["backend"]]
+            if k in settings[r["id"]]
+        ]
+        labels[r["id"]] = r.get("label") or " ".join(
+            [backend_name(r["backend"]), *values]
+        )
     return labels
 
 
@@ -394,8 +404,18 @@ def _page_order(results: Iterable[Mapping], appendix: Mapping) -> list[dict]:
     """Main results first, then the appendix's, each grouped by backend (first-seen order)."""
     results = list(results)
     backends = list(dict.fromkeys(r["backend"] for r in results))
-    main = [r for b in backends for r in results if r["backend"] == b and r.get("reference") not in appendix]
-    rest = [r for b in backends for r in results if r["backend"] == b and r.get("reference") in appendix]
+    main = [
+        r
+        for b in backends
+        for r in results
+        if r["backend"] == b and r.get("reference") not in appendix
+    ]
+    rest = [
+        r
+        for b in backends
+        for r in results
+        if r["backend"] == b and r.get("reference") in appendix
+    ]
     return main + rest
 
 
@@ -432,13 +452,18 @@ def annoquest_request(
         "id": request_id,
         "title": title,
         "intro": intro,
-        "documents": [{"id": "page", "title": title, "source": {"kind": "url", "url": page_url}}],
-        "responseTypes": {"stars": {"kind": "choice", "label": "Rating", "options": stars}},
+        "documents": [
+            {"id": "page", "title": title, "source": {"kind": "url", "url": page_url}}
+        ],
+        "responseTypes": {
+            "stars": {"kind": "choice", "label": "Rating", "options": stars}
+        },
         "items": [
             {
                 "id": r["id"],
                 "doc": "page",
-                "title": labels[r["id"]] + (f" ({r['reference']})" if r.get("reference") in appendix else ""),
+                "title": labels[r["id"]]
+                + (f" ({r['reference']})" if r.get("reference") in appendix else ""),
                 "prompt": prompt,
                 "response": "stars",
                 "comment": "optional",
@@ -486,7 +511,9 @@ def build_page(
     references = dict(references or {})
     backend_notes = dict(backend_notes or {})
     if notes_sink and notes_sink.get("kind") != "annoquest":
-        raise ValueError(f"Unknown notes_sink kind {notes_sink.get('kind')!r} (have: 'annoquest')")
+        raise ValueError(
+            f"Unknown notes_sink kind {notes_sink.get('kind')!r} (have: 'annoquest')"
+        )
     out = Path(out_dir)
     results = _page_order(results, appendix)
     labels = variant_labels(results)
@@ -500,7 +527,11 @@ def build_page(
             for k in ("duration", "score", "snr_db", "asr_confidence")
             if ref.get(k) is not None
         )
-        processing = f"<div class='muted'>{e(ref['processing'])}</div>" if ref.get("processing") else ""
+        processing = (
+            f"<div class='muted'>{e(ref['processing'])}</div>"
+            if ref.get("processing")
+            else ""
+        )
         return (
             f"<div class='card'><div class='head'><span class='name'>{e(ref.get('label') or name)}</span>"
             f"<span class='muted'>{stats}</span></div>{processing}"
@@ -515,7 +546,9 @@ def build_page(
             if not r.get("error") and r.get("rtf") is not None
             else ""
         )
-        settings = _fmt_params({**r.get("init", {}), **r.get("params", {})}, _defaults(r["backend"]))
+        settings = _fmt_params(
+            {**r.get("init", {}), **r.get("params", {})}, _defaults(r["backend"])
+        )
         ref = r.get("reference")
         ref_name = (references.get(ref) or {}).get("label") or ref
         ref_note = f" &middot; from {e(ref_name)}" if ref else ""
@@ -540,7 +573,9 @@ def build_page(
         for backend in dict.fromkeys(r["backend"] for r in rows):
             parts.append(f"<h2>{e(backend_name(backend))}</h2>")
             spec = LOCAL_CLONE_BACKENDS.get(backend)
-            note = backend_notes.get(backend) or (f"{spec.notes} Licence: {spec.licence}." if spec else "")
+            note = backend_notes.get(backend) or (
+                f"{spec.notes} Licence: {spec.licence}." if spec else ""
+            )
             if note:
                 parts.append(f"<p class='muted'>{e(note)}</p>")
             parts += [variant_card(r) for r in rows if r["backend"] == backend]
@@ -559,7 +594,9 @@ def build_page(
     if intro:
         body.append(f"<p>{e(intro)}</p>")
     if text:
-        body.append(f"<details open><summary>Text</summary><div class='excerpt'>{e(text)}</div></details>")
+        body.append(
+            f"<details open><summary>Text</summary><div class='excerpt'>{e(text)}</div></details>"
+        )
     main_refs = {n: r for n, r in references.items() if n not in appendix}
     if main_refs:
         body.append("<h2>Reference (the real voice)</h2>")
@@ -651,13 +688,26 @@ def references_from_spec(
 def _media_seconds(path: str | os.PathLike) -> float:
     """Duration of any audio file ffmpeg reads."""
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-        check=True, capture_output=True, text=True,
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
+            str(path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
     )
     return float(out.stdout.strip())
 
 
-def import_results(entries: Iterable[Mapping], out_dir: str | os.PathLike) -> list[dict]:
+def import_results(
+    entries: Iterable[Mapping], out_dir: str | os.PathLike
+) -> list[dict]:
     """Results for clips rendered elsewhere (a cloud service, another machine).
 
     Each entry: ``backend``, ``audio_file``, and optionally ``params``, ``init``,
@@ -668,22 +718,29 @@ def import_results(entries: Iterable[Mapping], out_dir: str | os.PathLike) -> li
     (out / AUDIO_DIR).mkdir(parents=True, exist_ok=True)
     results = []
     for entry in entries:
-        v = Variant(entry["backend"], dict(entry.get("params", {})), dict(entry.get("init", {})),
-                    entry.get("reference", ""), entry.get("label", ""))
+        v = Variant(
+            entry["backend"],
+            dict(entry.get("params", {})),
+            dict(entry.get("init", {})),
+            entry.get("reference", ""),
+            entry.get("label", ""),
+        )
         src = Path(entry["audio_file"]).expanduser()
         dst = out / AUDIO_DIR / f"{v.id}{src.suffix}"
         shutil.copyfile(src, dst)
         audio_s = _media_seconds(dst)
         gen_s = entry.get("generation_seconds")
-        results.append({
-            **asdict(v),
-            "id": v.id,
-            "audio": f"{AUDIO_DIR}/{dst.name}",
-            "generation_seconds": gen_s,
-            "audio_seconds": round(audio_s, 1),
-            "rtf": round(gen_s / audio_s, 2) if gen_s and audio_s else None,
-            "imported": True,
-        })
+        results.append(
+            {
+                **asdict(v),
+                "id": v.id,
+                "audio": f"{AUDIO_DIR}/{dst.name}",
+                "generation_seconds": gen_s,
+                "audio_seconds": round(audio_s, 1),
+                "rtf": round(gen_s / audio_s, 2) if gen_s and audio_s else None,
+                "imported": True,
+            }
+        )
     return results
 
 
@@ -724,7 +781,9 @@ def run_spec(spec: Mapping, out_dir: str | os.PathLike, *, log=print) -> Path:
             api_url=sink.get("url", "/api/annoquest"),
             appendix=spec.get("appendix"),
         )
-        (out / ANNOQUEST_REQUEST_FILE).write_text(json.dumps(request, indent=1, ensure_ascii=False))
+        (out / ANNOQUEST_REQUEST_FILE).write_text(
+            json.dumps(request, indent=1, ensure_ascii=False)
+        )
     return build_page(
         results,
         out,
