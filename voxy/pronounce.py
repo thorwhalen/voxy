@@ -356,21 +356,41 @@ class Take:
 
 @dataclass(frozen=True)
 class LineTakes:
-    """Every take of one line (1-based ``line``, as :class:`voxy.speechtext.Risk`)."""
+    """Every take of one line (1-based ``line``, as :class:`voxy.speechtext.Risk`).
+
+    A blank line has no take.
+    """
 
     line: int
     text: str
     takes: tuple[Take, ...] = field(default_factory=tuple)
+    checks: tuple = ()
 
     @property
-    def chosen(self) -> Take:
+    def chosen(self) -> Take | None:
         """The first take with no failing word, else the one with the fewest."""
-        return min(self.takes, key=lambda t: len(t.failing))
+        return min(self.takes, key=lambda t: len(t.failing), default=None)
+
+    @property
+    def unconfirmed(self) -> list[str]:
+        """Checked words with an expected reading that the chosen take did not confirm.
+
+        A word is confirmed when the audio decidedly gave the expected reading at least
+        once. It stays unconfirmed when ASR never found it, or when the recogniser
+        could not decide.
+        """
+        verdicts = self.chosen.verdicts if self.chosen else ()
+        return [
+            word
+            for word, _, expected in self.checks
+            if expected is not None
+            and not any(v.word == word and v.ok for v in verdicts)
+        ]
 
     @property
     def verified(self) -> bool:
-        """Whether the chosen take has no decidedly misread word."""
-        return not self.chosen.failing
+        """No checked word misread, and every one with an expected reading confirmed."""
+        return not (self.chosen and self.chosen.failing) and not self.unconfirmed
 
 
 def checks_by_line(
@@ -393,10 +413,22 @@ def checks_by_line(
 def timed_words(segments: Iterable[Mapping]) -> list[Mapping]:
     """The timed words of ASR segments (``voxy.refprep.transcribe``'s output).
 
-    >>> timed_words([{"words": [{"start": 0.0, "end": 0.2, "text": "a"}]}, {}])
-    [{'start': 0.0, 'end': 0.2, 'text': 'a'}]
+    Words without times are dropped; a segment with no timed word counts as one word.
+
+    >>> timed_words([{"words": [{"start": 0.0, "end": 0.2, "text": "a"},
+    ...                         {"start": None, "end": None, "text": "b"}]},
+    ...              {"start": 1.0, "end": 2.0, "text": "c", "words": []}])
+    [{'start': 0.0, 'end': 0.2, 'text': 'a'}, {'start': 1.0, 'end': 2.0, 'text': 'c'}]
     """
-    return [w for s in segments for w in s.get("words") or ()]
+    words: list[Mapping] = []
+    for s in segments:
+        timed = [
+            w
+            for w in s.get("words") or ()
+            if w.get("start") is not None and w.get("end") is not None
+        ]
+        words += timed or [{"start": s["start"], "end": s["end"], "text": s["text"]}]
+    return words
 
 
 def _transcribed_words(audio: str) -> list[Mapping]:
@@ -420,8 +452,11 @@ def render_verified(
 
     A line with checks is verified (:func:`verify_words`) after each render and
     rendered again while a word is decidedly misread (:func:`failing`), up to
-    ``max_attempts`` renders; a line without checks is rendered once.
-    :attr:`LineTakes.chosen` is the take to keep.
+    ``max_attempts`` renders; a line without checks is rendered once, and a blank
+    line not at all (line numbers still count it, as ``flag_risks`` does).
+    :attr:`LineTakes.chosen` is the take to keep; :attr:`LineTakes.verified` also
+    requires each expected reading to be confirmed (a word ASR did not find, or the
+    recogniser could not decide, leaves the line unverified rather than retried).
 
     Args:
         lines: The lines to speak, in order (line numbers start at 1).
@@ -455,6 +490,9 @@ def render_verified(
     results = []
     for number, text in enumerate(lines, 1):
         line_checks = list(checks.get(number, ()))
+        if not text.strip():
+            results.append(LineTakes(number, text))
+            continue
         takes: list[Take] = []
         for attempt in range(max_attempts if line_checks else 1):
             audio = str(render(text, number, attempt))
@@ -473,7 +511,7 @@ def render_verified(
             takes.append(Take(attempt, audio, verdicts))
             if not failing(verdicts):
                 break
-        results.append(LineTakes(number, text, tuple(takes)))
+        results.append(LineTakes(number, text, tuple(takes), tuple(line_checks)))
     return results
 
 
@@ -487,14 +525,21 @@ def speech_renderer(
 ) -> Callable[[str, int, int], str]:
     """A ``render`` for :func:`render_verified` over a :class:`voxy.base.SpeechModel`.
 
-    Each take is saved as ``<outdir>/<line>-<attempt>.<format>`` (default outdir:
-    ``voxy_cache_dir("takes")``). With ``take_kwarg`` (e.g. ``"seed"``), the attempt
+    Each take is saved as ``<outdir>/<line>-<attempt>.<format>`` (default outdir: a
+    new folder per renderer under ``voxy_cache_dir("takes")``, so runs never
+    overwrite each other's takes). With ``take_kwarg`` (e.g. ``"seed"``), the attempt
     number is passed to ``model.synthesize`` under that name, so a seeded model gives
     a new take; without it, the model is simply called again.
     """
     from voxy.local_clone import voxy_cache_dir
 
-    root = Path(outdir) if outdir is not None else voxy_cache_dir("takes")
+    if outdir is None:
+        import time
+        import uuid
+
+        run = f"{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        outdir = voxy_cache_dir("takes", run)
+    root = Path(outdir)
 
     def render(text: str, line: int, attempt: int) -> str:
         kwargs = dict(synthesize_kwargs)

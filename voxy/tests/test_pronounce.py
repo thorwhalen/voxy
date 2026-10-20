@@ -165,13 +165,31 @@ def test_render_verified_stops_at_max_attempts_and_keeps_the_least_bad_take():
     assert not second.verified and second.chosen.attempt == 0
 
 
+def test_a_line_whose_word_asr_never_found_is_not_verified_and_blank_lines_are_skipped():
+    heard = {}
+
+    def render(text, line, attempt):
+        heard[f"{line}-{attempt}"] = "ɛst"
+        return f"{line}-{attempt}"
+
+    blank, line = render_verified(
+        ["", "L'Est"],
+        {2: [("Est", READINGS, "noun")]},
+        render=render,
+        emitter=_emitter_hearing(heard),
+        words_of=lambda audio: [{"start": 0.0, "end": 0.3, "text": "L'Est"}],
+    )
+    assert blank.takes == () and blank.chosen is None and blank.verified
+    assert len(line.takes) == 1 and line.unconfirmed == ["Est"] and not line.verified
+
+
 def test_render_verified_validates_max_attempts():
     with pytest.raises(ValueError, match="max_attempts"):
         render_verified([], {}, render=None, emitter=None, max_attempts=0)
 
 
 def test_checks_by_line_groups_risks_with_known_readings():
-    risks = flag_risks("Il est là\nEst ou ouest\nrien",heteronyms={"est": ()})
+    risks = flag_risks("Il est là\nEst ou ouest\nrien", heteronyms={"est": ()})
     checks = checks_by_line(risks, readings={"est": READINGS}, expected={"est": "verb"})
     assert sorted(checks) == [1, 2]
     assert checks[2] == [("Est", READINGS, "verb")]
