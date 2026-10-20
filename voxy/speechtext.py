@@ -15,7 +15,8 @@ ASR checks cannot catch this (Whisper hears "est" either way), so the fix is ups
    supply, e.g. from Lexique; more detectors plug in through ``extra``), saying which
    ones sit where the capital trigger bites. :func:`pos_detector` is one such
    detector: it tags the text and, for heteronyms whose part of speech picks the
-   reading (French "est": verb /ɛ/, noun /ɛst/), names the ``expected`` reading.
+   reading (French "est": verb /ɛ/, noun /ɛst/), names the ``expected`` reading;
+   :func:`llm_detector` asks a language model for the risky words and their readings.
 
 Engines differ in what they accept: for several local models text is the only lever
 (they take no phonemes or SSML), so this is a text-level step; it plugs into
@@ -318,5 +319,113 @@ def pos_detector(
                 )
             )
         return risks
+
+    return detect
+
+
+# LLM proposer -----------------------------------------------------------------------
+
+#: The prompt :func:`llm_detector` sends; ``$language`` and ``$text`` are filled in.
+LLM_RISK_PROMPT = """You help a text-to-speech system avoid misreadings. Below is a $language text, \
+its lines numbered. List the words a speech model may misread: heteronyms (words with \
+more than one pronunciation, such as French "est" as a verb or as a noun), names, \
+abbreviations. For each, give the line, the word exactly as written, short \
+names of its possible readings, and the reading this context needs.
+
+Answer with a JSON list only, one object per word:
+[{"line": 2, "word": "est", "readings": ["verb", "noun"], "expected": "verb", "why": "..."}]
+Use "expected": null when the context does not decide. Answer [] if nothing is risky.
+
+$text
+"""
+
+
+def _json_list(reply: str) -> list:
+    """The first JSON list in a model's ``reply`` (fenced or not); ``[]`` if none parses."""
+    import json
+
+    start = reply.find("[")
+    while start != -1:
+        try:
+            value, _ = json.JSONDecoder().raw_decode(reply[start:])
+        except ValueError:
+            start = reply.find("[", start + 1)
+            continue
+        if isinstance(value, list):
+            return value
+        start = reply.find("[", start + 1)
+    return []
+
+
+def _proposed_risk(item, lines: list[str]) -> Risk | None:
+    """``item`` as a :class:`Risk` if it names a word really on its line, else ``None``."""
+    if not isinstance(item, dict):
+        return None
+    line, word = item.get("line"), item.get("word")
+    if not (isinstance(line, int) and isinstance(word, str) and 1 <= line <= len(lines)):
+        return None
+    on_line = {
+        part.casefold()
+        for m in _WORD.finditer(lines[line - 1])
+        for part in (m.group(0), *re.split(r"['’]", m.group(0)))  # "d'ici" holds "ici"
+    }
+    if word.rstrip(".").casefold() not in on_line:  # "Dr." is the word "Dr"
+        return None  # a word the model made up, or put on the wrong line
+    readings = tuple(r for r in item.get("readings") or () if isinstance(r, str))
+    expected = item.get("expected")
+    why = item.get("why")
+    return Risk(
+        line,
+        word,
+        f"proposed by a language model: {why}" if isinstance(why, str) and why
+        else "proposed by a language model",
+        readings,
+        expected=expected if isinstance(expected, str) and expected in readings else None,
+    )
+
+
+def llm_detector(
+    *,
+    chat: Callable[[str], str] | None = None,
+    language: str = "French",
+    prompt: str = LLM_RISK_PROMPT,
+) -> Callable[[str], list[Risk]]:
+    """A :func:`flag_risks` ``extra`` detector that asks a language model for risky words.
+
+    The model's proposals are kept only when the word is really on the line it names,
+    and an ``expected`` reading only when it is one of the proposed ``readings``; a
+    reply that is not a JSON list proposes nothing.
+
+    Args:
+        chat: ``prompt -> reply text``; default ``aix.chat`` (``pip install 'voxy[aix]'``,
+            keys and model from aix's own config). Each call costs a model request.
+        language: The text's language, named in the prompt.
+        prompt: A ``string.Template`` with ``$language`` and ``$text`` (numbered lines).
+
+    >>> fake = lambda prompt: '[{"line": 1, "word": "est", "readings": ["verb", "noun"], "expected": "verb"}]'
+    >>> [(r.line, r.word, r.expected) for r in llm_detector(chat=fake)("Il est parti")]
+    [(1, 'est', 'verb')]
+    """
+    from string import Template
+
+    template = Template(prompt)
+
+    def detect(text: str) -> list[Risk]:
+        nonlocal chat
+        if chat is None:
+            try:
+                from aix import chat as aix_chat
+            except ImportError as error:
+                raise ImportError(
+                    "the LLM proposer needs aix (or pass chat=): pip install 'voxy[aix]'"
+                ) from error
+            chat = aix_chat
+        lines = text.split("\n")
+        numbered = "\n".join(f"{i}: {line}" for i, line in enumerate(lines, 1))
+        reply = chat(template.substitute(language=language, text=numbered))
+        if not isinstance(reply, str):  # a streaming chat yields chunks
+            reply = "".join(reply)
+        risks = (_proposed_risk(item, lines) for item in _json_list(reply))
+        return [r for r in risks if r is not None]
 
     return detect

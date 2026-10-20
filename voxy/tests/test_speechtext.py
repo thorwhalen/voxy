@@ -111,3 +111,53 @@ def test_spacy_tagger_says_how_to_install_spacy():
         pytest.skip("spaCy is installed here")
     with pytest.raises(ImportError, match=r"voxy\[pos\]"):
         spacy_tagger()("est")
+
+
+def test_llm_detector_keeps_only_words_really_on_their_line():
+    from voxy.speechtext import llm_detector
+
+    prompts = []
+
+    def chat(prompt):
+        prompts.append(prompt)
+        return (
+            "Here you go:\n```json\n"
+            '[{"line": 2, "word": "Est", "readings": ["verb", "noun"], "expected": "verb", "why": "verb after a subject"},'
+            ' {"line": 1, "word": "ouest", "readings": ["a"]},'
+            ' {"line": 9, "word": "est"},'
+            ' {"line": 3, "word": "ici", "readings": ["x"], "expected": "not-a-reading"},'
+            ' "junk"]\n```'
+        )
+
+    risks = flag_risks("Mon frere\nEst parti\nLoin d'ici.", extra=[llm_detector(chat=chat)])
+    assert [(r.line, r.word, r.expected) for r in risks] == [(2, "Est", "verb"), (3, "ici", None)]
+    assert "verb after a subject" in risks[0].reason
+    assert "1: Mon frere\n2: Est parti" in prompts[0] and "French" in prompts[0]
+
+
+def test_llm_detector_proposes_nothing_on_a_reply_that_is_not_json():
+    from voxy.speechtext import llm_detector
+
+    assert llm_detector(chat=lambda p: "I cannot [help] with that")("est") == []
+
+
+def test_llm_detector_joins_a_streamed_reply_and_matches_abbreviations():
+    from voxy.speechtext import llm_detector
+
+    chunks = ['[{"line": 1, "word": "Dr.", ', '"readings": ["docteur"]}]']
+    (risk,) = llm_detector(chat=lambda p: iter(chunks))("Le Dr. Martin")
+    assert (risk.line, risk.word) == (1, "Dr.")
+
+
+def test_llm_detector_live():
+    """Opt-in: VOXY_LIVE_LLM=1 (a paid model call through aix)."""
+    import os
+
+    import pytest
+
+    if os.environ.get("VOXY_LIVE_LLM") != "1":
+        pytest.skip("set VOXY_LIVE_LLM=1 to call a real model")
+    from voxy.speechtext import llm_detector
+
+    risks = llm_detector()("Mon frere\nest parti vers l'est.")
+    assert all(r.line in (1, 2) for r in risks)
