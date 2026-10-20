@@ -12,6 +12,7 @@
 
    aix_model
    base
+   benchmarks
    diagnosis
    elevenlabs_model
    envs

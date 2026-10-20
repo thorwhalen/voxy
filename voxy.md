@@ -1,4 +1,4 @@
-> built 2026-10-20 03:59 UTC from 35906e0 (main) · voxy 0.0.14. Details: build_info.json
+> built 2026-10-20 08:18 UTC from 6b59cd9 (main) · voxy 0.0.15. Details: build_info.json
 
 # index.html.md
 
@@ -213,6 +213,8 @@ model.close()  # free the model's memory
 Long text is split into paragraphs and sentence-packed chunks, each spoken separately and joined with controlled pauses (`gap_ms=`, `paragraph_gap_ms=`). Model parameters are keyword arguments of `synthesize` (see `voxy.local_clone.LOCAL_CLONE_BACKENDS[name].params`); model options (a variant, a fine-tuned checkpoint) are keyword arguments of `create_speech_model`. Threads are capped at `$VOXY_NUM_THREADS` (default 8). Licences differ: F5-TTS and XTTS-v2 weights are non-commercial (XTTS needs `accept_licence=True`); VoxCPM2, Qwen3-TTS and Chatterbox are Apache-2.0/MIT.
 
 Languages: VoxCPM2 (30 languages), Qwen3-TTS (10, pass `language="French"` etc.), XTTS-v2 (17, `language="fr"`) and Chatterbox with `variant="multilingual"` (23, `language="fr"`) speak beyond English; Chatterbox’s `original` and `turbo` variants and the F5-TTS base model are English (F5 also Chinese).
+
+**Which backend?** [misc/docs/benchmarks.md]() compares the cloning backends on published benchmarks (French and English accuracy, voice likeness rated by people, arenas, licence, price, watermark), with tables, charts and a link to every source. The data is `voxy/data/benchmarks.json`; `python -m voxy benchmarks misc/docs/benchmarks.md` regenerates the tables and charts after you edit it.
 
 ```python
 model = voxy.create_speech_model("chatterbox", variant="multilingual")
@@ -713,6 +715,93 @@ b'\xff\x7f'
 
 * **Return type:**
   [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
+
+
+# _autosummary/voxy.benchmarks.html.md
+
+# voxy.benchmarks
+
+Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.
+
+The data (`voxy/data/benchmarks.json`) has two parts: `models` (licence, size, languages,
+price, watermark per backend id such as `"qwen3tts"` or `"elevenlabs/eleven_v3"`) and
+`results`, one row per published number:
+
+```default
+{model, benchmark, metric, value, higher_is_better, source_url, self_reported, retrieved, note?}
+```
+
+`misc/docs/benchmarks.md` holds the prose; its tables and charts are generated between markers
+(`<!-- voxy-benchmarks:NAME -->` … `<!-- /voxy-benchmarks -->`) by `render_docs`, from the
+`TABLES` and `CHARTS` specs below. To update: edit the JSON (add rows, keep every source URL),
+then `python -m voxy benchmarks misc/docs/benchmarks.md`.
+
+```pycon
+>>> rows = [{"model": "a", "benchmark": "B", "metric": "WER %", "value": 2.0, "self_reported": True,
+...          "source_url": "https://x.org/p"}]
+>>> print(results_table(rows, [("B", "WER %")], models={"a": {"name": "Model A"}}))
+| Model | B (WER %) |
+|---|---|
+| Model A | [2.0](https://x.org/p) (S) |
+```
+
+### Functions
+
+| [`chart`](_autosummary/voxy.benchmarks.html.md#voxy.benchmarks.chart)(rows, spec, path, \*[, models])             | Draw one `CHARTS` spec to an image file (SVG or PNG by extension; needs matplotlib).    |
+|----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| [`facts_table`](_autosummary/voxy.benchmarks.html.md#voxy.benchmarks.facts_table)(models, \*[, columns])                | A Markdown table of each backend's practical facts (licence, French, price, ...).       |
+| [`load_benchmarks`](_autosummary/voxy.benchmarks.html.md#voxy.benchmarks.load_benchmarks)([path])                           | The benchmark data: `{"retrieved", "models", "results"}` (default: the shipped file).   |
+| [`render_docs`](_autosummary/voxy.benchmarks.html.md#voxy.benchmarks.render_docs)(doc_path, \*[, data, tables, ...])    | Regenerate the generated blocks of a benchmarks doc; return the names updated.          |
+| [`results_table`](_autosummary/voxy.benchmarks.html.md#voxy.benchmarks.results_table)(rows, columns, \*[, models])        | A Markdown table: one row per model with any value, one column per (benchmark, metric). |
+| [`select`](_autosummary/voxy.benchmarks.html.md#voxy.benchmarks.select)(rows, \*[, benchmark, metric, model, ...]) | The rows matching every filter given (`source`: a substring of `source_url`).           |
+
+### voxy.benchmarks.chart(rows, spec, path, , models=None)
+
+Draw one `CHARTS` spec to an image file (SVG or PNG by extension; needs matplotlib).
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.benchmarks.facts_table(models, , columns=[('licence', 'Licence'), ('french', 'French'), ('languages', 'Languages'), ('params', 'Size'), ('runs', 'Runs'), ('price', 'Price'), ('watermark', 'Watermark')])
+
+A Markdown table of each backend’s practical facts (licence, French, price, …).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.benchmarks.load_benchmarks(path=None)
+
+The benchmark data: `{"retrieved", "models", "results"}` (default: the shipped file).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### voxy.benchmarks.render_docs(doc_path, , data=None, tables={'french': [('CV3-eval: French', 'WER %'), ('CV3-eval: French', 'SIM (cosine, 0-1)'), ('MiniMax multilingual test: French', 'WER %'), ('MiniMax multilingual test: French', 'SIM (cosine, 0-1)')], 'human': [('Hume Voice Replication Leaderboard (overall, 13 models)', 'same-speaker rating (1-5)'), ('Hume Voice Replication Leaderboard (overall, 13 models)', 'different-person %'), ('Artificial Analysis Controlled Voice arena (8 cloned EN voices, 44 models)', 'Elo'), ('TTS Arena V2 (TTS-AGI, 39 listed)', 'Elo')], 'seed': [('Seed-TTS-eval test-en', 'WER %'), ('Seed-TTS-eval test-en', 'SIM (cosine, 0-1)'), ('Seed-TTS-eval test-zh', 'CER %'), ('Seed-TTS-eval test-zh', 'SIM (cosine, 0-1)')]}, charts={'cloned-voice-arena': {'kind': 'bar', 'title': 'Blind preference votes on cloned voices (Artificial Analysis, Elo)', 'y': ('Artificial Analysis Controlled Voice arena (8 cloned EN voices, 44 models)', 'Elo')}, 'french-tradeoff': {'kind': 'scatter', 'source': 'open_tts_leaderboard', 'title': 'French cloning: intelligibility vs likeness (CV3-eval, HF Open TTS Leaderboard)', 'x': ('CV3-eval: French', 'WER %'), 'y': ('CV3-eval: French', 'SIM (cosine, 0-1)')}, 'human-likeness': {'kind': 'bar', 'title': 'Human raters: does it sound like the reference person? (Hume, 1-5)', 'y': ('Hume Voice Replication Leaderboard (overall, 13 models)', 'same-speaker rating (1-5)')}}, charts_dir='benchmarks', draw=True)
+
+Regenerate the generated blocks of a benchmarks doc; return the names updated.
+
+A block `<!-- voxy-benchmarks:NAME -->...<!-- /voxy-benchmarks -->` gets the table `NAME`
+(`facts` is the practical-facts table), or the chart `NAME` drawn to
+`<charts_dir>/NAME.svg` next to the doc and embedded as an image.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### voxy.benchmarks.results_table(rows, columns, , models=None)
+
+A Markdown table: one row per model with any value, one column per (benchmark, metric).
+
+A cell lists every source’s number, linked, with `(S)` when the developer measured its own model.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.benchmarks.select(rows, , benchmark=None, metric=None, model=None, source=None, independent=None)
+
+The rows matching every filter given (`source`: a substring of `source_url`).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
 
 # _autosummary/voxy.diagnosis.html.md
@@ -1554,6 +1643,7 @@ True
 | [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.     |
 |--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
 | [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                   |
+| [`benchmarks`](_autosummary/voxy.benchmarks.html.md#module-voxy.benchmarks)               | Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.    |
 | [`diagnosis`](_autosummary/voxy.diagnosis.html.md#module-voxy.diagnosis)                 | Diagnosis pages: render one text through a grid of (model x parameters), listen side by side. |
 | [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model)   | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.             |
 | [`envs`](_autosummary/voxy.envs.html.md#module-voxy.envs)                           | Isolated Python environments for backends whose dependencies clash with yours.                |
@@ -2702,18 +2792,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-20 03:59 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/35906e07a53a87f9b0de8c08dab82c84ce882c22"><code>35906e0</code></a> on branch <code>main</code>, for **voxy 0.0.14** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-20 08:18 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/6b59cd94e9ad4aaca90111b3ccddc17a1fea0746"><code>6b59cd9</code></a> on branch <code>main</code>, for **voxy 0.0.15** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.14) is behind the latest release on PyPI (0.0.15): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.15) is behind the latest release on PyPI (0.0.16): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/35906e07a53a87f9b0de8c08dab82c84ce882c22"><code>35906e07a53a87f9b0de8c08dab82c84ce882c22</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/6b59cd94e9ad4aaca90111b3ccddc17a1fea0746"><code>6b59cd94e9ad4aaca90111b3ccddc17a1fea0746</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -2724,9 +2814,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39366929152">39366929152</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39392064105">39392064105</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>35906e07a53a87f9b0de8c08dab82c84ce882c22</code> (in the history of the built commit) |
+| Event commit | <code>6b59cd94e9ad4aaca90111b3ccddc17a1fea0746</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -2751,13 +2841,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.15/">0.0.15</a>, newer than the documented version (0.0.14).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.16/">0.0.16</a>, newer than the documented version (0.0.15).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 35906e07a53a87f9b0de8c08dab82c84ce882c22
+git checkout 6b59cd94e9ad4aaca90111b3ccddc17a1fea0746
 pip install "epythet==0.2.18"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

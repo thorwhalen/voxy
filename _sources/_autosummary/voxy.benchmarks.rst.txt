@@ -1,0 +1,17 @@
+voxy.benchmarks
+===============
+
+.. automodule:: voxy.benchmarks
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      chart
+      facts_table
+      load_benchmarks
+      render_docs
+      results_table
+      select
+   

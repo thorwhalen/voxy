@@ -10,6 +10,7 @@
 - [voxy](_autosummary/voxy.html.md): Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
 - [voxy.aix_model](_autosummary/voxy.aix_model.html.md): Speech through aix (LiteLLM): OpenAI’s TTS voices and the other providers LiteLLM routes.
 - [voxy.base](_autosummary/voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
+- [voxy.benchmarks](_autosummary/voxy.benchmarks.html.md): Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.
 - [voxy.diagnosis](_autosummary/voxy.diagnosis.html.md): Diagnosis pages: render one text through a grid of (model x parameters), listen side by side.
 - [voxy.elevenlabs_model](_autosummary/voxy.elevenlabs_model.html.md): ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.
 - [voxy.envs](_autosummary/voxy.envs.html.md): Isolated Python environments for backends whose dependencies clash with yours.
@@ -34,7 +35,7 @@
 - [voxy.workers.voxcpm_adapter](_autosummary/voxy.workers.voxcpm_adapter.html.md): VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.
 - [voxy.workers.xtts_adapter](_autosummary/voxy.workers.xtts_adapter.html.md): XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.
 - [For AI agents](ai-agents.html.md): &#96;voxy&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-20 03:59 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-20 08:18 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
 
 ## Optional
 
