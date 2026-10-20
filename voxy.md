@@ -1,4 +1,4 @@
-> built 2026-10-18 00:25 UTC from e86823f (main) · voxy 0.0.13. Details: build_info.json
+> built 2026-10-20 03:59 UTC from 35906e0 (main) · voxy 0.0.14. Details: build_info.json
 
 # index.html.md
 
@@ -234,6 +234,8 @@ python -m voxy diagnose spec.json --out renders/first-listen --publish
  "grid": [{"backend": "voxcpm", "params": {"cfg_value": [1.5, 2.0, 2.5]}},
           {"backend": "chatterbox", "params": {"exaggeration": [0.3, 0.6]}}]}
 ```
+
+Cards are titled with readable names (the backend, then the settings that vary, e.g. “Chatterbox 0.3”). For a page you share with other listeners, optional spec keys help: `references` (named clips, e.g. a raw and a denoised one, each with a `label`), `appendix` (reference name → a note: those variants go in a collapsed section at the end), `imported` (clips rendered elsewhere, such as a cloud service, with their `backend`, `label` and `audio_file`), `backend_notes`, `noindex`, and `notes_sink` + `page_url`, which save every rating, note, name and clip play as they happen to an [annoquest](https://github.com/i2mint/annoquest) server (`{"kind": "annoquest", "url": "/api/annoquest", "request": "<id>"}`). The page says so, and `annoquest-request.json` is written next to it for registering on that server; add `?reader=<name>` to the link you send each listener to tell them apart.
 
 ### The voice library: clone once, reuse by name
 
@@ -739,25 +741,39 @@ model’s defaults in bold), generation time and real-time factor, and lets each
 listener rate it (1-5) and write a note. Ratings stay in the listener’s browser;
 “Copy my notes” turns them into a text block to paste into a message.
 
+For a page shared with other listeners: `notes_sink` saves every rating and
+note as it is made (to an annoquest server, whose owner page then lists them per
+listener), `appendix` folds the variants of some references into a collapsed
+section, and `imported` adds clips rendered elsewhere (a cloud service).
+
 ### Module Attributes
 
 | [`BACKEND_PREFIXES`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.BACKEND_PREFIXES)   | Short, readable ID prefixes (other backends use their first two letters).   |
 |---------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [`BACKEND_NAMES`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.BACKEND_NAMES)      | Display names for page sections and default variant labels.                 |
 
 ### Functions
 
-| [`build_page`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.build_page)(results, out_dir, \*[, title, ...])   | Write `out_dir/index.html`: one card per variant, grouped by backend.                 |
-|---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
-| [`expand_grid`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.expand_grid)(grid, \*[, references])              | Variants from grid rows: list values are swept (cartesian product), scalars fixed.    |
-| [`page_id`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.page_id)(results, title)                          | A short ID for the page (its notes are stored under it).                              |
-| [`references_from_spec`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.references_from_spec)(spec, out_dir, \*[, log])   | `(voices, shown)`: reference voices for rendering, and their page entries.            |
-| [`render_grid`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.render_grid)(text, references, variants, ...)     | Render every variant to `out_dir/audio/<id>.<format>`; return (and save) the results. |
-| [`run_spec`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.run_spec)(spec, out_dir, \*[, log])               | Render a spec's grid and build its page; return the page path.                        |
+| [`annoquest_request`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.annoquest_request)(results, \*, request_id, ...)   | The annoquest request a `notes_sink` page reports to: one item per variant (a 1-5 rating and a note), so the owner page reads the saved notes per listener.   |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`backend_name`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.backend_name)(backend)                             | The display name of a backend (its key when it has none).                                                                                                     |
+| [`build_page`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.build_page)(results, out_dir, \*[, title, ...])    | Write `out_dir/index.html`: one card per variant, grouped by backend.                                                                                         |
+| [`expand_grid`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.expand_grid)(grid, \*[, references])               | Variants from grid rows: list values are swept (cartesian product), scalars fixed.                                                                            |
+| [`import_results`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.import_results)(entries, out_dir)                  | Results for clips rendered elsewhere (a cloud service, another machine).                                                                                      |
+| [`page_id`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.page_id)(results, title)                           | A short ID for the page (its notes are stored under it).                                                                                                      |
+| [`references_from_spec`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.references_from_spec)(spec, out_dir, \*[, log])    | `(voices, shown)`: reference voices for rendering, and their page entries.                                                                                    |
+| [`render_grid`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.render_grid)(text, references, variants, ...)      | Render every variant to `out_dir/audio/<id>.<format>`; return (and save) the results.                                                                         |
+| [`run_spec`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.run_spec)(spec, out_dir, \*[, log])                | Render a spec's grid and build its page; return the page path.                                                                                                |
+| [`variant_labels`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.variant_labels)(results)                           | Readable names: the backend's name, then the values of the settings that vary between that backend's variants.                                                |
 
 ### Classes
 
 | [`Variant`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.Variant)(backend[, params, init, reference, ...])   | One configuration to render: a backend, its model options and parameters.   |
 |-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+
+### voxy.diagnosis.BACKEND_NAMES *= {'chatterbox': 'Chatterbox', 'elevenlabs': 'ElevenLabs', 'f5tts': 'F5-TTS', 'qwen3tts': 'Qwen3-TTS', 'voxcpm': 'VoxCPM2', 'xtts': 'XTTS-v2'}*
+
+Display names for page sections and default variant labels.
 
 ### voxy.diagnosis.BACKEND_PREFIXES *= {'chatterbox': 'CB', 'elevenlabs': 'EL', 'f5tts': 'F5', 'qwen3tts': 'QW', 'voxcpm': 'VX', 'xtts': 'XT'}*
 
@@ -780,13 +796,45 @@ Stable ID from backend, init, params and reference (not the text).
 True
 ```
 
-### voxy.diagnosis.build_page(results, out_dir, , title='Voice diagnosis', text='', references=None, intro='')
+### voxy.diagnosis.annoquest_request(results, , request_id, page_url, title, intro='', api_url='/api/annoquest', appendix=None, prompt='How much does this sound like the real voice, and how natural is it?')
+
+The annoquest request a `notes_sink` page reports to: one item per variant
+(a 1-5 rating and a note), so the owner page reads the saved notes per listener.
+Register it on the server with `python -m annoquest_server put-request <file>`.
+
+```pycon
+>>> r = annoquest_request([{"id": "CB-AAAA", "backend": "chatterbox"}],
+...     request_id="abcdefgh12", page_url="https://example.org/p/", title="T")
+>>> [(i["id"], i["title"], i["response"]) for i in r["items"]]
+[('CB-AAAA', 'Chatterbox', 'stars')]
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### voxy.diagnosis.backend_name(backend)
+
+The display name of a backend (its key when it has none).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.diagnosis.build_page(results, out_dir, , title='Voice diagnosis', text='', references=None, intro='', appendix=None, backend_notes=None, notes_sink=None, noindex=False)
 
 Write `out_dir/index.html`: one card per variant, grouped by backend.
 
-`references`: name -> `{"audio": relative path, "text": ..., ...}` shown
-at the top so listeners can compare with the real voice.
-
+* **Parameters:**
+  * **references** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – name -> `{"audio": relative path, "text": ..., "label"?, "processing"?, ...}`
+    shown so listeners can compare with the real voice.
+  * **appendix** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – reference name -> a note: the variants made from those references
+    (and the references themselves) go in a collapsed section at the end,
+    under the note.
+  * **backend_notes** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – backend -> a note shown under its section heading (default:
+    the local backend’s notes and licence).
+  * **notes_sink** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `{"kind": "annoquest", "url": "/api/annoquest", "request": id}`
+    saves ratings, notes, the listener’s name and clip plays as they happen
+    (the page says so). Without it they stay in the listener’s browser.
+  * **noindex** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Ask search engines not to index the page (for a page shared by link).
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
@@ -806,6 +854,17 @@ Every variant is rendered once per reference name.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Variant`](_autosummary/voxy.diagnosis.html.md#voxy.diagnosis.Variant)]
+
+### voxy.diagnosis.import_results(entries, out_dir)
+
+Results for clips rendered elsewhere (a cloud service, another machine).
+
+Each entry: `backend`, `audio_file`, and optionally `params`, `init`,
+`reference`, `label`, `generation_seconds`. The audio is copied next to the
+page and the entry gets the same ID scheme as rendered variants.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
 ### voxy.diagnosis.page_id(results, title)
 
@@ -848,10 +907,32 @@ Render a spec’s grid and build its page; return the page path.
 
 Spec keys: `title`, `text` (or `text_file`), `references` or `voice`
 (+ `n_references`), `grid` (rows for `expand_grid`), optional `intro`,
-`audio_format`.
+`audio_format`, `imported` (see `import_results`), `appendix`,
+`backend_notes`, `noindex` and `notes_sink` (see `build_page`). With an
+annoquest `notes_sink` and a `page_url` (where the page will be served), the
+request to register on that server is written next to the page.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.diagnosis.variant_labels(results)
+
+Readable names: the backend’s name, then the values of the settings that vary
+between that backend’s variants. A result’s own `label` wins.
+
+```pycon
+>>> rs = [
+...     {"id": "a", "backend": "chatterbox", "params": {"language": "fr", "exaggeration": 0.3}},
+...     {"id": "b", "backend": "chatterbox", "params": {"language": "fr", "exaggeration": 0.5}},
+...     {"id": "c", "backend": "voxcpm", "params": {"cfg_value": 2.0}},
+...     {"id": "d", "backend": "elevenlabs", "label": "ElevenLabs v3"},
+... ]
+>>> variant_labels(rs)
+{'a': 'Chatterbox 0.3', 'b': 'Chatterbox 0.5', 'c': 'VoxCPM2', 'd': 'ElevenLabs v3'}
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 
 # _autosummary/voxy.elevenlabs_model.html.md
@@ -2621,18 +2702,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-18 00:25 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/e86823f69412246f51fa8ea23fa61ab2b5f2267e"><code>e86823f</code></a> on branch <code>main</code>, for **voxy 0.0.13** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-20 03:59 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/35906e07a53a87f9b0de8c08dab82c84ce882c22"><code>35906e0</code></a> on branch <code>main</code>, for **voxy 0.0.14** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.13) is behind the latest release on PyPI (0.0.14): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.14) is behind the latest release on PyPI (0.0.15): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/e86823f69412246f51fa8ea23fa61ab2b5f2267e"><code>e86823f69412246f51fa8ea23fa61ab2b5f2267e</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/35906e07a53a87f9b0de8c08dab82c84ce882c22"><code>35906e07a53a87f9b0de8c08dab82c84ce882c22</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -2643,16 +2724,16 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39082474188">39082474188</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39366929152">39366929152</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>e86823f69412246f51fa8ea23fa61ab2b5f2267e</code> (in the history of the built commit) |
+| Event commit | <code>35906e07a53a87f9b0de8c08dab82c84ce882c22</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.17  |
-| Sphinx   | 9.1.0   |
+| epythet  | 0.2.18  |
+| Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
 | Python   | 3.12.15 |
 
@@ -2670,14 +2751,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.14/">0.0.14</a>, newer than the documented version (0.0.13).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.15/">0.0.15</a>, newer than the documented version (0.0.14).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout e86823f69412246f51fa8ea23fa61ab2b5f2267e
-pip install "epythet==0.2.17"
+git checkout 35906e07a53a87f9b0de8c08dab82c84ce882c22
+pip install "epythet==0.2.18"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

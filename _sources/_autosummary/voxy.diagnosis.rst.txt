@@ -9,17 +9,22 @@ voxy.diagnosis
    .. autosummary::
    
       BACKEND_PREFIXES
+      BACKEND_NAMES
    
    .. rubric:: Functions
 
    .. autosummary::
    
+      annoquest_request
+      backend_name
       build_page
       expand_grid
+      import_results
       page_id
       references_from_spec
       render_grid
       run_spec
+      variant_labels
    
    .. rubric:: Classes
 

@@ -337,6 +337,7 @@ to install the CSM model and its dependencies.</p>
 </span><span id="line-3"><span class="w">          </span><span class="p">{</span><span class="nt">"backend"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chatterbox"</span><span class="p">,</span><span class="w"> </span><span class="nt">"params"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"exaggeration"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.3</span><span class="p">,</span><span class="w"> </span><span class="mf">0.6</span><span class="p">]}}]}</span>
 </span></code></pre></div>
 </div>
+<p>Cards are titled with readable names (the backend, then the settings that vary, e.g. “Chatterbox 0.3”). For a page you share with other listeners, optional spec keys help: <code class="docutils literal notranslate"><span class="pre">references</span></code> (named clips, e.g. a raw and a denoised one, each with a <code class="docutils literal notranslate"><span class="pre">label</span></code>), <code class="docutils literal notranslate"><span class="pre">appendix</span></code> (reference name → a note: those variants go in a collapsed section at the end), <code class="docutils literal notranslate"><span class="pre">imported</span></code> (clips rendered elsewhere, such as a cloud service, with their <code class="docutils literal notranslate"><span class="pre">backend</span></code>, <code class="docutils literal notranslate"><span class="pre">label</span></code> and <code class="docutils literal notranslate"><span class="pre">audio_file</span></code>), <code class="docutils literal notranslate"><span class="pre">backend_notes</span></code>, <code class="docutils literal notranslate"><span class="pre">noindex</span></code>, and <code class="docutils literal notranslate"><span class="pre">notes_sink</span></code> + <code class="docutils literal notranslate"><span class="pre">page_url</span></code>, which save every rating, note, name and clip play as they happen to an <a class="reference external" href="https://github.com/i2mint/annoquest" rel="nofollow noopener">annoquest<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> server (<code class="docutils literal notranslate"><span class="pre">{"kind":</span> <span class="pre">"annoquest",</span> <span class="pre">"url":</span> <span class="pre">"/api/annoquest",</span> <span class="pre">"request":</span> <span class="pre">"&lt;id&gt;"}</span></code>). The page says so, and <code class="docutils literal notranslate"><span class="pre">annoquest-request.json</span></code> is written next to it for registering on that server; add <code class="docutils literal notranslate"><span class="pre">?reader=&lt;name&gt;</span></code> to the link you send each listener to tell them apart.</p>
 </section>
 <section id="the-voice-library-clone-once-reuse-by-name">
 <h3>The voice library: clone once, reuse by name<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#the-voice-library-clone-once-reuse-by-name" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#the-voice-library-clone-once-reuse-by-name'">¶</a></h3>
@@ -419,7 +420,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-18 00:25 UTC from <a href="https://github.com/thorwhalen/voxy/commit/e86823f69412246f51fa8ea23fa61ab2b5f2267e">e86823f</a> (main) · voxy 0.0.13 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-20 03:59 UTC from <a href="https://github.com/thorwhalen/voxy/commit/35906e07a53a87f9b0de8c08dab82c84ce882c22">35906e0</a> (main) · voxy 0.0.14 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -463,7 +464,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=9fc46840"></script>
+<script src="_static/documentation_options.js?v=544df88d"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>
