@@ -47,9 +47,18 @@ TABLES = {
         ("Seed-TTS-eval test-zh", "SIM (cosine, 0-1)"),
     ],
     "human": [
-        ("Hume Voice Replication Leaderboard (overall, 13 models)", "same-speaker rating (1-5)"),
-        ("Hume Voice Replication Leaderboard (overall, 13 models)", "different-person %"),
-        ("Artificial Analysis Controlled Voice arena (8 cloned EN voices, 44 models)", "Elo"),
+        (
+            "Hume Voice Replication Leaderboard (overall, 13 models)",
+            "same-speaker rating (1-5)",
+        ),
+        (
+            "Hume Voice Replication Leaderboard (overall, 13 models)",
+            "different-person %",
+        ),
+        (
+            "Artificial Analysis Controlled Voice arena (8 cloned EN voices, 44 models)",
+            "Elo",
+        ),
         ("TTS Arena V2 (TTS-AGI, 39 listed)", "Elo"),
     ],
 }
@@ -66,12 +75,18 @@ CHARTS = {
     "human-likeness": {
         "kind": "bar",
         "title": "Human raters: does it sound like the reference person? (Hume, 1-5)",
-        "y": ("Hume Voice Replication Leaderboard (overall, 13 models)", "same-speaker rating (1-5)"),
+        "y": (
+            "Hume Voice Replication Leaderboard (overall, 13 models)",
+            "same-speaker rating (1-5)",
+        ),
     },
     "cloned-voice-arena": {
         "kind": "bar",
         "title": "Blind preference votes on cloned voices (Artificial Analysis, Elo)",
-        "y": ("Artificial Analysis Controlled Voice arena (8 cloned EN voices, 44 models)", "Elo"),
+        "y": (
+            "Artificial Analysis Controlled Voice arena (8 cloned EN voices, 44 models)",
+            "Elo",
+        ),
     },
 }
 FACT_COLUMNS = [
@@ -122,7 +137,8 @@ def _cell(rows: Sequence[Mapping]) -> str:
     if not rows:
         return MISSING
     return " · ".join(
-        f"[{r['value']}]({r['source_url']})" + (f" {SELF_MARK}" if r.get("self_reported") else "")
+        f"[{r['value']}]({r['source_url']})"
+        + (f" {SELF_MARK}" if r.get("self_reported") else "")
         for r in rows
     )
 
@@ -155,17 +171,25 @@ def results_table(
     return _markdown(header, body)
 
 
-def facts_table(models: Mapping, *, columns: Sequence[tuple[str, str]] = FACT_COLUMNS) -> str:
+def facts_table(
+    models: Mapping, *, columns: Sequence[tuple[str, str]] = FACT_COLUMNS
+) -> str:
     """A Markdown table of each backend's practical facts (licence, French, price, ...)."""
 
     def fmt(v):
-        return MISSING if v is None else ("yes" if v is True else "no" if v is False else str(v))
+        return (
+            MISSING
+            if v is None
+            else ("yes" if v is True else "no" if v is False else str(v))
+        )
 
     body = [[m["name"]] + [fmt(m.get(k)) for k, _ in columns] for m in models.values()]
     return _markdown(["Model"] + [label for _, label in columns], body)
 
 
-def chart(rows: Iterable[Mapping], spec: Mapping, path: str | os.PathLike, *, models=None) -> Path:
+def chart(
+    rows: Iterable[Mapping], spec: Mapping, path: str | os.PathLike, *, models=None
+) -> Path:
     """Draw one ``CHARTS`` spec to an image file (SVG or PNG by extension; needs matplotlib)."""
     import matplotlib
 
@@ -185,7 +209,9 @@ def chart(rows: Iterable[Mapping], spec: Mapping, path: str | os.PathLike, *, mo
     if spec["kind"] == "bar":
         ys = values(*spec["y"])
         names = sorted(ys, key=ys.get, reverse=True)
-        ax.barh([_name(m, models) for m in names], [ys[m] for m in names], color="#6a8caf")
+        ax.barh(
+            [_name(m, models) for m in names], [ys[m] for m in names], color="#6a8caf"
+        )
         ax.invert_yaxis()
         ax.set_xlabel(spec["y"][1])
         lo = min(ys.values())
@@ -196,7 +222,13 @@ def chart(rows: Iterable[Mapping], spec: Mapping, path: str | os.PathLike, *, mo
         xs, ys = values(*spec["x"]), values(*spec["y"])
         for m in sorted(set(xs) & set(ys)):
             ax.scatter(xs[m], ys[m], s=60, color="#6a8caf")
-            ax.annotate(_name(m, models), (xs[m], ys[m]), textcoords="offset points", xytext=(6, 4), fontsize=9)
+            ax.annotate(
+                _name(m, models),
+                (xs[m], ys[m]),
+                textcoords="offset points",
+                xytext=(6, 4),
+                fontsize=9,
+            )
         ax.set_xlabel(spec["x"][1] + " (lower is better)")
         ax.set_ylabel(spec["y"][1] + " (higher is better)")
         ax.margins(0.25)
@@ -244,10 +276,14 @@ def render_docs(
                 chart(rows, charts[name], doc_path.parent / rel, models=models)
             body = f"![{charts[name]['title']}]({rel})"
         else:
-            raise ValueError(f"No table or chart named {name!r} for {match.group(0)[:60]!r}")
+            raise ValueError(
+                f"No table or chart named {name!r} for {match.group(0)[:60]!r}"
+            )
         updated.append(name)
         return f"<!-- {DOC_MARKER}:{name} -->\n{body}\n<!-- /{DOC_MARKER} -->"
 
-    pattern = re.compile(rf"<!-- {DOC_MARKER}:([\w-]+) -->.*?<!-- /{DOC_MARKER} -->", re.S)
+    pattern = re.compile(
+        rf"<!-- {DOC_MARKER}:([\w-]+) -->.*?<!-- /{DOC_MARKER} -->", re.S
+    )
     doc_path.write_text(pattern.sub(block, doc_path.read_text()))
     return updated

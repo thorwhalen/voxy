@@ -40,7 +40,9 @@ def main(argv=None) -> int:
     diagnose.add_argument("--out", required=True, help="output folder")
     diagnose.add_argument("--publish", action="store_true", help="annals publish it")
     diagnose.add_argument("--session", default=None, help="annals --session name")
-    bench = commands.add_parser("benchmarks", help="regenerate a benchmarks doc's tables and charts")
+    bench = commands.add_parser(
+        "benchmarks", help="regenerate a benchmarks doc's tables and charts"
+    )
     bench.add_argument("doc", help="Markdown doc with voxy-benchmarks blocks")
     bench.add_argument("--data", help="benchmarks JSON (default: the shipped data)")
     args = parser.parse_args(argv)
