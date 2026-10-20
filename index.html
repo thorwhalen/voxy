@@ -126,7 +126,7 @@
 <section id="voxy">
 <h1>voxy<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy">¶</a></h1>
 <p>Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designing voices.</p>
-<p>To install:	<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">voxy</span></code> (add <code class="docutils literal notranslate"><span class="pre">'voxy[elevenlabs]'</span></code>, <code class="docutils literal notranslate"><span class="pre">'voxy[aix]'</span></code> or <code class="docutils literal notranslate"><span class="pre">'voxy[fal]'</span></code> for those services) The part-of-speech heteronym detector (<code class="docutils literal notranslate"><span class="pre">voxy.speechtext.pos_detector</span></code>) needs <code class="docutils literal notranslate"><span class="pre">'voxy[pos]'</span></code> plus <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">spacy</span> <span class="pre">download</span> <span class="pre">fr_core_news_sm</span></code>.</p>
+<p>To install:	<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">voxy</span></code> (add <code class="docutils literal notranslate"><span class="pre">'voxy[elevenlabs]'</span></code>, <code class="docutils literal notranslate"><span class="pre">'voxy[aix]'</span></code> or <code class="docutils literal notranslate"><span class="pre">'voxy[fal]'</span></code> for those services) The part-of-speech heteronym detector (<code class="docutils literal notranslate"><span class="pre">voxy.speechtext.pos_detector</span></code>) needs <code class="docutils literal notranslate"><span class="pre">'voxy[pos]'</span></code> plus <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">spacy</span> <span class="pre">download</span> <span class="pre">fr_core_news_sm</span></code>. The LLM proposer (<code class="docutils literal notranslate"><span class="pre">voxy.speechtext.llm_detector</span></code>) uses <code class="docutils literal notranslate"><span class="pre">'voxy[aix]'</span></code> unless you pass <code class="docutils literal notranslate"><span class="pre">chat=</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">import</span><span class="w"> </span><span class="nn">voxy</span>
 </span><span id="line-2">
 </span><span id="line-3"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span><span class="s2">"Hello!"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"ada"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
@@ -424,7 +424,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-20 17:40 UTC from <a href="https://github.com/thorwhalen/voxy/commit/31a8e318a5c1dd2adeb27fa7bb61bd781194f113">31a8e31</a> (main) · voxy 0.0.21 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-20 17:45 UTC from <a href="https://github.com/thorwhalen/voxy/commit/e80b610436dd4cfc0700de337dd3c58e1a300a59">e80b610</a> (main) · voxy 0.0.22 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -468,7 +468,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=a11416ff"></script>
+<script src="_static/documentation_options.js?v=96ec9c95"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

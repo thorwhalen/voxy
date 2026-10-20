@@ -17,7 +17,8 @@ ASR checks cannot catch this (Whisper hears “est” either way), so the fix is
    supply, e.g. from Lexique; more detectors plug in through `extra`), saying which
    ones sit where the capital trigger bites. [`pos_detector()`](#voxy.speechtext.pos_detector) is one such
    detector: it tags the text and, for heteronyms whose part of speech picks the
-   reading (French “est”: verb /ɛ/, noun /ɛst/), names the `expected` reading.
+   reading (French “est”: verb /ɛ/, noun /ɛst/), names the `expected` reading;
+   [`llm_detector()`](#voxy.speechtext.llm_detector) asks a language model for the risky words and their readings.
 
 Engines differ in what they accept: for several local models text is the only lever
 (they take no phonemes or SSML), so this is a text-level step; it plugs into
@@ -34,16 +35,18 @@ True
 
 ### Module Attributes
 
-| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)          | the next line's capital then starts a new one.                                                             |
-|------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
-| [`Tagger`](#voxy.speechtext.Tagger)                | `text -> (char offset, token, universal POS tag)` for every token.                                         |
-| [`DFLT_SPACY_MODEL`](#voxy.speechtext.DFLT_SPACY_MODEL)      | The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French). |
-| [`FRENCH_POS_HETERONYMS`](#voxy.speechtext.FRENCH_POS_HETERONYMS) | `{word: {UPOS: reading}}`.                                                                                 |
+| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)          | the next line's capital then starts a new one.                                                                           |
+|------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| [`Tagger`](#voxy.speechtext.Tagger)                | `text -> (char offset, token, universal POS tag)` for every token.                                                       |
+| [`DFLT_SPACY_MODEL`](#voxy.speechtext.DFLT_SPACY_MODEL)      | The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).               |
+| [`FRENCH_POS_HETERONYMS`](#voxy.speechtext.FRENCH_POS_HETERONYMS) | `{word: {UPOS: reading}}`.                                                                                               |
+| [`LLM_RISK_PROMPT`](#voxy.speechtext.LLM_RISK_PROMPT)       | The prompt [`llm_detector()`](#voxy.speechtext.llm_detector) sends; `$language` and `$text` are filled in. |
 
 ### Functions
 
 | [`flag_risks`](#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra])   | Words of `text` a model may misread, in text order.                                                                                  |
 |----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| [`llm_detector`](#voxy.speechtext.llm_detector)(\*[, chat, language, prompt])  | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector that asks a language model for risky words.         |
 | [`pos_detector`](#voxy.speechtext.pos_detector)([rules, tagger])               | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading. |
 | [`prepare_speech_text`](#voxy.speechtext.prepare_speech_text)(text, \*[, ...])        | Display text in, speech text out, with a record of every change.                                                                     |
 | [`spacy_tagger`](#voxy.speechtext.spacy_tagger)([model])                       | A [`Tagger`](#voxy.speechtext.Tagger) over a spaCy pipeline, loaded on first use.                                |
@@ -72,6 +75,10 @@ The reading names are the keys of the IPA table given to `voxy.pronounce`.
 
 * **Type:**
   French heteronyms whose part of speech picks the reading
+
+### voxy.speechtext.LLM_RISK_PROMPT *= 'You help a text-to-speech system avoid misreadings. Below is a $language text, its lines numbered. List the words a speech model may misread: heteronyms (words with more than one pronunciation, such as French "est" as a verb or as a noun), names, abbreviations. For each, give the line, the word exactly as written, short names of its possible readings, and the reading this context needs.\\n\\nAnswer with a JSON list only, one object per word:\\n[{"line": 2, "word": "est", "readings": ["verb", "noun"], "expected": "verb", "why": "..."}]\\nUse "expected": null when the context does not decide. Answer [] if nothing is risky.\\n\\n$text\\n'*
+
+The prompt [`llm_detector()`](#voxy.speechtext.llm_detector) sends; `$language` and `$text` are filled in.
 
 ### *class* voxy.speechtext.Risk(line, word, reason, readings=(), line_initial_capital=False, expected=None)
 
@@ -121,6 +128,28 @@ Words of `text` a model may misread, in text order.
 
 A heteronym that is capitalised at a line start where no sentence begins is flagged
 with `line_initial_capital=True`: that is where the capital trigger bites.
+
+### voxy.speechtext.llm_detector(, chat=None, language='French', prompt='You help a text-to-speech system avoid misreadings. Below is a $language text, its lines numbered. List the words a speech model may misread: heteronyms (words with more than one pronunciation, such as French "est" as a verb or as a noun), names, abbreviations. For each, give the line, the word exactly as written, short names of its possible readings, and the reading this context needs.\\n\\nAnswer with a JSON list only, one object per word:\\n[{"line": 2, "word": "est", "readings": ["verb", "noun"], "expected": "verb", "why": "..."}]\\nUse "expected": null when the context does not decide. Answer [] if nothing is risky.\\n\\n$text\\n')
+
+A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector that asks a language model for risky words.
+
+The model’s proposals are kept only when the word is really on the line it names,
+and an `expected` reading only when it is one of the proposed `readings`; a
+reply that is not a JSON list proposes nothing.
+
+* **Parameters:**
+  * **chat** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `prompt -> reply text`; default `aix.chat` (`pip install 'voxy[aix]'`,
+    keys and model from aix’s own config). Each call costs a model request.
+  * **language** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The text’s language, named in the prompt.
+  * **prompt** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – A `string.Template` with `$language` and `$text` (numbered lines).
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Risk`](#voxy.speechtext.Risk)]]
+
+```pycon
+>>> fake = lambda prompt: '[{"line": 1, "word": "est", "readings": ["verb", "noun"], "expected": "verb"}]'
+>>> [(r.line, r.word, r.expected) for r in llm_detector(chat=fake)("Il est parti")]
+[(1, 'est', 'verb')]
+```
 
 ### voxy.speechtext.pos_detector(rules={'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}}, , tagger=None)
 
