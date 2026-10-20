@@ -7,7 +7,7 @@ How the voice-cloning backends voxy wraps compare on published, objective measur
 - **Voice likeness, judged by people:** VoxCPM2 leads the one human-rated cloning leaderboard (Hume, 1st of 13). ElevenLabs Multilingual v2 is mid-table and Qwen3-TTS close behind it. ElevenLabs v3 is last: raters judged 28% of its clips to be a different person [3].
 - **French, measured independently:** on CV3-eval French with cloning, Qwen3-TTS is the most intelligible and VoxCPM2 the most alike; Chatterbox Multilingual trails on both [2]. No study puts ElevenLabs, F5-TTS or XTTS-v2 on the same French test.
 - **Blind preference on cloned English voices:** ElevenLabs v3 > Multilingual v2 > Chatterbox > XTTS-v2 (Artificial Analysis); Qwen3-TTS, VoxCPM2 and F5-TTS are not listed [4].
-- **Cost and licence:** Qwen3-TTS, VoxCPM2 (Apache-2.0) and Chatterbox (MIT, watermarked) are free for any use. F5-TTS and XTTS-v2 weights are non-commercial. ElevenLabs bills 1 credit per character on both models.
+- **Cost, licence, watermark:** Qwen3-TTS, VoxCPM2 (Apache-2.0) and Chatterbox (MIT) are free for any use. Chatterbox and ElevenLabs embed an inaudible watermark; Qwen3-TTS and VoxCPM2 do not. F5-TTS and XTTS-v2 weights are non-commercial. ElevenLabs bills 1 credit per character on both models.
 - **Trade-off:** for French, start with Qwen3-TTS (stability) and VoxCPM2 (likeness), and judge by ear. ElevenLabs is the fast, paid option; v3 is the more expressive, v2 the more faithful to the voice.
 
 ## The charts
@@ -78,10 +78,10 @@ Each cell links to its source; several sources are separated by `·`; `—` mean
 <!-- voxy-benchmarks:facts -->
 | Model | Licence | French | Languages | Size | Runs | Price | Watermark |
 |---|---|---|---|---|---|---|---|
-| ElevenLabs Multilingual v2 | proprietary service | yes | 29 | — | cloud API | about $0.08 per 1,000 characters (1 credit per character) | not documented |
-| ElevenLabs v3 | proprietary service | yes | 70 | — | cloud API | about $0.08 per 1,000 characters (1 credit per character) | not documented |
-| Qwen3-TTS 1.7B | Apache-2.0 | yes | 10 | 1.7B | local, CPU or GPU | free (local) | none |
-| VoxCPM2 | Apache-2.0 | yes | 30 | 2B | local, CPU or GPU (about 8 GB VRAM) | free (local) | none |
+| ElevenLabs Multilingual v2 | proprietary service | yes | 29 | — | cloud API | about $0.08 per 1,000 characters (1 credit per character) | inaudible, embedded (ElevenLabs Audio Detector) |
+| ElevenLabs v3 | proprietary service | yes | 70 | — | cloud API | about $0.08 per 1,000 characters (1 credit per character) | inaudible, embedded (ElevenLabs Audio Detector) |
+| Qwen3-TTS 1.7B | Apache-2.0 | yes | 10 | 1.7B | local, CPU or GPU | free (local) | none documented or in code |
+| VoxCPM2 | Apache-2.0 | yes | 30 | 2B | local, CPU or GPU (about 8 GB VRAM) | free (local) | none documented or in code |
 | Chatterbox (English) | MIT | no | 1 | 0.5B | local, CPU or GPU | free (local) | Perth, always on |
 | Chatterbox Multilingual | MIT | yes | 23 | 0.5B | local, CPU or GPU | free (local) | Perth, always on |
 | F5-TTS | code MIT, weights CC-BY-NC-4.0 (non-commercial) | no | 2 | 336M | local, CPU or GPU | free (local), non-commercial | none |
@@ -114,4 +114,4 @@ New tables or charts are entries in `TABLES` and `CHARTS` in `voxy/benchmarks.py
 4. [Artificial Analysis Controlled Voice Leaderboard](https://artificialanalysis.ai/text-to-speech/leaderboard/controlled-voice)
 5. [TTS Arena V2](https://huggingface.co/spaces/TTS-AGI/TTS-Arena-V2)
 6. [Qwen3-TTS Technical Report](https://arxiv.org/abs/2601.15621) · [VoxCPM2 Technical Report](https://arxiv.org/abs/2606.06928) · [F5-TTS](https://arxiv.org/abs/2410.06885) · [XTTS](https://arxiv.org/abs/2406.04904) · [MiniMax-Speech](https://arxiv.org/abs/2505.07916)
-7. [ElevenLabs API pricing](https://elevenlabs.io/pricing/api) · [ElevenLabs models](https://elevenlabs.io/docs/overview/models)
+7. [ElevenLabs watermarking](https://elevenlabs.io/docs/help-center/legal/audio-detector/what-is-watermarking-and-why-is-eleven-labs-using-it) · [ElevenLabs API pricing](https://elevenlabs.io/pricing/api) · [ElevenLabs models](https://elevenlabs.io/docs/overview/models)

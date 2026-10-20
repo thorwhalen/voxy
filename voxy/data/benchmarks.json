@@ -8,7 +8,7 @@
    "languages": 29,
    "french": true,
    "price": "about $0.08 per 1,000 characters (1 credit per character)",
-   "watermark": "not documented",
+   "watermark": "inaudible, embedded (ElevenLabs Audio Detector)",
    "runs": "cloud API"
   },
   "elevenlabs/eleven_v3": {
@@ -18,7 +18,7 @@
    "languages": 70,
    "french": true,
    "price": "about $0.08 per 1,000 characters (1 credit per character)",
-   "watermark": "not documented",
+   "watermark": "inaudible, embedded (ElevenLabs Audio Detector)",
    "runs": "cloud API"
   },
   "qwen3tts": {
@@ -28,7 +28,7 @@
    "languages": 10,
    "french": true,
    "price": "free (local)",
-   "watermark": "none",
+   "watermark": "none documented or in code",
    "runs": "local, CPU or GPU"
   },
   "voxcpm": {
@@ -38,7 +38,7 @@
    "languages": 30,
    "french": true,
    "price": "free (local)",
-   "watermark": "none",
+   "watermark": "none documented or in code",
    "runs": "local, CPU or GPU (about 8 GB VRAM)"
   },
   "chatterbox": {
