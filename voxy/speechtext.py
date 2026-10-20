@@ -323,7 +323,7 @@ def pos_detector(
 LLM_RISK_PROMPT = """You help a text-to-speech system avoid misreadings. Below is a $language text, \
 its lines numbered. List the words a speech model may misread: heteronyms (words with \
 more than one pronunciation, such as French "est" as a verb or as a noun), names, \
-abbreviations, numbers. For each, give the line, the word exactly as written, short \
+abbreviations. For each, give the line, the word exactly as written, short \
 names of its possible readings, and the reading this context needs.
 
 Answer with a JSON list only, one object per word:
@@ -363,7 +363,7 @@ def _proposed_risk(item, lines: list[str]) -> Risk | None:
         for m in _WORD.finditer(lines[line - 1])
         for part in (m.group(0), *re.split(r"['’]", m.group(0)))  # "d'ici" holds "ici"
     }
-    if word.casefold() not in on_line:
+    if word.rstrip(".").casefold() not in on_line:  # "Dr." is the word "Dr"
         return None  # a word the model made up, or put on the wrong line
     readings = tuple(r for r in item.get("readings") or () if isinstance(r, str))
     expected = item.get("expected")
@@ -417,7 +417,9 @@ def llm_detector(
         lines = text.split("\n")
         numbered = "\n".join(f"{i}: {line}" for i, line in enumerate(lines, 1))
         reply = chat(template.substitute(language=language, text=numbered))
-        risks = (_proposed_risk(item, lines) for item in _json_list(str(reply)))
+        if not isinstance(reply, str):  # a streaming chat yields chunks
+            reply = "".join(reply)
+        risks = (_proposed_risk(item, lines) for item in _json_list(reply))
         return [r for r in risks if r is not None]
 
     return detect

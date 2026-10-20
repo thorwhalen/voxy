@@ -141,6 +141,14 @@ def test_llm_detector_proposes_nothing_on_a_reply_that_is_not_json():
     assert llm_detector(chat=lambda p: "I cannot [help] with that")("est") == []
 
 
+def test_llm_detector_joins_a_streamed_reply_and_matches_abbreviations():
+    from voxy.speechtext import llm_detector
+
+    chunks = ['[{"line": 1, "word": "Dr.", ', '"readings": ["docteur"]}]']
+    (risk,) = llm_detector(chat=lambda p: iter(chunks))("Le Dr. Martin")
+    assert (risk.line, risk.word) == (1, "Dr.")
+
+
 def test_llm_detector_live():
     """Opt-in: VOXY_LIVE_LLM=1 (a paid model call through aix)."""
     import os
