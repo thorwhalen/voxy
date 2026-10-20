@@ -181,8 +181,11 @@ The name of the reading `log_probs` support best.
 
 `readings` maps a word (case-insensitively) to `{name: IPA}`, e.g. from a
 Lexique-derived heteronym list the caller supplies; `expected` names the
-reading each word should have. Words with no entry are skipped. Each word is
-checked once: `verify_words` finds every place it is spoken.
+reading each word should have, and otherwise the risks’ own `expected` (what a
+detector such as `voxy.speechtext.pos_detector` found) is used. Words with no
+entry are skipped. Each word is checked once: `verify_words` finds every place
+it is spoken, so a word whose risks name *different* readings gets none here
+(group the risks by line with [`checks_by_line()`](#voxy.pronounce.checks_by_line) to check each one).
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]

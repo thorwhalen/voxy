@@ -15,7 +15,9 @@ ASR checks cannot catch this (Whisper hears “est” either way), so the fix is
    respelling table and proper-name aliases, and returns every change it made.
 2. [`flag_risks()`](#voxy.speechtext.flag_risks) lists the words of a text a model may misread (heteronyms you
    supply, e.g. from Lexique; more detectors plug in through `extra`), saying which
-   ones sit where the capital trigger bites.
+   ones sit where the capital trigger bites. [`pos_detector()`](#voxy.speechtext.pos_detector) is one such
+   detector: it tags the text and, for heteronyms whose part of speech picks the
+   reading (French “est”: verb /ɛ/, noun /ɛst/), names the `expected` reading.
 
 Engines differ in what they accept: for several local models text is the only lever
 (they take no phonemes or SSML), so this is a text-level step; it plugs into
@@ -32,14 +34,19 @@ True
 
 ### Module Attributes
 
-| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)   | the next line's capital then starts a new one.   |
-|-----------------------------------------------------------------|--------------------------------------------------|
+| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)          | the next line's capital then starts a new one.                                                             |
+|------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| [`Tagger`](#voxy.speechtext.Tagger)                | `text -> (char offset, token, universal POS tag)` for every token.                                         |
+| [`DFLT_SPACY_MODEL`](#voxy.speechtext.DFLT_SPACY_MODEL)      | The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French). |
+| [`FRENCH_POS_HETERONYMS`](#voxy.speechtext.FRENCH_POS_HETERONYMS) | `{word: {UPOS: reading}}`.                                                                                 |
 
 ### Functions
 
-| [`flag_risks`](#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra])   | Words of `text` a model may misread, in text order.              |
-|----------------------------------------------------------------------------------------------|------------------------------------------------------------------|
-| [`prepare_speech_text`](#voxy.speechtext.prepare_speech_text)(text, \*[, ...])        | Display text in, speech text out, with a record of every change. |
+| [`flag_risks`](#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra])   | Words of `text` a model may misread, in text order.                                                                                  |
+|----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| [`pos_detector`](#voxy.speechtext.pos_detector)([rules, tagger])               | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading. |
+| [`prepare_speech_text`](#voxy.speechtext.prepare_speech_text)(text, \*[, ...])        | Display text in, speech text out, with a record of every change.                                                                     |
+| [`spacy_tagger`](#voxy.speechtext.spacy_tagger)([model])                       | A [`Tagger`](#voxy.speechtext.Tagger) over a spaCy pipeline, loaded on first use.                                |
 
 ### Classes
 
@@ -54,11 +61,27 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One edit [`prepare_speech_text()`](#voxy.speechtext.prepare_speech_text) made (`line` counts from 1).
 
-### *class* voxy.speechtext.Risk(line, word, reason, readings=(), line_initial_capital=False)
+### voxy.speechtext.DFLT_SPACY_MODEL *= 'fr_core_news_sm'*
+
+The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).
+
+### voxy.speechtext.FRENCH_POS_HETERONYMS *: [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]]* *= {'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}}*
+
+`{word: {UPOS: reading}}`.
+The reading names are the keys of the IPA table given to `voxy.pronounce`.
+
+* **Type:**
+  French heteronyms whose part of speech picks the reading
+
+### *class* voxy.speechtext.Risk(line, word, reason, readings=(), line_initial_capital=False, expected=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A word a model may misread: where it is, why it is flagged, its known readings.
+
+#### expected *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+The reading the context picks (a name among `readings`), when a detector knows it.
 
 ### voxy.speechtext.SENTENCE_END *= re.compile('[.!?…][\\'\\\\"”’»)\\\\]]\*\\\\s\*$')*
 
@@ -72,6 +95,15 @@ the next line’s capital then starts a new one.
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 The text to show (`display`), the text to speak (`speech`) and what changed.
+
+### voxy.speechtext.Tagger
+
+`text -> (char offset, token, universal POS tag)` for every token.
+
+* **Type:**
+  A tagger
+
+alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
 
 ### voxy.speechtext.flag_risks(text, , heteronyms=(), extra=())
 
@@ -89,6 +121,27 @@ Words of `text` a model may misread, in text order.
 
 A heteronym that is capitalised at a line start where no sentence begins is flagged
 with `line_initial_capital=True`: that is where the capital trigger bites.
+
+### voxy.speechtext.pos_detector(rules={'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}}, , tagger=None)
+
+A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading.
+
+Run it on the *speech* text ([`prepare_speech_text()`](#voxy.speechtext.prepare_speech_text)): a stray verse-initial
+capital fools the tagger the same way it fools the speech model.
+
+* **Parameters:**
+  * **rules** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – `{word: {UPOS tag: reading name}}`, words matched case-insensitively
+    (default [`FRENCH_POS_HETERONYMS`](#voxy.speechtext.FRENCH_POS_HETERONYMS)).
+  * **tagger** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> (offset, token, UPOS)`; default [`spacy_tagger()`](#voxy.speechtext.spacy_tagger)
+    (French), loaded on first use.
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Risk`](#voxy.speechtext.Risk)]]
+
+```pycon
+>>> fake = lambda text: [(0, "Il", "PRON"), (3, "est", "AUX"), (7, "parti", "VERB")]
+>>> [(r.word, r.expected) for r in pos_detector(tagger=fake)("Il est parti")]
+[('est', 'verb')]
+```
 
 ### voxy.speechtext.prepare_speech_text(text, , lowercase_verse_initial=True, keep=(), respellings=None, aliases=None, transforms=())
 
@@ -109,3 +162,13 @@ Display text in, speech text out, with a record of every change.
   [`SpeechText`](#voxy.speechtext.SpeechText)
 * **Returns:**
   A [`SpeechText`](#voxy.speechtext.SpeechText).
+
+### voxy.speechtext.spacy_tagger(model='fr_core_news_sm')
+
+A [`Tagger`](#voxy.speechtext.Tagger) over a spaCy pipeline, loaded on first use.
+
+Needs `pip install 'voxy[pos]'` and the model itself
+(`python -m spacy download fr_core_news_sm`).
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]

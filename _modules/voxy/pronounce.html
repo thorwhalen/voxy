@@ -477,341 +477,353 @@
 </span><span id="line-267">
 </span><span id="line-268"><span class="sd">    ``readings`` maps a word (case-insensitively) to ``{name: IPA}``, e.g. from a</span>
 </span><span id="line-269"><span class="sd">    Lexique-derived heteronym list the caller supplies; ``expected`` names the</span>
-</span><span id="line-270"><span class="sd">    reading each word should have. Words with no entry are skipped. Each word is</span>
-</span><span id="line-271"><span class="sd">    checked once: ``verify_words`` finds every place it is spoken.</span>
-</span><span id="line-272"><span class="sd">    """</span>
-</span><span id="line-273">    <span class="n">table</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">casefold</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">readings</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-</span><span id="line-274">    <span class="n">wanted</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">casefold</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">expected</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-</span><span id="line-275">    <span class="n">seen</span><span class="p">,</span> <span class="n">checks</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(),</span> <span class="p">[]</span>
-</span><span id="line-276">    <span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">risks</span><span class="p">:</span>
-</span><span id="line-277">        <span class="n">key</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
-</span><span id="line-278">        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">table</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
-</span><span id="line-279">            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-</span><span id="line-280">            <span class="n">checks</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="p">,</span> <span class="n">table</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">wanted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)))</span>
-</span><span id="line-281">    <span class="k">return</span> <span class="n">checks</span></div>
+</span><span id="line-270"><span class="sd">    reading each word should have, and otherwise the risks' own ``expected`` (what a</span>
+</span><span id="line-271"><span class="sd">    detector such as ``voxy.speechtext.pos_detector`` found) is used. Words with no</span>
+</span><span id="line-272"><span class="sd">    entry are skipped. Each word is checked once: ``verify_words`` finds every place</span>
+</span><span id="line-273"><span class="sd">    it is spoken, so a word whose risks name *different* readings gets none here</span>
+</span><span id="line-274"><span class="sd">    (group the risks by line with :func:`checks_by_line` to check each one).</span>
+</span><span id="line-275"><span class="sd">    """</span>
+</span><span id="line-276">    <span class="n">table</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">casefold</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">readings</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+</span><span id="line-277">    <span class="n">wanted</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">casefold</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">expected</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+</span><span id="line-278">    <span class="n">words</span><span class="p">,</span> <span class="n">found</span> <span class="o">=</span> <span class="p">{},</span> <span class="p">{}</span>  <span class="c1"># first spelling seen; the risks' expected readings</span>
+</span><span id="line-279">    <span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">risks</span><span class="p">:</span>
+</span><span id="line-280">        <span class="n">key</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
+</span><span id="line-281">        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">table</span><span class="p">:</span>
+</span><span id="line-282">            <span class="n">words</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="p">)</span>
+</span><span id="line-283">            <span class="k">if</span> <span class="p">(</span><span class="n">reading</span> <span class="o">:=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="s2">"expected"</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-284">                <span class="n">found</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">reading</span><span class="p">)</span>
+</span><span id="line-285">
+</span><span id="line-286">    <span class="k">def</span><span class="w"> </span><span class="nf">reading_of</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+</span><span id="line-287">        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">wanted</span><span class="p">:</span>
+</span><span id="line-288">            <span class="k">return</span> <span class="n">wanted</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+</span><span id="line-289">        <span class="n">named</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">())</span>
+</span><span id="line-290">        <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">named</span><span class="p">))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">named</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="kc">None</span>
+</span><span id="line-291">
+</span><span id="line-292">    <span class="n">checks</span> <span class="o">=</span> <span class="p">[(</span><span class="n">word</span><span class="p">,</span> <span class="n">table</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">reading_of</span><span class="p">(</span><span class="n">key</span><span class="p">))</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+</span><span id="line-293">    <span class="k">return</span> <span class="n">checks</span></div>
 
-</span><span id="line-282">
-</span><span id="line-283">
+</span><span id="line-294">
+</span><span id="line-295">
 <div class="viewcode-block" id="failing">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.failing">[docs]</a>
-</span><span id="line-284"><span class="k">def</span><span class="w"> </span><span class="nf">failing</span><span class="p">(</span><span class="n">verdicts</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Verdict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Verdict</span><span class="p">]:</span>
-</span><span id="line-285"><span class="w">    </span><span class="sd">"""The verdicts whose word was decidedly read the wrong way (``ok is False``)."""</span>
-</span><span id="line-286">    <span class="k">return</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">verdicts</span> <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">ok</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">]</span></div>
+</span><span id="line-296"><span class="k">def</span><span class="w"> </span><span class="nf">failing</span><span class="p">(</span><span class="n">verdicts</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Verdict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Verdict</span><span class="p">]:</span>
+</span><span id="line-297"><span class="w">    </span><span class="sd">"""The verdicts whose word was decidedly read the wrong way (``ok is False``)."""</span>
+</span><span id="line-298">    <span class="k">return</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">verdicts</span> <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">ok</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">]</span></div>
 
-</span><span id="line-287">
-</span><span id="line-288">
-</span><span id="line-289"><span class="c1"># 3. the recogniser worker ------------------------------------------------------</span>
-</span><span id="line-290">
-</span><span id="line-291">
-</span><span id="line-292"><span class="n">_PHONEME_WORKERS</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-293">
-</span><span id="line-294">
-</span><span id="line-295"><span class="k">def</span><span class="w"> </span><span class="nf">_phoneme_worker</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
-</span><span id="line-296"><span class="w">    </span><span class="sd">"""One recogniser worker per (model, threads, data root), started on demand."""</span>
-</span><span id="line-297">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
-</span><span id="line-298">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worker</span>
-</span><span id="line-299">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.workers</span><span class="w"> </span><span class="kn">import</span> <span class="n">adapter_path</span>
+</span><span id="line-299">
 </span><span id="line-300">
-</span><span id="line-301">    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-302">    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_PHONEME_WORKERS</span><span class="p">:</span>
-</span><span id="line-303">        <span class="n">python</span> <span class="o">=</span> <span class="n">ensure_env</span><span class="p">(</span><span class="n">PHONEME_ENV</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-304">        <span class="n">_PHONEME_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Worker</span><span class="p">(</span>
-</span><span id="line-305">            <span class="n">python</span><span class="p">,</span>
-</span><span id="line-306">            <span class="n">adapter_path</span><span class="p">(</span><span class="s2">"phonemes"</span><span class="p">),</span>
-</span><span id="line-307">            <span class="n">init</span><span class="o">=</span><span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="n">model</span><span class="p">},</span>
-</span><span id="line-308">            <span class="n">env</span><span class="o">=</span><span class="n">worker_environ</span><span class="p">(</span><span class="n">PHONEME_ENV</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span>
-</span><span id="line-309">            <span class="n">log_path</span><span class="o">=</span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"logs"</span><span class="p">,</span> <span class="s2">"phonemes.log"</span><span class="p">),</span>
-</span><span id="line-310">        <span class="p">)</span>
-</span><span id="line-311">    <span class="k">return</span> <span class="n">_PHONEME_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+</span><span id="line-301"><span class="c1"># 3. the recogniser worker ------------------------------------------------------</span>
+</span><span id="line-302">
+</span><span id="line-303">
+</span><span id="line-304"><span class="n">_PHONEME_WORKERS</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-305">
+</span><span id="line-306">
+</span><span id="line-307"><span class="k">def</span><span class="w"> </span><span class="nf">_phoneme_worker</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
+</span><span id="line-308"><span class="w">    </span><span class="sd">"""One recogniser worker per (model, threads, data root), started on demand."""</span>
+</span><span id="line-309">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
+</span><span id="line-310">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worker</span>
+</span><span id="line-311">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.workers</span><span class="w"> </span><span class="kn">import</span> <span class="n">adapter_path</span>
 </span><span id="line-312">
-</span><span id="line-313">
+</span><span id="line-313">    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-314">    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_PHONEME_WORKERS</span><span class="p">:</span>
+</span><span id="line-315">        <span class="n">python</span> <span class="o">=</span> <span class="n">ensure_env</span><span class="p">(</span><span class="n">PHONEME_ENV</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-316">        <span class="n">_PHONEME_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Worker</span><span class="p">(</span>
+</span><span id="line-317">            <span class="n">python</span><span class="p">,</span>
+</span><span id="line-318">            <span class="n">adapter_path</span><span class="p">(</span><span class="s2">"phonemes"</span><span class="p">),</span>
+</span><span id="line-319">            <span class="n">init</span><span class="o">=</span><span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="n">model</span><span class="p">},</span>
+</span><span id="line-320">            <span class="n">env</span><span class="o">=</span><span class="n">worker_environ</span><span class="p">(</span><span class="n">PHONEME_ENV</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span>
+</span><span id="line-321">            <span class="n">log_path</span><span class="o">=</span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"logs"</span><span class="p">,</span> <span class="s2">"phonemes.log"</span><span class="p">),</span>
+</span><span id="line-322">        <span class="p">)</span>
+</span><span id="line-323">    <span class="k">return</span> <span class="n">_PHONEME_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+</span><span id="line-324">
+</span><span id="line-325">
 <div class="viewcode-block" id="phoneme_emitter">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.phoneme_emitter">[docs]</a>
-</span><span id="line-314"><span class="k">def</span><span class="w"> </span><span class="nf">phoneme_emitter</span><span class="p">(</span>
-</span><span id="line-315">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-316">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_PHONEME_MODEL</span><span class="p">,</span>
-</span><span id="line-317">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-318">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-319"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Emitter</span><span class="p">:</span>
-</span><span id="line-320"><span class="w">    </span><span class="sd">"""The default :data:`Emitter`: the wav2vec2 phoneme recogniser in its own env.</span>
-</span><span id="line-321">
-</span><span id="line-322"><span class="sd">    The env (torch, transformers) is built on first use under the data root, and the</span>
-</span><span id="line-323"><span class="sd">    model weights download from the Hugging Face hub then.</span>
-</span><span id="line-324"><span class="sd">    """</span>
-</span><span id="line-325">
-</span><span id="line-326">    <span class="k">def</span><span class="w"> </span><span class="nf">emit</span><span class="p">(</span><span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
-</span><span id="line-327">        <span class="n">worker</span> <span class="o">=</span> <span class="n">_phoneme_worker</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rootdir</span><span class="p">)</span> <span class="k">if</span> <span class="n">rootdir</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-328">        <span class="n">reply</span> <span class="o">=</span> <span class="n">worker</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="s2">"emissions"</span><span class="p">,</span> <span class="n">audio</span><span class="o">=</span><span class="n">audio</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">)</span>
-</span><span id="line-329">        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">reply</span><span class="p">[</span><span class="s2">"log_probs"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">reply</span><span class="p">[</span><span class="s2">"vocab"</span><span class="p">]</span>
-</span><span id="line-330">
-</span><span id="line-331">    <span class="k">return</span> <span class="n">emit</span></div>
-
-</span><span id="line-332">
+</span><span id="line-326"><span class="k">def</span><span class="w"> </span><span class="nf">phoneme_emitter</span><span class="p">(</span>
+</span><span id="line-327">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-328">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_PHONEME_MODEL</span><span class="p">,</span>
+</span><span id="line-329">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-330">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-331"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Emitter</span><span class="p">:</span>
+</span><span id="line-332"><span class="w">    </span><span class="sd">"""The default :data:`Emitter`: the wav2vec2 phoneme recogniser in its own env.</span>
 </span><span id="line-333">
-</span><span id="line-334"><span class="c1"># 4. re-rendering the lines that fail -------------------------------------------</span>
-</span><span id="line-335">
-</span><span id="line-336"><span class="c1">#: Renders of one line at most (the first take included).</span>
-</span><span id="line-337"><span class="n">DFLT_MAX_ATTEMPTS</span> <span class="o">=</span> <span class="mi">3</span>
-</span><span id="line-338">
-</span><span id="line-339"><span class="c1">#: ``(word, {reading name: IPA}, expected reading or None)``: one word to check.</span>
-</span><span id="line-340"><span class="n">Check</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="s2">"str | None"</span><span class="p">]</span>
-</span><span id="line-341">
+</span><span id="line-334"><span class="sd">    The env (torch, transformers) is built on first use under the data root, and the</span>
+</span><span id="line-335"><span class="sd">    model weights download from the Hugging Face hub then.</span>
+</span><span id="line-336"><span class="sd">    """</span>
+</span><span id="line-337">
+</span><span id="line-338">    <span class="k">def</span><span class="w"> </span><span class="nf">emit</span><span class="p">(</span><span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+</span><span id="line-339">        <span class="n">worker</span> <span class="o">=</span> <span class="n">_phoneme_worker</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rootdir</span><span class="p">)</span> <span class="k">if</span> <span class="n">rootdir</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-340">        <span class="n">reply</span> <span class="o">=</span> <span class="n">worker</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="s2">"emissions"</span><span class="p">,</span> <span class="n">audio</span><span class="o">=</span><span class="n">audio</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">)</span>
+</span><span id="line-341">        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">reply</span><span class="p">[</span><span class="s2">"log_probs"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">reply</span><span class="p">[</span><span class="s2">"vocab"</span><span class="p">]</span>
 </span><span id="line-342">
+</span><span id="line-343">    <span class="k">return</span> <span class="n">emit</span></div>
+
+</span><span id="line-344">
+</span><span id="line-345">
+</span><span id="line-346"><span class="c1"># 4. re-rendering the lines that fail -------------------------------------------</span>
+</span><span id="line-347">
+</span><span id="line-348"><span class="c1">#: Renders of one line at most (the first take included).</span>
+</span><span id="line-349"><span class="n">DFLT_MAX_ATTEMPTS</span> <span class="o">=</span> <span class="mi">3</span>
+</span><span id="line-350">
+</span><span id="line-351"><span class="c1">#: ``(word, {reading name: IPA}, expected reading or None)``: one word to check.</span>
+</span><span id="line-352"><span class="n">Check</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="s2">"str | None"</span><span class="p">]</span>
+</span><span id="line-353">
+</span><span id="line-354">
 <div class="viewcode-block" id="Take">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.Take">[docs]</a>
-</span><span id="line-343"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-344"><span class="k">class</span><span class="w"> </span><span class="nc">Take</span><span class="p">:</span>
-</span><span id="line-345"><span class="w">    </span><span class="sd">"""One render of a line and what the audio says about its flagged words."""</span>
-</span><span id="line-346">
-</span><span id="line-347">    <span class="n">attempt</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="line-348">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="line-349">    <span class="n">verdicts</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Verdict</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
-</span><span id="line-350">
-</span><span id="line-351">    <span class="nd">@property</span>
-</span><span id="line-352">    <span class="k">def</span><span class="w"> </span><span class="nf">failing</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Verdict</span><span class="p">]:</span>
-</span><span id="line-353"><span class="w">        </span><span class="sd">"""The verdicts of this take whose word was decidedly misread."""</span>
-</span><span id="line-354">        <span class="k">return</span> <span class="n">failing</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verdicts</span><span class="p">)</span></div>
+</span><span id="line-355"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-356"><span class="k">class</span><span class="w"> </span><span class="nc">Take</span><span class="p">:</span>
+</span><span id="line-357"><span class="w">    </span><span class="sd">"""One render of a line and what the audio says about its flagged words."""</span>
+</span><span id="line-358">
+</span><span id="line-359">    <span class="n">attempt</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="line-360">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="line-361">    <span class="n">verdicts</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Verdict</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+</span><span id="line-362">
+</span><span id="line-363">    <span class="nd">@property</span>
+</span><span id="line-364">    <span class="k">def</span><span class="w"> </span><span class="nf">failing</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Verdict</span><span class="p">]:</span>
+</span><span id="line-365"><span class="w">        </span><span class="sd">"""The verdicts of this take whose word was decidedly misread."""</span>
+</span><span id="line-366">        <span class="k">return</span> <span class="n">failing</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verdicts</span><span class="p">)</span></div>
 
-</span><span id="line-355">
-</span><span id="line-356">
+</span><span id="line-367">
+</span><span id="line-368">
 <div class="viewcode-block" id="LineTakes">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.LineTakes">[docs]</a>
-</span><span id="line-357"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-358"><span class="k">class</span><span class="w"> </span><span class="nc">LineTakes</span><span class="p">:</span>
-</span><span id="line-359"><span class="w">    </span><span class="sd">"""Every take of one line (1-based ``line``, as :class:`voxy.speechtext.Risk`).</span>
-</span><span id="line-360">
-</span><span id="line-361"><span class="sd">    A blank line has no take.</span>
-</span><span id="line-362"><span class="sd">    """</span>
-</span><span id="line-363">
-</span><span id="line-364">    <span class="n">line</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="line-365">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="line-366">    <span class="n">takes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Take</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
-</span><span id="line-367">    <span class="n">checks</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
-</span><span id="line-368">
-</span><span id="line-369">    <span class="nd">@property</span>
-</span><span id="line-370">    <span class="k">def</span><span class="w"> </span><span class="nf">chosen</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Take</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-371"><span class="w">        </span><span class="sd">"""The first take with no failing word, else the one with the fewest."""</span>
-</span><span id="line-372">        <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">takes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">failing</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="line-373">
-</span><span id="line-374">    <span class="nd">@property</span>
-</span><span id="line-375">    <span class="k">def</span><span class="w"> </span><span class="nf">unconfirmed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-376"><span class="w">        </span><span class="sd">"""Checked words with an expected reading that the chosen take did not confirm.</span>
-</span><span id="line-377">
-</span><span id="line-378"><span class="sd">        A word is confirmed when the audio decidedly gave the expected reading at least</span>
-</span><span id="line-379"><span class="sd">        once. It stays unconfirmed when ASR never found it, or when the recogniser</span>
-</span><span id="line-380"><span class="sd">        could not decide.</span>
-</span><span id="line-381"><span class="sd">        """</span>
-</span><span id="line-382">        <span class="n">verdicts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chosen</span><span class="o">.</span><span class="n">verdicts</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">chosen</span> <span class="k">else</span> <span class="p">()</span>
-</span><span id="line-383">        <span class="k">return</span> <span class="p">[</span>
-</span><span id="line-384">            <span class="n">word</span>
-</span><span id="line-385">            <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">expected</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">checks</span>
-</span><span id="line-386">            <span class="k">if</span> <span class="n">expected</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-</span><span id="line-387">            <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">word</span> <span class="o">==</span> <span class="n">word</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">ok</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">verdicts</span><span class="p">)</span>
-</span><span id="line-388">        <span class="p">]</span>
+</span><span id="line-369"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-370"><span class="k">class</span><span class="w"> </span><span class="nc">LineTakes</span><span class="p">:</span>
+</span><span id="line-371"><span class="w">    </span><span class="sd">"""Every take of one line (1-based ``line``, as :class:`voxy.speechtext.Risk`).</span>
+</span><span id="line-372">
+</span><span id="line-373"><span class="sd">    A blank line has no take.</span>
+</span><span id="line-374"><span class="sd">    """</span>
+</span><span id="line-375">
+</span><span id="line-376">    <span class="n">line</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="line-377">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="line-378">    <span class="n">takes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Take</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
+</span><span id="line-379">    <span class="n">checks</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()</span>
+</span><span id="line-380">
+</span><span id="line-381">    <span class="nd">@property</span>
+</span><span id="line-382">    <span class="k">def</span><span class="w"> </span><span class="nf">chosen</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Take</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-383"><span class="w">        </span><span class="sd">"""The first take with no failing word, else the one with the fewest."""</span>
+</span><span id="line-384">        <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">takes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">failing</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="line-385">
+</span><span id="line-386">    <span class="nd">@property</span>
+</span><span id="line-387">    <span class="k">def</span><span class="w"> </span><span class="nf">unconfirmed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-388"><span class="w">        </span><span class="sd">"""Checked words with an expected reading that the chosen take did not confirm.</span>
 </span><span id="line-389">
-</span><span id="line-390">    <span class="nd">@property</span>
-</span><span id="line-391">    <span class="k">def</span><span class="w"> </span><span class="nf">verified</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="line-392"><span class="w">        </span><span class="sd">"""No checked word misread, and every one with an expected reading confirmed."""</span>
-</span><span id="line-393">        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chosen</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">chosen</span><span class="o">.</span><span class="n">failing</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">unconfirmed</span></div>
+</span><span id="line-390"><span class="sd">        A word is confirmed when the audio decidedly gave the expected reading at least</span>
+</span><span id="line-391"><span class="sd">        once. It stays unconfirmed when ASR never found it, or when the recogniser</span>
+</span><span id="line-392"><span class="sd">        could not decide.</span>
+</span><span id="line-393"><span class="sd">        """</span>
+</span><span id="line-394">        <span class="n">verdicts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chosen</span><span class="o">.</span><span class="n">verdicts</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">chosen</span> <span class="k">else</span> <span class="p">()</span>
+</span><span id="line-395">        <span class="k">return</span> <span class="p">[</span>
+</span><span id="line-396">            <span class="n">word</span>
+</span><span id="line-397">            <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">expected</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">checks</span>
+</span><span id="line-398">            <span class="k">if</span> <span class="n">expected</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</span><span id="line-399">            <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">word</span> <span class="o">==</span> <span class="n">word</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">ok</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">verdicts</span><span class="p">)</span>
+</span><span id="line-400">        <span class="p">]</span>
+</span><span id="line-401">
+</span><span id="line-402">    <span class="nd">@property</span>
+</span><span id="line-403">    <span class="k">def</span><span class="w"> </span><span class="nf">verified</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-404"><span class="w">        </span><span class="sd">"""No checked word misread, and every one with an expected reading confirmed."""</span>
+</span><span id="line-405">        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chosen</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">chosen</span><span class="o">.</span><span class="n">failing</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">unconfirmed</span></div>
 
-</span><span id="line-394">
-</span><span id="line-395">
+</span><span id="line-406">
+</span><span id="line-407">
 <div class="viewcode-block" id="checks_by_line">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.checks_by_line">[docs]</a>
-</span><span id="line-396"><span class="k">def</span><span class="w"> </span><span class="nf">checks_by_line</span><span class="p">(</span>
-</span><span id="line-397">    <span class="n">risks</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span>
-</span><span id="line-398">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-399">    <span class="n">readings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
-</span><span id="line-400">    <span class="n">expected</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-401"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Check</span><span class="p">]]:</span>
-</span><span id="line-402"><span class="w">    </span><span class="sd">""":func:`checks_from_risks`, grouped by the line each risk is on."""</span>
-</span><span id="line-403">    <span class="n">by_line</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-404">    <span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">risks</span><span class="p">:</span>
-</span><span id="line-405">        <span class="n">by_line</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">risk</span><span class="o">.</span><span class="n">line</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">risk</span><span class="p">)</span>
-</span><span id="line-406">    <span class="n">grouped</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-407">        <span class="n">line</span><span class="p">:</span> <span class="n">checks_from_risks</span><span class="p">(</span><span class="n">line_risks</span><span class="p">,</span> <span class="n">readings</span><span class="o">=</span><span class="n">readings</span><span class="p">,</span> <span class="n">expected</span><span class="o">=</span><span class="n">expected</span><span class="p">)</span>
-</span><span id="line-408">        <span class="k">for</span> <span class="n">line</span><span class="p">,</span> <span class="n">line_risks</span> <span class="ow">in</span> <span class="n">by_line</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-</span><span id="line-409">    <span class="p">}</span>
-</span><span id="line-410">    <span class="k">return</span> <span class="p">{</span><span class="n">line</span><span class="p">:</span> <span class="n">checks</span> <span class="k">for</span> <span class="n">line</span><span class="p">,</span> <span class="n">checks</span> <span class="ow">in</span> <span class="n">grouped</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">checks</span><span class="p">}</span></div>
+</span><span id="line-408"><span class="k">def</span><span class="w"> </span><span class="nf">checks_by_line</span><span class="p">(</span>
+</span><span id="line-409">    <span class="n">risks</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span>
+</span><span id="line-410">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-411">    <span class="n">readings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+</span><span id="line-412">    <span class="n">expected</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-413"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Check</span><span class="p">]]:</span>
+</span><span id="line-414"><span class="w">    </span><span class="sd">""":func:`checks_from_risks`, grouped by the line each risk is on."""</span>
+</span><span id="line-415">    <span class="n">by_line</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-416">    <span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">risks</span><span class="p">:</span>
+</span><span id="line-417">        <span class="n">by_line</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">risk</span><span class="o">.</span><span class="n">line</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">risk</span><span class="p">)</span>
+</span><span id="line-418">    <span class="n">grouped</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-419">        <span class="n">line</span><span class="p">:</span> <span class="n">checks_from_risks</span><span class="p">(</span><span class="n">line_risks</span><span class="p">,</span> <span class="n">readings</span><span class="o">=</span><span class="n">readings</span><span class="p">,</span> <span class="n">expected</span><span class="o">=</span><span class="n">expected</span><span class="p">)</span>
+</span><span id="line-420">        <span class="k">for</span> <span class="n">line</span><span class="p">,</span> <span class="n">line_risks</span> <span class="ow">in</span> <span class="n">by_line</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+</span><span id="line-421">    <span class="p">}</span>
+</span><span id="line-422">    <span class="k">return</span> <span class="p">{</span><span class="n">line</span><span class="p">:</span> <span class="n">checks</span> <span class="k">for</span> <span class="n">line</span><span class="p">,</span> <span class="n">checks</span> <span class="ow">in</span> <span class="n">grouped</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">checks</span><span class="p">}</span></div>
 
-</span><span id="line-411">
-</span><span id="line-412">
+</span><span id="line-423">
+</span><span id="line-424">
 <div class="viewcode-block" id="timed_words">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.timed_words">[docs]</a>
-</span><span id="line-413"><span class="k">def</span><span class="w"> </span><span class="nf">timed_words</span><span class="p">(</span><span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]:</span>
-</span><span id="line-414"><span class="w">    </span><span class="sd">"""The timed words of ASR segments (``voxy.refprep.transcribe``'s output).</span>
-</span><span id="line-415">
-</span><span id="line-416"><span class="sd">    Words without times are dropped; a segment with no timed word counts as one word.</span>
-</span><span id="line-417">
-</span><span id="line-418"><span class="sd">    &gt;&gt;&gt; timed_words([{"words": [{"start": 0.0, "end": 0.2, "text": "a"},</span>
-</span><span id="line-419"><span class="sd">    ...                         {"start": None, "end": None, "text": "b"}]},</span>
-</span><span id="line-420"><span class="sd">    ...              {"start": 1.0, "end": 2.0, "text": "c", "words": []}])</span>
-</span><span id="line-421"><span class="sd">    [{'start': 0.0, 'end': 0.2, 'text': 'a'}, {'start': 1.0, 'end': 2.0, 'text': 'c'}]</span>
-</span><span id="line-422"><span class="sd">    """</span>
-</span><span id="line-423">    <span class="n">words</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-424">    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
-</span><span id="line-425">        <span class="n">timed</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="line-426">            <span class="n">w</span>
-</span><span id="line-427">            <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"words"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">()</span>
-</span><span id="line-428">            <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"end"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-</span><span id="line-429">        <span class="p">]</span>
-</span><span id="line-430">        <span class="n">words</span> <span class="o">+=</span> <span class="n">timed</span> <span class="ow">or</span> <span class="p">[{</span><span class="s2">"start"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span> <span class="s2">"end"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"end"</span><span class="p">],</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]}]</span>
-</span><span id="line-431">    <span class="k">return</span> <span class="n">words</span></div>
+</span><span id="line-425"><span class="k">def</span><span class="w"> </span><span class="nf">timed_words</span><span class="p">(</span><span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]:</span>
+</span><span id="line-426"><span class="w">    </span><span class="sd">"""The timed words of ASR segments (``voxy.refprep.transcribe``'s output).</span>
+</span><span id="line-427">
+</span><span id="line-428"><span class="sd">    Words without times are dropped; a segment with no timed word counts as one word.</span>
+</span><span id="line-429">
+</span><span id="line-430"><span class="sd">    &gt;&gt;&gt; timed_words([{"words": [{"start": 0.0, "end": 0.2, "text": "a"},</span>
+</span><span id="line-431"><span class="sd">    ...                         {"start": None, "end": None, "text": "b"}]},</span>
+</span><span id="line-432"><span class="sd">    ...              {"start": 1.0, "end": 2.0, "text": "c", "words": []}])</span>
+</span><span id="line-433"><span class="sd">    [{'start': 0.0, 'end': 0.2, 'text': 'a'}, {'start': 1.0, 'end': 2.0, 'text': 'c'}]</span>
+</span><span id="line-434"><span class="sd">    """</span>
+</span><span id="line-435">    <span class="n">words</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-436">    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
+</span><span id="line-437">        <span class="n">timed</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="line-438">            <span class="n">w</span>
+</span><span id="line-439">            <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"words"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">()</span>
+</span><span id="line-440">            <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"end"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</span><span id="line-441">        <span class="p">]</span>
+</span><span id="line-442">        <span class="n">words</span> <span class="o">+=</span> <span class="n">timed</span> <span class="ow">or</span> <span class="p">[{</span><span class="s2">"start"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span> <span class="s2">"end"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"end"</span><span class="p">],</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]}]</span>
+</span><span id="line-443">    <span class="k">return</span> <span class="n">words</span></div>
 
-</span><span id="line-432">
-</span><span id="line-433">
-</span><span id="line-434"><span class="k">def</span><span class="w"> </span><span class="nf">_transcribed_words</span><span class="p">(</span><span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]:</span>
-</span><span id="line-435">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.refprep</span><span class="w"> </span><span class="kn">import</span> <span class="n">transcribe</span>
-</span><span id="line-436">
-</span><span id="line-437">    <span class="k">return</span> <span class="n">timed_words</span><span class="p">(</span><span class="n">transcribe</span><span class="p">(</span><span class="n">audio</span><span class="p">))</span>
-</span><span id="line-438">
-</span><span id="line-439">
+</span><span id="line-444">
+</span><span id="line-445">
+</span><span id="line-446"><span class="k">def</span><span class="w"> </span><span class="nf">_transcribed_words</span><span class="p">(</span><span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]:</span>
+</span><span id="line-447">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.refprep</span><span class="w"> </span><span class="kn">import</span> <span class="n">transcribe</span>
+</span><span id="line-448">
+</span><span id="line-449">    <span class="k">return</span> <span class="n">timed_words</span><span class="p">(</span><span class="n">transcribe</span><span class="p">(</span><span class="n">audio</span><span class="p">))</span>
+</span><span id="line-450">
+</span><span id="line-451">
 <div class="viewcode-block" id="render_verified">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.render_verified">[docs]</a>
-</span><span id="line-440"><span class="k">def</span><span class="w"> </span><span class="nf">render_verified</span><span class="p">(</span>
-</span><span id="line-441">    <span class="n">lines</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
-</span><span id="line-442">    <span class="n">checks</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Check</span><span class="p">]],</span>
-</span><span id="line-443">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-444">    <span class="n">render</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="s2">"str | os.PathLike"</span><span class="p">],</span>
-</span><span id="line-445">    <span class="n">emitter</span><span class="p">:</span> <span class="n">Emitter</span><span class="p">,</span>
-</span><span id="line-446">    <span class="n">words_of</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_transcribed_words</span><span class="p">,</span>
-</span><span id="line-447">    <span class="n">max_attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_MAX_ATTEMPTS</span><span class="p">,</span>
-</span><span id="line-448">    <span class="n">padding</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_CROP_PADDING</span><span class="p">,</span>
-</span><span id="line-449">    <span class="n">margin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MARGIN</span><span class="p">,</span>
-</span><span id="line-450"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">LineTakes</span><span class="p">]:</span>
-</span><span id="line-451"><span class="w">    </span><span class="sd">"""Render each line, and re-render the ones whose flagged words came out wrong.</span>
-</span><span id="line-452">
-</span><span id="line-453"><span class="sd">    A line with checks is verified (:func:`verify_words`) after each render and</span>
-</span><span id="line-454"><span class="sd">    rendered again while a word is decidedly misread (:func:`failing`), up to</span>
-</span><span id="line-455"><span class="sd">    ``max_attempts`` renders; a line without checks is rendered once, and a blank</span>
-</span><span id="line-456"><span class="sd">    line not at all (line numbers still count it, as ``flag_risks`` does).</span>
-</span><span id="line-457"><span class="sd">    :attr:`LineTakes.chosen` is the take to keep; :attr:`LineTakes.verified` also</span>
-</span><span id="line-458"><span class="sd">    requires each expected reading to be confirmed (a word ASR did not find, or the</span>
-</span><span id="line-459"><span class="sd">    recogniser could not decide, leaves the line unverified rather than retried).</span>
-</span><span id="line-460">
-</span><span id="line-461"><span class="sd">    Args:</span>
-</span><span id="line-462"><span class="sd">        lines: The lines to speak, in order (line numbers start at 1).</span>
-</span><span id="line-463"><span class="sd">        checks: By line number, the words to check (:func:`checks_by_line`).</span>
-</span><span id="line-464"><span class="sd">        render: ``(text, line, attempt) -&gt; audio path``; each call should give a</span>
-</span><span id="line-465"><span class="sd">            new take (a new seed, or a service's own variation).</span>
-</span><span id="line-466"><span class="sd">            :func:`speech_renderer` adapts a :class:`voxy.base.SpeechModel`.</span>
-</span><span id="line-467"><span class="sd">        emitter: The phoneme recogniser (:func:`phoneme_emitter`).</span>
-</span><span id="line-468"><span class="sd">        words_of: ``audio -&gt; timed words``; the default transcribes with</span>
-</span><span id="line-469"><span class="sd">            ``voxy.refprep.transcribe``.</span>
-</span><span id="line-470"><span class="sd">        max_attempts: Renders of one line at most.</span>
-</span><span id="line-471"><span class="sd">        padding, margin: As in :func:`verify_words`.</span>
+</span><span id="line-452"><span class="k">def</span><span class="w"> </span><span class="nf">render_verified</span><span class="p">(</span>
+</span><span id="line-453">    <span class="n">lines</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+</span><span id="line-454">    <span class="n">checks</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Check</span><span class="p">]],</span>
+</span><span id="line-455">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-456">    <span class="n">render</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="s2">"str | os.PathLike"</span><span class="p">],</span>
+</span><span id="line-457">    <span class="n">emitter</span><span class="p">:</span> <span class="n">Emitter</span><span class="p">,</span>
+</span><span id="line-458">    <span class="n">words_of</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_transcribed_words</span><span class="p">,</span>
+</span><span id="line-459">    <span class="n">max_attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_MAX_ATTEMPTS</span><span class="p">,</span>
+</span><span id="line-460">    <span class="n">padding</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_CROP_PADDING</span><span class="p">,</span>
+</span><span id="line-461">    <span class="n">margin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MARGIN</span><span class="p">,</span>
+</span><span id="line-462"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">LineTakes</span><span class="p">]:</span>
+</span><span id="line-463"><span class="w">    </span><span class="sd">"""Render each line, and re-render the ones whose flagged words came out wrong.</span>
+</span><span id="line-464">
+</span><span id="line-465"><span class="sd">    A line with checks is verified (:func:`verify_words`) after each render and</span>
+</span><span id="line-466"><span class="sd">    rendered again while a word is decidedly misread (:func:`failing`), up to</span>
+</span><span id="line-467"><span class="sd">    ``max_attempts`` renders; a line without checks is rendered once, and a blank</span>
+</span><span id="line-468"><span class="sd">    line not at all (line numbers still count it, as ``flag_risks`` does).</span>
+</span><span id="line-469"><span class="sd">    :attr:`LineTakes.chosen` is the take to keep; :attr:`LineTakes.verified` also</span>
+</span><span id="line-470"><span class="sd">    requires each expected reading to be confirmed (a word ASR did not find, or the</span>
+</span><span id="line-471"><span class="sd">    recogniser could not decide, leaves the line unverified rather than retried).</span>
 </span><span id="line-472">
-</span><span id="line-473"><span class="sd">    &gt;&gt;&gt; heard = {"est": "ɛ"}  # a fake recogniser: what each word sounds like</span>
-</span><span id="line-474"><span class="sd">    &gt;&gt;&gt; def emitter(audio, start, end):</span>
-</span><span id="line-475"><span class="sd">    ...     vocab = ["&lt;pad&gt;", "ɛ", "s", "t"]</span>
-</span><span id="line-476"><span class="sd">    ...     path = [vocab.index(s) for s in heard["est"]]</span>
-</span><span id="line-477"><span class="sd">    ...     return log_probs_from_path(path, vocab_size=4), vocab</span>
-</span><span id="line-478"><span class="sd">    &gt;&gt;&gt; def render(text, line, attempt):</span>
-</span><span id="line-479"><span class="sd">    ...     heard["est"] = "ɛst" if attempt else "ɛ"  # the second take is right</span>
-</span><span id="line-480"><span class="sd">    ...     return f"take-{line}-{attempt}.wav"</span>
-</span><span id="line-481"><span class="sd">    &gt;&gt;&gt; words = lambda audio: [{"start": 0.0, "end": 0.3, "text": "Est"}]</span>
-</span><span id="line-482"><span class="sd">    &gt;&gt;&gt; checks = {1: [("Est", {"verb": "ɛ", "noun": "ɛst"}, "noun")]}</span>
-</span><span id="line-483"><span class="sd">    &gt;&gt;&gt; [result] = render_verified(["L'Est"], checks, render=render, emitter=emitter,</span>
-</span><span id="line-484"><span class="sd">    ...                            words_of=words)</span>
-</span><span id="line-485"><span class="sd">    &gt;&gt;&gt; [t.audio for t in result.takes], result.chosen.attempt, result.verified</span>
-</span><span id="line-486"><span class="sd">    (['take-1-0.wav', 'take-1-1.wav'], 1, True)</span>
-</span><span id="line-487"><span class="sd">    """</span>
-</span><span id="line-488">    <span class="k">if</span> <span class="n">max_attempts</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="line-489">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"max_attempts must be at least 1, got </span><span class="si">{</span><span class="n">max_attempts</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-490">    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-491">    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="line-492">        <span class="n">line_checks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">checks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="p">()))</span>
-</span><span id="line-493">        <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-</span><span id="line-494">            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LineTakes</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="n">text</span><span class="p">))</span>
-</span><span id="line-495">            <span class="k">continue</span>
-</span><span id="line-496">        <span class="n">takes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Take</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-497">        <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_attempts</span> <span class="k">if</span> <span class="n">line_checks</span> <span class="k">else</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="line-498">            <span class="n">audio</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">render</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">number</span><span class="p">,</span> <span class="n">attempt</span><span class="p">))</span>
-</span><span id="line-499">            <span class="n">verdicts</span> <span class="o">=</span> <span class="p">()</span>
-</span><span id="line-500">            <span class="k">if</span> <span class="n">line_checks</span><span class="p">:</span>
-</span><span id="line-501">                <span class="n">verdicts</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
-</span><span id="line-502">                    <span class="n">verify_words</span><span class="p">(</span>
-</span><span id="line-503">                        <span class="n">audio</span><span class="p">,</span>
-</span><span id="line-504">                        <span class="n">line_checks</span><span class="p">,</span>
-</span><span id="line-505">                        <span class="n">words</span><span class="o">=</span><span class="n">words_of</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span>
-</span><span id="line-506">                        <span class="n">emitter</span><span class="o">=</span><span class="n">emitter</span><span class="p">,</span>
-</span><span id="line-507">                        <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span>
-</span><span id="line-508">                        <span class="n">margin</span><span class="o">=</span><span class="n">margin</span><span class="p">,</span>
-</span><span id="line-509">                    <span class="p">)</span>
-</span><span id="line-510">                <span class="p">)</span>
-</span><span id="line-511">            <span class="n">takes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Take</span><span class="p">(</span><span class="n">attempt</span><span class="p">,</span> <span class="n">audio</span><span class="p">,</span> <span class="n">verdicts</span><span class="p">))</span>
-</span><span id="line-512">            <span class="k">if</span> <span class="ow">not</span> <span class="n">failing</span><span class="p">(</span><span class="n">verdicts</span><span class="p">):</span>
-</span><span id="line-513">                <span class="k">break</span>
-</span><span id="line-514">        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LineTakes</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">takes</span><span class="p">),</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">line_checks</span><span class="p">)))</span>
-</span><span id="line-515">    <span class="k">return</span> <span class="n">results</span></div>
+</span><span id="line-473"><span class="sd">    Args:</span>
+</span><span id="line-474"><span class="sd">        lines: The lines to speak, in order (line numbers start at 1).</span>
+</span><span id="line-475"><span class="sd">        checks: By line number, the words to check (:func:`checks_by_line`).</span>
+</span><span id="line-476"><span class="sd">        render: ``(text, line, attempt) -&gt; audio path``; each call should give a</span>
+</span><span id="line-477"><span class="sd">            new take (a new seed, or a service's own variation).</span>
+</span><span id="line-478"><span class="sd">            :func:`speech_renderer` adapts a :class:`voxy.base.SpeechModel`.</span>
+</span><span id="line-479"><span class="sd">        emitter: The phoneme recogniser (:func:`phoneme_emitter`).</span>
+</span><span id="line-480"><span class="sd">        words_of: ``audio -&gt; timed words``; the default transcribes with</span>
+</span><span id="line-481"><span class="sd">            ``voxy.refprep.transcribe``.</span>
+</span><span id="line-482"><span class="sd">        max_attempts: Renders of one line at most.</span>
+</span><span id="line-483"><span class="sd">        padding, margin: As in :func:`verify_words`.</span>
+</span><span id="line-484">
+</span><span id="line-485"><span class="sd">    &gt;&gt;&gt; heard = {"est": "ɛ"}  # a fake recogniser: what each word sounds like</span>
+</span><span id="line-486"><span class="sd">    &gt;&gt;&gt; def emitter(audio, start, end):</span>
+</span><span id="line-487"><span class="sd">    ...     vocab = ["&lt;pad&gt;", "ɛ", "s", "t"]</span>
+</span><span id="line-488"><span class="sd">    ...     path = [vocab.index(s) for s in heard["est"]]</span>
+</span><span id="line-489"><span class="sd">    ...     return log_probs_from_path(path, vocab_size=4), vocab</span>
+</span><span id="line-490"><span class="sd">    &gt;&gt;&gt; def render(text, line, attempt):</span>
+</span><span id="line-491"><span class="sd">    ...     heard["est"] = "ɛst" if attempt else "ɛ"  # the second take is right</span>
+</span><span id="line-492"><span class="sd">    ...     return f"take-{line}-{attempt}.wav"</span>
+</span><span id="line-493"><span class="sd">    &gt;&gt;&gt; words = lambda audio: [{"start": 0.0, "end": 0.3, "text": "Est"}]</span>
+</span><span id="line-494"><span class="sd">    &gt;&gt;&gt; checks = {1: [("Est", {"verb": "ɛ", "noun": "ɛst"}, "noun")]}</span>
+</span><span id="line-495"><span class="sd">    &gt;&gt;&gt; [result] = render_verified(["L'Est"], checks, render=render, emitter=emitter,</span>
+</span><span id="line-496"><span class="sd">    ...                            words_of=words)</span>
+</span><span id="line-497"><span class="sd">    &gt;&gt;&gt; [t.audio for t in result.takes], result.chosen.attempt, result.verified</span>
+</span><span id="line-498"><span class="sd">    (['take-1-0.wav', 'take-1-1.wav'], 1, True)</span>
+</span><span id="line-499"><span class="sd">    """</span>
+</span><span id="line-500">    <span class="k">if</span> <span class="n">max_attempts</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="line-501">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"max_attempts must be at least 1, got </span><span class="si">{</span><span class="n">max_attempts</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-502">    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-503">    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="line-504">        <span class="n">line_checks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">checks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="p">()))</span>
+</span><span id="line-505">        <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+</span><span id="line-506">            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LineTakes</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="n">text</span><span class="p">))</span>
+</span><span id="line-507">            <span class="k">continue</span>
+</span><span id="line-508">        <span class="n">takes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Take</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-509">        <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_attempts</span> <span class="k">if</span> <span class="n">line_checks</span> <span class="k">else</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="line-510">            <span class="n">audio</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">render</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">number</span><span class="p">,</span> <span class="n">attempt</span><span class="p">))</span>
+</span><span id="line-511">            <span class="n">verdicts</span> <span class="o">=</span> <span class="p">()</span>
+</span><span id="line-512">            <span class="k">if</span> <span class="n">line_checks</span><span class="p">:</span>
+</span><span id="line-513">                <span class="n">verdicts</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+</span><span id="line-514">                    <span class="n">verify_words</span><span class="p">(</span>
+</span><span id="line-515">                        <span class="n">audio</span><span class="p">,</span>
+</span><span id="line-516">                        <span class="n">line_checks</span><span class="p">,</span>
+</span><span id="line-517">                        <span class="n">words</span><span class="o">=</span><span class="n">words_of</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span>
+</span><span id="line-518">                        <span class="n">emitter</span><span class="o">=</span><span class="n">emitter</span><span class="p">,</span>
+</span><span id="line-519">                        <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span>
+</span><span id="line-520">                        <span class="n">margin</span><span class="o">=</span><span class="n">margin</span><span class="p">,</span>
+</span><span id="line-521">                    <span class="p">)</span>
+</span><span id="line-522">                <span class="p">)</span>
+</span><span id="line-523">            <span class="n">takes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Take</span><span class="p">(</span><span class="n">attempt</span><span class="p">,</span> <span class="n">audio</span><span class="p">,</span> <span class="n">verdicts</span><span class="p">))</span>
+</span><span id="line-524">            <span class="k">if</span> <span class="ow">not</span> <span class="n">failing</span><span class="p">(</span><span class="n">verdicts</span><span class="p">):</span>
+</span><span id="line-525">                <span class="k">break</span>
+</span><span id="line-526">        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LineTakes</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">takes</span><span class="p">),</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">line_checks</span><span class="p">)))</span>
+</span><span id="line-527">    <span class="k">return</span> <span class="n">results</span></div>
 
-</span><span id="line-516">
-</span><span id="line-517">
+</span><span id="line-528">
+</span><span id="line-529">
 <div class="viewcode-block" id="speech_renderer">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.speech_renderer">[docs]</a>
-</span><span id="line-518"><span class="k">def</span><span class="w"> </span><span class="nf">speech_renderer</span><span class="p">(</span>
-</span><span id="line-519">    <span class="n">model</span><span class="p">,</span>
-</span><span id="line-520">    <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="line-521">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-522">    <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-523">    <span class="n">take_kwarg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-524">    <span class="o">**</span><span class="n">synthesize_kwargs</span><span class="p">,</span>
-</span><span id="line-525"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-526"><span class="w">    </span><span class="sd">"""A ``render`` for :func:`render_verified` over a :class:`voxy.base.SpeechModel`.</span>
-</span><span id="line-527">
-</span><span id="line-528"><span class="sd">    Each take is saved as ``&lt;outdir&gt;/&lt;line&gt;-&lt;attempt&gt;.&lt;format&gt;`` (default outdir: a</span>
-</span><span id="line-529"><span class="sd">    new folder per renderer under ``voxy_cache_dir("takes")``, so runs never</span>
-</span><span id="line-530"><span class="sd">    overwrite each other's takes). With ``take_kwarg`` (e.g. ``"seed"``), the attempt</span>
-</span><span id="line-531"><span class="sd">    number is passed to ``model.synthesize`` under that name, so a seeded model gives</span>
-</span><span id="line-532"><span class="sd">    a new take; without it, the model is simply called again.</span>
-</span><span id="line-533"><span class="sd">    """</span>
-</span><span id="line-534">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
-</span><span id="line-535">
-</span><span id="line-536">    <span class="k">if</span> <span class="n">outdir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-537">        <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
-</span><span id="line-538">        <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+</span><span id="line-530"><span class="k">def</span><span class="w"> </span><span class="nf">speech_renderer</span><span class="p">(</span>
+</span><span id="line-531">    <span class="n">model</span><span class="p">,</span>
+</span><span id="line-532">    <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-533">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-534">    <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-535">    <span class="n">take_kwarg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-536">    <span class="o">**</span><span class="n">synthesize_kwargs</span><span class="p">,</span>
+</span><span id="line-537"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-538"><span class="w">    </span><span class="sd">"""A ``render`` for :func:`render_verified` over a :class:`voxy.base.SpeechModel`.</span>
 </span><span id="line-539">
-</span><span id="line-540">        <span class="n">run</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">'%Y%m</span><span class="si">%d</span><span class="s1">-%H%M%S'</span><span class="p">)</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="line-541">        <span class="n">outdir</span> <span class="o">=</span> <span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"takes"</span><span class="p">,</span> <span class="n">run</span><span class="p">)</span>
-</span><span id="line-542">    <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">outdir</span><span class="p">)</span>
-</span><span id="line-543">
-</span><span id="line-544">    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">line</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">attempt</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-545">        <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">synthesize_kwargs</span><span class="p">)</span>
-</span><span id="line-546">        <span class="k">if</span> <span class="n">take_kwarg</span><span class="p">:</span>
-</span><span id="line-547">            <span class="n">kwargs</span><span class="p">[</span><span class="n">take_kwarg</span><span class="p">]</span> <span class="o">=</span> <span class="n">attempt</span>
-</span><span id="line-548">        <span class="n">speech</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="line-549">        <span class="k">return</span> <span class="n">speech</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">root</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">line</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">attempt</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">speech</span><span class="o">.</span><span class="n">format</span><span class="si">}</span><span class="s2">"</span><span class="p">))</span>
-</span><span id="line-550">
-</span><span id="line-551">    <span class="k">return</span> <span class="n">render</span></div>
+</span><span id="line-540"><span class="sd">    Each take is saved as ``&lt;outdir&gt;/&lt;line&gt;-&lt;attempt&gt;.&lt;format&gt;`` (default outdir: a</span>
+</span><span id="line-541"><span class="sd">    new folder per renderer under ``voxy_cache_dir("takes")``, so runs never</span>
+</span><span id="line-542"><span class="sd">    overwrite each other's takes). With ``take_kwarg`` (e.g. ``"seed"``), the attempt</span>
+</span><span id="line-543"><span class="sd">    number is passed to ``model.synthesize`` under that name, so a seeded model gives</span>
+</span><span id="line-544"><span class="sd">    a new take; without it, the model is simply called again.</span>
+</span><span id="line-545"><span class="sd">    """</span>
+</span><span id="line-546">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
+</span><span id="line-547">
+</span><span id="line-548">    <span class="k">if</span> <span class="n">outdir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-549">        <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+</span><span id="line-550">        <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+</span><span id="line-551">
+</span><span id="line-552">        <span class="n">run</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">'%Y%m</span><span class="si">%d</span><span class="s1">-%H%M%S'</span><span class="p">)</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-553">        <span class="n">outdir</span> <span class="o">=</span> <span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"takes"</span><span class="p">,</span> <span class="n">run</span><span class="p">)</span>
+</span><span id="line-554">    <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">outdir</span><span class="p">)</span>
+</span><span id="line-555">
+</span><span id="line-556">    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">line</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">attempt</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-557">        <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">synthesize_kwargs</span><span class="p">)</span>
+</span><span id="line-558">        <span class="k">if</span> <span class="n">take_kwarg</span><span class="p">:</span>
+</span><span id="line-559">            <span class="n">kwargs</span><span class="p">[</span><span class="n">take_kwarg</span><span class="p">]</span> <span class="o">=</span> <span class="n">attempt</span>
+</span><span id="line-560">        <span class="n">speech</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="line-561">        <span class="k">return</span> <span class="n">speech</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">root</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">line</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">attempt</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">speech</span><span class="o">.</span><span class="n">format</span><span class="si">}</span><span class="s2">"</span><span class="p">))</span>
+</span><span id="line-562">
+</span><span id="line-563">    <span class="k">return</span> <span class="n">render</span></div>
 
-</span><span id="line-552">
-</span><span id="line-553">
+</span><span id="line-564">
+</span><span id="line-565">
 <div class="viewcode-block" id="load_readings">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.load_readings">[docs]</a>
-</span><span id="line-554"><span class="k">def</span><span class="w"> </span><span class="nf">load_readings</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-</span><span id="line-555"><span class="w">    </span><span class="sd">"""Heteronym readings ``{word: {reading name: IPA}}`` from a caller's file.</span>
-</span><span id="line-556">
-</span><span id="line-557"><span class="sd">    A ``.json`` file holds that mapping; any other file is tab-separated</span>
-</span><span id="line-558"><span class="sd">    ``word&lt;TAB&gt;reading name&lt;TAB&gt;IPA``, one reading per line (``#`` lines and blank</span>
-</span><span id="line-559"><span class="sd">    lines skipped), e.g. a list derived from Lexique, which voxy does not ship.</span>
-</span><span id="line-560"><span class="sd">    """</span>
-</span><span id="line-561">    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-</span><span id="line-562">
-</span><span id="line-563">    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="line-564">    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">".json"</span><span class="p">:</span>
-</span><span id="line-565">        <span class="k">return</span> <span class="p">{</span><span class="n">w</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">))</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-</span><span id="line-566">    <span class="n">table</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-567">    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">(),</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="line-568">        <span class="k">if</span> <span class="ow">not</span> <span class="n">row</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="n">row</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"#"</span><span class="p">):</span>
-</span><span id="line-569">            <span class="k">continue</span>
-</span><span id="line-570">        <span class="n">fields</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-571">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
-</span><span id="line-572">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-573">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">number</span><span class="si">}</span><span class="s2">: expected word&lt;TAB&gt;reading name&lt;TAB&gt;IPA, got </span><span class="si">{</span><span class="n">row</span><span class="si">!r}</span><span class="s2">"</span>
-</span><span id="line-574">            <span class="p">)</span>
-</span><span id="line-575">        <span class="n">word</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">ipa</span> <span class="o">=</span> <span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">)</span>
-</span><span id="line-576">        <span class="n">table</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="p">{})[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ipa</span>
-</span><span id="line-577">    <span class="k">return</span> <span class="n">table</span></div>
+</span><span id="line-566"><span class="k">def</span><span class="w"> </span><span class="nf">load_readings</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+</span><span id="line-567"><span class="w">    </span><span class="sd">"""Heteronym readings ``{word: {reading name: IPA}}`` from a caller's file.</span>
+</span><span id="line-568">
+</span><span id="line-569"><span class="sd">    A ``.json`` file holds that mapping; any other file is tab-separated</span>
+</span><span id="line-570"><span class="sd">    ``word&lt;TAB&gt;reading name&lt;TAB&gt;IPA``, one reading per line (``#`` lines and blank</span>
+</span><span id="line-571"><span class="sd">    lines skipped), e.g. a list derived from Lexique, which voxy does not ship.</span>
+</span><span id="line-572"><span class="sd">    """</span>
+</span><span id="line-573">    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+</span><span id="line-574">
+</span><span id="line-575">    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="line-576">    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">".json"</span><span class="p">:</span>
+</span><span id="line-577">        <span class="k">return</span> <span class="p">{</span><span class="n">w</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">))</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+</span><span id="line-578">    <span class="n">table</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-579">    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">(),</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="line-580">        <span class="k">if</span> <span class="ow">not</span> <span class="n">row</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="n">row</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"#"</span><span class="p">):</span>
+</span><span id="line-581">            <span class="k">continue</span>
+</span><span id="line-582">        <span class="n">fields</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-583">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+</span><span id="line-584">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-585">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">number</span><span class="si">}</span><span class="s2">: expected word&lt;TAB&gt;reading name&lt;TAB&gt;IPA, got </span><span class="si">{</span><span class="n">row</span><span class="si">!r}</span><span class="s2">"</span>
+</span><span id="line-586">            <span class="p">)</span>
+</span><span id="line-587">        <span class="n">word</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">ipa</span> <span class="o">=</span> <span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">)</span>
+</span><span id="line-588">        <span class="n">table</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="p">{})[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ipa</span>
+</span><span id="line-589">    <span class="k">return</span> <span class="n">table</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -826,7 +838,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=056c92e6"></script>
+    <script src="../../_static/documentation_options.js?v=a11416ff"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

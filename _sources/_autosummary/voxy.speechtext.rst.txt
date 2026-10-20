@@ -9,13 +9,18 @@ voxy.speechtext
    .. autosummary::
    
       SENTENCE_END
+      Tagger
+      DFLT_SPACY_MODEL
+      FRENCH_POS_HETERONYMS
    
    .. rubric:: Functions
 
    .. autosummary::
    
       flag_risks
+      pos_detector
       prepare_speech_text
+      spacy_tagger
    
    .. rubric:: Classes
 

@@ -38,7 +38,7 @@
 - [voxy.workers.voxcpm_adapter](_autosummary/voxy.workers.voxcpm_adapter.html.md): VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.
 - [voxy.workers.xtts_adapter](_autosummary/voxy.workers.xtts_adapter.html.md): XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.
 - [For AI agents](ai-agents.html.md): &#96;voxy&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-20 17:05 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-20 17:40 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
 
 ## Optional
 

@@ -1,4 +1,4 @@
-> built 2026-10-20 17:05 UTC from 7c7e6c6 (main) · voxy 0.0.20. Details: build_info.json
+> built 2026-10-20 17:40 UTC from 31a8e31 (main) · voxy 0.0.21. Details: build_info.json
 
 # index.html.md
 
@@ -8,7 +8,7 @@
 
 Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designing voices.
 
-To install:	`pip install voxy` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'voxy[fal]'` for those services)
+To install:	`pip install voxy` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'voxy[fal]'` for those services) The part-of-speech heteronym detector (`voxy.speechtext.pos_detector`) needs `'voxy[pos]'` plus `python -m spacy download fr_core_news_sm`.
 
 ```python
 import voxy
@@ -2179,8 +2179,11 @@ The name of the reading `log_probs` support best.
 
 `readings` maps a word (case-insensitively) to `{name: IPA}`, e.g. from a
 Lexique-derived heteronym list the caller supplies; `expected` names the
-reading each word should have. Words with no entry are skipped. Each word is
-checked once: `verify_words` finds every place it is spoken.
+reading each word should have, and otherwise the risks’ own `expected` (what a
+detector such as `voxy.speechtext.pos_detector` found) is used. Words with no
+entry are skipped. Each word is checked once: `verify_words` finds every place
+it is spoken, so a word whose risks name *different* readings gets none here
+(group the risks by line with [`checks_by_line()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.checks_by_line) to check each one).
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]
@@ -2691,7 +2694,9 @@ ASR checks cannot catch this (Whisper hears “est” either way), so the fix is
    respelling table and proper-name aliases, and returns every change it made.
 2. [`flag_risks()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.flag_risks) lists the words of a text a model may misread (heteronyms you
    supply, e.g. from Lexique; more detectors plug in through `extra`), saying which
-   ones sit where the capital trigger bites.
+   ones sit where the capital trigger bites. [`pos_detector()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.pos_detector) is one such
+   detector: it tags the text and, for heteronyms whose part of speech picks the
+   reading (French “est”: verb /ɛ/, noun /ɛst/), names the `expected` reading.
 
 Engines differ in what they accept: for several local models text is the only lever
 (they take no phonemes or SSML), so this is a text-level step; it plugs into
@@ -2708,14 +2713,19 @@ True
 
 ### Module Attributes
 
-| [`SENTENCE_END`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.SENTENCE_END)   | the next line's capital then starts a new one.   |
-|-----------------------------------------------------------------|--------------------------------------------------|
+| [`SENTENCE_END`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.SENTENCE_END)          | the next line's capital then starts a new one.                                                             |
+|------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| [`Tagger`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Tagger)                | `text -> (char offset, token, universal POS tag)` for every token.                                         |
+| [`DFLT_SPACY_MODEL`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.DFLT_SPACY_MODEL)      | The spaCy model [`spacy_tagger()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.spacy_tagger) loads by default (French). |
+| [`FRENCH_POS_HETERONYMS`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.FRENCH_POS_HETERONYMS) | `{word: {UPOS: reading}}`.                                                                                 |
 
 ### Functions
 
-| [`flag_risks`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra])   | Words of `text` a model may misread, in text order.              |
-|----------------------------------------------------------------------------------------------|------------------------------------------------------------------|
-| [`prepare_speech_text`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.prepare_speech_text)(text, \*[, ...])        | Display text in, speech text out, with a record of every change. |
+| [`flag_risks`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra])   | Words of `text` a model may misread, in text order.                                                                                  |
+|----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| [`pos_detector`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.pos_detector)([rules, tagger])               | A [`flag_risks()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading. |
+| [`prepare_speech_text`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.prepare_speech_text)(text, \*[, ...])        | Display text in, speech text out, with a record of every change.                                                                     |
+| [`spacy_tagger`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.spacy_tagger)([model])                       | A [`Tagger`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Tagger) over a spaCy pipeline, loaded on first use.                                |
 
 ### Classes
 
@@ -2730,11 +2740,27 @@ Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 One edit [`prepare_speech_text()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.prepare_speech_text) made (`line` counts from 1).
 
-### *class* voxy.speechtext.Risk(line, word, reason, readings=(), line_initial_capital=False)
+### voxy.speechtext.DFLT_SPACY_MODEL *= 'fr_core_news_sm'*
+
+The spaCy model [`spacy_tagger()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.spacy_tagger) loads by default (French).
+
+### voxy.speechtext.FRENCH_POS_HETERONYMS *: [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]]* *= {'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}}*
+
+`{word: {UPOS: reading}}`.
+The reading names are the keys of the IPA table given to `voxy.pronounce`.
+
+* **Type:**
+  French heteronyms whose part of speech picks the reading
+
+### *class* voxy.speechtext.Risk(line, word, reason, readings=(), line_initial_capital=False, expected=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A word a model may misread: where it is, why it is flagged, its known readings.
+
+#### expected *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+The reading the context picks (a name among `readings`), when a detector knows it.
 
 ### voxy.speechtext.SENTENCE_END *= re.compile('[.!?…][\\'\\\\"”’»)\\\\]]\*\\\\s\*$')*
 
@@ -2748,6 +2774,15 @@ the next line’s capital then starts a new one.
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 The text to show (`display`), the text to speak (`speech`) and what changed.
+
+### voxy.speechtext.Tagger
+
+`text -> (char offset, token, universal POS tag)` for every token.
+
+* **Type:**
+  A tagger
+
+alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
 
 ### voxy.speechtext.flag_risks(text, , heteronyms=(), extra=())
 
@@ -2765,6 +2800,27 @@ Words of `text` a model may misread, in text order.
 
 A heteronym that is capitalised at a line start where no sentence begins is flagged
 with `line_initial_capital=True`: that is where the capital trigger bites.
+
+### voxy.speechtext.pos_detector(rules={'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}}, , tagger=None)
+
+A [`flag_risks()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading.
+
+Run it on the *speech* text ([`prepare_speech_text()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.prepare_speech_text)): a stray verse-initial
+capital fools the tagger the same way it fools the speech model.
+
+* **Parameters:**
+  * **rules** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – `{word: {UPOS tag: reading name}}`, words matched case-insensitively
+    (default [`FRENCH_POS_HETERONYMS`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.FRENCH_POS_HETERONYMS)).
+  * **tagger** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> (offset, token, UPOS)`; default [`spacy_tagger()`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.spacy_tagger)
+    (French), loaded on first use.
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Risk`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Risk)]]
+
+```pycon
+>>> fake = lambda text: [(0, "Il", "PRON"), (3, "est", "AUX"), (7, "parti", "VERB")]
+>>> [(r.word, r.expected) for r in pos_detector(tagger=fake)("Il est parti")]
+[('est', 'verb')]
+```
 
 ### voxy.speechtext.prepare_speech_text(text, , lowercase_verse_initial=True, keep=(), respellings=None, aliases=None, transforms=())
 
@@ -2785,6 +2841,16 @@ Display text in, speech text out, with a record of every change.
   [`SpeechText`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.SpeechText)
 * **Returns:**
   A [`SpeechText`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.SpeechText).
+
+### voxy.speechtext.spacy_tagger(model='fr_core_news_sm')
+
+A [`Tagger`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Tagger) over a spaCy pipeline, loaded on first use.
+
+Needs `pip install 'voxy[pos]'` and the model itself
+(`python -m spacy download fr_core_news_sm`).
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
 
 
 # _autosummary/voxy.stores.html.md
@@ -3336,18 +3402,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-20 17:05 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/7c7e6c61e032e61a43e5358454cdd5f9486b89b7"><code>7c7e6c6</code></a> on branch <code>main</code>, for **voxy 0.0.20** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-20 17:40 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/31a8e318a5c1dd2adeb27fa7bb61bd781194f113"><code>31a8e31</code></a> on branch <code>main</code>, for **voxy 0.0.21** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.20) is behind the latest release on PyPI (0.0.21): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.21) is behind the latest release on PyPI (0.0.22): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/7c7e6c61e032e61a43e5358454cdd5f9486b89b7"><code>7c7e6c61e032e61a43e5358454cdd5f9486b89b7</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/31a8e318a5c1dd2adeb27fa7bb61bd781194f113"><code>31a8e318a5c1dd2adeb27fa7bb61bd781194f113</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -3358,9 +3424,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39462590760">39462590760</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39467591958">39467591958</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>7c7e6c61e032e61a43e5358454cdd5f9486b89b7</code> (in the history of the built commit) |
+| Event commit | <code>31a8e318a5c1dd2adeb27fa7bb61bd781194f113</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -3385,13 +3451,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.21/">0.0.21</a>, newer than the documented version (0.0.20).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.22/">0.0.22</a>, newer than the documented version (0.0.21).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 7c7e6c61e032e61a43e5358454cdd5f9486b89b7
+git checkout 31a8e318a5c1dd2adeb27fa7bb61bd781194f113
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
