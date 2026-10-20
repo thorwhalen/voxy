@@ -44,6 +44,8 @@ CLI: `python -m voxy voices [--backend X]`, `python -m voxy speak "text" --voice
 | `voxcpm`, `qwen3tts`, `chatterbox`, `f5tts`, `xtts` | local cloning from one reference clip + transcript, CPU OK (slow: RTF > 1); long text chunked | `uv`, `ffmpeg`; env + weights built on first use under `$VOXY_DATA_DIR` |
 | `csm` | local Sesame CSM-1B (GPU) | torch, the CSM repo |
 
+To choose between cloning backends on evidence (French and English accuracy, voice likeness judged by people, arenas, licence, price, watermark), read `misc/docs/benchmarks.md` in the voxy repo; its data is `voxy/data/benchmarks.json` (`voxy.benchmarks.load_benchmarks()`), every number with its source. When you find a newer published result, add a row and run `python -m voxy benchmarks misc/docs/benchmarks.md`.
+
 Add a service with `voxy.register_speech_model("name", factory)`: a `SpeechModel` subclass implementing `synthesize(text, voice) -> Speech` (and optionally `list_voices`, `clone_voice`, `design_voice`). Synthesis costs credits: draft with `say`, render the final with the real voice.
 
 ## 3. New voices

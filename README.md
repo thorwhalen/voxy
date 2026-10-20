@@ -208,6 +208,8 @@ Long text is split into paragraphs and sentence-packed chunks, each spoken separ
 
 Languages: VoxCPM2 (30 languages), Qwen3-TTS (10, pass `language="French"` etc.), XTTS-v2 (17, `language="fr"`) and Chatterbox with `variant="multilingual"` (23, `language="fr"`) speak beyond English; Chatterbox's `original` and `turbo` variants and the F5-TTS base model are English (F5 also Chinese).
 
+**Which backend?** [misc/docs/benchmarks.md](misc/docs/benchmarks.md) compares the cloning backends on published benchmarks (French and English accuracy, voice likeness rated by people, arenas, licence, price, watermark), with tables, charts and a link to every source. The data is `voxy/data/benchmarks.json`; `python -m voxy benchmarks misc/docs/benchmarks.md` regenerates the tables and charts after you edit it.
+
 ```python
 model = voxy.create_speech_model("chatterbox", variant="multilingual")
 speech = model.synthesize("Bonjour à tous.", voice, language="fr")
