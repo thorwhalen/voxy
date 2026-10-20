@@ -24,6 +24,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 
@@ -328,3 +329,249 @@ def phoneme_emitter(
         return np.asarray(reply["log_probs"], dtype=float), reply["vocab"]
 
     return emit
+
+
+# 4. re-rendering the lines that fail -------------------------------------------
+
+#: Renders of one line at most (the first take included).
+DFLT_MAX_ATTEMPTS = 3
+
+#: ``(word, {reading name: IPA}, expected reading or None)``: one word to check.
+Check = tuple[str, Mapping[str, str], "str | None"]
+
+
+@dataclass(frozen=True)
+class Take:
+    """One render of a line and what the audio says about its flagged words."""
+
+    attempt: int
+    audio: str
+    verdicts: tuple[Verdict, ...] = ()
+
+    @property
+    def failing(self) -> list[Verdict]:
+        """The verdicts of this take whose word was decidedly misread."""
+        return failing(self.verdicts)
+
+
+@dataclass(frozen=True)
+class LineTakes:
+    """Every take of one line (1-based ``line``, as :class:`voxy.speechtext.Risk`).
+
+    A blank line has no take.
+    """
+
+    line: int
+    text: str
+    takes: tuple[Take, ...] = field(default_factory=tuple)
+    checks: tuple = ()
+
+    @property
+    def chosen(self) -> Take | None:
+        """The first take with no failing word, else the one with the fewest."""
+        return min(self.takes, key=lambda t: len(t.failing), default=None)
+
+    @property
+    def unconfirmed(self) -> list[str]:
+        """Checked words with an expected reading that the chosen take did not confirm.
+
+        A word is confirmed when the audio decidedly gave the expected reading at least
+        once. It stays unconfirmed when ASR never found it, or when the recogniser
+        could not decide.
+        """
+        verdicts = self.chosen.verdicts if self.chosen else ()
+        return [
+            word
+            for word, _, expected in self.checks
+            if expected is not None
+            and not any(v.word == word and v.ok for v in verdicts)
+        ]
+
+    @property
+    def verified(self) -> bool:
+        """No checked word misread, and every one with an expected reading confirmed."""
+        return not (self.chosen and self.chosen.failing) and not self.unconfirmed
+
+
+def checks_by_line(
+    risks: Iterable,
+    *,
+    readings: Mapping[str, Mapping[str, str]],
+    expected: Mapping[str, str] | None = None,
+) -> dict[int, list[Check]]:
+    """:func:`checks_from_risks`, grouped by the line each risk is on."""
+    by_line: dict[int, list] = {}
+    for risk in risks:
+        by_line.setdefault(risk.line, []).append(risk)
+    grouped = {
+        line: checks_from_risks(line_risks, readings=readings, expected=expected)
+        for line, line_risks in by_line.items()
+    }
+    return {line: checks for line, checks in grouped.items() if checks}
+
+
+def timed_words(segments: Iterable[Mapping]) -> list[Mapping]:
+    """The timed words of ASR segments (``voxy.refprep.transcribe``'s output).
+
+    Words without times are dropped; a segment with no timed word counts as one word.
+
+    >>> timed_words([{"words": [{"start": 0.0, "end": 0.2, "text": "a"},
+    ...                         {"start": None, "end": None, "text": "b"}]},
+    ...              {"start": 1.0, "end": 2.0, "text": "c", "words": []}])
+    [{'start': 0.0, 'end': 0.2, 'text': 'a'}, {'start': 1.0, 'end': 2.0, 'text': 'c'}]
+    """
+    words: list[Mapping] = []
+    for s in segments:
+        timed = [
+            w
+            for w in s.get("words") or ()
+            if w.get("start") is not None and w.get("end") is not None
+        ]
+        words += timed or [{"start": s["start"], "end": s["end"], "text": s["text"]}]
+    return words
+
+
+def _transcribed_words(audio: str) -> list[Mapping]:
+    from voxy.refprep import transcribe
+
+    return timed_words(transcribe(audio))
+
+
+def render_verified(
+    lines: Iterable[str],
+    checks: Mapping[int, Sequence[Check]],
+    *,
+    render: Callable[[str, int, int], "str | os.PathLike"],
+    emitter: Emitter,
+    words_of: Callable[[str], Iterable[Mapping]] = _transcribed_words,
+    max_attempts: int = DFLT_MAX_ATTEMPTS,
+    padding: float = DFLT_CROP_PADDING,
+    margin: float = DFLT_MARGIN,
+) -> list[LineTakes]:
+    """Render each line, and re-render the ones whose flagged words came out wrong.
+
+    A line with checks is verified (:func:`verify_words`) after each render and
+    rendered again while a word is decidedly misread (:func:`failing`), up to
+    ``max_attempts`` renders; a line without checks is rendered once, and a blank
+    line not at all (line numbers still count it, as ``flag_risks`` does).
+    :attr:`LineTakes.chosen` is the take to keep; :attr:`LineTakes.verified` also
+    requires each expected reading to be confirmed (a word ASR did not find, or the
+    recogniser could not decide, leaves the line unverified rather than retried).
+
+    Args:
+        lines: The lines to speak, in order (line numbers start at 1).
+        checks: By line number, the words to check (:func:`checks_by_line`).
+        render: ``(text, line, attempt) -> audio path``; each call should give a
+            new take (a new seed, or a service's own variation).
+            :func:`speech_renderer` adapts a :class:`voxy.base.SpeechModel`.
+        emitter: The phoneme recogniser (:func:`phoneme_emitter`).
+        words_of: ``audio -> timed words``; the default transcribes with
+            ``voxy.refprep.transcribe``.
+        max_attempts: Renders of one line at most.
+        padding, margin: As in :func:`verify_words`.
+
+    >>> heard = {"est": "ɛ"}  # a fake recogniser: what each word sounds like
+    >>> def emitter(audio, start, end):
+    ...     vocab = ["<pad>", "ɛ", "s", "t"]
+    ...     path = [vocab.index(s) for s in heard["est"]]
+    ...     return log_probs_from_path(path, vocab_size=4), vocab
+    >>> def render(text, line, attempt):
+    ...     heard["est"] = "ɛst" if attempt else "ɛ"  # the second take is right
+    ...     return f"take-{line}-{attempt}.wav"
+    >>> words = lambda audio: [{"start": 0.0, "end": 0.3, "text": "Est"}]
+    >>> checks = {1: [("Est", {"verb": "ɛ", "noun": "ɛst"}, "noun")]}
+    >>> [result] = render_verified(["L'Est"], checks, render=render, emitter=emitter,
+    ...                            words_of=words)
+    >>> [t.audio for t in result.takes], result.chosen.attempt, result.verified
+    (['take-1-0.wav', 'take-1-1.wav'], 1, True)
+    """
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
+    results = []
+    for number, text in enumerate(lines, 1):
+        line_checks = list(checks.get(number, ()))
+        if not text.strip():
+            results.append(LineTakes(number, text))
+            continue
+        takes: list[Take] = []
+        for attempt in range(max_attempts if line_checks else 1):
+            audio = str(render(text, number, attempt))
+            verdicts = ()
+            if line_checks:
+                verdicts = tuple(
+                    verify_words(
+                        audio,
+                        line_checks,
+                        words=words_of(audio),
+                        emitter=emitter,
+                        padding=padding,
+                        margin=margin,
+                    )
+                )
+            takes.append(Take(attempt, audio, verdicts))
+            if not failing(verdicts):
+                break
+        results.append(LineTakes(number, text, tuple(takes), tuple(line_checks)))
+    return results
+
+
+def speech_renderer(
+    model,
+    voice=None,
+    *,
+    outdir: str | os.PathLike | None = None,
+    take_kwarg: str | None = None,
+    **synthesize_kwargs,
+) -> Callable[[str, int, int], str]:
+    """A ``render`` for :func:`render_verified` over a :class:`voxy.base.SpeechModel`.
+
+    Each take is saved as ``<outdir>/<line>-<attempt>.<format>`` (default outdir: a
+    new folder per renderer under ``voxy_cache_dir("takes")``, so runs never
+    overwrite each other's takes). With ``take_kwarg`` (e.g. ``"seed"``), the attempt
+    number is passed to ``model.synthesize`` under that name, so a seeded model gives
+    a new take; without it, the model is simply called again.
+    """
+    from voxy.local_clone import voxy_cache_dir
+
+    if outdir is None:
+        import time
+        import uuid
+
+        run = f"{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        outdir = voxy_cache_dir("takes", run)
+    root = Path(outdir)
+
+    def render(text: str, line: int, attempt: int) -> str:
+        kwargs = dict(synthesize_kwargs)
+        if take_kwarg:
+            kwargs[take_kwarg] = attempt
+        speech = model.synthesize(text, voice, **kwargs)
+        return speech.save(str(root / f"{line:04d}-{attempt}.{speech.format}"))
+
+    return render
+
+
+def load_readings(path: str | os.PathLike) -> dict[str, dict[str, str]]:
+    """Heteronym readings ``{word: {reading name: IPA}}`` from a caller's file.
+
+    A ``.json`` file holds that mapping; any other file is tab-separated
+    ``word<TAB>reading name<TAB>IPA``, one reading per line (``#`` lines and blank
+    lines skipped), e.g. a list derived from Lexique, which voxy does not ship.
+    """
+    import json
+
+    path = Path(path)
+    if path.suffix == ".json":
+        return {w: dict(r) for w, r in json.loads(path.read_text("utf-8")).items()}
+    table: dict[str, dict[str, str]] = {}
+    for number, row in enumerate(path.read_text("utf-8").splitlines(), 1):
+        if not row.strip() or row.startswith("#"):
+            continue
+        fields = row.split("\t")
+        if len(fields) != 3:
+            raise ValueError(
+                f"{path}:{number}: expected word<TAB>reading name<TAB>IPA, got {row!r}"
+            )
+        word, name, ipa = (f.strip() for f in fields)
+        table.setdefault(word, {})[name] = ipa
+    return table
