@@ -9,7 +9,7 @@ Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcri
 The steps, each a function you can call alone or replace:
 
 1. ``condition`` (ffmpeg): any format to mono PCM WAV at ``sample_rate``, with a
-   high-pass, optional denoising (``denoise=``: 'afftdn', 'anlmdn', or None) and
+   high-pass, optional denoising (``denoise=``: 'afftdn', 'anlmdn', 'deepfilternet', or None) and
    loudness normalisation (EBU R128, ``loudness_lufs``).
 2. ``transcribe``: timed segments and words from a local Whisper (scribed's
    faster-whisper backend, in its own environment, see ``voxy.envs``).
@@ -30,6 +30,7 @@ import shutil
 import subprocess
 import tempfile
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -41,6 +42,7 @@ DFLT_SAMPLE_RATE = 24000
 DFLT_LOUDNESS_LUFS = -20.0
 DFLT_HIGHPASS_HZ = 70
 DFLT_DENOISE = "afftdn"
+DEEPFILTERNET = "deepfilternet"
 DFLT_MIN_SECONDS = 3.0
 DFLT_MAX_SECONDS = 12.0
 DFLT_PAD_SECONDS = 0.12
@@ -54,7 +56,16 @@ DENOISE_FILTERS = {
     None: [],
     "afftdn": ["afftdn=nr=12:nf=-50:tn=1"],
     "anlmdn": ["anlmdn=s=0.0005"],
+    # No ffmpeg filter: DeepFilterNet runs as its own stage (see ``with_deepfilternet``).
+    DEEPFILTERNET: [],
 }
+
+#: DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.
+DF_SAMPLE_RATE = 48000
+DF_ENV = EnvSpec(
+    "deepfilternet",
+    ("torch==2.0.1", "torchaudio==2.0.2", "deepfilternet", "soundfile"),
+)
 
 ASR_ENV = EnvSpec("asr", ("scribed[faster-whisper]>=0.0.5", "soundfile"))
 
@@ -116,6 +127,64 @@ def condition(
     Path(dst).parent.mkdir(parents=True, exist_ok=True)
     run(cmd, check=True)
     return Path(dst)
+
+
+def deepfilternet_denoise(
+    src: str | os.PathLike,
+    dst: str | os.PathLike,
+    *,
+    rootdir: str | os.PathLike | None = None,
+    threads: int | None = None,
+    run=subprocess.run,
+    ensure=ensure_env,
+) -> Path:
+    """Denoise the 48 kHz WAV ``src`` into ``dst`` with DeepFilterNet 3.
+
+    Runs the ``deepFilter`` command of the isolated :data:`DF_ENV` (built once with
+    ``uv`` under the data root: see ``voxy.envs``). One short call per file, so it needs
+    no resident worker.
+    """
+    python = ensure(DF_ENV, rootdir=rootdir)
+    command = Path(python).parent / "deepFilter"
+    with tempfile.TemporaryDirectory() as out:
+        run(
+            [str(command), str(src), "-o", out],
+            check=True,
+            env=worker_environ(DF_ENV, threads=threads, rootdir=rootdir),
+        )
+        results = sorted(Path(out).glob("*.wav"))
+        if not results:
+            raise RuntimeError(f"deepFilter wrote no WAV for {src}")
+        result = results[0]
+        Path(dst).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(result, dst)
+    return Path(dst)
+
+
+def with_deepfilternet(
+    conditioner: Callable[..., Path] | None = None,
+    *,
+    denoiser: Callable[..., Path] | None = None,
+    rootdir: str | os.PathLike | None = None,
+) -> Callable[..., Path]:
+    """A ``conditioner`` that denoises with DeepFilterNet between two ffmpeg passes.
+
+    Pass 1 converts the source to a 48 kHz mono WAV (no filters); DeepFilterNet cleans
+    it; pass 2 applies the usual ``filters`` (high-pass, loudness) and resamples to
+    ``sample_rate``. ``conditioner`` (default :func:`condition`) does both ffmpeg passes.
+    """
+    conditioner = conditioner or condition
+    denoiser = denoiser or partial(deepfilternet_denoise, rootdir=rootdir)
+
+    def conditioned(src, dst, *, sample_rate=DFLT_SAMPLE_RATE, filters=None, **kwargs):
+        with tempfile.TemporaryDirectory() as tmp:
+            wide = Path(tmp) / "wide.wav"
+            clean = Path(tmp) / "clean.wav"
+            conditioner(src, wide, sample_rate=DF_SAMPLE_RATE, filters=[], **kwargs)
+            denoiser(wide, clean)
+            return conditioner(clean, dst, sample_rate=sample_rate, filters=filters)
+
+    return conditioned
 
 
 # 2. transcription -------------------------------------------------------------
@@ -368,6 +437,8 @@ def prepare_reference(
         samples = samples_store(voice, rootdir=rootdir)
     transcriber = transcriber or partial_transcribe(rootdir)
     conditioner = conditioner or condition
+    if denoise == DEEPFILTERNET:
+        conditioner = with_deepfilternet(conditioner, rootdir=rootdir)
     filters = conditioning_filters(denoise=denoise, loudness_lufs=loudness_lufs)
     manifest = []
     with tempfile.TemporaryDirectory() as tmp:
