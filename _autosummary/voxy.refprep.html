@@ -144,7 +144,7 @@
 <p>The steps, each a function you can call alone or replace:</p>
 <ol class="arabic simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">condition</span></code> (ffmpeg): any format to mono PCM WAV at <code class="docutils literal notranslate"><span class="pre">sample_rate</span></code>, with a
-high-pass, optional denoising (<code class="docutils literal notranslate"><span class="pre">denoise=</span></code>: ‘afftdn’, ‘anlmdn’, or None) and
+high-pass, optional denoising (<code class="docutils literal notranslate"><span class="pre">denoise=</span></code>: ‘afftdn’, ‘anlmdn’, ‘deepfilternet’, or None) and
 loudness normalisation (EBU R128, <code class="docutils literal notranslate"><span class="pre">loudness_lufs</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">transcribe</span></code>: timed segments and words from a local Whisper (scribed’s
 faster-whisper backend, in its own environment, see <code class="docutils literal notranslate"><span class="pre">voxy.envs</span></code>).</p></li>
@@ -161,6 +161,9 @@ reference clip) and fine-tuning (<code class="docutils literal notranslate"><spa
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.DENOISE_FILTERS" title="voxy.refprep.DENOISE_FILTERS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DENOISE_FILTERS</span></code></a></p></td>
 <td><p>no denoising).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.DF_SAMPLE_RATE" title="voxy.refprep.DF_SAMPLE_RATE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DF_SAMPLE_RATE</span></code></a></p></td>
+<td><p>DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.</p></td>
 </tr>
 </tbody>
 </table>
@@ -179,41 +182,52 @@ reference clip) and fine-tuning (<code class="docutils literal notranslate"><spa
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.conditioning_filters" title="voxy.refprep.conditioning_filters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">conditioning_filters</span></code></a>(*[, denoise, ...])</p></td>
 <td><p>The ffmpeg audio filter chain for <code class="docutils literal notranslate"><span class="pre">condition</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.load_manifest" title="voxy.refprep.load_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_manifest</span></code></a>(samples)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.deepfilternet_denoise" title="voxy.refprep.deepfilternet_denoise"><code class="xref py py-obj docutils literal notranslate"><span class="pre">deepfilternet_denoise</span></code></a>(src, dst, *[, ...])</p></td>
+<td><p>Denoise the 48 kHz WAV <code class="docutils literal notranslate"><span class="pre">src</span></code> into <code class="docutils literal notranslate"><span class="pre">dst</span></code> with DeepFilterNet 3.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.load_manifest" title="voxy.refprep.load_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_manifest</span></code></a>(samples)</p></td>
 <td><p>The manifest saved by <code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> in a samples store.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.partial_transcribe" title="voxy.refprep.partial_transcribe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">partial_transcribe</span></code></a>([rootdir])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.partial_transcribe" title="voxy.refprep.partial_transcribe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">partial_transcribe</span></code></a>([rootdir])</p></td>
 <td><p>The default transcriber, bound to a data root.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.plan_clips" title="voxy.refprep.plan_clips"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plan_clips</span></code></a>(segments, *[, min_seconds, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.plan_clips" title="voxy.refprep.plan_clips"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plan_clips</span></code></a>(segments, *[, min_seconds, ...])</p></td>
 <td><p>Clips <code class="docutils literal notranslate"><span class="pre">[{start,</span> <span class="pre">end,</span> <span class="pre">text,</span> <span class="pre">words}]</span></code> cut between words, ending sentences where possible.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.prepare_reference" title="voxy.refprep.prepare_reference"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prepare_reference</span></code></a>(sources, *[, voice, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.prepare_reference" title="voxy.refprep.prepare_reference"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prepare_reference</span></code></a>(sources, *[, voice, ...])</p></td>
 <td><p>Condition, transcribe, cut and score <code class="docutils literal notranslate"><span class="pre">sources</span></code>; save clips and manifest; return it.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.score_clip" title="voxy.refprep.score_clip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">score_clip</span></code></a>(samples, sample_rate, *[, words, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.score_clip" title="voxy.refprep.score_clip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">score_clip</span></code></a>(samples, sample_rate, *[, words, ...])</p></td>
 <td><p>Quality measures of a clip, and their combination <code class="docutils literal notranslate"><span class="pre">score</span></code> in [0, 1].</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.summarize" title="voxy.refprep.summarize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">summarize</span></code></a>(manifest)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.summarize" title="voxy.refprep.summarize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">summarize</span></code></a>(manifest)</p></td>
 <td><p>Totals for a manifest: clips, minutes, minutes above score thresholds.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.transcribe" title="voxy.refprep.transcribe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transcribe</span></code></a>(audio, *[, language, model, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.transcribe" title="voxy.refprep.transcribe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transcribe</span></code></a>(audio, *[, language, model, ...])</p></td>
 <td><p>Timed segments <code class="docutils literal notranslate"><span class="pre">[{start,</span> <span class="pre">end,</span> <span class="pre">text,</span> <span class="pre">confidence,</span> <span class="pre">words:</span> <span class="pre">[...]},</span> <span class="pre">...]</span></code> of <code class="docutils literal notranslate"><span class="pre">audio</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.transcribe_text" title="voxy.refprep.transcribe_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transcribe_text</span></code></a>(audio, **kwargs)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.transcribe_text" title="voxy.refprep.transcribe_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transcribe_text</span></code></a>(audio, **kwargs)</p></td>
 <td><p>The transcript of <code class="docutils literal notranslate"><span class="pre">audio</span></code> as one string.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.with_deepfilternet" title="voxy.refprep.with_deepfilternet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">with_deepfilternet</span></code></a>([conditioner, denoiser, ...])</p></td>
+<td><p>A <code class="docutils literal notranslate"><span class="pre">conditioner</span></code> that denoises with DeepFilterNet between two ffmpeg passes.</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.refprep.DENOISE_FILTERS">
-<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">DENOISE_FILTERS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'afftdn':</span> <span class="pre">['afftdn=nr=12:nf=-50:tn=1'],</span> <span class="pre">'anlmdn':</span> <span class="pre">['anlmdn=s=0.0005'],</span> <span class="pre">None:</span> <span class="pre">[]}</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.DENOISE_FILTERS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.DENOISE_FILTERS'">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">DENOISE_FILTERS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'afftdn':</span> <span class="pre">['afftdn=nr=12:nf=-50:tn=1'],</span> <span class="pre">'anlmdn':</span> <span class="pre">['anlmdn=s=0.0005'],</span> <span class="pre">'deepfilternet':</span> <span class="pre">[],</span> <span class="pre">None:</span> <span class="pre">[]}</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.DENOISE_FILTERS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.DENOISE_FILTERS'">¶</a></dt>
 <dd><p>no denoising).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>ffmpeg filters for each <code class="docutils literal notranslate"><span class="pre">denoise</span></code> strategy (None</p>
 </dd>
 </dl>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.refprep.DF_SAMPLE_RATE">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">DF_SAMPLE_RATE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">48000</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.DF_SAMPLE_RATE" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.DF_SAMPLE_RATE'">¶</a></dt>
+<dd><p>DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.</p>
 </dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.refprep.best_references">
@@ -262,6 +276,19 @@ reference clip) and fine-tuning (<code class="docutils literal notranslate"><spa
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.refprep.deepfilternet_denoise">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">deepfilternet_denoise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;function</span> <span class="pre">run&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ensure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;function</span> <span class="pre">ensure_env&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/refprep.html#deepfilternet_denoise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.deepfilternet_denoise" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.deepfilternet_denoise'">¶</a></dt>
+<dd><p>Denoise the 48 kHz WAV <code class="docutils literal notranslate"><span class="pre">src</span></code> into <code class="docutils literal notranslate"><span class="pre">dst</span></code> with DeepFilterNet 3.</p>
+<p>Runs the <code class="docutils literal notranslate"><span class="pre">deepFilter</span></code> command of the isolated <code class="xref py py-data docutils literal notranslate"><span class="pre">DF_ENV</span></code> (built once with
+<code class="docutils literal notranslate"><span class="pre">uv</span></code> under the data root: see <code class="docutils literal notranslate"><span class="pre">voxy.envs</span></code>). One short call per file, so it needs
+no resident worker.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -392,15 +419,30 @@ the pause between two words, padded by up to <code class="docutils literal notra
 </dd>
 </dl>
 </dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.refprep.with_deepfilternet">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">with_deepfilternet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">conditioner</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">denoiser</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/refprep.html#with_deepfilternet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.with_deepfilternet" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.with_deepfilternet'">¶</a></dt>
+<dd><p>A <code class="docutils literal notranslate"><span class="pre">conditioner</span></code> that denoises with DeepFilterNet between two ffmpeg passes.</p>
+<p>Pass 1 converts the source to a 48 kHz mono WAV (no filters); DeepFilterNet cleans
+it; pass 2 applies the usual <code class="docutils literal notranslate"><span class="pre">filters</span></code> (high-pass, loudness) and resamples to
+<code class="docutils literal notranslate"><span class="pre">sample_rate</span></code>. <code class="docutils literal notranslate"><span class="pre">conditioner</span></code> (default <a class="reference internal" href="#voxy.refprep.condition" title="voxy.refprep.condition"><code class="xref py py-func docutils literal notranslate"><span class="pre">condition()</span></code></a>) does both ffmpeg passes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference external" href="https://docs.python.org/3/builtins/constants.html#Ellipsis" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
 </section>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
 <li><a :data-current="activeSection === '#voxy.refprep.DENOISE_FILTERS'" class="reference internal" href="#voxy.refprep.DENOISE_FILTERS"><code class="docutils literal notranslate"><span class="pre">DENOISE_FILTERS</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.DF_SAMPLE_RATE'" class="reference internal" href="#voxy.refprep.DF_SAMPLE_RATE"><code class="docutils literal notranslate"><span class="pre">DF_SAMPLE_RATE</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.best_references'" class="reference internal" href="#voxy.refprep.best_references"><code class="docutils literal notranslate"><span class="pre">best_references()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.close_asr'" class="reference internal" href="#voxy.refprep.close_asr"><code class="docutils literal notranslate"><span class="pre">close_asr()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.condition'" class="reference internal" href="#voxy.refprep.condition"><code class="docutils literal notranslate"><span class="pre">condition()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.conditioning_filters'" class="reference internal" href="#voxy.refprep.conditioning_filters"><code class="docutils literal notranslate"><span class="pre">conditioning_filters()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.deepfilternet_denoise'" class="reference internal" href="#voxy.refprep.deepfilternet_denoise"><code class="docutils literal notranslate"><span class="pre">deepfilternet_denoise()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.load_manifest'" class="reference internal" href="#voxy.refprep.load_manifest"><code class="docutils literal notranslate"><span class="pre">load_manifest()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.partial_transcribe'" class="reference internal" href="#voxy.refprep.partial_transcribe"><code class="docutils literal notranslate"><span class="pre">partial_transcribe()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.plan_clips'" class="reference internal" href="#voxy.refprep.plan_clips"><code class="docutils literal notranslate"><span class="pre">plan_clips()</span></code></a></li>
@@ -409,6 +451,7 @@ the pause between two words, padded by up to <code class="docutils literal notra
 <li><a :data-current="activeSection === '#voxy.refprep.summarize'" class="reference internal" href="#voxy.refprep.summarize"><code class="docutils literal notranslate"><span class="pre">summarize()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.transcribe'" class="reference internal" href="#voxy.refprep.transcribe"><code class="docutils literal notranslate"><span class="pre">transcribe()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.transcribe_text'" class="reference internal" href="#voxy.refprep.transcribe_text"><code class="docutils literal notranslate"><span class="pre">transcribe_text()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.with_deepfilternet'" class="reference internal" href="#voxy.refprep.with_deepfilternet"><code class="docutils literal notranslate"><span class="pre">with_deepfilternet()</span></code></a></li>
 </ul>
 </div>
 </aside>
@@ -422,7 +465,7 @@ the pause between two words, padded by up to <code class="docutils literal notra
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=c7cdf6fe"></script>
+<script src="../_static/documentation_options.js?v=63b572e7"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

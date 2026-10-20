@@ -1,4 +1,4 @@
-> built 2026-10-20 08:35 UTC from 941df3c (main) · voxy 0.0.16. Details: build_info.json
+> built 2026-10-20 12:51 UTC from 8ecbcce (main) · voxy 0.0.17. Details: build_info.json
 
 # index.html.md
 
@@ -227,7 +227,7 @@ python -m voxy prep ada tape1.m4a tape2.mp3 --language en
 python -m voxy diagnose spec.json --out renders/first-listen --publish
 ```
 
-**Reference preparation** (`voxy.refprep.prepare_reference`): converts any recording to mono WAV, denoises and normalises loudness (ffmpeg), transcribes locally with Whisper (scribed’s faster-whisper backend) with word timings, cuts clips of 3-12 s at sentence boundaries, and scores each clip (signal-to-noise, clipping, level, ASR confidence, speaking rate). Clips and `manifest.jsonl` go to the voice’s samples store; `best_references(manifest)` picks reference clips and `voxy.finetune.export_dataset` writes training sets (LJSpeech or F5-TTS layout).
+**Reference preparation** (`voxy.refprep.prepare_reference`): converts any recording to mono WAV, denoises (`denoise=` `afftdn`, `anlmdn`, or `deepfilternet`, which lowers real room noise far more but builds its own torch environment on first use) and normalises loudness (ffmpeg), transcribes locally with Whisper (scribed’s faster-whisper backend) with word timings, cuts clips of 3-12 s at sentence boundaries, and scores each clip (signal-to-noise, clipping, level, ASR confidence, speaking rate). Clips and `manifest.jsonl` go to the voice’s samples store; `best_references(manifest)` picks reference clips and `voxy.finetune.export_dataset` writes training sets (LJSpeech or F5-TTS layout).
 
 **Diagnosis pages** (`voxy.diagnosis`): render one text through a grid of models and parameters, then build one page with a player per variant, its parameters, generation time and real-time factor. Each variant has a stable ID (e.g. `VX-7KQ2`) derived from its configuration, not the text, so listeners can say “use VX-7KQ2” across pages and chapters; each listener can rate and annotate variants and copy their notes. A spec:
 
@@ -2006,7 +2006,7 @@ Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transc
 The steps, each a function you can call alone or replace:
 
 1. `condition` (ffmpeg): any format to mono PCM WAV at `sample_rate`, with a
-   high-pass, optional denoising (`denoise=`: ‘afftdn’, ‘anlmdn’, or None) and
+   high-pass, optional denoising (`denoise=`: ‘afftdn’, ‘anlmdn’, ‘deepfilternet’, or None) and
    loudness normalisation (EBU R128, `loudness_lufs`).
 2. `transcribe`: timed segments and words from a local Whisper (scribed’s
    faster-whisper backend, in its own environment, see `voxy.envs`).
@@ -2021,8 +2021,9 @@ reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same d
 
 ### Module Attributes
 
-| [`DENOISE_FILTERS`](_autosummary/voxy.refprep.html.md#voxy.refprep.DENOISE_FILTERS)   | no denoising).   |
-|--------------------------------------------------------------------|------------------|
+| [`DENOISE_FILTERS`](_autosummary/voxy.refprep.html.md#voxy.refprep.DENOISE_FILTERS)   | no denoising).                                                                           |
+|--------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| [`DF_SAMPLE_RATE`](_autosummary/voxy.refprep.html.md#voxy.refprep.DF_SAMPLE_RATE)    | DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env. |
 
 ### Functions
 
@@ -2031,6 +2032,7 @@ reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same d
 | [`close_asr`](_autosummary/voxy.refprep.html.md#voxy.refprep.close_asr)()                                        | Stop the transcription workers (free their memory).                                     |
 | [`condition`](_autosummary/voxy.refprep.html.md#voxy.refprep.condition)(src, dst, \*[, sample_rate, start, ...]) | Convert `src` (any format ffmpeg reads) to clean mono 16-bit WAV at `dst`.              |
 | [`conditioning_filters`](_autosummary/voxy.refprep.html.md#voxy.refprep.conditioning_filters)(\*[, denoise, ...])           | The ffmpeg audio filter chain for `condition`.                                          |
+| [`deepfilternet_denoise`](_autosummary/voxy.refprep.html.md#voxy.refprep.deepfilternet_denoise)(src, dst, \*[, ...])         | Denoise the 48 kHz WAV `src` into `dst` with DeepFilterNet 3.                           |
 | [`load_manifest`](_autosummary/voxy.refprep.html.md#voxy.refprep.load_manifest)(samples)                             | The manifest saved by `prepare_reference` in a samples store.                           |
 | [`partial_transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.partial_transcribe)([rootdir])                      | The default transcriber, bound to a data root.                                          |
 | [`plan_clips`](_autosummary/voxy.refprep.html.md#voxy.refprep.plan_clips)(segments, \*[, min_seconds, ...])       | Clips `[{start, end, text, words}]` cut between words, ending sentences where possible. |
@@ -2039,13 +2041,18 @@ reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same d
 | [`summarize`](_autosummary/voxy.refprep.html.md#voxy.refprep.summarize)(manifest)                                | Totals for a manifest: clips, minutes, minutes above score thresholds.                  |
 | [`transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe)(audio, \*[, language, model, ...])      | Timed segments `[{start, end, text, confidence, words: [...]}, ...]` of `audio`.        |
 | [`transcribe_text`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe_text)(audio, \*\*kwargs)                 | The transcript of `audio` as one string.                                                |
+| [`with_deepfilternet`](_autosummary/voxy.refprep.html.md#voxy.refprep.with_deepfilternet)([conditioner, denoiser, ...])   | A `conditioner` that denoises with DeepFilterNet between two ffmpeg passes.             |
 
-### voxy.refprep.DENOISE_FILTERS *= {'afftdn': ['afftdn=nr=12:nf=-50:tn=1'], 'anlmdn': ['anlmdn=s=0.0005'], None: []}*
+### voxy.refprep.DENOISE_FILTERS *= {'afftdn': ['afftdn=nr=12:nf=-50:tn=1'], 'anlmdn': ['anlmdn=s=0.0005'], 'deepfilternet': [], None: []}*
 
 no denoising).
 
 * **Type:**
   ffmpeg filters for each `denoise` strategy (None
+
+### voxy.refprep.DF_SAMPLE_RATE *= 48000*
+
+DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.
 
 ### voxy.refprep.best_references(manifest, , n=3, min_seconds=5.0, max_seconds=12.0, min_score=0.0)
 
@@ -2086,6 +2093,17 @@ The ffmpeg audio filter chain for `condition`.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### voxy.refprep.deepfilternet_denoise(src, dst, \*, rootdir=None, threads=None, run=<function run>, ensure=<function ensure_env>)
+
+Denoise the 48 kHz WAV `src` into `dst` with DeepFilterNet 3.
+
+Runs the `deepFilter` command of the isolated `DF_ENV` (built once with
+`uv` under the data root: see `voxy.envs`). One short call per file, so it needs
+no resident worker.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 ### voxy.refprep.load_manifest(samples)
 
@@ -2188,6 +2206,17 @@ The transcript of `audio` as one string.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.refprep.with_deepfilternet(conditioner=None, , denoiser=None, rootdir=None)
+
+A `conditioner` that denoises with DeepFilterNet between two ffmpeg passes.
+
+Pass 1 converts the source to a 48 kHz mono WAV (no filters); DeepFilterNet cleans
+it; pass 2 applies the usual `filters` (high-pass, loudness) and resamples to
+`sample_rate`. `conditioner` (default [`condition()`](_autosummary/voxy.refprep.html.md#voxy.refprep.condition)) does both ffmpeg passes.
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)]
 
 
 # _autosummary/voxy.say_model.html.md
@@ -2792,18 +2821,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-20 08:35 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/941df3c1a2948cd41be8d3914f17b76a94225bc0"><code>941df3c</code></a> on branch <code>main</code>, for **voxy 0.0.16** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-20 12:51 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/8ecbccef40db39a6d6e01dfddf786a1e983cec36"><code>8ecbcce</code></a> on branch <code>main</code>, for **voxy 0.0.17** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.16) is behind the latest release on PyPI (0.0.17): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.17) is behind the latest release on PyPI (0.0.18): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/941df3c1a2948cd41be8d3914f17b76a94225bc0"><code>941df3c1a2948cd41be8d3914f17b76a94225bc0</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/8ecbccef40db39a6d6e01dfddf786a1e983cec36"><code>8ecbccef40db39a6d6e01dfddf786a1e983cec36</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -2814,15 +2843,15 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39394109975">39394109975</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39425102429">39425102429</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>941df3c1a2948cd41be8d3914f17b76a94225bc0</code> (in the history of the built commit) |
+| Event commit | <code>8ecbccef40db39a6d6e01dfddf786a1e983cec36</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.18  |
+| epythet  | 0.2.20  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
 | Python   | 3.12.15 |
@@ -2841,14 +2870,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.17/">0.0.17</a>, newer than the documented version (0.0.16).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.18/">0.0.18</a>, newer than the documented version (0.0.17).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 941df3c1a2948cd41be8d3914f17b76a94225bc0
-pip install "epythet==0.2.18"
+git checkout 8ecbccef40db39a6d6e01dfddf786a1e983cec36
+pip install "epythet==0.2.20"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

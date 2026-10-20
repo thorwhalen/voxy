@@ -191,7 +191,7 @@
 </span><span id="line-9"><span class="sd">The steps, each a function you can call alone or replace:</span>
 </span><span id="line-10">
 </span><span id="line-11"><span class="sd">1. ``condition`` (ffmpeg): any format to mono PCM WAV at ``sample_rate``, with a</span>
-</span><span id="line-12"><span class="sd">   high-pass, optional denoising (``denoise=``: 'afftdn', 'anlmdn', or None) and</span>
+</span><span id="line-12"><span class="sd">   high-pass, optional denoising (``denoise=``: 'afftdn', 'anlmdn', 'deepfilternet', or None) and</span>
 </span><span id="line-13"><span class="sd">   loudness normalisation (EBU R128, ``loudness_lufs``).</span>
 </span><span id="line-14"><span class="sd">2. ``transcribe``: timed segments and words from a local Whisper (scribed's</span>
 </span><span id="line-15"><span class="sd">   faster-whisper backend, in its own environment, see ``voxy.envs``).</span>
@@ -212,479 +212,556 @@
 </span><span id="line-30"><span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 </span><span id="line-31"><span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 </span><span id="line-32"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">MutableMapping</span>
-</span><span id="line-33"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="line-34">
-</span><span id="line-35"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-</span><span id="line-36">
-</span><span id="line-37"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="n">ensure_env</span><span class="p">,</span> <span class="n">worker_environ</span>
-</span><span id="line-38"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">frame_db</span><span class="p">,</span> <span class="n">read_wav</span><span class="p">,</span> <span class="n">write_wav</span>
-</span><span id="line-39">
-</span><span id="line-40"><span class="n">DFLT_SAMPLE_RATE</span> <span class="o">=</span> <span class="mi">24000</span>
-</span><span id="line-41"><span class="n">DFLT_LOUDNESS_LUFS</span> <span class="o">=</span> <span class="o">-</span><span class="mf">20.0</span>
-</span><span id="line-42"><span class="n">DFLT_HIGHPASS_HZ</span> <span class="o">=</span> <span class="mi">70</span>
-</span><span id="line-43"><span class="n">DFLT_DENOISE</span> <span class="o">=</span> <span class="s2">"afftdn"</span>
-</span><span id="line-44"><span class="n">DFLT_MIN_SECONDS</span> <span class="o">=</span> <span class="mf">3.0</span>
-</span><span id="line-45"><span class="n">DFLT_MAX_SECONDS</span> <span class="o">=</span> <span class="mf">12.0</span>
-</span><span id="line-46"><span class="n">DFLT_PAD_SECONDS</span> <span class="o">=</span> <span class="mf">0.12</span>
-</span><span id="line-47"><span class="n">DFLT_ASR_MODEL</span> <span class="o">=</span> <span class="s2">"large-v3-turbo"</span>
-</span><span id="line-48"><span class="n">MANIFEST_KEY</span> <span class="o">=</span> <span class="s2">"manifest.jsonl"</span>
-</span><span id="line-49"><span class="n">CLIPS_PREFIX</span> <span class="o">=</span> <span class="s2">"clips/"</span>
-</span><span id="line-50"><span class="n">CONDITIONED_PREFIX</span> <span class="o">=</span> <span class="s2">"conditioned/"</span>
-</span><span id="line-51">
-</span><span id="line-52"><span class="c1">#: ffmpeg filters for each ``denoise`` strategy (None: no denoising).</span>
-</span><span id="line-53"><span class="n">DENOISE_FILTERS</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-54">    <span class="kc">None</span><span class="p">:</span> <span class="p">[],</span>
-</span><span id="line-55">    <span class="s2">"afftdn"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"afftdn=nr=12:nf=-50:tn=1"</span><span class="p">],</span>
-</span><span id="line-56">    <span class="s2">"anlmdn"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"anlmdn=s=0.0005"</span><span class="p">],</span>
-</span><span id="line-57"><span class="p">}</span>
-</span><span id="line-58">
-</span><span id="line-59"><span class="n">ASR_ENV</span> <span class="o">=</span> <span class="n">EnvSpec</span><span class="p">(</span><span class="s2">"asr"</span><span class="p">,</span> <span class="p">(</span><span class="s2">"scribed[faster-whisper]&gt;=0.0.5"</span><span class="p">,</span> <span class="s2">"soundfile"</span><span class="p">))</span>
-</span><span id="line-60">
-</span><span id="line-61">
-</span><span id="line-62"><span class="c1"># 1. conditioning --------------------------------------------------------------</span>
-</span><span id="line-63">
-</span><span id="line-64">
-</span><span id="line-65"><span class="k">def</span><span class="w"> </span><span class="nf">_ffmpeg</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-66">    <span class="n">ffmpeg</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"ffmpeg"</span><span class="p">)</span>
-</span><span id="line-67">    <span class="k">if</span> <span class="n">ffmpeg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-68">        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-</span><span id="line-69">            <span class="s2">"Preparing audio needs ffmpeg: apt-get install ffmpeg (Linux), "</span>
-</span><span id="line-70">            <span class="s2">"brew install ffmpeg (macOS), or https://ffmpeg.org/download.html"</span>
-</span><span id="line-71">        <span class="p">)</span>
-</span><span id="line-72">    <span class="k">return</span> <span class="n">ffmpeg</span>
-</span><span id="line-73">
+</span><span id="line-33"><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+</span><span id="line-34"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="line-35">
+</span><span id="line-36"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="line-37">
+</span><span id="line-38"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="n">ensure_env</span><span class="p">,</span> <span class="n">worker_environ</span>
+</span><span id="line-39"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">frame_db</span><span class="p">,</span> <span class="n">read_wav</span><span class="p">,</span> <span class="n">write_wav</span>
+</span><span id="line-40">
+</span><span id="line-41"><span class="n">DFLT_SAMPLE_RATE</span> <span class="o">=</span> <span class="mi">24000</span>
+</span><span id="line-42"><span class="n">DFLT_LOUDNESS_LUFS</span> <span class="o">=</span> <span class="o">-</span><span class="mf">20.0</span>
+</span><span id="line-43"><span class="n">DFLT_HIGHPASS_HZ</span> <span class="o">=</span> <span class="mi">70</span>
+</span><span id="line-44"><span class="n">DFLT_DENOISE</span> <span class="o">=</span> <span class="s2">"afftdn"</span>
+</span><span id="line-45"><span class="n">DEEPFILTERNET</span> <span class="o">=</span> <span class="s2">"deepfilternet"</span>
+</span><span id="line-46"><span class="n">DFLT_MIN_SECONDS</span> <span class="o">=</span> <span class="mf">3.0</span>
+</span><span id="line-47"><span class="n">DFLT_MAX_SECONDS</span> <span class="o">=</span> <span class="mf">12.0</span>
+</span><span id="line-48"><span class="n">DFLT_PAD_SECONDS</span> <span class="o">=</span> <span class="mf">0.12</span>
+</span><span id="line-49"><span class="n">DFLT_ASR_MODEL</span> <span class="o">=</span> <span class="s2">"large-v3-turbo"</span>
+</span><span id="line-50"><span class="n">MANIFEST_KEY</span> <span class="o">=</span> <span class="s2">"manifest.jsonl"</span>
+</span><span id="line-51"><span class="n">CLIPS_PREFIX</span> <span class="o">=</span> <span class="s2">"clips/"</span>
+</span><span id="line-52"><span class="n">CONDITIONED_PREFIX</span> <span class="o">=</span> <span class="s2">"conditioned/"</span>
+</span><span id="line-53">
+</span><span id="line-54"><span class="c1">#: ffmpeg filters for each ``denoise`` strategy (None: no denoising).</span>
+</span><span id="line-55"><span class="n">DENOISE_FILTERS</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-56">    <span class="kc">None</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="line-57">    <span class="s2">"afftdn"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"afftdn=nr=12:nf=-50:tn=1"</span><span class="p">],</span>
+</span><span id="line-58">    <span class="s2">"anlmdn"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"anlmdn=s=0.0005"</span><span class="p">],</span>
+</span><span id="line-59">    <span class="c1"># No ffmpeg filter: DeepFilterNet runs as its own stage (see ``with_deepfilternet``).</span>
+</span><span id="line-60">    <span class="n">DEEPFILTERNET</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="line-61"><span class="p">}</span>
+</span><span id="line-62">
+</span><span id="line-63"><span class="c1">#: DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.</span>
+</span><span id="line-64"><span class="n">DF_SAMPLE_RATE</span> <span class="o">=</span> <span class="mi">48000</span>
+</span><span id="line-65"><span class="n">DF_ENV</span> <span class="o">=</span> <span class="n">EnvSpec</span><span class="p">(</span>
+</span><span id="line-66">    <span class="s2">"deepfilternet"</span><span class="p">,</span>
+</span><span id="line-67">    <span class="p">(</span><span class="s2">"torch==2.0.1"</span><span class="p">,</span> <span class="s2">"torchaudio==2.0.2"</span><span class="p">,</span> <span class="s2">"deepfilternet"</span><span class="p">,</span> <span class="s2">"soundfile"</span><span class="p">),</span>
+</span><span id="line-68"><span class="p">)</span>
+</span><span id="line-69">
+</span><span id="line-70"><span class="n">ASR_ENV</span> <span class="o">=</span> <span class="n">EnvSpec</span><span class="p">(</span><span class="s2">"asr"</span><span class="p">,</span> <span class="p">(</span><span class="s2">"scribed[faster-whisper]&gt;=0.0.5"</span><span class="p">,</span> <span class="s2">"soundfile"</span><span class="p">))</span>
+</span><span id="line-71">
+</span><span id="line-72">
+</span><span id="line-73"><span class="c1"># 1. conditioning --------------------------------------------------------------</span>
 </span><span id="line-74">
+</span><span id="line-75">
+</span><span id="line-76"><span class="k">def</span><span class="w"> </span><span class="nf">_ffmpeg</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-77">    <span class="n">ffmpeg</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"ffmpeg"</span><span class="p">)</span>
+</span><span id="line-78">    <span class="k">if</span> <span class="n">ffmpeg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-79">        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+</span><span id="line-80">            <span class="s2">"Preparing audio needs ffmpeg: apt-get install ffmpeg (Linux), "</span>
+</span><span id="line-81">            <span class="s2">"brew install ffmpeg (macOS), or https://ffmpeg.org/download.html"</span>
+</span><span id="line-82">        <span class="p">)</span>
+</span><span id="line-83">    <span class="k">return</span> <span class="n">ffmpeg</span>
+</span><span id="line-84">
+</span><span id="line-85">
 <div class="viewcode-block" id="conditioning_filters">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.conditioning_filters">[docs]</a>
-</span><span id="line-75"><span class="k">def</span><span class="w"> </span><span class="nf">conditioning_filters</span><span class="p">(</span>
-</span><span id="line-76">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-77">    <span class="n">denoise</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_DENOISE</span><span class="p">,</span>
-</span><span id="line-78">    <span class="n">loudness_lufs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_LOUDNESS_LUFS</span><span class="p">,</span>
-</span><span id="line-79">    <span class="n">highpass_hz</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_HIGHPASS_HZ</span><span class="p">,</span>
-</span><span id="line-80"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-81"><span class="w">    </span><span class="sd">"""The ffmpeg audio filter chain for ``condition``.</span>
-</span><span id="line-82">
-</span><span id="line-83"><span class="sd">    &gt;&gt;&gt; conditioning_filters(denoise=None, loudness_lufs=-20, highpass_hz=70)</span>
-</span><span id="line-84"><span class="sd">    ['highpass=f=70', 'loudnorm=I=-20:TP=-1.5:LRA=11']</span>
-</span><span id="line-85"><span class="sd">    """</span>
-</span><span id="line-86">    <span class="k">if</span> <span class="n">denoise</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DENOISE_FILTERS</span><span class="p">:</span>
-</span><span id="line-87">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown denoise </span><span class="si">{</span><span class="n">denoise</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">DENOISE_FILTERS</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-</span><span id="line-88">    <span class="n">filters</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"highpass=f=</span><span class="si">{</span><span class="n">highpass_hz</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="k">if</span> <span class="n">highpass_hz</span> <span class="k">else</span> <span class="p">[]</span>
-</span><span id="line-89">    <span class="n">filters</span> <span class="o">+=</span> <span class="n">DENOISE_FILTERS</span><span class="p">[</span><span class="n">denoise</span><span class="p">]</span>
-</span><span id="line-90">    <span class="k">if</span> <span class="n">loudness_lufs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-91">        <span class="n">filters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"loudnorm=I=</span><span class="si">{</span><span class="n">loudness_lufs</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">:TP=-1.5:LRA=11"</span><span class="p">)</span>
-</span><span id="line-92">    <span class="k">return</span> <span class="n">filters</span></div>
-
+</span><span id="line-86"><span class="k">def</span><span class="w"> </span><span class="nf">conditioning_filters</span><span class="p">(</span>
+</span><span id="line-87">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-88">    <span class="n">denoise</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_DENOISE</span><span class="p">,</span>
+</span><span id="line-89">    <span class="n">loudness_lufs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_LOUDNESS_LUFS</span><span class="p">,</span>
+</span><span id="line-90">    <span class="n">highpass_hz</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_HIGHPASS_HZ</span><span class="p">,</span>
+</span><span id="line-91"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-92"><span class="w">    </span><span class="sd">"""The ffmpeg audio filter chain for ``condition``.</span>
 </span><span id="line-93">
-</span><span id="line-94">
+</span><span id="line-94"><span class="sd">    &gt;&gt;&gt; conditioning_filters(denoise=None, loudness_lufs=-20, highpass_hz=70)</span>
+</span><span id="line-95"><span class="sd">    ['highpass=f=70', 'loudnorm=I=-20:TP=-1.5:LRA=11']</span>
+</span><span id="line-96"><span class="sd">    """</span>
+</span><span id="line-97">    <span class="k">if</span> <span class="n">denoise</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DENOISE_FILTERS</span><span class="p">:</span>
+</span><span id="line-98">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown denoise </span><span class="si">{</span><span class="n">denoise</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">DENOISE_FILTERS</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+</span><span id="line-99">    <span class="n">filters</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"highpass=f=</span><span class="si">{</span><span class="n">highpass_hz</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="k">if</span> <span class="n">highpass_hz</span> <span class="k">else</span> <span class="p">[]</span>
+</span><span id="line-100">    <span class="n">filters</span> <span class="o">+=</span> <span class="n">DENOISE_FILTERS</span><span class="p">[</span><span class="n">denoise</span><span class="p">]</span>
+</span><span id="line-101">    <span class="k">if</span> <span class="n">loudness_lufs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-102">        <span class="n">filters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"loudnorm=I=</span><span class="si">{</span><span class="n">loudness_lufs</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">:TP=-1.5:LRA=11"</span><span class="p">)</span>
+</span><span id="line-103">    <span class="k">return</span> <span class="n">filters</span></div>
+
+</span><span id="line-104">
+</span><span id="line-105">
 <div class="viewcode-block" id="condition">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.condition">[docs]</a>
-</span><span id="line-95"><span class="k">def</span><span class="w"> </span><span class="nf">condition</span><span class="p">(</span>
-</span><span id="line-96">    <span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
-</span><span id="line-97">    <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
-</span><span id="line-98">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-99">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SAMPLE_RATE</span><span class="p">,</span>
-</span><span id="line-100">    <span class="n">start</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-101">    <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-102">    <span class="n">filters</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-103">    <span class="n">run</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
-</span><span id="line-104"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-</span><span id="line-105"><span class="w">    </span><span class="sd">"""Convert ``src`` (any format ffmpeg reads) to clean mono 16-bit WAV at ``dst``."""</span>
-</span><span id="line-106">    <span class="n">filters</span> <span class="o">=</span> <span class="n">conditioning_filters</span><span class="p">()</span> <span class="k">if</span> <span class="n">filters</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">filters</span><span class="p">)</span>
-</span><span id="line-107">    <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="n">_ffmpeg</span><span class="p">(),</span> <span class="s2">"-hide_banner"</span><span class="p">,</span> <span class="s2">"-loglevel"</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">,</span> <span class="s2">"-y"</span><span class="p">]</span>
-</span><span id="line-108">    <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-109">        <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-ss"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">start</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
-</span><span id="line-110">    <span class="k">if</span> <span class="n">duration</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-111">        <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-t"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">duration</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
-</span><span id="line-112">    <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-i"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">),</span> <span class="s2">"-ac"</span><span class="p">,</span> <span class="s2">"1"</span><span class="p">]</span>
-</span><span id="line-113">    <span class="k">if</span> <span class="n">filters</span><span class="p">:</span>
-</span><span id="line-114">        <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-af"</span><span class="p">,</span> <span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filters</span><span class="p">)]</span>
-</span><span id="line-115">    <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-ar"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">),</span> <span class="s2">"-c:a"</span><span class="p">,</span> <span class="s2">"pcm_s16le"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">dst</span><span class="p">)]</span>
-</span><span id="line-116">    <span class="n">Path</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-117">    <span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-118">    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span></div>
+</span><span id="line-106"><span class="k">def</span><span class="w"> </span><span class="nf">condition</span><span class="p">(</span>
+</span><span id="line-107">    <span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-108">    <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-109">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-110">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SAMPLE_RATE</span><span class="p">,</span>
+</span><span id="line-111">    <span class="n">start</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-112">    <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-113">    <span class="n">filters</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-114">    <span class="n">run</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
+</span><span id="line-115"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="line-116"><span class="w">    </span><span class="sd">"""Convert ``src`` (any format ffmpeg reads) to clean mono 16-bit WAV at ``dst``."""</span>
+</span><span id="line-117">    <span class="n">filters</span> <span class="o">=</span> <span class="n">conditioning_filters</span><span class="p">()</span> <span class="k">if</span> <span class="n">filters</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">filters</span><span class="p">)</span>
+</span><span id="line-118">    <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="n">_ffmpeg</span><span class="p">(),</span> <span class="s2">"-hide_banner"</span><span class="p">,</span> <span class="s2">"-loglevel"</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">,</span> <span class="s2">"-y"</span><span class="p">]</span>
+</span><span id="line-119">    <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-120">        <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-ss"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">start</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
+</span><span id="line-121">    <span class="k">if</span> <span class="n">duration</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-122">        <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-t"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">duration</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
+</span><span id="line-123">    <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-i"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">),</span> <span class="s2">"-ac"</span><span class="p">,</span> <span class="s2">"1"</span><span class="p">]</span>
+</span><span id="line-124">    <span class="k">if</span> <span class="n">filters</span><span class="p">:</span>
+</span><span id="line-125">        <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-af"</span><span class="p">,</span> <span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filters</span><span class="p">)]</span>
+</span><span id="line-126">    <span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"-ar"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">),</span> <span class="s2">"-c:a"</span><span class="p">,</span> <span class="s2">"pcm_s16le"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">dst</span><span class="p">)]</span>
+</span><span id="line-127">    <span class="n">Path</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-128">    <span class="n">run</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-129">    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span></div>
 
-</span><span id="line-119">
-</span><span id="line-120">
-</span><span id="line-121"><span class="c1"># 2. transcription -------------------------------------------------------------</span>
-</span><span id="line-122">
-</span><span id="line-123">
-</span><span id="line-124"><span class="n">_ASR_WORKERS</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-125">
-</span><span id="line-126">
-</span><span id="line-127"><span class="k">def</span><span class="w"> </span><span class="nf">_asr_worker</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
-</span><span id="line-128"><span class="w">    </span><span class="sd">"""One transcription worker per (model, threads, data root), started on demand."""</span>
-</span><span id="line-129">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
-</span><span id="line-130">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worker</span>
-</span><span id="line-131">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.workers</span><span class="w"> </span><span class="kn">import</span> <span class="n">adapter_path</span>
-</span><span id="line-132">
-</span><span id="line-133">    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-134">    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_ASR_WORKERS</span><span class="p">:</span>
-</span><span id="line-135">        <span class="n">python</span> <span class="o">=</span> <span class="n">ensure_env</span><span class="p">(</span><span class="n">ASR_ENV</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-136">        <span class="n">_ASR_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Worker</span><span class="p">(</span>
-</span><span id="line-137">            <span class="n">python</span><span class="p">,</span>
-</span><span id="line-138">            <span class="n">adapter_path</span><span class="p">(</span><span class="s2">"asr"</span><span class="p">),</span>
-</span><span id="line-139">            <span class="n">init</span><span class="o">=</span><span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="n">model</span><span class="p">},</span>
-</span><span id="line-140">            <span class="n">env</span><span class="o">=</span><span class="n">worker_environ</span><span class="p">(</span><span class="n">ASR_ENV</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span>
-</span><span id="line-141">            <span class="n">log_path</span><span class="o">=</span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"logs"</span><span class="p">,</span> <span class="s2">"asr.log"</span><span class="p">),</span>
-</span><span id="line-142">        <span class="p">)</span>
-</span><span id="line-143">    <span class="k">return</span> <span class="n">_ASR_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-</span><span id="line-144">
-</span><span id="line-145">
+</span><span id="line-130">
+</span><span id="line-131">
+<div class="viewcode-block" id="deepfilternet_denoise">
+<a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.deepfilternet_denoise">[docs]</a>
+</span><span id="line-132"><span class="k">def</span><span class="w"> </span><span class="nf">deepfilternet_denoise</span><span class="p">(</span>
+</span><span id="line-133">    <span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-134">    <span class="n">dst</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-135">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-136">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-137">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-138">    <span class="n">run</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
+</span><span id="line-139">    <span class="n">ensure</span><span class="o">=</span><span class="n">ensure_env</span><span class="p">,</span>
+</span><span id="line-140"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="line-141"><span class="w">    </span><span class="sd">"""Denoise the 48 kHz WAV ``src`` into ``dst`` with DeepFilterNet 3.</span>
+</span><span id="line-142">
+</span><span id="line-143"><span class="sd">    Runs the ``deepFilter`` command of the isolated :data:`DF_ENV` (built once with</span>
+</span><span id="line-144"><span class="sd">    ``uv`` under the data root: see ``voxy.envs``). One short call per file, so it needs</span>
+</span><span id="line-145"><span class="sd">    no resident worker.</span>
+</span><span id="line-146"><span class="sd">    """</span>
+</span><span id="line-147">    <span class="n">python</span> <span class="o">=</span> <span class="n">ensure</span><span class="p">(</span><span class="n">DF_ENV</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-148">    <span class="n">command</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">python</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"deepFilter"</span>
+</span><span id="line-149">    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">out</span><span class="p">:</span>
+</span><span id="line-150">        <span class="n">run</span><span class="p">(</span>
+</span><span id="line-151">            <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">command</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">),</span> <span class="s2">"-o"</span><span class="p">,</span> <span class="n">out</span><span class="p">],</span>
+</span><span id="line-152">            <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="line-153">            <span class="n">env</span><span class="o">=</span><span class="n">worker_environ</span><span class="p">(</span><span class="n">DF_ENV</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span>
+</span><span id="line-154">        <span class="p">)</span>
+</span><span id="line-155">        <span class="n">results</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">out</span><span class="p">)</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*.wav"</span><span class="p">))</span>
+</span><span id="line-156">        <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
+</span><span id="line-157">            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"deepFilter wrote no WAV for </span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-158">        <span class="n">result</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-159">        <span class="n">Path</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-160">        <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">dst</span><span class="p">)</span>
+</span><span id="line-161">    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span></div>
+
+</span><span id="line-162">
+</span><span id="line-163">
+<div class="viewcode-block" id="with_deepfilternet">
+<a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.with_deepfilternet">[docs]</a>
+</span><span id="line-164"><span class="k">def</span><span class="w"> </span><span class="nf">with_deepfilternet</span><span class="p">(</span>
+</span><span id="line-165">    <span class="n">conditioner</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-166">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-167">    <span class="n">denoiser</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-168">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-169"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+</span><span id="line-170"><span class="w">    </span><span class="sd">"""A ``conditioner`` that denoises with DeepFilterNet between two ffmpeg passes.</span>
+</span><span id="line-171">
+</span><span id="line-172"><span class="sd">    Pass 1 converts the source to a 48 kHz mono WAV (no filters); DeepFilterNet cleans</span>
+</span><span id="line-173"><span class="sd">    it; pass 2 applies the usual ``filters`` (high-pass, loudness) and resamples to</span>
+</span><span id="line-174"><span class="sd">    ``sample_rate``. ``conditioner`` (default :func:`condition`) does both ffmpeg passes.</span>
+</span><span id="line-175"><span class="sd">    """</span>
+</span><span id="line-176">    <span class="n">conditioner</span> <span class="o">=</span> <span class="n">conditioner</span> <span class="ow">or</span> <span class="n">condition</span>
+</span><span id="line-177">    <span class="n">denoiser</span> <span class="o">=</span> <span class="n">denoiser</span> <span class="ow">or</span> <span class="n">partial</span><span class="p">(</span><span class="n">deepfilternet_denoise</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-178">
+</span><span id="line-179">    <span class="k">def</span><span class="w"> </span><span class="nf">conditioned</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">DFLT_SAMPLE_RATE</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span id="line-180">        <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+</span><span id="line-181">            <span class="n">wide</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"wide.wav"</span>
+</span><span id="line-182">            <span class="n">clean</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"clean.wav"</span>
+</span><span id="line-183">            <span class="n">conditioner</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">wide</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">DF_SAMPLE_RATE</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="p">[],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="line-184">            <span class="n">denoiser</span><span class="p">(</span><span class="n">wide</span><span class="p">,</span> <span class="n">clean</span><span class="p">)</span>
+</span><span id="line-185">            <span class="k">return</span> <span class="n">conditioner</span><span class="p">(</span><span class="n">clean</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+</span><span id="line-186">
+</span><span id="line-187">    <span class="k">return</span> <span class="n">conditioned</span></div>
+
+</span><span id="line-188">
+</span><span id="line-189">
+</span><span id="line-190"><span class="c1"># 2. transcription -------------------------------------------------------------</span>
+</span><span id="line-191">
+</span><span id="line-192">
+</span><span id="line-193"><span class="n">_ASR_WORKERS</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-194">
+</span><span id="line-195">
+</span><span id="line-196"><span class="k">def</span><span class="w"> </span><span class="nf">_asr_worker</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
+</span><span id="line-197"><span class="w">    </span><span class="sd">"""One transcription worker per (model, threads, data root), started on demand."""</span>
+</span><span id="line-198">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
+</span><span id="line-199">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worker</span>
+</span><span id="line-200">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.workers</span><span class="w"> </span><span class="kn">import</span> <span class="n">adapter_path</span>
+</span><span id="line-201">
+</span><span id="line-202">    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-203">    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_ASR_WORKERS</span><span class="p">:</span>
+</span><span id="line-204">        <span class="n">python</span> <span class="o">=</span> <span class="n">ensure_env</span><span class="p">(</span><span class="n">ASR_ENV</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-205">        <span class="n">_ASR_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Worker</span><span class="p">(</span>
+</span><span id="line-206">            <span class="n">python</span><span class="p">,</span>
+</span><span id="line-207">            <span class="n">adapter_path</span><span class="p">(</span><span class="s2">"asr"</span><span class="p">),</span>
+</span><span id="line-208">            <span class="n">init</span><span class="o">=</span><span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="n">model</span><span class="p">},</span>
+</span><span id="line-209">            <span class="n">env</span><span class="o">=</span><span class="n">worker_environ</span><span class="p">(</span><span class="n">ASR_ENV</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span>
+</span><span id="line-210">            <span class="n">log_path</span><span class="o">=</span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"logs"</span><span class="p">,</span> <span class="s2">"asr.log"</span><span class="p">),</span>
+</span><span id="line-211">        <span class="p">)</span>
+</span><span id="line-212">    <span class="k">return</span> <span class="n">_ASR_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+</span><span id="line-213">
+</span><span id="line-214">
 <div class="viewcode-block" id="transcribe">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.transcribe">[docs]</a>
-</span><span id="line-146"><span class="k">def</span><span class="w"> </span><span class="nf">transcribe</span><span class="p">(</span>
-</span><span id="line-147">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
-</span><span id="line-148">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-149">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-150">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_ASR_MODEL</span><span class="p">,</span>
-</span><span id="line-151">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-152">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-153"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-154"><span class="w">    </span><span class="sd">"""Timed segments ``[{start, end, text, confidence, words: [...]}, ...]`` of ``audio``."""</span>
-</span><span id="line-155">    <span class="n">worker</span> <span class="o">=</span> <span class="n">_asr_worker</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rootdir</span><span class="p">)</span> <span class="k">if</span> <span class="n">rootdir</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-156">    <span class="n">reply</span> <span class="o">=</span> <span class="n">worker</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="s2">"transcribe"</span><span class="p">,</span> <span class="n">audio</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">)</span>
-</span><span id="line-157">    <span class="k">return</span> <span class="n">reply</span><span class="p">[</span><span class="s2">"segments"</span><span class="p">]</span></div>
+</span><span id="line-215"><span class="k">def</span><span class="w"> </span><span class="nf">transcribe</span><span class="p">(</span>
+</span><span id="line-216">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-217">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-218">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-219">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_ASR_MODEL</span><span class="p">,</span>
+</span><span id="line-220">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-221">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-222"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-223"><span class="w">    </span><span class="sd">"""Timed segments ``[{start, end, text, confidence, words: [...]}, ...]`` of ``audio``."""</span>
+</span><span id="line-224">    <span class="n">worker</span> <span class="o">=</span> <span class="n">_asr_worker</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rootdir</span><span class="p">)</span> <span class="k">if</span> <span class="n">rootdir</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-225">    <span class="n">reply</span> <span class="o">=</span> <span class="n">worker</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="s2">"transcribe"</span><span class="p">,</span> <span class="n">audio</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">)</span>
+</span><span id="line-226">    <span class="k">return</span> <span class="n">reply</span><span class="p">[</span><span class="s2">"segments"</span><span class="p">]</span></div>
 
-</span><span id="line-158">
-</span><span id="line-159">
+</span><span id="line-227">
+</span><span id="line-228">
 <div class="viewcode-block" id="transcribe_text">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.transcribe_text">[docs]</a>
-</span><span id="line-160"><span class="k">def</span><span class="w"> </span><span class="nf">transcribe_text</span><span class="p">(</span><span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-161"><span class="w">    </span><span class="sd">"""The transcript of ``audio`` as one string."""</span>
-</span><span id="line-162">    <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">transcribe</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+</span><span id="line-229"><span class="k">def</span><span class="w"> </span><span class="nf">transcribe_text</span><span class="p">(</span><span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-230"><span class="w">    </span><span class="sd">"""The transcript of ``audio`` as one string."""</span>
+</span><span id="line-231">    <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">transcribe</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
 
-</span><span id="line-163">
-</span><span id="line-164">
+</span><span id="line-232">
+</span><span id="line-233">
 <div class="viewcode-block" id="close_asr">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.close_asr">[docs]</a>
-</span><span id="line-165"><span class="k">def</span><span class="w"> </span><span class="nf">close_asr</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-166"><span class="w">    </span><span class="sd">"""Stop the transcription workers (free their memory)."""</span>
-</span><span id="line-167">    <span class="k">while</span> <span class="n">_ASR_WORKERS</span><span class="p">:</span>
-</span><span id="line-168">        <span class="n">_ASR_WORKERS</span><span class="o">.</span><span class="n">popitem</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</span><span id="line-234"><span class="k">def</span><span class="w"> </span><span class="nf">close_asr</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-235"><span class="w">    </span><span class="sd">"""Stop the transcription workers (free their memory)."""</span>
+</span><span id="line-236">    <span class="k">while</span> <span class="n">_ASR_WORKERS</span><span class="p">:</span>
+</span><span id="line-237">        <span class="n">_ASR_WORKERS</span><span class="o">.</span><span class="n">popitem</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
-</span><span id="line-169">
-</span><span id="line-170">
-</span><span id="line-171"><span class="c1"># 3. clip planning -------------------------------------------------------------</span>
-</span><span id="line-172">
-</span><span id="line-173"><span class="n">_SENTENCE_FINAL</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[.!?…][</span><span class="se">\"</span><span class="s2">'”’)\]]?$"</span><span class="p">)</span>
-</span><span id="line-174">
-</span><span id="line-175">
-</span><span id="line-176"><span class="k">def</span><span class="w"> </span><span class="nf">_words</span><span class="p">(</span><span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-177"><span class="w">    </span><span class="sd">"""All timed words, in order (segments without word times count as one word)."""</span>
-</span><span id="line-178">    <span class="n">words</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-179">    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
-</span><span id="line-180">        <span class="n">timed</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"words"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">()</span> <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
-</span><span id="line-181">        <span class="n">words</span> <span class="o">+=</span> <span class="n">timed</span> <span class="ow">or</span> <span class="p">[</span>
-</span><span id="line-182">            <span class="p">{</span>
-</span><span id="line-183">                <span class="s2">"start"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span>
-</span><span id="line-184">                <span class="s2">"end"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"end"</span><span class="p">],</span>
-</span><span id="line-185">                <span class="s2">"text"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"text"</span><span class="p">],</span>
-</span><span id="line-186">                <span class="s2">"confidence"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-187">            <span class="p">}</span>
-</span><span id="line-188">        <span class="p">]</span>
-</span><span id="line-189">    <span class="k">return</span> <span class="n">words</span>
-</span><span id="line-190">
-</span><span id="line-191">
-</span><span id="line-192"><span class="k">def</span><span class="w"> </span><span class="nf">_join_words</span><span class="p">(</span><span class="n">words</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-193"><span class="w">    </span><span class="sd">"""The words' text, keeping Whisper's own spacing (its words carry a leading space).</span>
-</span><span id="line-194">
-</span><span id="line-195"><span class="sd">    &gt;&gt;&gt; _join_words([{"text": " cypress"}, {"text": "-hooded"}, {"text": " hill."}])</span>
-</span><span id="line-196"><span class="sd">    'cypress-hooded hill.'</span>
-</span><span id="line-197"><span class="sd">    &gt;&gt;&gt; _join_words([{"text": "One"}, {"text": "two."}])</span>
-</span><span id="line-198"><span class="sd">    'One two.'</span>
-</span><span id="line-199"><span class="sd">    """</span>
-</span><span id="line-200">    <span class="n">texts</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span><span class="p">]</span>
-</span><span id="line-201">    <span class="n">whisper_style</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">t</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isspace</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">)</span>
-</span><span id="line-202">    <span class="k">return</span> <span class="p">(</span><span class="s2">""</span> <span class="k">if</span> <span class="n">whisper_style</span> <span class="k">else</span> <span class="s2">" "</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">texts</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-</span><span id="line-203">
-</span><span id="line-204">
+</span><span id="line-238">
+</span><span id="line-239">
+</span><span id="line-240"><span class="c1"># 3. clip planning -------------------------------------------------------------</span>
+</span><span id="line-241">
+</span><span id="line-242"><span class="n">_SENTENCE_FINAL</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[.!?…][</span><span class="se">\"</span><span class="s2">'”’)\]]?$"</span><span class="p">)</span>
+</span><span id="line-243">
+</span><span id="line-244">
+</span><span id="line-245"><span class="k">def</span><span class="w"> </span><span class="nf">_words</span><span class="p">(</span><span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-246"><span class="w">    </span><span class="sd">"""All timed words, in order (segments without word times count as one word)."""</span>
+</span><span id="line-247">    <span class="n">words</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-248">    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
+</span><span id="line-249">        <span class="n">timed</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"words"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">()</span> <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+</span><span id="line-250">        <span class="n">words</span> <span class="o">+=</span> <span class="n">timed</span> <span class="ow">or</span> <span class="p">[</span>
+</span><span id="line-251">            <span class="p">{</span>
+</span><span id="line-252">                <span class="s2">"start"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span>
+</span><span id="line-253">                <span class="s2">"end"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"end"</span><span class="p">],</span>
+</span><span id="line-254">                <span class="s2">"text"</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="s2">"text"</span><span class="p">],</span>
+</span><span id="line-255">                <span class="s2">"confidence"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-256">            <span class="p">}</span>
+</span><span id="line-257">        <span class="p">]</span>
+</span><span id="line-258">    <span class="k">return</span> <span class="n">words</span>
+</span><span id="line-259">
+</span><span id="line-260">
+</span><span id="line-261"><span class="k">def</span><span class="w"> </span><span class="nf">_join_words</span><span class="p">(</span><span class="n">words</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-262"><span class="w">    </span><span class="sd">"""The words' text, keeping Whisper's own spacing (its words carry a leading space).</span>
+</span><span id="line-263">
+</span><span id="line-264"><span class="sd">    &gt;&gt;&gt; _join_words([{"text": " cypress"}, {"text": "-hooded"}, {"text": " hill."}])</span>
+</span><span id="line-265"><span class="sd">    'cypress-hooded hill.'</span>
+</span><span id="line-266"><span class="sd">    &gt;&gt;&gt; _join_words([{"text": "One"}, {"text": "two."}])</span>
+</span><span id="line-267"><span class="sd">    'One two.'</span>
+</span><span id="line-268"><span class="sd">    """</span>
+</span><span id="line-269">    <span class="n">texts</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span><span class="p">]</span>
+</span><span id="line-270">    <span class="n">whisper_style</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">t</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isspace</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">)</span>
+</span><span id="line-271">    <span class="k">return</span> <span class="p">(</span><span class="s2">""</span> <span class="k">if</span> <span class="n">whisper_style</span> <span class="k">else</span> <span class="s2">" "</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">texts</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</span><span id="line-272">
+</span><span id="line-273">
 <div class="viewcode-block" id="plan_clips">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.plan_clips">[docs]</a>
-</span><span id="line-205"><span class="k">def</span><span class="w"> </span><span class="nf">plan_clips</span><span class="p">(</span>
-</span><span id="line-206">    <span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
-</span><span id="line-207">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-208">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_SECONDS</span><span class="p">,</span>
-</span><span id="line-209">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MAX_SECONDS</span><span class="p">,</span>
-</span><span id="line-210">    <span class="n">pad_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_PAD_SECONDS</span><span class="p">,</span>
-</span><span id="line-211">    <span class="n">total_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-212"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-213"><span class="w">    </span><span class="sd">"""Clips ``[{start, end, text, words}]`` cut between words, ending sentences where possible.</span>
-</span><span id="line-214">
-</span><span id="line-215"><span class="sd">    Words accumulate until the clip passes ``min_seconds`` and a word ends a</span>
-</span><span id="line-216"><span class="sd">    sentence (or the next word would push it past ``max_seconds``). Cuts fall in</span>
-</span><span id="line-217"><span class="sd">    the pause between two words, padded by up to ``pad_seconds``.</span>
-</span><span id="line-218">
-</span><span id="line-219"><span class="sd">    &gt;&gt;&gt; w = lambda s, e, t: {"start": s, "end": e, "text": t, "confidence": 0.9}</span>
-</span><span id="line-220"><span class="sd">    &gt;&gt;&gt; segs = [{"words": [w(0, 1, "One"), w(1.1, 2, "two."), w(3, 4, "Three"),</span>
-</span><span id="line-221"><span class="sd">    ...                    w(4.1, 5, "four.")], "start": 0, "end": 5, "text": ""}]</span>
-</span><span id="line-222"><span class="sd">    &gt;&gt;&gt; [c["text"] for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]</span>
-</span><span id="line-223"><span class="sd">    ['One two.', 'Three four.']</span>
-</span><span id="line-224"><span class="sd">    """</span>
-</span><span id="line-225">    <span class="n">words</span> <span class="o">=</span> <span class="n">_words</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
-</span><span id="line-226">    <span class="n">clips</span><span class="p">,</span> <span class="n">current</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
-</span><span id="line-227">
-</span><span id="line-228">    <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="n">next_start</span><span class="p">):</span>
-</span><span id="line-229">        <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">:</span>
-</span><span id="line-230">            <span class="k">return</span>
-</span><span id="line-231">        <span class="n">prev_end</span> <span class="o">=</span> <span class="n">clips</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"end"</span><span class="p">]</span> <span class="k">if</span> <span class="n">clips</span> <span class="k">else</span> <span class="mf">0.0</span>
-</span><span id="line-232">        <span class="n">start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">prev_end</span><span class="p">,</span> <span class="n">current</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">-</span> <span class="n">pad_seconds</span><span class="p">)</span>
-</span><span id="line-233">        <span class="n">end</span> <span class="o">=</span> <span class="n">current</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">+</span> <span class="n">pad_seconds</span>
-</span><span id="line-234">        <span class="k">if</span> <span class="n">next_start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-235">            <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="p">(</span><span class="n">current</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">+</span> <span class="n">next_start</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
-</span><span id="line-236">        <span class="k">elif</span> <span class="n">total_seconds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-237">            <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="n">total_seconds</span><span class="p">)</span>
-</span><span id="line-238">        <span class="n">clips</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="line-239">            <span class="p">{</span>
-</span><span id="line-240">                <span class="s2">"start"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
-</span><span id="line-241">                <span class="s2">"end"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
-</span><span id="line-242">                <span class="s2">"text"</span><span class="p">:</span> <span class="n">_join_words</span><span class="p">(</span><span class="n">current</span><span class="p">),</span>
-</span><span id="line-243">                <span class="s2">"words"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">current</span><span class="p">),</span>
-</span><span id="line-244">            <span class="p">}</span>
-</span><span id="line-245">        <span class="p">)</span>
-</span><span id="line-246">        <span class="n">current</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
-</span><span id="line-247">
-</span><span id="line-248">    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">word</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">words</span><span class="p">):</span>
-</span><span id="line-249">        <span class="k">if</span> <span class="n">current</span> <span class="ow">and</span> <span class="n">word</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">-</span> <span class="n">current</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">max_seconds</span><span class="p">:</span>
-</span><span id="line-250">            <span class="n">flush</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"start"</span><span class="p">])</span>
-</span><span id="line-251">        <span class="n">current</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
-</span><span id="line-252">        <span class="n">length</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">-</span> <span class="n">current</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"start"</span><span class="p">]</span>
-</span><span id="line-253">        <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;=</span> <span class="n">min_seconds</span> <span class="ow">and</span> <span class="n">_SENTENCE_FINAL</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()):</span>
-</span><span id="line-254">            <span class="n">flush</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="s2">"start"</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-255">    <span class="n">flush</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="line-256">    <span class="k">return</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">clips</span> <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_seconds</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">]</span></div>
+</span><span id="line-274"><span class="k">def</span><span class="w"> </span><span class="nf">plan_clips</span><span class="p">(</span>
+</span><span id="line-275">    <span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
+</span><span id="line-276">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-277">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_SECONDS</span><span class="p">,</span>
+</span><span id="line-278">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MAX_SECONDS</span><span class="p">,</span>
+</span><span id="line-279">    <span class="n">pad_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_PAD_SECONDS</span><span class="p">,</span>
+</span><span id="line-280">    <span class="n">total_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-281"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-282"><span class="w">    </span><span class="sd">"""Clips ``[{start, end, text, words}]`` cut between words, ending sentences where possible.</span>
+</span><span id="line-283">
+</span><span id="line-284"><span class="sd">    Words accumulate until the clip passes ``min_seconds`` and a word ends a</span>
+</span><span id="line-285"><span class="sd">    sentence (or the next word would push it past ``max_seconds``). Cuts fall in</span>
+</span><span id="line-286"><span class="sd">    the pause between two words, padded by up to ``pad_seconds``.</span>
+</span><span id="line-287">
+</span><span id="line-288"><span class="sd">    &gt;&gt;&gt; w = lambda s, e, t: {"start": s, "end": e, "text": t, "confidence": 0.9}</span>
+</span><span id="line-289"><span class="sd">    &gt;&gt;&gt; segs = [{"words": [w(0, 1, "One"), w(1.1, 2, "two."), w(3, 4, "Three"),</span>
+</span><span id="line-290"><span class="sd">    ...                    w(4.1, 5, "four.")], "start": 0, "end": 5, "text": ""}]</span>
+</span><span id="line-291"><span class="sd">    &gt;&gt;&gt; [c["text"] for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]</span>
+</span><span id="line-292"><span class="sd">    ['One two.', 'Three four.']</span>
+</span><span id="line-293"><span class="sd">    """</span>
+</span><span id="line-294">    <span class="n">words</span> <span class="o">=</span> <span class="n">_words</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
+</span><span id="line-295">    <span class="n">clips</span><span class="p">,</span> <span class="n">current</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+</span><span id="line-296">
+</span><span id="line-297">    <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="n">next_start</span><span class="p">):</span>
+</span><span id="line-298">        <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">:</span>
+</span><span id="line-299">            <span class="k">return</span>
+</span><span id="line-300">        <span class="n">prev_end</span> <span class="o">=</span> <span class="n">clips</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"end"</span><span class="p">]</span> <span class="k">if</span> <span class="n">clips</span> <span class="k">else</span> <span class="mf">0.0</span>
+</span><span id="line-301">        <span class="n">start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">prev_end</span><span class="p">,</span> <span class="n">current</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">-</span> <span class="n">pad_seconds</span><span class="p">)</span>
+</span><span id="line-302">        <span class="n">end</span> <span class="o">=</span> <span class="n">current</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">+</span> <span class="n">pad_seconds</span>
+</span><span id="line-303">        <span class="k">if</span> <span class="n">next_start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-304">            <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="p">(</span><span class="n">current</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">+</span> <span class="n">next_start</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="line-305">        <span class="k">elif</span> <span class="n">total_seconds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-306">            <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="n">total_seconds</span><span class="p">)</span>
+</span><span id="line-307">        <span class="n">clips</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+</span><span id="line-308">            <span class="p">{</span>
+</span><span id="line-309">                <span class="s2">"start"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+</span><span id="line-310">                <span class="s2">"end"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+</span><span id="line-311">                <span class="s2">"text"</span><span class="p">:</span> <span class="n">_join_words</span><span class="p">(</span><span class="n">current</span><span class="p">),</span>
+</span><span id="line-312">                <span class="s2">"words"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">current</span><span class="p">),</span>
+</span><span id="line-313">            <span class="p">}</span>
+</span><span id="line-314">        <span class="p">)</span>
+</span><span id="line-315">        <span class="n">current</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</span><span id="line-316">
+</span><span id="line-317">    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">word</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">words</span><span class="p">):</span>
+</span><span id="line-318">        <span class="k">if</span> <span class="n">current</span> <span class="ow">and</span> <span class="n">word</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">-</span> <span class="n">current</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">max_seconds</span><span class="p">:</span>
+</span><span id="line-319">            <span class="n">flush</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"start"</span><span class="p">])</span>
+</span><span id="line-320">        <span class="n">current</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+</span><span id="line-321">        <span class="n">length</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">-</span> <span class="n">current</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"start"</span><span class="p">]</span>
+</span><span id="line-322">        <span class="k">if</span> <span class="n">length</span> <span class="o">&gt;=</span> <span class="n">min_seconds</span> <span class="ow">and</span> <span class="n">_SENTENCE_FINAL</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()):</span>
+</span><span id="line-323">            <span class="n">flush</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="s2">"start"</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-324">    <span class="n">flush</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="line-325">    <span class="k">return</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">clips</span> <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_seconds</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">]</span></div>
 
-</span><span id="line-257">
-</span><span id="line-258">
-</span><span id="line-259"><span class="c1"># 4. scoring -------------------------------------------------------------------</span>
-</span><span id="line-260">
-</span><span id="line-261">
-<div class="viewcode-block" id="score_clip">
-<a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.score_clip">[docs]</a>
-</span><span id="line-262"><span class="k">def</span><span class="w"> </span><span class="nf">score_clip</span><span class="p">(</span>
-</span><span id="line-263">    <span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-</span><span id="line-264">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-</span><span id="line-265">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-266">    <span class="n">words</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
-</span><span id="line-267">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
-</span><span id="line-268">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_SECONDS</span><span class="p">,</span>
-</span><span id="line-269">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MAX_SECONDS</span><span class="p">,</span>
-</span><span id="line-270"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-</span><span id="line-271"><span class="w">    </span><span class="sd">"""Quality measures of a clip, and their combination ``score`` in [0, 1].</span>
-</span><span id="line-272">
-</span><span id="line-273"><span class="sd">    - ``snr_db``: loud-frame level minus quiet-frame level (speech vs floor).</span>
-</span><span id="line-274"><span class="sd">    - ``clipped``: fraction of samples at full scale.</span>
-</span><span id="line-275"><span class="sd">    - ``level_db``: level of the loud frames.</span>
-</span><span id="line-276"><span class="sd">    - ``asr_confidence``: mean Whisper word probability (low: mumbling, noise, music).</span>
-</span><span id="line-277"><span class="sd">    - ``chars_per_second``: speaking rate (outliers: bad alignment).</span>
-</span><span id="line-278">
-</span><span id="line-279"><span class="sd">    &gt;&gt;&gt; rng = np.random.default_rng(0)</span>
-</span><span id="line-280"><span class="sd">    &gt;&gt;&gt; speechy = np.concatenate([0.3 * rng.standard_normal(40000), 0.001 * rng.standard_normal(8000)])</span>
-</span><span id="line-281"><span class="sd">    &gt;&gt;&gt; s = score_clip(speechy, 8000, text="x" * 70)</span>
-</span><span id="line-282"><span class="sd">    &gt;&gt;&gt; s["snr_db"] &gt; 30, 0 &lt; s["score"] &lt;= 1</span>
-</span><span id="line-283"><span class="sd">    (True, True)</span>
-</span><span id="line-284"><span class="sd">    """</span>
-</span><span id="line-285">    <span class="n">duration</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">/</span> <span class="n">sample_rate</span>
-</span><span id="line-286">    <span class="n">levels</span> <span class="o">=</span> <span class="n">frame_db</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">)</span>
-</span><span id="line-287">    <span class="n">loud</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="mi">95</span><span class="p">))</span> <span class="k">if</span> <span class="n">levels</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="o">-</span><span class="mf">100.0</span>
-</span><span id="line-288">    <span class="n">floor</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span> <span class="k">if</span> <span class="n">levels</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="o">-</span><span class="mf">100.0</span>
-</span><span id="line-289">    <span class="n">snr</span> <span class="o">=</span> <span class="n">loud</span> <span class="o">-</span> <span class="n">floor</span>
-</span><span id="line-290">    <span class="n">clipped</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mf">0.999</span><span class="p">))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span>
-</span><span id="line-291">    <span class="n">confidences</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span><span class="p">[</span><span class="s2">"confidence"</span><span class="p">]</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span> <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"confidence"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
-</span><span id="line-292">    <span class="n">asr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">confidences</span><span class="p">))</span> <span class="k">if</span> <span class="n">confidences</span> <span class="k">else</span> <span class="kc">None</span>
-</span><span id="line-293">    <span class="n">rate</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">/</span> <span class="n">duration</span> <span class="k">if</span> <span class="n">duration</span> <span class="k">else</span> <span class="mf">0.0</span>
-</span><span id="line-294">
-</span><span id="line-295">    <span class="k">def</span><span class="w"> </span><span class="nf">ramp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">):</span>
-</span><span id="line-296">        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">lo</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">hi</span> <span class="o">-</span> <span class="n">lo</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-</span><span id="line-297">
-</span><span id="line-298">    <span class="n">parts</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-299">        <span class="s2">"snr"</span><span class="p">:</span> <span class="n">ramp</span><span class="p">(</span><span class="n">snr</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">40</span><span class="p">),</span>
-</span><span id="line-300">        <span class="s2">"clipping"</span><span class="p">:</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ramp</span><span class="p">(</span><span class="n">clipped</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.002</span><span class="p">),</span>
-</span><span id="line-301">        <span class="s2">"level"</span><span class="p">:</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ramp</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">loud</span> <span class="o">+</span> <span class="mi">18</span><span class="p">),</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">18</span><span class="p">),</span>
-</span><span id="line-302">        <span class="s2">"rate"</span><span class="p">:</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ramp</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">rate</span> <span class="o">-</span> <span class="mi">15</span><span class="p">),</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
-</span><span id="line-303">        <span class="s2">"duration"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">min_seconds</span> <span class="o">&lt;=</span> <span class="n">duration</span> <span class="o">&lt;=</span> <span class="n">max_seconds</span> <span class="o">*</span> <span class="mf">1.25</span><span class="p">),</span>
-</span><span id="line-304">    <span class="p">}</span>
-</span><span id="line-305">    <span class="k">if</span> <span class="n">asr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-306">        <span class="n">parts</span><span class="p">[</span><span class="s2">"asr"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ramp</span><span class="p">(</span><span class="n">asr</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">)</span>
-</span><span id="line-307">    <span class="n">score</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)))</span>
-</span><span id="line-308">    <span class="k">return</span> <span class="p">{</span>
-</span><span id="line-309">        <span class="s2">"duration"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
-</span><span id="line-310">        <span class="s2">"snr_db"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">snr</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-311">        <span class="s2">"clipped"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">clipped</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
-</span><span id="line-312">        <span class="s2">"level_db"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">loud</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-313">        <span class="s2">"asr_confidence"</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">asr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">round</span><span class="p">(</span><span class="n">asr</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
-</span><span id="line-314">        <span class="s2">"chars_per_second"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">rate</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-315">        <span class="s2">"score"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
-</span><span id="line-316">    <span class="p">}</span></div>
-
-</span><span id="line-317">
-</span><span id="line-318">
-</span><span id="line-319"><span class="c1"># the pipeline -----------------------------------------------------------------</span>
-</span><span id="line-320">
-</span><span id="line-321">
-</span><span id="line-322"><span class="k">def</span><span class="w"> </span><span class="nf">_slug</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-323"><span class="w">    </span><span class="sd">"""A key-safe stem for a source file.</span>
-</span><span id="line-324">
-</span><span id="line-325"><span class="sd">    &gt;&gt;&gt; _slug("/x/My Tape (1).m4a")</span>
-</span><span id="line-326"><span class="sd">    'my-tape-1'</span>
-</span><span id="line-327"><span class="sd">    """</span>
-</span><span id="line-328">    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^a-z0-9]+"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"source"</span>
+</span><span id="line-326">
+</span><span id="line-327">
+</span><span id="line-328"><span class="c1"># 4. scoring -------------------------------------------------------------------</span>
 </span><span id="line-329">
 </span><span id="line-330">
+<div class="viewcode-block" id="score_clip">
+<a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.score_clip">[docs]</a>
+</span><span id="line-331"><span class="k">def</span><span class="w"> </span><span class="nf">score_clip</span><span class="p">(</span>
+</span><span id="line-332">    <span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+</span><span id="line-333">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+</span><span id="line-334">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-335">    <span class="n">words</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+</span><span id="line-336">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
+</span><span id="line-337">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_SECONDS</span><span class="p">,</span>
+</span><span id="line-338">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MAX_SECONDS</span><span class="p">,</span>
+</span><span id="line-339"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-340"><span class="w">    </span><span class="sd">"""Quality measures of a clip, and their combination ``score`` in [0, 1].</span>
+</span><span id="line-341">
+</span><span id="line-342"><span class="sd">    - ``snr_db``: loud-frame level minus quiet-frame level (speech vs floor).</span>
+</span><span id="line-343"><span class="sd">    - ``clipped``: fraction of samples at full scale.</span>
+</span><span id="line-344"><span class="sd">    - ``level_db``: level of the loud frames.</span>
+</span><span id="line-345"><span class="sd">    - ``asr_confidence``: mean Whisper word probability (low: mumbling, noise, music).</span>
+</span><span id="line-346"><span class="sd">    - ``chars_per_second``: speaking rate (outliers: bad alignment).</span>
+</span><span id="line-347">
+</span><span id="line-348"><span class="sd">    &gt;&gt;&gt; rng = np.random.default_rng(0)</span>
+</span><span id="line-349"><span class="sd">    &gt;&gt;&gt; speechy = np.concatenate([0.3 * rng.standard_normal(40000), 0.001 * rng.standard_normal(8000)])</span>
+</span><span id="line-350"><span class="sd">    &gt;&gt;&gt; s = score_clip(speechy, 8000, text="x" * 70)</span>
+</span><span id="line-351"><span class="sd">    &gt;&gt;&gt; s["snr_db"] &gt; 30, 0 &lt; s["score"] &lt;= 1</span>
+</span><span id="line-352"><span class="sd">    (True, True)</span>
+</span><span id="line-353"><span class="sd">    """</span>
+</span><span id="line-354">    <span class="n">duration</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">/</span> <span class="n">sample_rate</span>
+</span><span id="line-355">    <span class="n">levels</span> <span class="o">=</span> <span class="n">frame_db</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">)</span>
+</span><span id="line-356">    <span class="n">loud</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="mi">95</span><span class="p">))</span> <span class="k">if</span> <span class="n">levels</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="o">-</span><span class="mf">100.0</span>
+</span><span id="line-357">    <span class="n">floor</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span> <span class="k">if</span> <span class="n">levels</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="o">-</span><span class="mf">100.0</span>
+</span><span id="line-358">    <span class="n">snr</span> <span class="o">=</span> <span class="n">loud</span> <span class="o">-</span> <span class="n">floor</span>
+</span><span id="line-359">    <span class="n">clipped</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mf">0.999</span><span class="p">))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span>
+</span><span id="line-360">    <span class="n">confidences</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span><span class="p">[</span><span class="s2">"confidence"</span><span class="p">]</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span> <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"confidence"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+</span><span id="line-361">    <span class="n">asr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">confidences</span><span class="p">))</span> <span class="k">if</span> <span class="n">confidences</span> <span class="k">else</span> <span class="kc">None</span>
+</span><span id="line-362">    <span class="n">rate</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">/</span> <span class="n">duration</span> <span class="k">if</span> <span class="n">duration</span> <span class="k">else</span> <span class="mf">0.0</span>
+</span><span id="line-363">
+</span><span id="line-364">    <span class="k">def</span><span class="w"> </span><span class="nf">ramp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">):</span>
+</span><span id="line-365">        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">lo</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">hi</span> <span class="o">-</span> <span class="n">lo</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span id="line-366">
+</span><span id="line-367">    <span class="n">parts</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-368">        <span class="s2">"snr"</span><span class="p">:</span> <span class="n">ramp</span><span class="p">(</span><span class="n">snr</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">40</span><span class="p">),</span>
+</span><span id="line-369">        <span class="s2">"clipping"</span><span class="p">:</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ramp</span><span class="p">(</span><span class="n">clipped</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.002</span><span class="p">),</span>
+</span><span id="line-370">        <span class="s2">"level"</span><span class="p">:</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ramp</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">loud</span> <span class="o">+</span> <span class="mi">18</span><span class="p">),</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">18</span><span class="p">),</span>
+</span><span id="line-371">        <span class="s2">"rate"</span><span class="p">:</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ramp</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">rate</span> <span class="o">-</span> <span class="mi">15</span><span class="p">),</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+</span><span id="line-372">        <span class="s2">"duration"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">min_seconds</span> <span class="o">&lt;=</span> <span class="n">duration</span> <span class="o">&lt;=</span> <span class="n">max_seconds</span> <span class="o">*</span> <span class="mf">1.25</span><span class="p">),</span>
+</span><span id="line-373">    <span class="p">}</span>
+</span><span id="line-374">    <span class="k">if</span> <span class="n">asr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-375">        <span class="n">parts</span><span class="p">[</span><span class="s2">"asr"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ramp</span><span class="p">(</span><span class="n">asr</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">)</span>
+</span><span id="line-376">    <span class="n">score</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)))</span>
+</span><span id="line-377">    <span class="k">return</span> <span class="p">{</span>
+</span><span id="line-378">        <span class="s2">"duration"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">duration</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+</span><span id="line-379">        <span class="s2">"snr_db"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">snr</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-380">        <span class="s2">"clipped"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">clipped</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+</span><span id="line-381">        <span class="s2">"level_db"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">loud</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-382">        <span class="s2">"asr_confidence"</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">asr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">round</span><span class="p">(</span><span class="n">asr</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+</span><span id="line-383">        <span class="s2">"chars_per_second"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">rate</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-384">        <span class="s2">"score"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+</span><span id="line-385">    <span class="p">}</span></div>
+
+</span><span id="line-386">
+</span><span id="line-387">
+</span><span id="line-388"><span class="c1"># the pipeline -----------------------------------------------------------------</span>
+</span><span id="line-389">
+</span><span id="line-390">
+</span><span id="line-391"><span class="k">def</span><span class="w"> </span><span class="nf">_slug</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-392"><span class="w">    </span><span class="sd">"""A key-safe stem for a source file.</span>
+</span><span id="line-393">
+</span><span id="line-394"><span class="sd">    &gt;&gt;&gt; _slug("/x/My Tape (1).m4a")</span>
+</span><span id="line-395"><span class="sd">    'my-tape-1'</span>
+</span><span id="line-396"><span class="sd">    """</span>
+</span><span id="line-397">    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^a-z0-9]+"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"source"</span>
+</span><span id="line-398">
+</span><span id="line-399">
 <div class="viewcode-block" id="prepare_reference">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.prepare_reference">[docs]</a>
-</span><span id="line-331"><span class="k">def</span><span class="w"> </span><span class="nf">prepare_reference</span><span class="p">(</span>
-</span><span id="line-332">    <span class="n">sources</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">],</span>
-</span><span id="line-333">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-334">    <span class="n">voice</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-335">    <span class="n">samples</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-336">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SAMPLE_RATE</span><span class="p">,</span>
-</span><span id="line-337">    <span class="n">denoise</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_DENOISE</span><span class="p">,</span>
-</span><span id="line-338">    <span class="n">loudness_lufs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_LOUDNESS_LUFS</span><span class="p">,</span>
-</span><span id="line-339">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_SECONDS</span><span class="p">,</span>
-</span><span id="line-340">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MAX_SECONDS</span><span class="p">,</span>
-</span><span id="line-341">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-342">    <span class="n">transcriber</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-343">    <span class="n">conditioner</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-344">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-345">    <span class="n">log</span><span class="o">=</span><span class="nb">print</span><span class="p">,</span>
-</span><span id="line-346"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-347"><span class="w">    </span><span class="sd">"""Condition, transcribe, cut and score ``sources``; save clips and manifest; return it.</span>
-</span><span id="line-348">
-</span><span id="line-349"><span class="sd">    Args:</span>
-</span><span id="line-350"><span class="sd">        sources: Recordings, any format ffmpeg reads.</span>
-</span><span id="line-351"><span class="sd">        voice: Voice name: clips go to ``samples_store(voice)``.</span>
-</span><span id="line-352"><span class="sd">        samples: A store to write to instead (``filename -&gt; bytes``).</span>
-</span><span id="line-353"><span class="sd">        sample_rate, denoise, loudness_lufs: Conditioning (see ``condition``).</span>
-</span><span id="line-354"><span class="sd">        min_seconds, max_seconds: Clip length bounds.</span>
-</span><span id="line-355"><span class="sd">        language: Force the ASR language (default: detected).</span>
-</span><span id="line-356"><span class="sd">        transcriber: ``(wav_path, language=) -&gt; segments`` (default ``transcribe``).</span>
-</span><span id="line-357"><span class="sd">        conditioner: ``(src, dst, sample_rate=, filters=) -&gt; path`` (default ``condition``).</span>
-</span><span id="line-358">
-</span><span id="line-359"><span class="sd">    Returns:</span>
-</span><span id="line-360"><span class="sd">        The manifest: one dict per clip (``key``, ``path`` if on disk, ``text``,</span>
-</span><span id="line-361"><span class="sd">        ``source``, ``start``, ``end``, and the ``score_clip`` measures), best first.</span>
-</span><span id="line-362"><span class="sd">    """</span>
-</span><span id="line-363">    <span class="k">if</span> <span class="n">samples</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-364">        <span class="k">if</span> <span class="n">voice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-365">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Pass voice= (a name) or samples= (a store)"</span><span class="p">)</span>
-</span><span id="line-366">        <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.stores</span><span class="w"> </span><span class="kn">import</span> <span class="n">samples_store</span>
-</span><span id="line-367">
-</span><span id="line-368">        <span class="n">samples</span> <span class="o">=</span> <span class="n">samples_store</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-369">    <span class="n">transcriber</span> <span class="o">=</span> <span class="n">transcriber</span> <span class="ow">or</span> <span class="n">partial_transcribe</span><span class="p">(</span><span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-370">    <span class="n">conditioner</span> <span class="o">=</span> <span class="n">conditioner</span> <span class="ow">or</span> <span class="n">condition</span>
-</span><span id="line-371">    <span class="n">filters</span> <span class="o">=</span> <span class="n">conditioning_filters</span><span class="p">(</span><span class="n">denoise</span><span class="o">=</span><span class="n">denoise</span><span class="p">,</span> <span class="n">loudness_lufs</span><span class="o">=</span><span class="n">loudness_lufs</span><span class="p">)</span>
-</span><span id="line-372">    <span class="n">manifest</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-373">    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
-</span><span id="line-374">        <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
-</span><span id="line-375">            <span class="n">slug</span> <span class="o">=</span> <span class="n">_slug</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
-</span><span id="line-376">            <span class="n">wav_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">.wav"</span>
-</span><span id="line-377">            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"voxy.refprep: conditioning </span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-378">            <span class="n">conditioner</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">wav_path</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
-</span><span id="line-379">            <span class="n">audio</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">read_wav</span><span class="p">(</span><span class="n">wav_path</span><span class="p">)</span>
-</span><span id="line-380">            <span class="n">samples</span><span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">CONDITIONED_PREFIX</span><span class="si">}{</span><span class="n">slug</span><span class="si">}</span><span class="s2">.wav"</span><span class="p">]</span> <span class="o">=</span> <span class="n">wav_path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
-</span><span id="line-381">            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"voxy.refprep: transcribing </span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">sr</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> s)"</span><span class="p">)</span>
-</span><span id="line-382">            <span class="n">segments</span> <span class="o">=</span> <span class="n">transcriber</span><span class="p">(</span><span class="n">wav_path</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">)</span>
-</span><span id="line-383">            <span class="n">plan</span> <span class="o">=</span> <span class="n">plan_clips</span><span class="p">(</span>
-</span><span id="line-384">                <span class="n">segments</span><span class="p">,</span>
-</span><span id="line-385">                <span class="n">min_seconds</span><span class="o">=</span><span class="n">min_seconds</span><span class="p">,</span>
-</span><span id="line-386">                <span class="n">max_seconds</span><span class="o">=</span><span class="n">max_seconds</span><span class="p">,</span>
-</span><span id="line-387">                <span class="n">total_seconds</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span> <span class="o">/</span> <span class="n">sr</span><span class="p">,</span>
-</span><span id="line-388">            <span class="p">)</span>
-</span><span id="line-389">            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">clip</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="line-390">                <span class="n">piece</span> <span class="o">=</span> <span class="n">audio</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">clip</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">*</span> <span class="n">sr</span><span class="p">)</span> <span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">clip</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">*</span> <span class="n">sr</span><span class="p">)]</span>
-</span><span id="line-391">                <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">CLIPS_PREFIX</span><span class="si">}{</span><span class="n">slug</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">.wav"</span>
-</span><span id="line-392">                <span class="n">samples</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">write_wav</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
-</span><span id="line-393">                <span class="n">entry</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-394">                    <span class="s2">"key"</span><span class="p">:</span> <span class="n">key</span><span class="p">,</span>
-</span><span id="line-395">                    <span class="s2">"text"</span><span class="p">:</span> <span class="n">clip</span><span class="p">[</span><span class="s2">"text"</span><span class="p">],</span>
-</span><span id="line-396">                    <span class="s2">"source"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">),</span>
-</span><span id="line-397">                    <span class="s2">"start"</span><span class="p">:</span> <span class="n">clip</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span>
-</span><span id="line-398">                    <span class="s2">"end"</span><span class="p">:</span> <span class="n">clip</span><span class="p">[</span><span class="s2">"end"</span><span class="p">],</span>
-</span><span id="line-399">                    <span class="s2">"sample_rate"</span><span class="p">:</span> <span class="n">sr</span><span class="p">,</span>
-</span><span id="line-400">                    <span class="o">**</span><span class="n">score_clip</span><span class="p">(</span>
-</span><span id="line-401">                        <span class="n">piece</span><span class="p">,</span>
-</span><span id="line-402">                        <span class="n">sr</span><span class="p">,</span>
-</span><span id="line-403">                        <span class="n">words</span><span class="o">=</span><span class="n">clip</span><span class="p">[</span><span class="s2">"words"</span><span class="p">],</span>
-</span><span id="line-404">                        <span class="n">text</span><span class="o">=</span><span class="n">clip</span><span class="p">[</span><span class="s2">"text"</span><span class="p">],</span>
-</span><span id="line-405">                        <span class="n">min_seconds</span><span class="o">=</span><span class="n">min_seconds</span><span class="p">,</span>
-</span><span id="line-406">                        <span class="n">max_seconds</span><span class="o">=</span><span class="n">max_seconds</span><span class="p">,</span>
-</span><span id="line-407">                    <span class="p">),</span>
-</span><span id="line-408">                <span class="p">}</span>
-</span><span id="line-409">                <span class="n">manifest</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
-</span><span id="line-410">    <span class="n">manifest</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="o">-</span><span class="n">e</span><span class="p">[</span><span class="s2">"score"</span><span class="p">])</span>
-</span><span id="line-411">    <span class="n">root</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="s2">"rootdir"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-412">    <span class="k">if</span> <span class="n">root</span><span class="p">:</span>
-</span><span id="line-413">        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">:</span>
-</span><span id="line-414">            <span class="n">entry</span><span class="p">[</span><span class="s2">"path"</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"key"</span><span class="p">])</span>
-</span><span id="line-415">    <span class="n">samples</span><span class="p">[</span><span class="n">MANIFEST_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
-</span><span id="line-416">    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"voxy.refprep: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span><span class="si">}</span><span class="s2"> clips saved"</span><span class="p">)</span>
-</span><span id="line-417">    <span class="k">return</span> <span class="n">manifest</span></div>
+</span><span id="line-400"><span class="k">def</span><span class="w"> </span><span class="nf">prepare_reference</span><span class="p">(</span>
+</span><span id="line-401">    <span class="n">sources</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">],</span>
+</span><span id="line-402">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-403">    <span class="n">voice</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-404">    <span class="n">samples</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-405">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SAMPLE_RATE</span><span class="p">,</span>
+</span><span id="line-406">    <span class="n">denoise</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_DENOISE</span><span class="p">,</span>
+</span><span id="line-407">    <span class="n">loudness_lufs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DFLT_LOUDNESS_LUFS</span><span class="p">,</span>
+</span><span id="line-408">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_SECONDS</span><span class="p">,</span>
+</span><span id="line-409">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MAX_SECONDS</span><span class="p">,</span>
+</span><span id="line-410">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-411">    <span class="n">transcriber</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-412">    <span class="n">conditioner</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-413">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-414">    <span class="n">log</span><span class="o">=</span><span class="nb">print</span><span class="p">,</span>
+</span><span id="line-415"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-416"><span class="w">    </span><span class="sd">"""Condition, transcribe, cut and score ``sources``; save clips and manifest; return it.</span>
+</span><span id="line-417">
+</span><span id="line-418"><span class="sd">    Args:</span>
+</span><span id="line-419"><span class="sd">        sources: Recordings, any format ffmpeg reads.</span>
+</span><span id="line-420"><span class="sd">        voice: Voice name: clips go to ``samples_store(voice)``.</span>
+</span><span id="line-421"><span class="sd">        samples: A store to write to instead (``filename -&gt; bytes``).</span>
+</span><span id="line-422"><span class="sd">        sample_rate, denoise, loudness_lufs: Conditioning (see ``condition``).</span>
+</span><span id="line-423"><span class="sd">        min_seconds, max_seconds: Clip length bounds.</span>
+</span><span id="line-424"><span class="sd">        language: Force the ASR language (default: detected).</span>
+</span><span id="line-425"><span class="sd">        transcriber: ``(wav_path, language=) -&gt; segments`` (default ``transcribe``).</span>
+</span><span id="line-426"><span class="sd">        conditioner: ``(src, dst, sample_rate=, filters=) -&gt; path`` (default ``condition``).</span>
+</span><span id="line-427">
+</span><span id="line-428"><span class="sd">    Returns:</span>
+</span><span id="line-429"><span class="sd">        The manifest: one dict per clip (``key``, ``path`` if on disk, ``text``,</span>
+</span><span id="line-430"><span class="sd">        ``source``, ``start``, ``end``, and the ``score_clip`` measures), best first.</span>
+</span><span id="line-431"><span class="sd">    """</span>
+</span><span id="line-432">    <span class="k">if</span> <span class="n">samples</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-433">        <span class="k">if</span> <span class="n">voice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-434">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Pass voice= (a name) or samples= (a store)"</span><span class="p">)</span>
+</span><span id="line-435">        <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.stores</span><span class="w"> </span><span class="kn">import</span> <span class="n">samples_store</span>
+</span><span id="line-436">
+</span><span id="line-437">        <span class="n">samples</span> <span class="o">=</span> <span class="n">samples_store</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-438">    <span class="n">transcriber</span> <span class="o">=</span> <span class="n">transcriber</span> <span class="ow">or</span> <span class="n">partial_transcribe</span><span class="p">(</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-439">    <span class="n">conditioner</span> <span class="o">=</span> <span class="n">conditioner</span> <span class="ow">or</span> <span class="n">condition</span>
+</span><span id="line-440">    <span class="k">if</span> <span class="n">denoise</span> <span class="o">==</span> <span class="n">DEEPFILTERNET</span><span class="p">:</span>
+</span><span id="line-441">        <span class="n">conditioner</span> <span class="o">=</span> <span class="n">with_deepfilternet</span><span class="p">(</span><span class="n">conditioner</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-442">    <span class="n">filters</span> <span class="o">=</span> <span class="n">conditioning_filters</span><span class="p">(</span><span class="n">denoise</span><span class="o">=</span><span class="n">denoise</span><span class="p">,</span> <span class="n">loudness_lufs</span><span class="o">=</span><span class="n">loudness_lufs</span><span class="p">)</span>
+</span><span id="line-443">    <span class="n">manifest</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-444">    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+</span><span id="line-445">        <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+</span><span id="line-446">            <span class="n">slug</span> <span class="o">=</span> <span class="n">_slug</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+</span><span id="line-447">            <span class="n">wav_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">.wav"</span>
+</span><span id="line-448">            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"voxy.refprep: conditioning </span><span class="si">{</span><span class="n">src</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-449">            <span class="n">conditioner</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">wav_path</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+</span><span id="line-450">            <span class="n">audio</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">read_wav</span><span class="p">(</span><span class="n">wav_path</span><span class="p">)</span>
+</span><span id="line-451">            <span class="n">samples</span><span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">CONDITIONED_PREFIX</span><span class="si">}{</span><span class="n">slug</span><span class="si">}</span><span class="s2">.wav"</span><span class="p">]</span> <span class="o">=</span> <span class="n">wav_path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+</span><span id="line-452">            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"voxy.refprep: transcribing </span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">sr</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> s)"</span><span class="p">)</span>
+</span><span id="line-453">            <span class="n">segments</span> <span class="o">=</span> <span class="n">transcriber</span><span class="p">(</span><span class="n">wav_path</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">)</span>
+</span><span id="line-454">            <span class="n">plan</span> <span class="o">=</span> <span class="n">plan_clips</span><span class="p">(</span>
+</span><span id="line-455">                <span class="n">segments</span><span class="p">,</span>
+</span><span id="line-456">                <span class="n">min_seconds</span><span class="o">=</span><span class="n">min_seconds</span><span class="p">,</span>
+</span><span id="line-457">                <span class="n">max_seconds</span><span class="o">=</span><span class="n">max_seconds</span><span class="p">,</span>
+</span><span id="line-458">                <span class="n">total_seconds</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span> <span class="o">/</span> <span class="n">sr</span><span class="p">,</span>
+</span><span id="line-459">            <span class="p">)</span>
+</span><span id="line-460">            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">clip</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="line-461">                <span class="n">piece</span> <span class="o">=</span> <span class="n">audio</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">clip</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">*</span> <span class="n">sr</span><span class="p">)</span> <span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">clip</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">*</span> <span class="n">sr</span><span class="p">)]</span>
+</span><span id="line-462">                <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">CLIPS_PREFIX</span><span class="si">}{</span><span class="n">slug</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">04d</span><span class="si">}</span><span class="s2">.wav"</span>
+</span><span id="line-463">                <span class="n">samples</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">write_wav</span><span class="p">(</span><span class="n">piece</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
+</span><span id="line-464">                <span class="n">entry</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-465">                    <span class="s2">"key"</span><span class="p">:</span> <span class="n">key</span><span class="p">,</span>
+</span><span id="line-466">                    <span class="s2">"text"</span><span class="p">:</span> <span class="n">clip</span><span class="p">[</span><span class="s2">"text"</span><span class="p">],</span>
+</span><span id="line-467">                    <span class="s2">"source"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">),</span>
+</span><span id="line-468">                    <span class="s2">"start"</span><span class="p">:</span> <span class="n">clip</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span>
+</span><span id="line-469">                    <span class="s2">"end"</span><span class="p">:</span> <span class="n">clip</span><span class="p">[</span><span class="s2">"end"</span><span class="p">],</span>
+</span><span id="line-470">                    <span class="s2">"sample_rate"</span><span class="p">:</span> <span class="n">sr</span><span class="p">,</span>
+</span><span id="line-471">                    <span class="o">**</span><span class="n">score_clip</span><span class="p">(</span>
+</span><span id="line-472">                        <span class="n">piece</span><span class="p">,</span>
+</span><span id="line-473">                        <span class="n">sr</span><span class="p">,</span>
+</span><span id="line-474">                        <span class="n">words</span><span class="o">=</span><span class="n">clip</span><span class="p">[</span><span class="s2">"words"</span><span class="p">],</span>
+</span><span id="line-475">                        <span class="n">text</span><span class="o">=</span><span class="n">clip</span><span class="p">[</span><span class="s2">"text"</span><span class="p">],</span>
+</span><span id="line-476">                        <span class="n">min_seconds</span><span class="o">=</span><span class="n">min_seconds</span><span class="p">,</span>
+</span><span id="line-477">                        <span class="n">max_seconds</span><span class="o">=</span><span class="n">max_seconds</span><span class="p">,</span>
+</span><span id="line-478">                    <span class="p">),</span>
+</span><span id="line-479">                <span class="p">}</span>
+</span><span id="line-480">                <span class="n">manifest</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+</span><span id="line-481">    <span class="n">manifest</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="o">-</span><span class="n">e</span><span class="p">[</span><span class="s2">"score"</span><span class="p">])</span>
+</span><span id="line-482">    <span class="n">root</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="s2">"rootdir"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-483">    <span class="k">if</span> <span class="n">root</span><span class="p">:</span>
+</span><span id="line-484">        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">:</span>
+</span><span id="line-485">            <span class="n">entry</span><span class="p">[</span><span class="s2">"path"</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"key"</span><span class="p">])</span>
+</span><span id="line-486">    <span class="n">samples</span><span class="p">[</span><span class="n">MANIFEST_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+</span><span id="line-487">    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"voxy.refprep: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span><span class="si">}</span><span class="s2"> clips saved"</span><span class="p">)</span>
+</span><span id="line-488">    <span class="k">return</span> <span class="n">manifest</span></div>
 
-</span><span id="line-418">
-</span><span id="line-419">
+</span><span id="line-489">
+</span><span id="line-490">
 <div class="viewcode-block" id="partial_transcribe">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.partial_transcribe">[docs]</a>
-</span><span id="line-420"><span class="k">def</span><span class="w"> </span><span class="nf">partial_transcribe</span><span class="p">(</span><span class="n">rootdir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]:</span>
-</span><span id="line-421"><span class="w">    </span><span class="sd">"""The default transcriber, bound to a data root."""</span>
-</span><span id="line-422">
-</span><span id="line-423">    <span class="k">def</span><span class="w"> </span><span class="nf">transcriber</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="line-424">        <span class="k">return</span> <span class="n">transcribe</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-425">
-</span><span id="line-426">    <span class="k">return</span> <span class="n">transcriber</span></div>
+</span><span id="line-491"><span class="k">def</span><span class="w"> </span><span class="nf">partial_transcribe</span><span class="p">(</span><span class="n">rootdir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]:</span>
+</span><span id="line-492"><span class="w">    </span><span class="sd">"""The default transcriber, bound to a data root."""</span>
+</span><span id="line-493">
+</span><span id="line-494">    <span class="k">def</span><span class="w"> </span><span class="nf">transcriber</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+</span><span id="line-495">        <span class="k">return</span> <span class="n">transcribe</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-496">
+</span><span id="line-497">    <span class="k">return</span> <span class="n">transcriber</span></div>
 
-</span><span id="line-427">
-</span><span id="line-428">
+</span><span id="line-498">
+</span><span id="line-499">
 <div class="viewcode-block" id="load_manifest">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.load_manifest">[docs]</a>
-</span><span id="line-429"><span class="k">def</span><span class="w"> </span><span class="nf">load_manifest</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-430"><span class="w">    </span><span class="sd">"""The manifest saved by ``prepare_reference`` in a samples store."""</span>
-</span><span id="line-431">    <span class="k">return</span> <span class="p">[</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">samples</span><span class="p">[</span><span class="n">MANIFEST_KEY</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()]</span></div>
+</span><span id="line-500"><span class="k">def</span><span class="w"> </span><span class="nf">load_manifest</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-501"><span class="w">    </span><span class="sd">"""The manifest saved by ``prepare_reference`` in a samples store."""</span>
+</span><span id="line-502">    <span class="k">return</span> <span class="p">[</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">samples</span><span class="p">[</span><span class="n">MANIFEST_KEY</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()]</span></div>
 
-</span><span id="line-432">
-</span><span id="line-433">
+</span><span id="line-503">
+</span><span id="line-504">
 <div class="viewcode-block" id="best_references">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.best_references">[docs]</a>
-</span><span id="line-434"><span class="k">def</span><span class="w"> </span><span class="nf">best_references</span><span class="p">(</span>
-</span><span id="line-435">    <span class="n">manifest</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
-</span><span id="line-436">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-437">    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-</span><span id="line-438">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
-</span><span id="line-439">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">12.0</span><span class="p">,</span>
-</span><span id="line-440">    <span class="n">min_score</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-</span><span id="line-441"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-442"><span class="w">    </span><span class="sd">"""The ``n`` best clips for zero-shot reference (length in range, best score first).</span>
-</span><span id="line-443">
-</span><span id="line-444"><span class="sd">    &gt;&gt;&gt; m = [{"duration": 8, "score": 0.7}, {"duration": 2, "score": 0.9},</span>
-</span><span id="line-445"><span class="sd">    ...      {"duration": 10, "score": 0.8}]</span>
-</span><span id="line-446"><span class="sd">    &gt;&gt;&gt; [c["score"] for c in best_references(m, n=2)]</span>
-</span><span id="line-447"><span class="sd">    [0.8, 0.7]</span>
-</span><span id="line-448"><span class="sd">    """</span>
-</span><span id="line-449">    <span class="n">fits</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="line-450">        <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
-</span><span id="line-451">        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span>
-</span><span id="line-452">        <span class="k">if</span> <span class="n">min_seconds</span> <span class="o">&lt;=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_seconds</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">"score"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_score</span>
-</span><span id="line-453">    <span class="p">]</span>
-</span><span id="line-454">    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">fits</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="o">-</span><span class="n">c</span><span class="p">[</span><span class="s2">"score"</span><span class="p">])[:</span><span class="n">n</span><span class="p">]</span></div>
+</span><span id="line-505"><span class="k">def</span><span class="w"> </span><span class="nf">best_references</span><span class="p">(</span>
+</span><span id="line-506">    <span class="n">manifest</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
+</span><span id="line-507">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-508">    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+</span><span id="line-509">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+</span><span id="line-510">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">12.0</span><span class="p">,</span>
+</span><span id="line-511">    <span class="n">min_score</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-512"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-513"><span class="w">    </span><span class="sd">"""The ``n`` best clips for zero-shot reference (length in range, best score first).</span>
+</span><span id="line-514">
+</span><span id="line-515"><span class="sd">    &gt;&gt;&gt; m = [{"duration": 8, "score": 0.7}, {"duration": 2, "score": 0.9},</span>
+</span><span id="line-516"><span class="sd">    ...      {"duration": 10, "score": 0.8}]</span>
+</span><span id="line-517"><span class="sd">    &gt;&gt;&gt; [c["score"] for c in best_references(m, n=2)]</span>
+</span><span id="line-518"><span class="sd">    [0.8, 0.7]</span>
+</span><span id="line-519"><span class="sd">    """</span>
+</span><span id="line-520">    <span class="n">fits</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="line-521">        <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+</span><span id="line-522">        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span>
+</span><span id="line-523">        <span class="k">if</span> <span class="n">min_seconds</span> <span class="o">&lt;=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_seconds</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">"score"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_score</span>
+</span><span id="line-524">    <span class="p">]</span>
+</span><span id="line-525">    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">fits</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="o">-</span><span class="n">c</span><span class="p">[</span><span class="s2">"score"</span><span class="p">])[:</span><span class="n">n</span><span class="p">]</span></div>
 
-</span><span id="line-455">
-</span><span id="line-456">
+</span><span id="line-526">
+</span><span id="line-527">
 <div class="viewcode-block" id="summarize">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.summarize">[docs]</a>
-</span><span id="line-457"><span class="k">def</span><span class="w"> </span><span class="nf">summarize</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-</span><span id="line-458"><span class="w">    </span><span class="sd">"""Totals for a manifest: clips, minutes, minutes above score thresholds.</span>
-</span><span id="line-459">
-</span><span id="line-460"><span class="sd">    &gt;&gt;&gt; summarize([{"duration": 60, "score": 0.9}, {"duration": 30, "score": 0.4}])</span>
-</span><span id="line-461"><span class="sd">    {'clips': 2, 'minutes': 1.5, 'minutes_score_0.5+': 1.0, 'minutes_score_0.7+': 1.0}</span>
-</span><span id="line-462"><span class="sd">    """</span>
-</span><span id="line-463">    <span class="n">manifest</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
-</span><span id="line-464">    <span class="n">minutes</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">cs</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cs</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># noqa: E731</span>
-</span><span id="line-465">    <span class="k">return</span> <span class="p">{</span>
-</span><span id="line-466">        <span class="s2">"clips"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
-</span><span id="line-467">        <span class="s2">"minutes"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
-</span><span id="line-468">        <span class="s2">"minutes_score_0.5+"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">([</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="s2">"score"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">]),</span>
-</span><span id="line-469">        <span class="s2">"minutes_score_0.7+"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">([</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="s2">"score"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.7</span><span class="p">]),</span>
-</span><span id="line-470">    <span class="p">}</span></div>
+</span><span id="line-528"><span class="k">def</span><span class="w"> </span><span class="nf">summarize</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-529"><span class="w">    </span><span class="sd">"""Totals for a manifest: clips, minutes, minutes above score thresholds.</span>
+</span><span id="line-530">
+</span><span id="line-531"><span class="sd">    &gt;&gt;&gt; summarize([{"duration": 60, "score": 0.9}, {"duration": 30, "score": 0.4}])</span>
+</span><span id="line-532"><span class="sd">    {'clips': 2, 'minutes': 1.5, 'minutes_score_0.5+': 1.0, 'minutes_score_0.7+': 1.0}</span>
+</span><span id="line-533"><span class="sd">    """</span>
+</span><span id="line-534">    <span class="n">manifest</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+</span><span id="line-535">    <span class="n">minutes</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">cs</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cs</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># noqa: E731</span>
+</span><span id="line-536">    <span class="k">return</span> <span class="p">{</span>
+</span><span id="line-537">        <span class="s2">"clips"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
+</span><span id="line-538">        <span class="s2">"minutes"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
+</span><span id="line-539">        <span class="s2">"minutes_score_0.5+"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">([</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="s2">"score"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">]),</span>
+</span><span id="line-540">        <span class="s2">"minutes_score_0.7+"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">([</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="s2">"score"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.7</span><span class="p">]),</span>
+</span><span id="line-541">    <span class="p">}</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -699,7 +776,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=c7cdf6fe"></script>
+    <script src="../../_static/documentation_options.js?v=63b572e7"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
