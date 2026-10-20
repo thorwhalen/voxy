@@ -88,7 +88,9 @@ def _mid_line_capitals(lines: list[str]) -> set[str]:
     return found
 
 
-def _replace_words(line: str, table: Mapping[str, str]) -> tuple[str, list[tuple[str, str]]]:
+def _replace_words(
+    line: str, table: Mapping[str, str]
+) -> tuple[str, list[tuple[str, str]]]:
     """Replace whole words of ``line`` found in ``table`` (case-insensitive); list the swaps."""
     lowered = {key.casefold(): value for key, value in table.items()}
     swaps: list[tuple[str, str]] = []
@@ -143,9 +145,14 @@ def prepare_speech_text(
                 if not _starts_sentence(previous):
                     word = lead.group(2)
                     lowered = word[0].lower() + word[1:]
-                    new = lead.group(1) + lowered + line[lead.end():]
+                    new = lead.group(1) + lowered + line[lead.end() :]
                     changes.append(
-                        Change(number, word, lowered, "verse-initial capital, not a sentence start")
+                        Change(
+                            number,
+                            word,
+                            lowered,
+                            "verse-initial capital, not a sentence start",
+                        )
                     )
         for table, reason in ((aliases, "alias"), (respellings, "respelling")):
             if table:
