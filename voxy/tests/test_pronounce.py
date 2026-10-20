@@ -228,6 +228,11 @@ def test_checks_by_line_takes_a_detectors_expected_reading():
     risks = [Risk(1, "est", "pos", expected="verb"), Risk(2, "Est", "pos", expected="noun")]
     checks = checks_by_line(risks, readings={"est": READINGS})
     assert checks == {1: [("est", READINGS, "verb")], 2: [("Est", READINGS, "noun")]}
+    # text-wide, the two readings conflict: no single expected reading is checked
+    assert checks_from_risks(risks, readings={"est": READINGS}) == [("est", READINGS, None)]
+    # a resolved reading is not hidden by an earlier unresolved risk of the same word
+    risks = [Risk(1, "est", "heteronym"), Risk(2, "est", "pos", expected="verb")]
+    assert checks_from_risks(risks, readings={"est": READINGS}) == [("est", READINGS, "verb")]
     # an explicit `expected` still wins
     assert checks_by_line(risks[:1], readings={"est": READINGS}, expected={"est": "noun"}) == {
         1: [("est", READINGS, "noun")]
