@@ -47,6 +47,8 @@ dependencies = [
     # voxy.stores: the voice library and its audio, as MutableMappings
     "dol",
     "config2py",
+    # ocracy.kit: the fleet's shared credential chain (stdlib-only; ocracy has no deps)
+    "ocracy>=0.1.12",
 ]
 
 [project.urls]
