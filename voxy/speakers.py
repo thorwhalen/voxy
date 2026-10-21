@@ -38,8 +38,15 @@ from voxy.wavutil import frame_db, read_wav
 DFLT_SPEAKER_MODEL = "speechbrain/spkrec-ecapa-voxceleb"
 DFLT_WINDOW_SECONDS = 1.0
 DFLT_HOP_SECONDS = 0.1
-#: Cosine similarity to the voice print below which a window is someone else.
-DFLT_MATCH_SIMILARITY = 0.45
+#: Cosine similarity to the voice print below which a window or word is someone else.
+#: One-second windows of old, noisy speech score low even for the target (median
+#: about 0.45 on a 1971 film soundtrack), so this is a floor, not a typical value.
+DFLT_MATCH_SIMILARITY = 0.2
+#: A whole ASR segment (a turn, usually) must match on average at least this well.
+DFLT_SEGMENT_SIMILARITY = 0.3
+#: ASR segments shorter than this are dropped whole: backchannels ("yes", "uh-huh")
+#: come out as short segments of their own, and are too short to identify reliably.
+DFLT_MIN_SEGMENT_SECONDS = 0.8
 #: Windows this far below the recording's speech level are silence: neither voice.
 DFLT_SILENCE_MARGIN_DB = 25.0
 #: Untranscribed foreign stretches shorter than this are ignored (one window's wobble).
@@ -288,14 +295,20 @@ def mark_speaker(
     *,
     threshold: float = DFLT_MATCH_SIMILARITY,
     loud: np.ndarray | None = None,
+    segment_threshold: float = DFLT_SEGMENT_SIMILARITY,
+    min_segment_seconds: float = DFLT_MIN_SEGMENT_SECONDS,
     word_overlap: float = DFLT_WORD_OVERLAP,
     pad: float = DFLT_FOREIGN_PAD_SECONDS,
     min_seconds: float = DFLT_MIN_FOREIGN_SECONDS,
 ) -> list[dict]:
     """Annotate each timed word with ``speaker_similarity`` and ``keep``; add gap markers.
 
-    A word is kept when the windows centred inside it match the voice print on
-    average and less than ``word_overlap`` of it lies in a foreign stretch. Every
+    Two levels. A segment (an ASR turn) is rejected whole when it is shorter than
+    ``min_segment_seconds`` or its windows match the voice print less than
+    ``segment_threshold`` on average: that catches a question, and a backchannel
+    whose own windows are mostly the target's speech around it. In a kept segment,
+    a word is kept when its windows match at least ``threshold`` on average and
+    less than ``word_overlap`` of it lies in a foreign stretch. Every
     foreign stretch is also added as an empty word with ``keep=False`` (an
     untranscribed "uh-huh" has no word of its own), padded by up to ``pad`` but never
     into a kept word, so ``refprep.plan_clips`` never puts it inside a clip.
@@ -308,14 +321,30 @@ def mark_speaker(
     >>> out = mark_speaker(segs, Windows(t, None), sim)
     >>> [(x["text"], x["keep"]) for x in out[0]["words"]], out[1]["words"][0]["end"]
     ([(' a', True), (' b', True)], 2.5)
+    >>> out = mark_speaker([{**segs[0], "end": 0.6}], Windows(t, None), sim)
+    >>> [x["keep"] for x in out[0]["words"]]  # a 0.6 s segment: a backchannel
+    [False, False]
     """
     centers = windows.centers
+
+    def mean_similarity(start, end):
+        inside = (centers >= start) & (centers <= end)
+        if not inside.any() and len(centers):
+            distance = np.abs(centers - (start + end) / 2)
+            inside = distance == distance.min()
+        return float(similarity[inside].mean()) if inside.any() else None
+
     foreign = foreign_spans(
         windows, similarity, threshold=threshold, loud=loud, min_seconds=min_seconds, pad=0
     )
     out, kept = [], []
     for seg in segments:
         seg = dict(seg)
+        seg_sim = mean_similarity(seg["start"], seg["end"])
+        seg["speaker_similarity"] = None if seg_sim is None else round(seg_sim, 3)
+        seg_ok = seg["end"] - seg["start"] >= min_segment_seconds and (
+            seg_sim is None or seg_sim >= segment_threshold
+        )
         words = []
         for word in seg.get("words") or ():
             word = dict(word)
@@ -323,14 +352,12 @@ def mark_speaker(
                 words.append(word)
                 continue
             start, end = word["start"], word["end"]
-            inside = (centers >= start) & (centers <= end)
-            if not inside.any() and len(centers):
-                distance = np.abs(centers - (start + end) / 2)
-                inside = distance == distance.min()
-            sim = float(similarity[inside].mean()) if inside.any() else None
+            sim = mean_similarity(start, end)
             word["speaker_similarity"] = None if sim is None else round(sim, 3)
             in_foreign = _overlap(start, end, foreign) / max(end - start, 1e-6)
-            word["keep"] = (sim is None or sim >= threshold) and in_foreign < word_overlap
+            word["keep"] = (
+                seg_ok and (sim is None or sim >= threshold) and in_foreign < word_overlap
+            )
             if word["keep"]:
                 kept.append((start, end))
             words.append(word)
@@ -354,6 +381,8 @@ def speaker_filter(
     target: np.ndarray | None = None,
     *,
     threshold: float = DFLT_MATCH_SIMILARITY,
+    segment_threshold: float = DFLT_SEGMENT_SIMILARITY,
+    min_segment_seconds: float = DFLT_MIN_SEGMENT_SECONDS,
     embed: Callable[..., Windows] | None = None,
     **embed_kwargs,
 ) -> Callable[..., list[dict]]:
@@ -362,7 +391,9 @@ def speaker_filter(
     Args:
         target: The voice print to keep (from :func:`voice_print`); None takes each
             recording's dominant voice.
-        threshold: Cosine similarity a window needs to count as the target.
+        threshold: Cosine similarity a window or word needs to count as the target.
+        segment_threshold, min_segment_seconds: The turn-level test (see
+            :func:`mark_speaker`).
         embed: ``(path, **embed_kwargs) -> Windows`` (default :func:`embed_windows`).
     """
     embed = embed or embed_windows
@@ -373,7 +404,13 @@ def speaker_filter(
         loud = loud_mask(windows, samples, sr)
         voice = target if target is not None else dominant_centroid(windows.vectors[loud])
         return mark_speaker(
-            segments, windows, windows.similarity(voice), threshold=threshold, loud=loud
+            segments,
+            windows,
+            windows.similarity(voice),
+            threshold=threshold,
+            segment_threshold=segment_threshold,
+            min_segment_seconds=min_segment_seconds,
+            loud=loud,
         )
 
     return mark

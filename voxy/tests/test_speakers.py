@@ -143,3 +143,11 @@ def test_prepare_reference_scores_the_speaker_match(tmp_path):
     )
     assert sorted(c["text"] for c in manifest) == ["First sentence.", "Second sentence."]
     assert all(c["speaker_similarity"] == 1.0 for c in manifest)
+
+
+def test_a_question_in_another_voice_is_dropped_whole():
+    question = [{"start": 1.0, "end": 4.0, "text": "", "words": [_w(1.0, 4.0, " Why?")]}]
+    windows = _fake_embed(lambda c: OTHER if 0.5 <= c <= 4.5 else TARGET)("x.wav")
+    marked = mark_speaker(question, windows, windows.similarity(TARGET))
+    assert marked[0]["speaker_similarity"] < 0.3
+    assert not marked[0]["words"][0]["keep"]
