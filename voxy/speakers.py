@@ -48,6 +48,14 @@ DFLT_MIN_FOREIGN_SECONDS = 0.2
 DFLT_FOREIGN_PAD_SECONDS = 0.15
 #: A word with this share of its length inside a foreign stretch is not kept.
 DFLT_WORD_OVERLAP = 0.25
+#: Inside a transcribed turn, a stretch is someone else's only below this (smoothed) match:
+#: one-second windows of old, noisy audio dip well below ``DFLT_MATCH_SIMILARITY`` on the
+#: target's own voice, so a turn that matches as a whole is only cut where the dip is deep.
+DFLT_DIP_SIMILARITY = 0.15
+#: Window similarities are averaged over this many neighbours before finding stretches.
+DFLT_SMOOTH_WINDOWS = 3
+#: Turns shorter than this are too short to attribute ("Yes.", "Uh-huh"): never kept.
+DFLT_MIN_TURN_SECONDS = 1.0
 DOMINANT_ITERATIONS = 6
 DOMINANT_QUANTILE = 0.5
 
@@ -242,12 +250,14 @@ def foreign_spans(
     windows: Windows,
     similarity: np.ndarray,
     *,
-    threshold: float = DFLT_MATCH_SIMILARITY,
+    threshold: float | np.ndarray = DFLT_MATCH_SIMILARITY,
     loud: np.ndarray | None = None,
     min_seconds: float = DFLT_MIN_FOREIGN_SECONDS,
     pad: float = DFLT_FOREIGN_PAD_SECONDS,
 ) -> list[list[float]]:
     """Stretches where a loud window does not match the voice print, padded by ``pad``.
+
+    ``threshold`` is one similarity, or one per window.
 
     Each window speaks for the ``hop``-wide slot around its centre, so a short "yes"
     marks about the length of the dip it causes, not a whole window.
@@ -272,6 +282,52 @@ def foreign_spans(
     ]
 
 
+def smooth(similarity: np.ndarray, windows: int = DFLT_SMOOTH_WINDOWS) -> np.ndarray:
+    """Moving average of ``similarity`` over ``windows`` neighbours (edges: the shorter mean).
+
+    >>> smooth(np.array([1.0, 1.0, 0.0, 1.0, 1.0])).round(2).tolist()
+    [1.0, 0.67, 0.67, 0.67, 1.0]
+    """
+    if windows <= 1 or len(similarity) < 2:
+        return np.asarray(similarity, dtype=float)
+    kernel = np.ones(windows)
+    total = np.convolve(similarity, kernel, mode="same")
+    count = np.convolve(np.ones(len(similarity)), kernel, mode="same")
+    return total / count
+
+
+def turn_similarity(
+    segments: Iterable[Mapping],
+    windows: Windows,
+    voice_print: np.ndarray,
+    *,
+    loud: np.ndarray | None = None,
+) -> list[float | None]:
+    """Match of each transcribed segment (a turn) to ``voice_print``, from its mean window.
+
+    Averaging the embeddings over a whole turn is far steadier than any one window
+    on noisy audio: it is what tells an interviewer's question from an answer. None
+    for a segment with no (loud) window centred in it.
+
+    >>> t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(40)])
+    >>> v = np.array([np.eye(2)[0]] * 20 + [np.eye(2)[1]] * 20)
+    >>> turn_similarity([{"start": 0, "end": 2}, {"start": 2.6, "end": 4.4}],
+    ...                 Windows(t, v), np.eye(2)[0])
+    [1.0, 0.0]
+    """
+    centers = windows.centers
+    out = []
+    for seg in segments:
+        inside = (centers >= seg["start"]) & (centers <= seg["end"])
+        if loud is not None:
+            inside &= loud
+        if not inside.any():
+            out.append(None)
+            continue
+        out.append(round(float(_unit(windows.vectors[inside].mean(axis=0)) @ voice_print), 3))
+    return out
+
+
 def _overlap(start: float, end: float, spans: Iterable[Sequence[float]]) -> float:
     """Seconds of ``[start, end]`` covered by ``spans``.
 
@@ -281,6 +337,19 @@ def _overlap(start: float, end: float, spans: Iterable[Sequence[float]]) -> floa
     return sum(max(0.0, min(end, e) - max(start, s)) for s, e in spans)
 
 
+def _word_similarity(start, end, centers, similarity) -> float | None:
+    """Mean similarity of the windows centred in ``[start, end]`` (else the nearest one)."""
+    inside = (centers >= start) & (centers <= end)
+    if not inside.any() and len(centers):
+        distance = np.abs(centers - (start + end) / 2)
+        inside = distance == distance.min()
+    return float(similarity[inside].mean()) if inside.any() else None
+
+
+def _ends_sentence(word: Mapping) -> bool:
+    return word.get("text", "").rstrip().endswith((".", "!", "?", "…"))
+
+
 def mark_speaker(
     segments: Iterable[Mapping],
     windows: Windows,
@@ -288,17 +357,26 @@ def mark_speaker(
     *,
     threshold: float = DFLT_MATCH_SIMILARITY,
     loud: np.ndarray | None = None,
+    turns: Sequence[float | None] | None = None,
+    dip_threshold: float = DFLT_DIP_SIMILARITY,
+    min_turn_seconds: float = DFLT_MIN_TURN_SECONDS,
     word_overlap: float = DFLT_WORD_OVERLAP,
     pad: float = DFLT_FOREIGN_PAD_SECONDS,
     min_seconds: float = DFLT_MIN_FOREIGN_SECONDS,
 ) -> list[dict]:
     """Annotate each timed word with ``speaker_similarity`` and ``keep``; add gap markers.
 
-    A word is kept when the windows centred inside it match the voice print on
-    average and less than ``word_overlap`` of it lies in a foreign stretch. Every
-    foreign stretch is also added as an empty word with ``keep=False`` (an
-    untranscribed "uh-huh" has no word of its own), padded by up to ``pad`` but never
-    into a kept word, so ``refprep.plan_clips`` never puts it inside a clip.
+    Without ``turns``, a word is kept when the windows centred inside it match the
+    voice print on average. With ``turns`` (one match per segment, see
+    :func:`turn_similarity`), a word is kept when its whole segment matches and lasts
+    at least ``min_turn_seconds``, and its ``speaker_similarity`` is the segment's;
+    inside a segment only a deep dip (below ``dip_threshold``) counts as someone else,
+    and a one-word sentence ("Yes.") must match the voice print on its own.
+    Either way a word is dropped when ``word_overlap`` of it lies in a foreign
+    stretch. Every foreign stretch is also added as an empty word with
+    ``keep=False`` (an untranscribed "uh-huh" has no word of its own), padded by up
+    to ``pad`` but never into a kept word, so ``refprep.plan_clips`` never puts it
+    inside a clip.
 
     >>> t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(40)])
     >>> sim = np.array([0.8] * 15 + [0.1] * 5 + [0.8] * 20)
@@ -309,13 +387,22 @@ def mark_speaker(
     >>> [(x["text"], x["keep"]) for x in out[0]["words"]], out[1]["words"][0]["end"]
     ([(' a', True), (' b', True)], 2.5)
     """
+    segments = list(segments)
     centers = windows.centers
+    floor = np.full(len(centers), threshold, dtype=float)
+    if turns is not None:
+        for seg in segments:
+            floor[(centers >= seg["start"]) & (centers <= seg["end"])] = dip_threshold
     foreign = foreign_spans(
-        windows, similarity, threshold=threshold, loud=loud, min_seconds=min_seconds, pad=0
+        windows, similarity, threshold=floor, loud=loud, min_seconds=min_seconds, pad=0
     )
     out, kept = [], []
-    for seg in segments:
+    for i, seg in enumerate(segments):
         seg = dict(seg)
+        turn = None if turns is None else turns[i]
+        turn_ok = turn is None or turn >= threshold
+        if turns is not None:
+            turn_ok = turn_ok and seg["end"] - seg["start"] >= min_turn_seconds
         words = []
         for word in seg.get("words") or ():
             word = dict(word)
@@ -323,14 +410,17 @@ def mark_speaker(
                 words.append(word)
                 continue
             start, end = word["start"], word["end"]
-            inside = (centers >= start) & (centers <= end)
-            if not inside.any() and len(centers):
-                distance = np.abs(centers - (start + end) / 2)
-                inside = distance == distance.min()
-            sim = float(similarity[inside].mean()) if inside.any() else None
-            word["speaker_similarity"] = None if sim is None else round(sim, 3)
             in_foreign = _overlap(start, end, foreign) / max(end - start, 1e-6)
-            word["keep"] = (sim is None or sim >= threshold) and in_foreign < word_overlap
+            sim = _word_similarity(start, end, centers, similarity)
+            word_ok = sim is None or sim >= threshold
+            if turns is not None:
+                word["speaker_similarity"] = turn
+                # A one-word sentence ("Yes.") inside a turn is often the listener's.
+                alone = _ends_sentence(word) and (not words or _ends_sentence(words[-1]))
+                word["keep"] = turn_ok and (word_ok or not alone) and in_foreign < word_overlap
+            else:
+                word["speaker_similarity"] = None if sim is None else round(sim, 3)
+                word["keep"] = word_ok and in_foreign < word_overlap
             if word["keep"]:
                 kept.append((start, end))
             words.append(word)
@@ -354,26 +444,45 @@ def speaker_filter(
     target: np.ndarray | None = None,
     *,
     threshold: float = DFLT_MATCH_SIMILARITY,
+    dip_threshold: float = DFLT_DIP_SIMILARITY,
+    smooth_windows: int = DFLT_SMOOTH_WINDOWS,
+    min_turn_seconds: float = DFLT_MIN_TURN_SECONDS,
     embed: Callable[..., Windows] | None = None,
     **embed_kwargs,
 ) -> Callable[..., list[dict]]:
     """A ``refprep.prepare_reference(speaker=...)`` step: ``(wav_path, segments) -> segments``.
 
+    Decides per transcribed segment (a turn: :func:`turn_similarity`), then cuts
+    deep dips inside kept turns and other voices between them (:func:`mark_speaker`).
+
     Args:
         target: The voice print to keep (from :func:`voice_print`); None takes each
             recording's dominant voice.
-        threshold: Cosine similarity a window needs to count as the target.
+        threshold: Cosine similarity a turn (or a stretch between turns) needs to
+            count as the target.
+        dip_threshold: Smoothed similarity below which a stretch inside a kept turn
+            is someone else.
+        smooth_windows: Neighbouring windows averaged before finding stretches.
+        min_turn_seconds: Shorter turns are never kept.
         embed: ``(path, **embed_kwargs) -> Windows`` (default :func:`embed_windows`).
     """
     embed = embed or embed_windows
 
     def mark(wav_path, segments):
+        segments = list(segments)
         windows = embed(wav_path, **embed_kwargs)
         samples, sr = read_wav(wav_path)
         loud = loud_mask(windows, samples, sr)
         voice = target if target is not None else dominant_centroid(windows.vectors[loud])
         return mark_speaker(
-            segments, windows, windows.similarity(voice), threshold=threshold, loud=loud
+            segments,
+            windows,
+            smooth(windows.similarity(voice), smooth_windows),
+            threshold=threshold,
+            loud=loud,
+            turns=turn_similarity(segments, windows, voice, loud=loud),
+            dip_threshold=dip_threshold,
+            min_turn_seconds=min_turn_seconds,
         )
 
     return mark

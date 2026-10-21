@@ -142,4 +142,38 @@ def test_prepare_reference_scores_the_speaker_match(tmp_path):
         log=lambda *_: None,
     )
     assert sorted(c["text"] for c in manifest) == ["First sentence.", "Second sentence."]
-    assert all(c["speaker_similarity"] == 1.0 for c in manifest)
+    assert all(c["speaker_similarity"] > 0.99 for c in manifest)
+
+
+#: An answer (target), a question (the other voice), a "Yes." (too short), an answer.
+TURNS = [
+    {"start": 0.0, "end": 2.0, "text": "", "words": [_w(0.1, 1.9, " Answer one.")]},
+    {"start": 2.2, "end": 4.4, "text": "", "words": [_w(2.3, 4.3, " A question?")]},
+    {"start": 4.5, "end": 4.8, "text": "", "words": [_w(4.5, 4.8, " Yes.")]},
+    {"start": 5.0, "end": 7.8, "text": "", "words": [_w(5.1, 7.7, " Answer two.")]},
+]
+
+
+def test_a_turn_is_kept_or_dropped_as_a_whole(tmp_path):
+    wav = _speechy_wav(tmp_path / "a.wav")
+    other = lambda c: OTHER if 2.2 <= c <= 4.4 else TARGET  # noqa: E731
+    marked = speaker_filter(TARGET, embed=_fake_embed(other))(wav, TURNS)
+    keep = {w["text"].strip(): w["keep"] for s in marked[:4] for w in s["words"]}
+    assert keep == {"Answer one.": True, "A question?": False, "Yes.": False, "Answer two.": True}
+    clips = refprep.plan_clips(marked, min_seconds=1.5, max_seconds=12)
+    assert [c["text"] for c in clips] == ["Answer one.", "Answer two."]
+
+
+def test_a_listeners_yes_inside_a_turn_is_not_kept(tmp_path):
+    wav = _speechy_wav(tmp_path / "a.wav")
+    turn = [
+        {
+            "start": 0.0,
+            "end": 7.8,
+            "text": "",
+            "words": [_w(0.1, 3.0, " One answer."), _w(3.4, 3.7, " Yes."), _w(4.2, 7.7, " Goes on.")],
+        }
+    ]
+    yes = lambda c: OTHER if 3.4 <= c <= 3.7 else TARGET  # noqa: E731
+    marked = speaker_filter(TARGET, embed=_fake_embed(yes))(wav, turn)
+    assert [w["keep"] for w in marked[0]["words"]] == [True, False, True]
