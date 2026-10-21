@@ -24,6 +24,7 @@
    pronounce
    refprep
    say_model
+   speakers
    speechtext
    stores
    textsplit

@@ -1,0 +1,40 @@
+voxy.speakers
+=============
+
+.. automodule:: voxy.speakers
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DFLT_MATCH_SIMILARITY
+      DFLT_SILENCE_MARGIN_DB
+      DFLT_MIN_FOREIGN_SECONDS
+      DFLT_FOREIGN_PAD_SECONDS
+      DFLT_WORD_OVERLAP
+      DFLT_DIP_SIMILARITY
+      DFLT_SMOOTH_WINDOWS
+      DFLT_MIN_TURN_SECONDS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      close_speaker
+      dominant_centroid
+      embed_windows
+      foreign_spans
+      loud_mask
+      mark_speaker
+      smooth
+      speaker_filter
+      turn_similarity
+      voice_print
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Windows
+   

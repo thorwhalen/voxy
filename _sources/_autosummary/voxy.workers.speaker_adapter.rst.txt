@@ -1,0 +1,13 @@
+voxy.workers.speaker\_adapter
+=============================
+
+.. automodule:: voxy.workers.speaker_adapter
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      embed
+      load
+   

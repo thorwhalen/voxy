@@ -22,5 +22,6 @@ voxy.workers
    phonemes_adapter
    qwen3tts_adapter
    serve
+   speaker_adapter
    voxcpm_adapter
    xtts_adapter

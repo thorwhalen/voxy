@@ -8,6 +8,7 @@ voxy.refprep
 
    .. autosummary::
    
+      SPEAKER_SCORE_RANGE
       DENOISE_FILTERS
       DF_SAMPLE_RATE
    

@@ -1,4 +1,4 @@
-> built 2026-10-20 17:45 UTC from e80b610 (main) · voxy 0.0.22. Details: build_info.json
+> built 2026-10-21 02:09 UTC from e05b668 (main) · voxy 0.0.23. Details: build_info.json
 
 # index.html.md
 
@@ -224,10 +224,11 @@ speech = model.synthesize("Bonjour à tous.", voice, language="fr")
 ```bash
 python -m voxy setup voxcpm qwen3tts      # build environments ahead of time
 python -m voxy prep ada tape1.m4a tape2.mp3 --language en
+python -m voxy prep ada interview.m4a --speaker dominant   # drop the interviewer's voice
 python -m voxy diagnose spec.json --out renders/first-listen --publish
 ```
 
-**Reference preparation** (`voxy.refprep.prepare_reference`): converts any recording to mono WAV, denoises (`denoise=` `afftdn`, `anlmdn`, or `deepfilternet`, which lowers real room noise far more but builds its own torch environment on first use) and normalises loudness (ffmpeg), transcribes locally with Whisper (scribed’s faster-whisper backend) with word timings, cuts clips of 3-12 s at sentence boundaries, and scores each clip (signal-to-noise, clipping, level, ASR confidence, speaking rate). Clips and `manifest.jsonl` go to the voice’s samples store; `best_references(manifest)` picks reference clips and `voxy.finetune.export_dataset` writes training sets (LJSpeech or F5-TTS layout).
+**Reference preparation** (`voxy.refprep.prepare_reference`): converts any recording to mono WAV, denoises (`denoise=` `afftdn`, `anlmdn`, or `deepfilternet`, which lowers real room noise far more but builds its own torch environment on first use) and normalises loudness (ffmpeg), transcribes locally with Whisper (scribed’s faster-whisper backend) with word timings, cuts clips of 3-12 s at sentence boundaries, and scores each clip (signal-to-noise, clipping, level, ASR confidence, speaking rate). With `speaker=voxy.speakers.speaker_filter()` (`--speaker`) it keeps one voice: ECAPA speaker embeddings (SpeechBrain, in its own environment) decide each transcribed turn as a whole against the target’s voice print (the recording’s dominant voice by default, or `speakers.voice_print(clean_recordings)`), and interviewer questions, interjections such as “Yes.” and untranscribed “uh-huh”s never end up inside a clip. Clips and `manifest.jsonl` go to the voice’s samples store; `best_references(manifest)` picks reference clips and `voxy.finetune.export_dataset` writes training sets (LJSpeech or F5-TTS layout).
 
 **Diagnosis pages** (`voxy.diagnosis`): render one text through a grid of models and parameters, then build one page with a player per variant, its parameters, generation time and real-time factor. Each variant has a stable ID (e.g. `VX-7KQ2`) derived from its configuration, not the text, so listeners can say “use VX-7KQ2” across pages and chapters; each listener can rate and annotate variants and copy their notes. A spec:
 
@@ -1655,6 +1656,7 @@ True
 | [`pronounce`](_autosummary/voxy.pronounce.html.md#module-voxy.pronounce)                 | Checking, in the audio, which reading of a flagged word a render used.                        |
 | [`refprep`](_autosummary/voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.    |
 | [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                |
+| [`speakers`](_autosummary/voxy.speakers.html.md#module-voxy.speakers)                   | Keep one speaker: find their voice in a recording and mark everyone else's words.             |
 | [`speechtext`](_autosummary/voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                          |
 | [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.               |
 | [`textsplit`](_autosummary/voxy.textsplit.html.md#module-voxy.textsplit)                 | Split long text (a chapter) into chunks a speech model can say in one breath.                 |
@@ -2399,10 +2401,14 @@ The steps, each a function you can call alone or replace:
    loudness normalisation (EBU R128, `loudness_lufs`).
 2. `transcribe`: timed segments and words from a local Whisper (scribed’s
    faster-whisper backend, in its own environment, see `voxy.envs`).
-3. `plan_clips`: cut points at sentence/segment boundaries, so each clip is
-   `min_seconds`-`max_seconds` long and carries its exact text.
-4. `score_clip`: duration, signal-to-noise estimate, clipping, level, ASR
-   confidence and speaking rate, folded into a `score` in [0, 1].
+3. `speaker` (optional, `voxy.speakers.speaker_filter`): marks words, and
+   untranscribed stretches, spoken by someone other than the target voice.
+4. `plan_clips`: cut points at sentence/segment boundaries, so each clip is
+   `min_seconds`-`max_seconds` long, carries its exact text, and never
+   contains a marked word.
+5. `score_clip`: duration, signal-to-noise estimate, clipping, level, ASR
+   confidence, speaking rate and (with a speaker step) the speaker match,
+   folded into a `score` in [0, 1].
 
 `prepare_reference` runs them all and saves the clips plus `manifest.jsonl` in
 the voice’s samples store (`voxy.stores.samples_store`), so any backend (a
@@ -2410,9 +2416,10 @@ reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same d
 
 ### Module Attributes
 
-| [`DENOISE_FILTERS`](_autosummary/voxy.refprep.html.md#voxy.refprep.DENOISE_FILTERS)   | no denoising).                                                                           |
-|--------------------------------------------------------------------|------------------------------------------------------------------------------------------|
-| [`DF_SAMPLE_RATE`](_autosummary/voxy.refprep.html.md#voxy.refprep.DF_SAMPLE_RATE)    | DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env. |
+| [`SPEAKER_SCORE_RANGE`](_autosummary/voxy.refprep.html.md#voxy.refprep.SPEAKER_SCORE_RANGE)   | Speaker similarity mapped to the score's `speaker` part (0 at the low end, 1 at the high).   |
+|------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
+| [`DENOISE_FILTERS`](_autosummary/voxy.refprep.html.md#voxy.refprep.DENOISE_FILTERS)       | no denoising).                                                                               |
+| [`DF_SAMPLE_RATE`](_autosummary/voxy.refprep.html.md#voxy.refprep.DF_SAMPLE_RATE)        | DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.     |
 
 ### Functions
 
@@ -2442,6 +2449,10 @@ no denoising).
 ### voxy.refprep.DF_SAMPLE_RATE *= 48000*
 
 DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.
+
+### voxy.refprep.SPEAKER_SCORE_RANGE *= (0.3, 0.7)*
+
+Speaker similarity mapped to the score’s `speaker` part (0 at the low end, 1 at the high).
 
 ### voxy.refprep.best_references(manifest, , n=3, min_seconds=5.0, max_seconds=12.0, min_score=0.0)
 
@@ -2514,7 +2525,9 @@ Clips `[{start, end, text, words}]` cut between words, ending sentences where po
 
 Words accumulate until the clip passes `min_seconds` and a word ends a
 sentence (or the next word would push it past `max_seconds`). Cuts fall in
-the pause between two words, padded by up to `pad_seconds`.
+the pause between two words, padded by up to `pad_seconds`. A word marked
+`keep=False` (someone else’s, see `voxy.speakers`) ends the clip before it,
+and the next clip starts after it.
 
 ```pycon
 >>> w = lambda s, e, t: {"start": s, "end": e, "text": t, "confidence": 0.9}
@@ -2522,12 +2535,15 @@ the pause between two words, padded by up to `pad_seconds`.
 ...                    w(4.1, 5, "four.")], "start": 0, "end": 5, "text": ""}]
 >>> [c["text"] for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]
 ['One two.', 'Three four.']
+>>> segs[0]["words"].insert(2, {**w(2.2, 2.6, " yes"), "keep": False})
+>>> [(c["text"], c["start"]) for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]
+[('One two.', 0.0), ('Three four.', 2.88)]
 ```
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
-### voxy.refprep.prepare_reference(sources, \*, voice=None, samples=None, sample_rate=24000, denoise='afftdn', loudness_lufs=-20.0, min_seconds=3.0, max_seconds=12.0, language=None, transcriber=None, conditioner=None, rootdir=None, log=<built-in function print>)
+### voxy.refprep.prepare_reference(sources, \*, voice=None, samples=None, sample_rate=24000, denoise='afftdn', loudness_lufs=-20.0, min_seconds=3.0, max_seconds=12.0, language=None, transcriber=None, conditioner=None, speaker=None, rootdir=None, log=<built-in function print>)
 
 Condition, transcribe, cut and score `sources`; save clips and manifest; return it.
 
@@ -2543,6 +2559,8 @@ Condition, transcribe, cut and score `sources`; save clips and manifest; return 
   * **language** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Force the ASR language (default: detected).
   * **transcriber** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(wav_path, language=) -> segments` (default `transcribe`).
   * **conditioner** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(src, dst, sample_rate=, filters=) -> path` (default `condition`).
+  * **speaker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(wav_path, segments) -> segments` marking other voices’ words
+    (`voxy.speakers.speaker_filter`); None keeps every voice.
 * **Returns:**
   one dict per clip (`key`, `path` if on disk, `text`,
   `source`, `start`, `end`, and the `score_clip` measures), best first.
@@ -2558,6 +2576,8 @@ Quality measures of a clip, and their combination `score` in [0, 1].
 - `level_db`: level of the loud frames.
 - `asr_confidence`: mean Whisper word probability (low: mumbling, noise, music).
 - `chars_per_second`: speaking rate (outliers: bad alignment).
+- `speaker_similarity`: lowest match of a word to the target voice (words
+  annotated by `voxy.speakers`; None otherwise).
 
 ```pycon
 >>> rng = np.random.default_rng(0)
@@ -2673,6 +2693,282 @@ Parse `say -v '?'` output.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+
+# _autosummary/voxy.speakers.html.md
+
+# voxy.speakers
+
+Keep one speaker: find their voice in a recording and mark everyone else’s words.
+
+Recordings of a person are rarely just that person: an interviewer asks the
+questions, someone says “yes” or “uh-huh” in the middle of an answer. A clone or a
+fine-tune trained on those clips learns the other voices too. This module
+compares the voice in short sliding windows with a **voice print** (the mean
+ECAPA speaker embedding of the target) and marks every transcribed word, and
+every untranscribed stretch of someone else’s voice, that does not match it:
+
+```pycon
+>>> from voxy import refprep, speakers
+>>> print_ = speakers.voice_print("clean_answer.wav")
+>>> refprep.prepare_reference(["interview.m4a"], voice="ada",
+...                           speaker=speakers.speaker_filter(print_))
+```
+
+`plan_clips` then never puts a marked word, or the pause around one, inside a
+clip. With no voice print, `speaker_filter()` takes each recording’s
+**dominant** voice (an iterated centroid over its loud windows), which is right
+for a talk or an interview where the target does most of the talking.
+
+The embeddings come from SpeechBrain’s ECAPA-TDNN (Apache-2.0, VoxCeleb weights)
+running in voxy’s isolated `speaker` environment (`SPEAKER_ENV`, built on
+first use, see `voxy.envs`); everything after the embeddings is numpy, so the
+logic below is testable with made-up vectors.
+
+### Module Attributes
+
+| [`DFLT_MATCH_SIMILARITY`](_autosummary/voxy.speakers.html.md#voxy.speakers.DFLT_MATCH_SIMILARITY)    | Cosine similarity to the voice print below which a window is someone else.                                                                                                                                                                                             |
+|---------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`DFLT_SILENCE_MARGIN_DB`](_autosummary/voxy.speakers.html.md#voxy.speakers.DFLT_SILENCE_MARGIN_DB)   | neither voice.                                                                                                                                                                                                                                                         |
+| [`DFLT_MIN_FOREIGN_SECONDS`](_autosummary/voxy.speakers.html.md#voxy.speakers.DFLT_MIN_FOREIGN_SECONDS) | Untranscribed foreign stretches shorter than this are ignored (one window's wobble).                                                                                                                                                                                   |
+| [`DFLT_FOREIGN_PAD_SECONDS`](_autosummary/voxy.speakers.html.md#voxy.speakers.DFLT_FOREIGN_PAD_SECONDS) | Margin added around a foreign stretch, so a cut never clips its edge into a clip.                                                                                                                                                                                      |
+| [`DFLT_WORD_OVERLAP`](_autosummary/voxy.speakers.html.md#voxy.speakers.DFLT_WORD_OVERLAP)        | A word with this share of its length inside a foreign stretch is not kept.                                                                                                                                                                                             |
+| [`DFLT_DIP_SIMILARITY`](_autosummary/voxy.speakers.html.md#voxy.speakers.DFLT_DIP_SIMILARITY)      | Inside a transcribed turn, a stretch is someone else's only below this (smoothed) match: one-second windows of old, noisy audio dip well below `DFLT_MATCH_SIMILARITY` on the target's own voice, so a turn that matches as a whole is only cut where the dip is deep. |
+| [`DFLT_SMOOTH_WINDOWS`](_autosummary/voxy.speakers.html.md#voxy.speakers.DFLT_SMOOTH_WINDOWS)      | Window similarities are averaged over this many neighbours before finding stretches.                                                                                                                                                                                   |
+| [`DFLT_MIN_TURN_SECONDS`](_autosummary/voxy.speakers.html.md#voxy.speakers.DFLT_MIN_TURN_SECONDS)    | never kept.                                                                                                                                                                                                                                                            |
+
+### Functions
+
+| [`close_speaker`](_autosummary/voxy.speakers.html.md#voxy.speakers.close_speaker)()                                   | Stop the embedding workers (free their memory).                                       |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| [`dominant_centroid`](_autosummary/voxy.speakers.html.md#voxy.speakers.dominant_centroid)(vectors, \*[, iterations, ...]) | The voice heard most: re-centre on the windows most like the centroid, repeatedly.    |
+| [`embed_windows`](_autosummary/voxy.speakers.html.md#voxy.speakers.embed_windows)(audio, \*[, spans, window, ...])    | ECAPA embeddings of `window`-second windows every `hop` s of `audio`.                 |
+| [`foreign_spans`](_autosummary/voxy.speakers.html.md#voxy.speakers.foreign_spans)(windows, similarity, \*[, ...])     | Stretches where a loud window does not match the voice print, padded by `pad`.        |
+| [`loud_mask`](_autosummary/voxy.speakers.html.md#voxy.speakers.loud_mask)(windows, samples, sample_rate, \*)      | Windows with speech in them: loud frames within `margin_db` of the speech level.      |
+| [`mark_speaker`](_autosummary/voxy.speakers.html.md#voxy.speakers.mark_speaker)(segments, windows, similarity, \*)   | Annotate each timed word with `speaker_similarity` and `keep`; add gap markers.       |
+| [`smooth`](_autosummary/voxy.speakers.html.md#voxy.speakers.smooth)(similarity[, windows])                     | Moving average of `similarity` over `windows` neighbours (edges: the shorter mean).   |
+| [`speaker_filter`](_autosummary/voxy.speakers.html.md#voxy.speakers.speaker_filter)([target, threshold, ...])          | A `refprep.prepare_reference(speaker=...)` step: `(wav_path, segments) -> segments`.  |
+| [`turn_similarity`](_autosummary/voxy.speakers.html.md#voxy.speakers.turn_similarity)(segments, windows, ...[, loud])   | Match of each transcribed segment (a turn) to `voice_print`, from its mean window.    |
+| [`voice_print`](_autosummary/voxy.speakers.html.md#voxy.speakers.voice_print)(audio, \*[, spans, embed])            | The voice print of `audio` (one recording or several): the dominant voice's centroid. |
+
+### Classes
+
+| [`Windows`](_autosummary/voxy.speakers.html.md#voxy.speakers.Windows)(times, vectors)   | Speaker embeddings of sliding windows: `times` (n, 2) seconds, unit `vectors` (n, d).   |
+|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+
+### voxy.speakers.DFLT_DIP_SIMILARITY *= 0.15*
+
+Inside a transcribed turn, a stretch is someone else’s only below this (smoothed) match:
+one-second windows of old, noisy audio dip well below `DFLT_MATCH_SIMILARITY` on the
+target’s own voice, so a turn that matches as a whole is only cut where the dip is deep.
+
+### voxy.speakers.DFLT_FOREIGN_PAD_SECONDS *= 0.15*
+
+Margin added around a foreign stretch, so a cut never clips its edge into a clip.
+
+### voxy.speakers.DFLT_MATCH_SIMILARITY *= 0.45*
+
+Cosine similarity to the voice print below which a window is someone else.
+
+### voxy.speakers.DFLT_MIN_FOREIGN_SECONDS *= 0.2*
+
+Untranscribed foreign stretches shorter than this are ignored (one window’s wobble).
+
+### voxy.speakers.DFLT_MIN_TURN_SECONDS *= 1.0*
+
+never kept.
+
+* **Type:**
+  Turns shorter than this are too short to attribute (”Yes.”, ”Uh-huh”)
+
+### voxy.speakers.DFLT_SILENCE_MARGIN_DB *= 25.0*
+
+neither voice.
+
+* **Type:**
+  Windows this far below the recording’s speech level are silence
+
+### voxy.speakers.DFLT_SMOOTH_WINDOWS *= 3*
+
+Window similarities are averaged over this many neighbours before finding stretches.
+
+### voxy.speakers.DFLT_WORD_OVERLAP *= 0.25*
+
+A word with this share of its length inside a foreign stretch is not kept.
+
+### *class* voxy.speakers.Windows(times, vectors)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Speaker embeddings of sliding windows: `times` (n, 2) seconds, unit `vectors` (n, d).
+
+#### similarity(voice_print)
+
+Cosine similarity of each window to `voice_print`.
+
+* **Return type:**
+  `ndarray`
+
+### voxy.speakers.close_speaker()
+
+Stop the embedding workers (free their memory).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.speakers.dominant_centroid(vectors, , iterations=6, quantile=0.5)
+
+The voice heard most: re-centre on the windows most like the centroid, repeatedly.
+
+Clustering fragments a noisy voice into several clusters; this converges on
+the majority voice instead (it needs that voice to be more than half the windows
+the first mean is computed from).
+
+```pycon
+>>> rng = np.random.default_rng(0)
+>>> a, b = np.eye(4)[0], np.eye(4)[1]
+>>> vs = np.array([_unit(a + 0.1 * rng.standard_normal(4)) for _ in range(30)]
+...             + [_unit(b + 0.1 * rng.standard_normal(4)) for _ in range(10)])
+>>> bool(dominant_centroid(vs) @ a > 0.95)
+True
+```
+
+* **Return type:**
+  `ndarray`
+
+### voxy.speakers.embed_windows(audio, , spans=None, window=1.0, hop=0.1, model='speechbrain/spkrec-ecapa-voxceleb', threads=None, rootdir=None)
+
+ECAPA embeddings of `window`-second windows every `hop` s of `audio`.
+
+`spans` restricts the windows to those `(start, end)` stretches (default:
+the whole file). Any sample rate; the worker resamples to 16 kHz.
+
+* **Return type:**
+  [`Windows`](_autosummary/voxy.speakers.html.md#voxy.speakers.Windows)
+
+### voxy.speakers.foreign_spans(windows, similarity, , threshold=0.45, loud=None, min_seconds=0.2, pad=0.15)
+
+Stretches where a loud window does not match the voice print, padded by `pad`.
+
+`threshold` is one similarity, or one per window.
+
+Each window speaks for the `hop`-wide slot around its centre, so a short “yes”
+marks about the length of the dip it causes, not a whole window.
+
+```pycon
+>>> t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(20)])
+>>> sim = np.array([0.8] * 8 + [0.1] * 4 + [0.8] * 8)
+>>> [[round(x, 2) for x in s] for s in foreign_spans(Windows(t, None), sim, pad=0)]
+[[1.25, 1.65]]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float)]]
+
+### voxy.speakers.loud_mask(windows, samples, sample_rate, , margin_db=25.0)
+
+Windows with speech in them: loud frames within `margin_db` of the speech level.
+
+```pycon
+>>> w = Windows(np.array([[0, 1], [1, 2]]), np.zeros((2, 3)))
+>>> x = np.concatenate([0.3 * np.ones(8000), np.zeros(8000)])
+>>> loud_mask(w, x, 8000).tolist()
+[True, False]
+```
+
+* **Return type:**
+  `ndarray`
+
+### voxy.speakers.mark_speaker(segments, windows, similarity, , threshold=0.45, loud=None, turns=None, dip_threshold=0.15, min_turn_seconds=1.0, word_overlap=0.25, pad=0.15, min_seconds=0.2)
+
+Annotate each timed word with `speaker_similarity` and `keep`; add gap markers.
+
+Without `turns`, a word is kept when the windows centred inside it match the
+voice print on average. With `turns` (one match per segment, see
+[`turn_similarity()`](_autosummary/voxy.speakers.html.md#voxy.speakers.turn_similarity)), a word is kept when its whole segment matches and lasts
+at least `min_turn_seconds`, and its `speaker_similarity` is the segment’s;
+inside a segment only a deep dip (below `dip_threshold`) counts as someone else,
+and a one-word sentence (“Yes.”) must match the voice print on its own.
+Either way a word is dropped when `word_overlap` of it lies in a foreign
+stretch. Every foreign stretch is also added as an empty word with
+`keep=False` (an untranscribed “uh-huh” has no word of its own), padded by up
+to `pad` and trimmed back to the kept words around it, so `refprep.plan_clips`
+never puts it inside a clip. A segment without word timings is judged as one word.
+
+```pycon
+>>> t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(40)])
+>>> sim = np.array([0.8] * 15 + [0.1] * 5 + [0.8] * 20)
+>>> w = lambda s, e, x: {"start": s, "end": e, "text": x}
+>>> segs = [{"start": 0, "end": 4, "text": "a b",
+...          "words": [w(0.5, 1.4, " a"), w(2.5, 3.8, " b")]}]
+>>> out = mark_speaker(segs, Windows(t, None), sim)
+>>> [(x["text"], x["keep"]) for x in out[0]["words"]], out[1]["words"][0]["end"]
+([(' a', True), (' b', True)], 2.5)
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### voxy.speakers.smooth(similarity, windows=3)
+
+Moving average of `similarity` over `windows` neighbours (edges: the shorter mean).
+
+```pycon
+>>> smooth(np.array([1.0, 1.0, 0.0, 1.0, 1.0])).round(2).tolist()
+[1.0, 0.67, 0.67, 0.67, 1.0]
+```
+
+* **Return type:**
+  `ndarray`
+
+### voxy.speakers.speaker_filter(target=None, , threshold=0.45, dip_threshold=0.15, smooth_windows=3, min_turn_seconds=1.0, embed=None, \*\*embed_kwargs)
+
+A `refprep.prepare_reference(speaker=...)` step: `(wav_path, segments) -> segments`.
+
+Decides per transcribed segment (a turn: [`turn_similarity()`](_autosummary/voxy.speakers.html.md#voxy.speakers.turn_similarity)), then cuts
+deep dips inside kept turns and other voices between them ([`mark_speaker()`](_autosummary/voxy.speakers.html.md#voxy.speakers.mark_speaker)).
+
+* **Parameters:**
+  * **target** (`ndarray` | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The voice print to keep (from [`voice_print()`](_autosummary/voxy.speakers.html.md#voxy.speakers.voice_print)); None takes each
+    recording’s dominant voice.
+  * **threshold** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Cosine similarity a turn (or a stretch between turns) needs to
+    count as the target.
+  * **dip_threshold** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Smoothed similarity below which a stretch inside a kept turn
+    is someone else.
+  * **smooth_windows** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Neighbouring windows averaged before finding stretches.
+  * **min_turn_seconds** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Shorter turns are never kept.
+  * **embed** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Windows`](_autosummary/voxy.speakers.html.md#voxy.speakers.Windows)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(path, **embed_kwargs) -> Windows` (default [`embed_windows()`](_autosummary/voxy.speakers.html.md#voxy.speakers.embed_windows)).
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]]
+
+### voxy.speakers.turn_similarity(segments, windows, voice_print, , loud=None)
+
+Match of each transcribed segment (a turn) to `voice_print`, from its mean window.
+
+Averaging the embeddings over a whole turn is far steadier than any one window
+on noisy audio: it is what tells an interviewer’s question from an answer. None
+for a segment with no (loud) window centred in it.
+
+```pycon
+>>> t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(40)])
+>>> v = np.array([np.eye(2)[0]] * 20 + [np.eye(2)[1]] * 20)
+>>> turn_similarity([{"start": 0, "end": 2}, {"start": 2.6, "end": 4.4}],
+...                 Windows(t, v), np.eye(2)[0])
+[1.0, 0.0]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
+
+### voxy.speakers.voice_print(audio, , spans=None, embed=None, \*\*embed_kwargs)
+
+The voice print of `audio` (one recording or several): the dominant voice’s centroid.
+
+Pass recordings (or `spans` of one) where the target speaks alone, and this is
+simply their voice; over mixed recordings it is whoever speaks most.
+
+* **Return type:**
+  `ndarray`
 
 
 # _autosummary/voxy.speechtext.html.md
@@ -3340,6 +3636,7 @@ The adapter file for `name` (e.g. ‘f5tts’ -> `f5tts_adapter.py`).
 | [`phonemes_adapter`](_autosummary/voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop.                                                                |
 | [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).                                                                 |
 | [`serve`](_autosummary/voxy.workers.serve.html.md#module-voxy.workers.serve)                           | Worker entry point: run a backend adapter inside its own environment.                                                                             |
+| [`speaker_adapter`](_autosummary/voxy.workers.speaker_adapter.html.md#module-voxy.workers.speaker_adapter)       | Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.                                                            |
 | [`voxcpm_adapter`](_autosummary/voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.                                                                |
 | [`xtts_adapter`](_autosummary/voxy.workers.xtts_adapter.html.md#module-voxy.workers.xtts_adapter)             | XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.                                                           |
 
@@ -3394,6 +3691,26 @@ Reply: `{"ok": true, "result": {...}}` or `{"ok": false, "error": "...", "traceb
 |------------------|----|
 
 
+# _autosummary/voxy.workers.speaker_adapter.html.md
+
+# voxy.workers.speaker_adapter
+
+Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.
+
+### Functions
+
+| [`embed`](_autosummary/voxy.workers.speaker_adapter.html.md#voxy.workers.speaker_adapter.embed)(state, \*, audio, out_path[, spans, ...])   | Embed windows of `window` s every `hop` s inside `spans` (default: all).   |
+|----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| `load`(\*[, model, device])                                                                        |                                                                            |
+
+### voxy.workers.speaker_adapter.embed(state, , audio, out_path, spans=None, window=1.0, hop=0.1, batch=64)
+
+Embed windows of `window` s every `hop` s inside `spans` (default: all).
+
+Saves `times` (n, 2) and unit `vectors` (n, d) to the `.npz` `out_path`.
+A span shorter than `window` gets one window, its own length.
+
+
 # _autosummary/voxy.workers.voxcpm_adapter.html.md
 
 # voxy.workers.voxcpm_adapter
@@ -3431,16 +3748,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-20 17:45 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/e80b610436dd4cfc0700de337dd3c58e1a300a59"><code>e80b610</code></a> on branch <code>main</code>, for **voxy 0.0.22** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-21 02:09 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/e05b668d7c0b563dead4848fd4a700b4b74305ac"><code>e05b668</code></a> on branch <code>main</code>, for **voxy 0.0.23** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.23) is behind the latest release on PyPI (0.0.24): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/e80b610436dd4cfc0700de337dd3c58e1a300a59"><code>e80b610436dd4cfc0700de337dd3c58e1a300a59</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/e05b668d7c0b563dead4848fd4a700b4b74305ac"><code>e05b668d7c0b563dead4848fd4a700b4b74305ac</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -3451,9 +3770,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39468342395">39468342395</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39531106722">39531106722</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>e80b610436dd4cfc0700de337dd3c58e1a300a59</code> (in the history of the built commit) |
+| Event commit | <code>e05b668d7c0b563dead4848fd4a700b4b74305ac</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -3478,13 +3797,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.22/">0.0.22</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.24/">0.0.24</a>, newer than the documented version (0.0.23).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout e80b610436dd4cfc0700de337dd3c58e1a300a59
+git checkout e05b668d7c0b563dead4848fd4a700b4b74305ac
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

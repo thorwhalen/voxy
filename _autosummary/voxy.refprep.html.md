@@ -16,10 +16,14 @@ The steps, each a function you can call alone or replace:
    loudness normalisation (EBU R128, `loudness_lufs`).
 2. `transcribe`: timed segments and words from a local Whisper (scribed’s
    faster-whisper backend, in its own environment, see `voxy.envs`).
-3. `plan_clips`: cut points at sentence/segment boundaries, so each clip is
-   `min_seconds`-`max_seconds` long and carries its exact text.
-4. `score_clip`: duration, signal-to-noise estimate, clipping, level, ASR
-   confidence and speaking rate, folded into a `score` in [0, 1].
+3. `speaker` (optional, `voxy.speakers.speaker_filter`): marks words, and
+   untranscribed stretches, spoken by someone other than the target voice.
+4. `plan_clips`: cut points at sentence/segment boundaries, so each clip is
+   `min_seconds`-`max_seconds` long, carries its exact text, and never
+   contains a marked word.
+5. `score_clip`: duration, signal-to-noise estimate, clipping, level, ASR
+   confidence, speaking rate and (with a speaker step) the speaker match,
+   folded into a `score` in [0, 1].
 
 `prepare_reference` runs them all and saves the clips plus `manifest.jsonl` in
 the voice’s samples store (`voxy.stores.samples_store`), so any backend (a
@@ -27,9 +31,10 @@ reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same d
 
 ### Module Attributes
 
-| [`DENOISE_FILTERS`](#voxy.refprep.DENOISE_FILTERS)   | no denoising).                                                                           |
-|--------------------------------------------------------------------|------------------------------------------------------------------------------------------|
-| [`DF_SAMPLE_RATE`](#voxy.refprep.DF_SAMPLE_RATE)    | DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env. |
+| [`SPEAKER_SCORE_RANGE`](#voxy.refprep.SPEAKER_SCORE_RANGE)   | Speaker similarity mapped to the score's `speaker` part (0 at the low end, 1 at the high).   |
+|------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
+| [`DENOISE_FILTERS`](#voxy.refprep.DENOISE_FILTERS)       | no denoising).                                                                               |
+| [`DF_SAMPLE_RATE`](#voxy.refprep.DF_SAMPLE_RATE)        | DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.     |
 
 ### Functions
 
@@ -59,6 +64,10 @@ no denoising).
 ### voxy.refprep.DF_SAMPLE_RATE *= 48000*
 
 DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.
+
+### voxy.refprep.SPEAKER_SCORE_RANGE *= (0.3, 0.7)*
+
+Speaker similarity mapped to the score’s `speaker` part (0 at the low end, 1 at the high).
 
 ### voxy.refprep.best_references(manifest, , n=3, min_seconds=5.0, max_seconds=12.0, min_score=0.0)
 
@@ -131,7 +140,9 @@ Clips `[{start, end, text, words}]` cut between words, ending sentences where po
 
 Words accumulate until the clip passes `min_seconds` and a word ends a
 sentence (or the next word would push it past `max_seconds`). Cuts fall in
-the pause between two words, padded by up to `pad_seconds`.
+the pause between two words, padded by up to `pad_seconds`. A word marked
+`keep=False` (someone else’s, see `voxy.speakers`) ends the clip before it,
+and the next clip starts after it.
 
 ```pycon
 >>> w = lambda s, e, t: {"start": s, "end": e, "text": t, "confidence": 0.9}
@@ -139,12 +150,15 @@ the pause between two words, padded by up to `pad_seconds`.
 ...                    w(4.1, 5, "four.")], "start": 0, "end": 5, "text": ""}]
 >>> [c["text"] for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]
 ['One two.', 'Three four.']
+>>> segs[0]["words"].insert(2, {**w(2.2, 2.6, " yes"), "keep": False})
+>>> [(c["text"], c["start"]) for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]
+[('One two.', 0.0), ('Three four.', 2.88)]
 ```
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
-### voxy.refprep.prepare_reference(sources, \*, voice=None, samples=None, sample_rate=24000, denoise='afftdn', loudness_lufs=-20.0, min_seconds=3.0, max_seconds=12.0, language=None, transcriber=None, conditioner=None, rootdir=None, log=<built-in function print>)
+### voxy.refprep.prepare_reference(sources, \*, voice=None, samples=None, sample_rate=24000, denoise='afftdn', loudness_lufs=-20.0, min_seconds=3.0, max_seconds=12.0, language=None, transcriber=None, conditioner=None, speaker=None, rootdir=None, log=<built-in function print>)
 
 Condition, transcribe, cut and score `sources`; save clips and manifest; return it.
 
@@ -160,6 +174,8 @@ Condition, transcribe, cut and score `sources`; save clips and manifest; return 
   * **language** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Force the ASR language (default: detected).
   * **transcriber** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(wav_path, language=) -> segments` (default `transcribe`).
   * **conditioner** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(src, dst, sample_rate=, filters=) -> path` (default `condition`).
+  * **speaker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(wav_path, segments) -> segments` marking other voices’ words
+    (`voxy.speakers.speaker_filter`); None keeps every voice.
 * **Returns:**
   one dict per clip (`key`, `path` if on disk, `text`,
   `source`, `start`, `end`, and the `score_clip` measures), best first.
@@ -175,6 +191,8 @@ Quality measures of a clip, and their combination `score` in [0, 1].
 - `level_db`: level of the loud frames.
 - `asr_confidence`: mean Whisper word probability (low: mumbling, noise, music).
 - `chars_per_second`: speaking rate (outliers: bad alignment).
+- `speaker_similarity`: lowest match of a word to the target voice (words
+  annotated by `voxy.speakers`; None otherwise).
 
 ```pycon
 >>> rng = np.random.default_rng(0)

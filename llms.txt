@@ -22,6 +22,7 @@
 - [voxy.pronounce](_autosummary/voxy.pronounce.html.md): Checking, in the audio, which reading of a flagged word a render used.
 - [voxy.refprep](_autosummary/voxy.refprep.html.md): Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
 - [voxy.say_model](_autosummary/voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
+- [voxy.speakers](_autosummary/voxy.speakers.html.md): Keep one speaker: find their voice in a recording and mark everyone else’s words.
 - [voxy.speechtext](_autosummary/voxy.speechtext.html.md): Display text vs speech text, and spotting words a model may misread.
 - [voxy.stores](_autosummary/voxy.stores.html.md): Where voxy keeps its data: voice records and audio, as &#96;MutableMapping&#96; stores.
 - [voxy.textsplit](_autosummary/voxy.textsplit.html.md): Split long text (a chapter) into chunks a speech model can say in one breath.
@@ -35,10 +36,11 @@
 - [voxy.workers.phonemes_adapter](_autosummary/voxy.workers.phonemes_adapter.html.md): Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop.
 - [voxy.workers.qwen3tts_adapter](_autosummary/voxy.workers.qwen3tts_adapter.html.md): Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).
 - [voxy.workers.serve](_autosummary/voxy.workers.serve.html.md): Worker entry point: run a backend adapter inside its own environment.
+- [voxy.workers.speaker_adapter](_autosummary/voxy.workers.speaker_adapter.html.md): Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.
 - [voxy.workers.voxcpm_adapter](_autosummary/voxy.workers.voxcpm_adapter.html.md): VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.
 - [voxy.workers.xtts_adapter](_autosummary/voxy.workers.xtts_adapter.html.md): XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.
 - [For AI agents](ai-agents.html.md): &#96;voxy&#96; ships artifacts for coding agents alongside its code. This page lists
-- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-20 17:45 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
+- [About this build](about-this-build.html.md): This documentation was built on &#42;&#42;2026-10-21 02:09 UTC&#42;&#42; from commit &lt;a href="https://github.com/tho...
 
 ## Optional
 
