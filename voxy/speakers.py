@@ -172,7 +172,9 @@ def dominant_centroid(
     True
     """
     if not len(vectors):
-        raise ValueError("No speech windows to find a voice in (silent or too short audio)")
+        raise ValueError(
+            "No speech windows to find a voice in (silent or too short audio)"
+        )
     c = _unit(vectors.mean(axis=0))
     for _ in range(iterations):
         sims = vectors @ c
@@ -201,8 +203,12 @@ def loud_mask(
     frame_s = len(samples) / sample_rate / len(levels)
     mask = []
     for start, end in windows.times:
-        frames = levels[int(start / frame_s) : max(int(start / frame_s) + 1, int(end / frame_s))]
-        mask.append(frames.size > 0 and np.percentile(frames, 90) > speech_level - margin_db)
+        frames = levels[
+            int(start / frame_s) : max(int(start / frame_s) + 1, int(end / frame_s))
+        ]
+        mask.append(
+            frames.size > 0 and np.percentile(frames, 90) > speech_level - margin_db
+        )
     return np.array(mask, dtype=bool)
 
 
@@ -223,7 +229,9 @@ def voice_print(
     vectors = []
     for path in paths:
         windows = embed(path, spans=spans, **embed_kwargs)
-        samples, sr = read_wav(path) if str(path).lower().endswith(".wav") else (None, None)
+        samples, sr = (
+            read_wav(path) if str(path).lower().endswith(".wav") else (None, None)
+        )
         if samples is not None:
             windows = windows.select(loud_mask(windows, samples, sr))
         vectors.append(windows.vectors)
@@ -327,7 +335,9 @@ def turn_similarity(
         if not inside.any():
             out.append(None)
             continue
-        out.append(round(float(_unit(windows.vectors[inside].mean(axis=0)) @ voice_print), 3))
+        out.append(
+            round(float(_unit(windows.vectors[inside].mean(axis=0)) @ voice_print), 3)
+        )
     return out
 
 
@@ -408,9 +418,18 @@ def mark_speaker(
             turn_ok = turn_ok and seg["end"] - seg["start"] >= min_turn_seconds
         timed = [w for w in seg.get("words") or () if w.get("start") is not None]
         # Untimed segment: judge it as one word, or plan_clips would keep it unmarked.
-        source = seg.get("words") if timed else [
-            {"start": seg["start"], "end": seg["end"], "text": seg.get("text", ""), "confidence": None}
-        ]
+        source = (
+            seg.get("words")
+            if timed
+            else [
+                {
+                    "start": seg["start"],
+                    "end": seg["end"],
+                    "text": seg.get("text", ""),
+                    "confidence": None,
+                }
+            ]
+        )
         words = []
         for word in source:
             word = dict(word)
@@ -424,8 +443,12 @@ def mark_speaker(
             if turns is not None:
                 word["speaker_similarity"] = turn
                 # A one-word sentence ("Yes.") inside a turn is often the listener's.
-                alone = _ends_sentence(word) and (not words or _ends_sentence(words[-1]))
-                word["keep"] = turn_ok and (word_ok or not alone) and in_foreign < word_overlap
+                alone = _ends_sentence(word) and (
+                    not words or _ends_sentence(words[-1])
+                )
+                word["keep"] = (
+                    turn_ok and (word_ok or not alone) and in_foreign < word_overlap
+                )
             else:
                 word["speaker_similarity"] = None if sim is None else round(sim, 3)
                 word["keep"] = word_ok and in_foreign < word_overlap
@@ -441,10 +464,17 @@ def mark_speaker(
         hi = min([e + pad] + [ws for ws, we in kept if we > e and ws < e + pad])
         if lo >= hi:  # inside one kept word, within its word_overlap tolerance
             continue
-        markers.append({"start": lo, "end": hi, "text": "", "confidence": None, "keep": False})
+        markers.append(
+            {"start": lo, "end": hi, "text": "", "confidence": None, "keep": False}
+        )
     if markers:
         out.append(
-            {"start": markers[0]["start"], "end": markers[-1]["end"], "text": "", "words": markers}
+            {
+                "start": markers[0]["start"],
+                "end": markers[-1]["end"],
+                "text": "",
+                "words": markers,
+            }
         )
     return out
 
@@ -484,7 +514,9 @@ def speaker_filter(
         loud = loud_mask(windows, samples, sr)
         if not loud.any():  # too short or silent: nothing to attribute, no clip either
             return segments
-        voice = target if target is not None else dominant_centroid(windows.vectors[loud])
+        voice = (
+            target if target is not None else dominant_centroid(windows.vectors[loud])
+        )
         return mark_speaker(
             segments,
             windows,

@@ -307,7 +307,9 @@ def plan_clips(
     """
     words = _words(segments)
     clips, current = [], []
-    floor = 0.0  # no clip may start before this (the end of the last clip or foreign word)
+    floor = (
+        0.0  # no clip may start before this (the end of the last clip or foreign word)
+    )
 
     def flush(next_start):
         nonlocal floor
@@ -381,7 +383,11 @@ def score_clip(
     clipped = float(np.mean(np.abs(samples) >= 0.999)) if len(samples) else 0.0
     confidences = [w["confidence"] for w in words if w.get("confidence") is not None]
     asr = float(np.mean(confidences)) if confidences else None
-    matches = [w["speaker_similarity"] for w in words if w.get("speaker_similarity") is not None]
+    matches = [
+        w["speaker_similarity"]
+        for w in words
+        if w.get("speaker_similarity") is not None
+    ]
     speaker = float(min(matches)) if matches else None
     rate = len(text) / duration if duration else 0.0
 
