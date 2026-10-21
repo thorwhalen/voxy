@@ -177,3 +177,46 @@ def test_a_listeners_yes_inside_a_turn_is_not_kept(tmp_path):
     yes = lambda c: OTHER if 3.4 <= c <= 3.7 else TARGET  # noqa: E731
     marked = speaker_filter(TARGET, embed=_fake_embed(yes))(wav, turn)
     assert [w["keep"] for w in marked[0]["words"]] == [True, False, True]
+
+
+def test_a_segment_without_word_times_is_judged_too(tmp_path):
+    wav = _speechy_wav(tmp_path / "a.wav")
+    untimed = [{**s, "words": None, "text": s["words"][0]["text"]} for s in TURNS]
+    other = lambda c: OTHER if 2.2 <= c <= 4.4 else TARGET  # noqa: E731
+    marked = speaker_filter(TARGET, embed=_fake_embed(other))(wav, untimed)
+    clips = refprep.plan_clips(marked, min_seconds=1.5, max_seconds=12)
+    assert [c["text"] for c in clips] == ["Answer one.", "Answer two."]
+
+
+def test_no_clip_runs_into_a_stretch_a_kept_word_tolerates(tmp_path):
+    wav = _speechy_wav(tmp_path / "a.wav")
+    long_word = [
+        {
+            "start": 0.0,
+            "end": 7.0,
+            "text": "",
+            "words": [_w(0.9, 2.0, " What"), _w(2.0, 4.0, " wonderful"), _w(5.0, 6.9, " news.")],
+        }
+    ]
+    dip = lambda c: OTHER if 3.5 <= c <= 4.1 else TARGET  # noqa: E731
+    marked = speaker_filter(TARGET, embed=_fake_embed(dip))(wav, long_word)
+    markers = [(w["start"], w["end"]) for s in marked for w in s["words"] if w["text"] == ""]
+    assert markers and all(s >= 4.0 for s, _ in markers)  # trimmed back to the kept word
+    clips = refprep.plan_clips(marked, min_seconds=0.5, max_seconds=12)
+    assert clips[0]["text"] == "What wonderful" and clips[0]["end"] >= 4.0  # not cut mid-word
+    for c in clips:
+        assert all(c["end"] <= s or c["start"] >= e for s, e in markers)
+
+
+def test_short_or_silent_audio_is_returned_unmarked(tmp_path):
+    wav = tmp_path / "a.wav"
+    wav.write_bytes(write_wav(np.zeros(SR // 2), SR))
+    empty = lambda path, **_: Windows(np.zeros((0, 2)), np.zeros((0, 8)))  # noqa: E731
+    assert speaker_filter(embed=empty)(wav, SEGMENTS) == SEGMENTS
+    assert speaker_filter(TARGET, embed=empty)(wav, SEGMENTS) == SEGMENTS
+
+
+def test_smooth_keeps_the_length_of_short_inputs():
+    from voxy.speakers import smooth
+
+    assert len(smooth(np.array([0.5, 0.7]), 5)) == 2

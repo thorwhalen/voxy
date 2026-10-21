@@ -171,6 +171,8 @@ def dominant_centroid(
     >>> bool(dominant_centroid(vs) @ a > 0.95)
     True
     """
+    if not len(vectors):
+        raise ValueError("No speech windows to find a voice in (silent or too short audio)")
     c = _unit(vectors.mean(axis=0))
     for _ in range(iterations):
         sims = vectors @ c
@@ -288,7 +290,8 @@ def smooth(similarity: np.ndarray, windows: int = DFLT_SMOOTH_WINDOWS) -> np.nda
     >>> smooth(np.array([1.0, 1.0, 0.0, 1.0, 1.0])).round(2).tolist()
     [1.0, 0.67, 0.67, 0.67, 1.0]
     """
-    if windows <= 1 or len(similarity) < 2:
+    windows = min(windows, len(similarity))
+    if windows <= 1:
         return np.asarray(similarity, dtype=float)
     kernel = np.ones(windows)
     total = np.convolve(similarity, kernel, mode="same")
@@ -375,8 +378,8 @@ def mark_speaker(
     Either way a word is dropped when ``word_overlap`` of it lies in a foreign
     stretch. Every foreign stretch is also added as an empty word with
     ``keep=False`` (an untranscribed "uh-huh" has no word of its own), padded by up
-    to ``pad`` but never into a kept word, so ``refprep.plan_clips`` never puts it
-    inside a clip.
+    to ``pad`` and trimmed back to the kept words around it, so ``refprep.plan_clips``
+    never puts it inside a clip. A segment without word timings is judged as one word.
 
     >>> t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(40)])
     >>> sim = np.array([0.8] * 15 + [0.1] * 5 + [0.8] * 20)
@@ -403,8 +406,13 @@ def mark_speaker(
         turn_ok = turn is None or turn >= threshold
         if turns is not None:
             turn_ok = turn_ok and seg["end"] - seg["start"] >= min_turn_seconds
+        timed = [w for w in seg.get("words") or () if w.get("start") is not None]
+        # Untimed segment: judge it as one word, or plan_clips would keep it unmarked.
+        source = seg.get("words") if timed else [
+            {"start": seg["start"], "end": seg["end"], "text": seg.get("text", ""), "confidence": None}
+        ]
         words = []
-        for word in seg.get("words") or ():
+        for word in source:
             word = dict(word)
             if word.get("start") is None:
                 words.append(word)
@@ -428,10 +436,11 @@ def mark_speaker(
         out.append(seg)
     markers = []
     for s, e in foreign:
-        before = [we for ws, we in kept if ws < s]
-        after = [ws for ws, we in kept if we > e]
-        lo = max([s - pad, 0.0] + [min(we, s) for we in before])
-        hi = min([e + pad] + [max(ws, e) for ws in after])
+        # Never into a kept word: plan_clips cuts between a word and the marker after it.
+        lo = max([s - pad, 0.0] + [we for ws, we in kept if ws < s and we > s - pad])
+        hi = min([e + pad] + [ws for ws, we in kept if we > e and ws < e + pad])
+        if lo >= hi:  # inside one kept word, within its word_overlap tolerance
+            continue
         markers.append({"start": lo, "end": hi, "text": "", "confidence": None, "keep": False})
     if markers:
         out.append(
@@ -473,6 +482,8 @@ def speaker_filter(
         windows = embed(wav_path, **embed_kwargs)
         samples, sr = read_wav(wav_path)
         loud = loud_mask(windows, samples, sr)
+        if not loud.any():  # too short or silent: nothing to attribute, no clip either
+            return segments
         voice = target if target is not None else dominant_centroid(windows.vectors[loud])
         return mark_speaker(
             segments,
