@@ -6,6 +6,7 @@ Command line for voxy: voices, speech, local model setup, reference prep, diagno
     python -m voxy speak "Hello" --voice ada -o hello.mp3
     python -m voxy setup f5tts chatterbox       # build local models' environments
     python -m voxy prep ada tape1.m4a tape2.mp3 # clean, cut, transcribe, score clips
+    python -m voxy prep ada interview.m4a --speaker dominant  # drop the other voices
     python -m voxy diagnose spec.json --out DIR --publish
     python -m voxy benchmarks docs/benchmarks.md # regenerate the comparison tables/charts
 """
@@ -39,6 +40,11 @@ def main(argv=None) -> int:
         default="afftdn",
         help="afftdn, anlmdn, deepfilternet (own env, needs uv) or none",
     )
+    prep.add_argument(
+        "--speaker",
+        help="keep one voice: 'dominant' (whoever speaks most in each recording) "
+        "or recordings of the target alone, comma-separated (own env, needs uv)",
+    )
     diagnose = commands.add_parser("diagnose", help="render a grid, build its page")
     diagnose.add_argument("spec", help="JSON spec (see voxy.diagnosis.run_spec)")
     diagnose.add_argument("--out", required=True, help="output folder")
@@ -62,20 +68,31 @@ def main(argv=None) -> int:
         from voxy.envs import ensure_env
         from voxy.local_clone import LOCAL_CLONE_BACKENDS
         from voxy.refprep import ASR_ENV
+        from voxy.speakers import SPEAKER_ENV
 
         envs = {name: b.env for name, b in LOCAL_CLONE_BACKENDS.items()}
         envs["asr"] = ASR_ENV
+        envs["speaker"] = SPEAKER_ENV
         for name in args.backends or list(envs):
             print(f"{name}\t{ensure_env(envs[name])}")
         return 0
     if args.command == "prep":
         from voxy import refprep
 
+        speaker = None
+        if args.speaker:
+            from voxy import speakers
+
+            target = None
+            if args.speaker != "dominant":
+                target = speakers.voice_print(args.speaker.split(","))
+            speaker = speakers.speaker_filter(target)
         manifest = refprep.prepare_reference(
             args.sources,
             voice=args.voice,
             language=args.language,
             denoise=None if args.denoise == "none" else args.denoise,
+            speaker=speaker,
         )
         print(json.dumps(refprep.summarize(manifest)))
         for clip in refprep.best_references(manifest):

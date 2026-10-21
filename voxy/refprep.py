@@ -13,10 +13,14 @@ The steps, each a function you can call alone or replace:
    loudness normalisation (EBU R128, ``loudness_lufs``).
 2. ``transcribe``: timed segments and words from a local Whisper (scribed's
    faster-whisper backend, in its own environment, see ``voxy.envs``).
-3. ``plan_clips``: cut points at sentence/segment boundaries, so each clip is
-   ``min_seconds``-``max_seconds`` long and carries its exact text.
-4. ``score_clip``: duration, signal-to-noise estimate, clipping, level, ASR
-   confidence and speaking rate, folded into a ``score`` in [0, 1].
+3. ``speaker`` (optional, ``voxy.speakers.speaker_filter``): marks words, and
+   untranscribed stretches, spoken by someone other than the target voice.
+4. ``plan_clips``: cut points at sentence/segment boundaries, so each clip is
+   ``min_seconds``-``max_seconds`` long, carries its exact text, and never
+   contains a marked word.
+5. ``score_clip``: duration, signal-to-noise estimate, clipping, level, ASR
+   confidence, speaking rate and (with a speaker step) the speaker match,
+   folded into a ``score`` in [0, 1].
 
 ``prepare_reference`` runs them all and saves the clips plus ``manifest.jsonl`` in
 the voice's samples store (``voxy.stores.samples_store``), so any backend (a
@@ -47,6 +51,8 @@ DFLT_MIN_SECONDS = 3.0
 DFLT_MAX_SECONDS = 12.0
 DFLT_PAD_SECONDS = 0.12
 DFLT_ASR_MODEL = "large-v3-turbo"
+#: Speaker similarity mapped to the score's ``speaker`` part (0 at the low end, 1 at the high).
+SPEAKER_SCORE_RANGE = (0.3, 0.7)
 MANIFEST_KEY = "manifest.jsonl"
 CLIPS_PREFIX = "clips/"
 CONDITIONED_PREFIX = "conditioned/"
@@ -222,7 +228,10 @@ def transcribe(
 ) -> list[dict]:
     """Timed segments ``[{start, end, text, confidence, words: [...]}, ...]`` of ``audio``."""
     worker = _asr_worker(model, threads, str(rootdir) if rootdir else None)
-    reply = worker.call("transcribe", audio=str(audio), language=language)
+    # The worker runs in its own working directory: hand it an absolute path.
+    reply = worker.call(
+        "transcribe", audio=str(Path(audio).resolve()), language=language
+    )
     return reply["segments"]
 
 
@@ -243,7 +252,7 @@ _SENTENCE_FINAL = re.compile(r"[.!?…][\"'”’)\]]?$")
 
 
 def _words(segments: Iterable[Mapping]) -> list[dict]:
-    """All timed words, in order (segments without word times count as one word)."""
+    """All timed words, in time order (segments without word times count as one word)."""
     words = []
     for s in segments:
         timed = [w for w in s.get("words") or () if w.get("start") is not None]
@@ -255,7 +264,7 @@ def _words(segments: Iterable[Mapping]) -> list[dict]:
                 "confidence": None,
             }
         ]
-    return words
+    return sorted(words, key=lambda w: w["start"])
 
 
 def _join_words(words: Iterable[Mapping]) -> str:
@@ -283,22 +292,28 @@ def plan_clips(
 
     Words accumulate until the clip passes ``min_seconds`` and a word ends a
     sentence (or the next word would push it past ``max_seconds``). Cuts fall in
-    the pause between two words, padded by up to ``pad_seconds``.
+    the pause between two words, padded by up to ``pad_seconds``. A word marked
+    ``keep=False`` (someone else's, see ``voxy.speakers``) ends the clip before it,
+    and the next clip starts after it.
 
     >>> w = lambda s, e, t: {"start": s, "end": e, "text": t, "confidence": 0.9}
     >>> segs = [{"words": [w(0, 1, "One"), w(1.1, 2, "two."), w(3, 4, "Three"),
     ...                    w(4.1, 5, "four.")], "start": 0, "end": 5, "text": ""}]
     >>> [c["text"] for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]
     ['One two.', 'Three four.']
+    >>> segs[0]["words"].insert(2, {**w(2.2, 2.6, " yes"), "keep": False})
+    >>> [(c["text"], c["start"]) for c in plan_clips(segs, min_seconds=1.5, max_seconds=3)]
+    [('One two.', 0.0), ('Three four.', 2.88)]
     """
     words = _words(segments)
     clips, current = [], []
+    floor = 0.0  # no clip may start before this (the end of the last clip or foreign word)
 
     def flush(next_start):
+        nonlocal floor
         if not current:
             return
-        prev_end = clips[-1]["end"] if clips else 0.0
-        start = max(prev_end, current[0]["start"] - pad_seconds)
+        start = max(floor, current[0]["start"] - pad_seconds)
         end = current[-1]["end"] + pad_seconds
         if next_start is not None:
             end = min(end, (current[-1]["end"] + next_start) / 2)
@@ -312,9 +327,14 @@ def plan_clips(
                 "words": list(current),
             }
         )
+        floor = end
         current.clear()
 
     for i, word in enumerate(words):
+        if word.get("keep") is False:
+            flush(word["start"])
+            floor = max(floor, word["end"])
+            continue
         if current and word["end"] - current[0]["start"] > max_seconds:
             flush(word["start"])
         current.append(word)
@@ -344,6 +364,8 @@ def score_clip(
     - ``level_db``: level of the loud frames.
     - ``asr_confidence``: mean Whisper word probability (low: mumbling, noise, music).
     - ``chars_per_second``: speaking rate (outliers: bad alignment).
+    - ``speaker_similarity``: lowest match of a word to the target voice (words
+      annotated by ``voxy.speakers``; None otherwise).
 
     >>> rng = np.random.default_rng(0)
     >>> speechy = np.concatenate([0.3 * rng.standard_normal(40000), 0.001 * rng.standard_normal(8000)])
@@ -359,6 +381,8 @@ def score_clip(
     clipped = float(np.mean(np.abs(samples) >= 0.999)) if len(samples) else 0.0
     confidences = [w["confidence"] for w in words if w.get("confidence") is not None]
     asr = float(np.mean(confidences)) if confidences else None
+    matches = [w["speaker_similarity"] for w in words if w.get("speaker_similarity") is not None]
+    speaker = float(min(matches)) if matches else None
     rate = len(text) / duration if duration else 0.0
 
     def ramp(x, lo, hi):
@@ -373,6 +397,8 @@ def score_clip(
     }
     if asr is not None:
         parts["asr"] = ramp(asr, 0.5, 0.95)
+    if speaker is not None:
+        parts["speaker"] = ramp(speaker, *SPEAKER_SCORE_RANGE)
     score = float(np.prod(list(parts.values())) ** (1 / len(parts)))
     return {
         "duration": round(duration, 3),
@@ -381,6 +407,7 @@ def score_clip(
         "level_db": round(loud, 1),
         "asr_confidence": None if asr is None else round(asr, 3),
         "chars_per_second": round(rate, 1),
+        "speaker_similarity": None if speaker is None else round(speaker, 3),
         "score": round(score, 3),
     }
 
@@ -410,6 +437,7 @@ def prepare_reference(
     language: str | None = None,
     transcriber: Callable[..., list[dict]] | None = None,
     conditioner: Callable[..., Path] | None = None,
+    speaker: Callable[..., list[dict]] | None = None,
     rootdir: str | os.PathLike | None = None,
     log=print,
 ) -> list[dict]:
@@ -424,6 +452,8 @@ def prepare_reference(
         language: Force the ASR language (default: detected).
         transcriber: ``(wav_path, language=) -> segments`` (default ``transcribe``).
         conditioner: ``(src, dst, sample_rate=, filters=) -> path`` (default ``condition``).
+        speaker: ``(wav_path, segments) -> segments`` marking other voices' words
+            (``voxy.speakers.speaker_filter``); None keeps every voice.
 
     Returns:
         The manifest: one dict per clip (``key``, ``path`` if on disk, ``text``,
@@ -451,6 +481,9 @@ def prepare_reference(
             samples[f"{CONDITIONED_PREFIX}{slug}.wav"] = wav_path.read_bytes()
             log(f"voxy.refprep: transcribing {slug} ({len(audio) / sr:.0f} s)")
             segments = transcriber(wav_path, language=language)
+            if speaker is not None:
+                log(f"voxy.refprep: marking other speakers in {slug}")
+                segments = speaker(wav_path, segments)
             plan = plan_clips(
                 segments,
                 min_seconds=min_seconds,
