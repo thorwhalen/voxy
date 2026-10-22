@@ -374,8 +374,10 @@ class ElevenLabsSpeechModel(SpeechModel):
         name = name or DFLT_CLONE_NAME_TEMPLATE.format(speaker_id=speaker_id)
         optional = {
             "description": description,
-            # A multipart form can't carry a dict: the API takes labels as JSON text.
-            "labels": json.dumps(dict(labels)) if labels is not None else None,
+            # The SDK (>=2.x) JSON-encodes labels itself; pre-encoding double-encodes
+            # them and ElevenLabs answers 400 invalid_labels. It also encodes an
+            # omitted value, so always send a dict (empty when there are no labels).
+            "labels": dict(labels) if labels is not None else {},
             "remove_background_noise": remove_background_noise,
         }
         response = self.client.voices.ivc.create(
