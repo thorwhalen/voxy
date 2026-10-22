@@ -82,7 +82,7 @@ def test_clone_uploads_every_sample_and_returns_profile(model, client, tmp_path)
     (op, kwargs), = client.calls
     assert op == "ivc.create"
     assert kwargs["name"] == "ada"
-    assert json.loads(kwargs["labels"]) == {"language": "en"}  # multipart needs text
+    assert kwargs["labels"] == {"language": "en"}  # the SDK JSON-encodes labels itself
     assert "description" not in kwargs  # unset options are not sent
     names = [n for n, _ in kwargs["files"]]
     contents = [c for _, c in kwargs["files"]]
