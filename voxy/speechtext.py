@@ -239,12 +239,43 @@ _VERB = {"AUX": "verb", "VERB": "verb"}
 _NOUN = {"NOUN": "noun", "PROPN": "noun"}
 _ADJECTIVE = {"ADJ": "adjective"}
 #: 3rd-plural verbs whose *-ent* is silent, against a noun or adjective in /ɑ̃/.
-_ENT_NOUNS = ("parent", "président", "résident", "talent", "ferment", "équivalent", "affluent", "expédient")
-_ENT_ADJECTIVES = ("content", "violent", "excellent", "négligent", "influent", "convergent", "divergent",
-                   "émergent", "évident", "insolent", "somnolent", "urgent", "coïncident")
+_ENT_NOUNS = (
+    "parent",
+    "président",
+    "résident",
+    "talent",
+    "ferment",
+    "équivalent",
+    "affluent",
+    "expédient",
+)
+_ENT_ADJECTIVES = (
+    "content",
+    "violent",
+    "excellent",
+    "négligent",
+    "influent",
+    "convergent",
+    "divergent",
+    "émergent",
+    "évident",
+    "insolent",
+    "somnolent",
+    "urgent",
+    "coïncident",
+)
 #: Nouns in *-tions* against a 1st-plural verb (*nous portions*).
-_TIONS = ("portions", "inventions", "intentions", "relations", "mentions", "options", "éditions",
-          "affections", "exceptions")
+_TIONS = (
+    "portions",
+    "inventions",
+    "intentions",
+    "relations",
+    "mentions",
+    "options",
+    "éditions",
+    "affections",
+    "exceptions",
+)
 FRENCH_POS_HETERONYMS: Mapping[str, Mapping[str, str]] = {
     "est": {**_VERB, **_NOUN, "ADJ": "noun"},
     "sens": {**_NOUN, **_VERB},

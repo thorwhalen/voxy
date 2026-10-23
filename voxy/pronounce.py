@@ -219,7 +219,10 @@ def spot_readings(
     baseline = float((log_probs.max(axis=1) - penalty).sum())
     return {
         name: spot_log_likelihood(
-            log_probs, tokenize_phonemes(reading, vocab), blank=blank, filler_penalty=penalty
+            log_probs,
+            tokenize_phonemes(reading, vocab),
+            blank=blank,
+            filler_penalty=penalty,
         )
         - baseline
         for name, reading in readings.items()
@@ -489,7 +492,9 @@ def espeak_phonemizer(
     def phonemize(texts: Sequence[str], language: str) -> list[str]:
         worker = _phoneme_worker(model, threads, str(rootdir) if rootdir else None)
         reply = worker.call(
-            "phonemize", texts=list(texts), language=ESPEAK_LANGUAGES.get(language, language)
+            "phonemize",
+            texts=list(texts),
+            language=ESPEAK_LANGUAGES.get(language, language),
         )
         return reply["ipa"]
 
@@ -543,7 +548,9 @@ def phrase_readings(
     head, tail = known_symbols(before, vocab), known_symbols(after, vocab)
     return {
         name: ctc_log_likelihood(
-            log_probs, tokenize_phonemes(head + known_symbols(reading, vocab) + tail, vocab), blank=blank
+            log_probs,
+            tokenize_phonemes(head + known_symbols(reading, vocab) + tail, vocab),
+            blank=blank,
         )
         for name, reading in readings.items()
     }
@@ -824,7 +831,7 @@ def heteronym_readings(language: str = "fr") -> dict[str, dict[str, str]]:
 
 
 def _normal_word(word: str) -> str:
-    return word.strip().strip(".,;:!?«»\"()…“”").replace("’", "'").casefold()
+    return word.strip().strip('.,;:!?«»"()…“”').replace("’", "'").casefold()
 
 
 def _text_words(text: str) -> list[tuple[int, str]]:
@@ -955,7 +962,8 @@ def audit(
     from voxy.speechtext import flag_risks
 
     table = {
-        k.casefold(): dict(v) for k, v in (readings or heteronym_readings(language)).items()
+        k.casefold(): dict(v)
+        for k, v in (readings or heteronym_readings(language)).items()
     }
     risks = flag_risks(text, heteronyms=table)
     proposed: dict[tuple[int, str], list] = {}
@@ -977,7 +985,11 @@ def audit(
     if not risks:
         return []
     emit = emitter or phoneme_emitter()
-    margins = {"phrase": DFLT_CONTEXT_MARGIN, "spot": DFLT_SPOT_MARGIN, "crop": DFLT_MARGIN}
+    margins = {
+        "phrase": DFLT_CONTEXT_MARGIN,
+        "spot": DFLT_SPOT_MARGIN,
+        "crop": DFLT_MARGIN,
+    }
     if scoring not in margins:
         raise ValueError(f"scoring must be one of {sorted(margins)}, not {scoring!r}")
     margin = margins[scoring] if margin is None else margin
@@ -988,24 +1000,34 @@ def audit(
     where = {(w["start"], w["end"]): i for i, w in enumerate(words)}
 
     def spoken(ws):
-        return " ".join(w["text"].strip().strip(".,;:!?«»\"()…") for w in ws).strip()
+        return " ".join(w["text"].strip().strip('.,;:!?«»"()…') for w in ws).strip()
 
     def scores_at(key, start, end):
         if scoring == "crop":
-            log_probs, vocab = emit(str(audio), max(0.0, start - padding), end + padding)
+            log_probs, vocab = emit(
+                str(audio), max(0.0, start - padding), end + padding
+            )
             return score_readings(log_probs, vocab, table[key])
         i = where[(start, end)]
         lo, hi = max(0, i - context), min(len(words) - 1, i + context)
         log_probs, vocab = emit(
-            str(audio), max(0.0, words[lo]["start"] - padding), words[hi]["end"] + padding
+            str(audio),
+            max(0.0, words[lo]["start"] - padding),
+            words[hi]["end"] + padding,
         )
         if scoring == "spot":
-            return spot_readings(log_probs, vocab, table[key], filler_penalty=filler_penalty)
+            return spot_readings(
+                log_probs, vocab, table[key], filler_penalty=filler_penalty
+            )
         before, after = spoken(words[lo:i]), spoken(words[i + 1 : hi + 1])
         said = [t for t in (before, after) if t]  # phonemizers drop empty texts
         ipa = dict(zip(said, phonemize(said, language))) if said else {}
         return phrase_readings(
-            log_probs, vocab, table[key], before=ipa.get(before, ""), after=ipa.get(after, "")
+            log_probs,
+            vocab,
+            table[key],
+            before=ipa.get(before, ""),
+            after=ipa.get(after, ""),
         )
 
     places = _risk_places(text, risks)
@@ -1014,12 +1036,17 @@ def audit(
     for risk, place in zip(risks, places):
         key = risk.word.casefold()
         line_key = (risk.line, key)
-        nth_on_line, on_line[line_key] = on_line.get(line_key, 0), on_line.get(line_key, 0) + 1
+        nth_on_line, on_line[line_key] = (
+            on_line.get(line_key, 0),
+            on_line.get(line_key, 0) + 1,
+        )
         want = expected_of(risk, nth_on_line)
         if heard_at.get(place) is None:
             findings.append(Finding(risk))
             continue
         start, end = words[heard_at[place]]["start"], words[heard_at[place]]["end"]
         scores = scores_at(key, start, end)
-        findings.append(Finding(risk, Verdict(risk.word, start, end, scores, want, margin)))
+        findings.append(
+            Finding(risk, Verdict(risk.word, start, end, scores, want, margin))
+        )
     return findings

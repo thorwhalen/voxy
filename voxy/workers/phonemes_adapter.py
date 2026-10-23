@@ -64,5 +64,7 @@ def phonemize(state, *, texts, language="fr-fr"):
         EspeakWrapper.set_library(espeakng_loader.get_library_path())
         EspeakWrapper.set_data_path(espeakng_loader.get_data_path())
         state["phonemize"] = run
-    ipa = state["phonemize"](list(texts), language=language, backend="espeak", strip=True)
+    ipa = state["phonemize"](
+        list(texts), language=language, backend="espeak", strip=True
+    )
     return {"ipa": list(ipa)}
