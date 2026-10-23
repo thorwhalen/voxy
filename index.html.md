@@ -236,6 +236,22 @@ python -m voxy diagnose spec.json --out renders/first-listen --publish
 
 Cards are titled with readable names (the backend, then the settings that vary, e.g. “Chatterbox 0.3”). For a page you share with other listeners, optional spec keys help: `references` (named clips, e.g. a raw and a denoised one, each with a `label`), `appendix` (reference name → a note: those variants go in a collapsed section at the end), `imported` (clips rendered elsewhere, such as a cloud service, with their `backend`, `label` and `audio_file`), `backend_notes`, `noindex`, and `notes_sink` + `page_url`, which save every rating, note, name and clip play as they happen to an [annoquest](https://github.com/i2mint/annoquest) server (`{"kind": "annoquest", "url": "/api/annoquest", "request": "<id>"}`). The page says so, and `annoquest-request.json` is written next to it for registering on that server; add `?reader=<name>` to the link you send each listener to tell them apart.
 
+### Heteronyms: what to send, and checking what was said
+
+Speech models misread words with two pronunciations (French *est* as the verb /ɛ/ or the noun /ɛst/, *plus*, *tous*, *fils*, the  *-ent* verbs), and a verse line’s capital makes it worse. An ASR check never sees it: Whisper writes “est” either way. Prepare the text, then audit the audio:
+
+```python
+from voxy.speechtext import prepare_speech_text
+from voxy.pronounce import audit
+
+text = prepare_speech_text(verse, keep={"Vous"}).speech   # verse capitals lowercased, deliberate ones kept
+# ... render `text` to take.wav with any backend ...
+findings = audit(text, "take.wav", expected={"est": "verb"})  # voxy's French heteronym table by default
+misread = [f for f in findings if f.ok is False]           # re-render these
+```
+
+`audit` finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from `expected` (a mapping, or a function of each risk) or from a detector such as `voxy.speechtext.pos_detector()`.
+
 ### The voice library: clone once, reuse by name
 
 voxy keeps voice data in stores (`MutableMapping`s) under `$VOXY_DATA_DIR` (default `~/.local/share/voxy`): `voices/{name}.json` records (with each backend’s saved profile, e.g. the ElevenLabs `voice_id`), `samples/{name}/` (audio a clone is made from), `sources/{name}/` (raw media). Every library function takes its stores as arguments (`voices=`, `samples=`), so any `MutableMapping` (another folder, S3) can stand in.

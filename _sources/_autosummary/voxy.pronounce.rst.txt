@@ -12,26 +12,43 @@ voxy.pronounce
       PHONEME_ENV
       DFLT_CROP_PADDING
       DFLT_MARGIN
+      DFLT_FILLER_PENALTY
+      DFLT_CONTEXT_MARGIN
+      ESPEAK_LANGUAGES
+      Phonemizer
+      DFLT_CONTEXT_WORDS
+      DFLT_SPOT_MARGIN
+      VARIANT_SEPARATOR
       BLANK_SYMBOL
       Emitter
       DFLT_MAX_ATTEMPTS
       Check
+      HETERONYMS_DIR
    
    .. rubric:: Functions
 
    .. autosummary::
    
+      align_words
+      audit
       best_reading
       checks_by_line
       checks_from_risks
       ctc_log_likelihood
+      espeak_phonemizer
       failing
+      heteronym_readings
+      known_symbols
       load_readings
       log_probs_from_path
       phoneme_emitter
+      phrase_readings
+      reading_name
       render_verified
       score_readings
       speech_renderer
+      spot_log_likelihood
+      spot_readings
       timed_words
       tokenize_phonemes
       verify_words
@@ -41,6 +58,7 @@ voxy.pronounce
 
    .. autosummary::
    
+      Finding
       LineTakes
       Take
       Verdict

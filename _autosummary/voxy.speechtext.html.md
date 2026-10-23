@@ -35,12 +35,11 @@ True
 
 ### Module Attributes
 
-| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)          | the next line's capital then starts a new one.                                                                           |
-|------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
-| [`Tagger`](#voxy.speechtext.Tagger)                | `text -> (char offset, token, universal POS tag)` for every token.                                                       |
-| [`DFLT_SPACY_MODEL`](#voxy.speechtext.DFLT_SPACY_MODEL)      | The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).               |
-| [`FRENCH_POS_HETERONYMS`](#voxy.speechtext.FRENCH_POS_HETERONYMS) | `{word: {UPOS: reading}}`.                                                                                               |
-| [`LLM_RISK_PROMPT`](#voxy.speechtext.LLM_RISK_PROMPT)       | The prompt [`llm_detector()`](#voxy.speechtext.llm_detector) sends; `$language` and `$text` are filled in. |
+| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)     | the next line's capital then starts a new one.                                                                           |
+|-------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| [`Tagger`](#voxy.speechtext.Tagger)           | `text -> (char offset, token, universal POS tag)` for every token.                                                       |
+| [`DFLT_SPACY_MODEL`](#voxy.speechtext.DFLT_SPACY_MODEL) | The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).               |
+| [`LLM_RISK_PROMPT`](#voxy.speechtext.LLM_RISK_PROMPT)  | The prompt [`llm_detector()`](#voxy.speechtext.llm_detector) sends; `$language` and `$text` are filled in. |
 
 ### Functions
 
@@ -67,14 +66,6 @@ One edit [`prepare_speech_text()`](#voxy.speechtext.prepare_speech_text) made (`
 ### voxy.speechtext.DFLT_SPACY_MODEL *= 'fr_core_news_sm'*
 
 The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).
-
-### voxy.speechtext.FRENCH_POS_HETERONYMS *: [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]]* *= {'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}}*
-
-`{word: {UPOS: reading}}`.
-The reading names are the keys of the IPA table given to `voxy.pronounce`.
-
-* **Type:**
-  French heteronyms whose part of speech picks the reading
 
 ### voxy.speechtext.LLM_RISK_PROMPT *= 'You help a text-to-speech system avoid misreadings. Below is a $language text, its lines numbered. List the words a speech model may misread: heteronyms (words with more than one pronunciation, such as French "est" as a verb or as a noun), names, abbreviations. For each, give the line, the word exactly as written, short names of its possible readings, and the reading this context needs.\\n\\nAnswer with a JSON list only, one object per word:\\n[{"line": 2, "word": "est", "readings": ["verb", "noun"], "expected": "verb", "why": "..."}]\\nUse "expected": null when the context does not decide. Answer [] if nothing is risky.\\n\\n$text\\n'*
 
@@ -151,7 +142,7 @@ reply that is not a JSON list proposes nothing.
 [(1, 'est', 'verb')]
 ```
 
-### voxy.speechtext.pos_detector(rules={'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}}, , tagger=None)
+### voxy.speechtext.pos_detector(rules={'affections': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'affluent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'as': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'content': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'convergent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'couvent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'coïncident': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'divergent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'excellent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'exceptions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'expédient': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'ferment': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'fier': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'influent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'insolent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'intentions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'inventions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'lis': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'mentions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'négligent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'options': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'parent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'portions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'président': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'relations': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'résident': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'sens': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'somnolent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'talent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'tous': {'DET': 'det', 'PRON': 'pronoun'}, 'urgent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'violent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'vis': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'éditions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'émergent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'équivalent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'évident': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}}, , tagger=None)
 
 A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading.
 
@@ -160,7 +151,7 @@ capital fools the tagger the same way it fools the speech model.
 
 * **Parameters:**
   * **rules** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]) – `{word: {UPOS tag: reading name}}`, words matched case-insensitively
-    (default [`FRENCH_POS_HETERONYMS`](#voxy.speechtext.FRENCH_POS_HETERONYMS)).
+    (default `FRENCH_POS_HETERONYMS`).
   * **tagger** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> (offset, token, UPOS)`; default [`spacy_tagger()`](#voxy.speechtext.spacy_tagger)
     (French), loaded on first use.
 * **Return type:**

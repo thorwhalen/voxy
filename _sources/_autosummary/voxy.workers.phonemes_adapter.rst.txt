@@ -4,10 +4,17 @@ voxy.workers.phonemes\_adapter
 .. automodule:: voxy.workers.phonemes_adapter
 
    
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      BLANK_SYMBOL
+   
    .. rubric:: Functions
 
    .. autosummary::
    
       emissions
       load
+      phonemize
    

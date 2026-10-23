@@ -138,7 +138,15 @@
 <div id="content" role="main">
 <section id="module-voxy.workers.phonemes_adapter">
 <span id="voxy-workers-phonemes-adapter"></span><h1>voxy.workers.phonemes_adapter<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#module-voxy.workers.phonemes_adapter">¶</a></h1>
-<p>Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop.</p>
+<p>Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.</p>
+<p class="rubric">Module Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.phonemes_adapter.BLANK_SYMBOL" title="voxy.workers.phonemes_adapter.BLANK_SYMBOL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLANK_SYMBOL</span></code></a></p></td>
+<td><p>the recogniser's padding symbol.</p></td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Functions</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -148,10 +156,35 @@
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(*[, model, device])</p></td>
 <td><p></p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.phonemes_adapter.phonemize" title="voxy.workers.phonemes_adapter.phonemize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">phonemize</span></code></a>(state, *, texts[, language])</p></td>
+<td><p>espeak IPA of each text (the symbols the recogniser was trained on), stress marks kept.</p></td>
+</tr>
 </tbody>
 </table>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.workers.phonemes_adapter.BLANK_SYMBOL">
+<span class="sig-prename descclassname"><span class="pre">voxy.workers.phonemes_adapter.</span></span><span class="sig-name descname"><span class="pre">BLANK_SYMBOL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'&lt;pad&gt;'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.phonemes_adapter.BLANK_SYMBOL" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.phonemes_adapter.BLANK_SYMBOL'">¶</a></dt>
+<dd><p>the recogniser’s padding symbol.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The CTC blank</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.workers.phonemes_adapter.phonemize">
+<span class="sig-prename descclassname"><span class="pre">voxy.workers.phonemes_adapter.</span></span><span class="sig-name descname"><span class="pre">phonemize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">texts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'fr-fr'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/workers/phonemes_adapter.html#phonemize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.phonemes_adapter.phonemize" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.phonemes_adapter.phonemize'">¶</a></dt>
+<dd><p>espeak IPA of each text (the symbols the recogniser was trained on), stress marks kept.</p>
+</dd></dl>
 </section>
-</div></div>
+</div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
+<div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
+<ul>
+<li><a :data-current="activeSection === '#voxy.workers.phonemes_adapter.BLANK_SYMBOL'" class="reference internal" href="#voxy.workers.phonemes_adapter.BLANK_SYMBOL"><code class="docutils literal notranslate"><span class="pre">BLANK_SYMBOL</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.workers.phonemes_adapter.phonemize'" class="reference internal" href="#voxy.workers.phonemes_adapter.phonemize"><code class="docutils literal notranslate"><span class="pre">phonemize()</span></code></a></li>
+</ul>
+</div>
+</aside>
 </main>
 </div>
 </div><footer class="py-6 border-t border-border md:py-0">
@@ -162,7 +195,7 @@
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=f91d8841"></script>
+<script src="../_static/documentation_options.js?v=5d650c58"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

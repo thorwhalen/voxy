@@ -31,7 +31,7 @@
 - [voxy.workers.asr_adapter](voxy.workers.asr_adapter.html.md): Speech recognition with timed words (scribed’s faster-whisper backend), for reference prep.
 - [voxy.workers.chatterbox_adapter](voxy.workers.chatterbox_adapter.html.md): Chatterbox (Resemble AI): ‘original’ (emotion exaggeration, CFG), ‘turbo’ (faster), or
 - [voxy.workers.f5tts_adapter](voxy.workers.f5tts_adapter.html.md): F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).
-- [voxy.workers.phonemes_adapter](voxy.workers.phonemes_adapter.html.md): Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop.
+- [voxy.workers.phonemes_adapter](voxy.workers.phonemes_adapter.html.md): Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonem...
 - [voxy.workers.qwen3tts_adapter](voxy.workers.qwen3tts_adapter.html.md): Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).
 - [voxy.workers.serve](voxy.workers.serve.html.md): Worker entry point: run a backend adapter inside its own environment.
 - [voxy.workers.speaker_adapter](voxy.workers.speaker_adapter.html.md): Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.
