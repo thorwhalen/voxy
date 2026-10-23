@@ -8,6 +8,8 @@ import pytest
 from voxy.base import Speech
 from voxy.pronounce import (
     Verdict,
+    audit,
+    heteronym_readings,
     checks_by_line,
     checks_from_risks,
     load_readings,
@@ -237,3 +239,67 @@ def test_checks_by_line_takes_a_detectors_expected_reading():
     assert checks_by_line(risks[:1], readings={"est": READINGS}, expected={"est": "noun"}) == {
         1: [("est", READINGS, "noun")]
     }
+
+
+def test_variants_of_one_reading_do_not_compete_and_count_as_that_reading():
+    scores = {"verb": -1.0, "verb~liaison": -1.1, "noun": -3.0}
+    verdict = Verdict("est", 0.0, 0.2, scores, expected="verb")
+    assert verdict.decided and verdict.reading == "verb" and verdict.ok
+    liaison = Verdict("est", 0.0, 0.2, {**scores, "verb~liaison": -0.9}, expected="verb")
+    assert liaison.heard == "verb~liaison" and liaison.ok
+
+
+def test_audit_checks_each_occurrence_against_its_own_expected_reading():
+    text = "Il est là\nà l'est du jardin\nil est"
+    words = [{"start": float(i), "end": i + 0.3, "text": w} for i, w in
+             enumerate(["Il", "est", "là", "à", "l'est", "du", "jardin", "il", "est"])]
+    # each window holds the word and its neighbours; the second "est" (a verb) came out as the noun
+    first, second = ["a", "ɛ", "ɛ", "<pad>", "a"], ["a", "ɛ", "ɛ", "s", "s", "t", "t", "a"]
+
+    def emitter(audio, start, end):
+        return log_probs_from_path(_ids(first if start < 1 else second), vocab_size=len(VOCAB)), VOCAB
+
+    findings = audit(text, "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                     scoring="spot", emitter=emitter, words_of=lambda audio: words)
+    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (3, False)]
+
+
+def test_audit_aligns_text_and_asr_words_and_leaves_missing_ones_unchecked():
+    heard = ["a", "ɛ", "ɛ", "a"]
+    findings = audit("est\nest", "take.wav", readings={"est": READINGS}, scoring="spot",
+                     expected=lambda risk: "verb" if risk.line == 1 else "noun",
+                     emitter=lambda audio, start, end: (log_probs_from_path(_ids(heard), vocab_size=len(VOCAB)), VOCAB),
+                     words_of=lambda audio: [{"start": 0.0, "end": 0.2, "text": "est"}])
+    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (2, None)]
+    assert findings[1].verdict is None
+
+
+def test_voxy_ships_a_french_heteronym_table():
+    table = heteronym_readings("fr")
+    assert {"est", "fils", "plus", "tous", "couvent"} <= set(table)
+    with pytest.raises(ValueError, match="no heteronym table"):
+        heteronym_readings("xx")
+
+
+def test_the_pos_rules_name_readings_the_french_table_has():
+    from voxy.pronounce import reading_name
+    from voxy.speechtext import FRENCH_POS_HETERONYMS
+
+    table = heteronym_readings("fr")
+    for word, by_tag in FRENCH_POS_HETERONYMS.items():
+        assert set(by_tag.values()) <= {reading_name(n) for n in table[word]}, word
+
+
+def test_audit_scores_whole_phrases_so_a_neighbours_s_t_is_not_the_nouns():
+    # "triste est le": the audio has s t (end of "triste") then ɛ: the verb, said right
+    words = [{"start": 0.0, "end": 0.4, "text": "triste"}, {"start": 0.4, "end": 0.6, "text": "est"},
+             {"start": 0.6, "end": 0.8, "text": "le"}]
+    heard = ["s", "s", "t", "t", "ɛ", "ɛ", "<pad>", "a", "a"]
+    ipa = {"triste": "st", "le": "a"}  # what the fake phonemizer writes out (VOCAB has no l, ə)
+    findings = audit("triste est le", "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                     emitter=lambda audio, start, end: (log_probs_from_path(_ids(heard), vocab_size=len(VOCAB)), VOCAB),
+                     phonemize=lambda texts, language: [ipa[t] for t in texts if t],
+                     words_of=lambda audio: words)
+    assert [f.ok for f in findings] == [True]
+    with pytest.raises(ValueError, match="scoring"):
+        audit("est", "take.wav", readings={"est": READINGS}, scoring="nope", words_of=lambda audio: words)

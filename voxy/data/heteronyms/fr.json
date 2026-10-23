@@ -1,0 +1,188 @@
+{
+ "_about": "French heteronyms (homographes non homophones) a speech model may misread: {word: {reading name: IPA}}. A name 'reading~variant' is another accepted pronunciation of 'reading' (liaison, open/closed vowel). IPA in the espeak symbols of facebook/wav2vec2-lv-60-espeak-cv-ft. Hand-made from a manual pass over the Lexique list (New, Pallier et al.); extend with a caller's file through voxy.pronounce.load_readings.",
+ "est": {
+  "verb": "ɛ",
+  "verb~e": "e",
+  "verb~liaison": "ɛt",
+  "noun": "ɛst"
+ },
+ "fils": {
+  "son": "fis",
+  "threads": "fil"
+ },
+ "plus": {
+  "ply": "ply",
+  "ply~liaison": "plyz",
+  "plys": "plys"
+ },
+ "tous": {
+  "pronoun": "tus",
+  "det": "tu",
+  "det~liaison": "tuz"
+ },
+ "sens": {
+  "noun": "sɑ̃s",
+  "verb": "sɑ̃"
+ },
+ "lis": {
+  "noun": "lis",
+  "verb": "li"
+ },
+ "christ": {
+  "christ": "kʁist",
+  "jesus-christ": "kʁi"
+ },
+ "os": {
+  "singular": "ɔs",
+  "plural": "o"
+ },
+ "couvent": {
+  "noun": "kuvɑ̃",
+  "verb": "kuv"
+ },
+ "fier": {
+  "adjective": "fjɛʁ",
+  "verb": "fje"
+ },
+ "as": {
+  "verb": "a",
+  "verb~liaison": "az",
+  "noun": "as"
+ },
+ "vis": {
+  "verb": "vi",
+  "noun": "vis"
+ },
+ "convient": {
+  "convenir": "kɔ̃vjɛ̃",
+  "convier": "kɔ̃vi"
+ },
+ "content": {
+  "adjective": "kɔ̃tɑ̃",
+  "verb": "kɔ̃t"
+ },
+ "président": {
+  "noun": "pʁezidɑ̃",
+  "verb": "pʁezid"
+ },
+ "résident": {
+  "noun": "ʁezidɑ̃",
+  "verb": "ʁezid"
+ },
+ "violent": {
+  "adjective": "vjɔlɑ̃",
+  "verb": "vjɔl"
+ },
+ "excellent": {
+  "adjective": "ɛksɛlɑ̃",
+  "verb": "ɛksɛl"
+ },
+ "négligent": {
+  "adjective": "neɡliʒɑ̃",
+  "verb": "neɡliʒ"
+ },
+ "parent": {
+  "noun": "paʁɑ̃",
+  "verb": "paʁ"
+ },
+ "expédient": {
+  "noun": "ɛkspedjɑ̃",
+  "verb": "ɛkspedi"
+ },
+ "influent": {
+  "adjective": "ɛ̃flyɑ̃",
+  "verb": "ɛ̃fly"
+ },
+ "affluent": {
+  "noun": "aflyɑ̃",
+  "verb": "afly"
+ },
+ "convergent": {
+  "adjective": "kɔ̃vɛʁʒɑ̃",
+  "verb": "kɔ̃vɛʁʒ"
+ },
+ "divergent": {
+  "adjective": "divɛʁʒɑ̃",
+  "verb": "divɛʁʒ"
+ },
+ "émergent": {
+  "adjective": "emɛʁʒɑ̃",
+  "verb": "emɛʁʒ"
+ },
+ "équivalent": {
+  "noun": "ekivalɑ̃",
+  "verb": "ekival"
+ },
+ "évident": {
+  "adjective": "evidɑ̃",
+  "verb": "evid"
+ },
+ "ferment": {
+  "noun": "fɛʁmɑ̃",
+  "verb": "fɛʁm"
+ },
+ "insolent": {
+  "adjective": "ɛ̃sɔlɑ̃",
+  "verb": "ɛ̃sɔl"
+ },
+ "somnolent": {
+  "adjective": "sɔmnɔlɑ̃",
+  "verb": "sɔmnɔl"
+ },
+ "talent": {
+  "noun": "talɑ̃",
+  "verb": "tal"
+ },
+ "urgent": {
+  "adjective": "yʁʒɑ̃",
+  "verb": "yʁʒ"
+ },
+ "coïncident": {
+  "adjective": "kɔɛ̃sidɑ̃",
+  "verb": "kɔɛ̃sid"
+ },
+ "pressent": {
+  "presser": "pʁɛs",
+  "pressentir": "pʁesɑ̃"
+ },
+ "portions": {
+  "noun": "pɔʁsjɔ̃",
+  "verb": "pɔʁtjɔ̃"
+ },
+ "inventions": {
+  "noun": "ɛ̃vɑ̃sjɔ̃",
+  "verb": "ɛ̃vɑ̃tjɔ̃"
+ },
+ "intentions": {
+  "noun": "ɛ̃tɑ̃sjɔ̃",
+  "verb": "ɛ̃tɑ̃tjɔ̃"
+ },
+ "relations": {
+  "noun": "ʁəlasjɔ̃",
+  "verb": "ʁəlatjɔ̃"
+ },
+ "mentions": {
+  "noun": "mɑ̃sjɔ̃",
+  "verb": "mɑ̃tjɔ̃"
+ },
+ "options": {
+  "noun": "ɔpsjɔ̃",
+  "verb": "ɔptjɔ̃"
+ },
+ "éditions": {
+  "noun": "edisjɔ̃",
+  "verb": "editjɔ̃"
+ },
+ "affections": {
+  "noun": "afɛksjɔ̃",
+  "verb": "afɛktjɔ̃"
+ },
+ "exceptions": {
+  "noun": "ɛksɛpsjɔ̃",
+  "verb": "ɛksɛptjɔ̃"
+ },
+ "lacs": {
+  "lakes": "lak",
+  "snares": "la"
+ }
+}

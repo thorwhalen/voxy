@@ -1,17 +1,24 @@
 """Checking, in the audio, which reading of a flagged word a render used.
 
 :func:`voxy.speechtext.flag_risks` lists the words a model may misread (heteronyms
-such as French "est" /ɛ/ vs "Est" /ɛst/). This module listens for the answer: it crops
-the word out of a render (word timestamps from ASR), asks a phoneme recogniser for its
+such as French "est" /ɛ/ vs "Est" /ɛst/). This module listens for the answer: it finds
+the word in a render (word timestamps from ASR), asks a phoneme recogniser for its
 frame-wise phoneme log-probabilities, and scores each candidate reading by its CTC
 likelihood. The reading the audio supports best is the one the model said; a render
 whose word came out as the wrong one can be re-rendered.
 
+ASR word times are loose, so a word cropped alone carries bits of its neighbours, and a
+neighbour's /s/ or /t/ then reads as the longer reading. :func:`audit` (the call for a
+finished render) therefore scores each reading as the whole phrase around it, the
+neighbours written out by espeak (:func:`phrase_readings`, :func:`espeak_phonemizer`);
+:func:`verify_words` and :func:`render_verified` still crop.
+
 The recogniser is ``facebook/wav2vec2-lv-60-espeak-cv-ft``, run in its own torch env
-(:data:`PHONEME_ENV`, built by ``voxy.envs``). Its ``vocab.json`` maps espeak IPA
-symbols to ids, so candidate readings are written in IPA and tokenised against that
-vocabulary: no phonemizer is needed. Everything above the recogniser is pure numpy and
-takes the recogniser as an argument (``emitter``), so it is tested without torch.
+(:data:`PHONEME_ENV`, built by ``voxy.envs``, with a bundled espeak-ng). Its
+``vocab.json`` maps espeak IPA symbols to ids, so readings are written in IPA and
+tokenised against that vocabulary. Everything above the recogniser is pure numpy and
+takes the recogniser (``emitter``) and the phonemizer as arguments, so it is tested
+without torch.
 
 >>> vocab = ["<pad>", "ɛ", "s", "t"]
 >>> emissions = log_probs_from_path([1, 0, 0], vocab_size=4)  # hears /ɛ/ only
@@ -34,13 +41,40 @@ from voxy.envs import EnvSpec, ensure_env, worker_environ
 DFLT_PHONEME_MODEL = "facebook/wav2vec2-lv-60-espeak-cv-ft"
 #: Its env: CPU torch plus transformers (the processor's vocab.json is all it needs).
 PHONEME_ENV = EnvSpec(
-    "phonemes", ("torch", "transformers", "soundfile", "numpy", "librosa")
+    "phonemes",
+    (
+        "torch",
+        "transformers",
+        "soundfile",
+        "numpy",
+        "librosa",
+        "phonemizer",
+        "espeakng-loader",
+    ),
 )
 #: Seconds kept on each side of a word's ASR timestamps: ASR word edges are loose.
 DFLT_CROP_PADDING = 0.08
 #: A reading must beat the runner-up by this much (mean log-likelihood per target
 #: symbol) for a verdict to count as decided.
 DFLT_MARGIN = 0.5
+
+#: What spotting a word in its context charges per frame left to filler (nats).
+DFLT_FILLER_PENALTY = 1.0
+#: A reading must beat the runner-up by this many nats when scored as a whole phrase.
+DFLT_CONTEXT_MARGIN = 2.0
+#: espeak voices for :func:`audit`'s ``language`` codes (others are passed as they are).
+ESPEAK_LANGUAGES = {"fr": "fr-fr", "en": "en-us"}
+
+#: ``(texts, language) -> IPA of each``: writes out the words around a flagged one.
+Phonemizer = Callable[[Sequence[str], str], Sequence[str]]
+
+#: Words of context on each side of a flagged word when :func:`audit` scores it.
+DFLT_CONTEXT_WORDS = 1
+#: A reading must beat the runner-up by this many nats when spotted in context.
+DFLT_SPOT_MARGIN = 2.0
+
+#: In a reading name, what separates a reading from one of its variants (``verb~liaison``).
+VARIANT_SEPARATOR = "~"
 
 #: The CTC blank of the recogniser's vocabulary (wav2vec2 uses its pad token).
 BLANK_SYMBOL = "<pad>"
@@ -118,6 +152,80 @@ def ctc_log_likelihood(
     return float(np.logaddexp(alpha[-1], alpha[-2]) if states > 1 else alpha[-1])
 
 
+def spot_log_likelihood(
+    log_probs: np.ndarray,
+    target: Sequence[int],
+    *,
+    blank: int = 0,
+    filler_penalty: float = None,
+) -> float:
+    """``log P`` of ``target`` said somewhere in ``log_probs``, the rest being filler.
+
+    Keyword spotting under CTC: frames before and after the target are explained by a
+    filler that takes each frame's best symbol at a cost of ``filler_penalty`` nats.
+    Scoring a word inside a window that holds its neighbours, a reading wins by
+    matching phonemes that are really there, not by the window's edges: a crop cut
+    from loose ASR word times otherwise favours the longer reading (/ɛst/ over /ɛ/).
+
+    >>> vocab = ["<pad>", "ɛ", "s", "t", "l"]
+    >>> lp = log_probs_from_path([4, 1, 0, 4], vocab_size=5)  # "l ɛ l": the verb
+    >>> verb, noun = (spot_log_likelihood(lp, tokenize_phonemes(r, vocab)) for r in ("ɛ", "ɛst"))
+    >>> verb > noun
+    True
+    """
+    penalty = DFLT_FILLER_PENALTY if filler_penalty is None else filler_penalty
+    filler = log_probs.max(axis=1) - penalty
+    extended = [blank]
+    for symbol in target:
+        extended += [symbol, blank]
+    states = len(extended)
+    neg = -np.inf
+    pre, post = filler[0], neg
+    alpha = np.full(states, neg)
+    alpha[0] = log_probs[0, blank]
+    if states > 1:
+        alpha[1] = log_probs[0, extended[1]]
+    for t in range(1, len(log_probs)):
+        previous = alpha
+        alpha = np.full(states, neg)
+        for s in range(states):
+            terms = [previous[s]]
+            if s >= 1:
+                terms.append(previous[s - 1])
+            if s >= 2 and extended[s] != blank and extended[s] != extended[s - 2]:
+                terms.append(previous[s - 2])
+            if s <= 1:
+                terms.append(pre)
+            alpha[s] = np.logaddexp.reduce(terms) + log_probs[t, extended[s]]
+        ends = [post, previous[-1]] + ([previous[-2]] if states > 1 else [])
+        post = np.logaddexp.reduce(ends) + filler[t]
+        pre = pre + filler[t]
+    finals = [post, alpha[-1]] + ([alpha[-2]] if states > 1 else [])
+    return float(np.logaddexp.reduce(finals))
+
+
+def spot_readings(
+    log_probs: np.ndarray,
+    vocab: Sequence[str],
+    readings: Mapping[str, str | Sequence[str]],
+    *,
+    blank: int | None = None,
+    filler_penalty: float | None = None,
+) -> dict[str, float]:
+    """Each reading's :func:`spot_log_likelihood`, less that of filler alone (higher is better)."""
+    if blank is None:
+        blank = list(vocab).index(BLANK_SYMBOL) if BLANK_SYMBOL in vocab else 0
+    penalty = DFLT_FILLER_PENALTY if filler_penalty is None else filler_penalty
+    baseline = float((log_probs.max(axis=1) - penalty).sum())
+    return {
+        name: spot_log_likelihood(
+            log_probs, tokenize_phonemes(reading, vocab), blank=blank, filler_penalty=penalty
+        )
+        - baseline
+        for name, reading in readings.items()
+    }
+
+
 def score_readings(
     log_probs: np.ndarray,
     vocab: Sequence[str],
@@ -181,13 +289,30 @@ class Verdict:
 
     @property
     def heard(self) -> str:
-        """The reading the audio supports best."""
+        """The reading (variant included) the audio supports best."""
         return max(self.scores, key=self.scores.get)
 
     @property
+    def reading_scores(self) -> dict[str, float]:
+        """``scores`` with each reading's variants (``name~variant``) merged by their best."""
+        merged: dict[str, float] = {}
+        for name, score in self.scores.items():
+            base = reading_name(name)
+            merged[base] = max(score, merged.get(base, -np.inf))
+        return merged
+
+    @property
+    def reading(self) -> str:
+        """The reading the audio supports best, variants folded in (``verb~e`` is ``verb``)."""
+        return reading_name(self.heard)
+
+    @property
     def decided(self) -> bool:
-        """Whether the best reading beats the runner-up by at least ``margin``."""
-        ranked = sorted(self.scores.values(), reverse=True)
+        """Whether the best reading beats the runner-up reading by at least ``margin``.
+
+        Variants of one reading do not compete with each other.
+        """
+        ranked = sorted(self.reading_scores.values(), reverse=True)
         return len(ranked) < 2 or ranked[0] - ranked[1] >= self.margin
 
     @property
@@ -195,7 +320,16 @@ class Verdict:
         """True/False when an ``expected`` reading was given and the audio decided."""
         if self.expected is None or not self.decided:
             return None
-        return self.heard == self.expected
+        return self.reading == reading_name(self.expected)
+
+
+def reading_name(name: str) -> str:
+    """The reading a name stands for: ``"verb~liaison"`` is a variant of ``"verb"``.
+
+    >>> reading_name("verb~liaison"), reading_name("noun")
+    ('verb', 'noun')
+    """
+    return name.split(VARIANT_SEPARATOR, 1)[0]
 
 
 def word_spans(words: Iterable[Mapping], word: str) -> list[tuple[float, float]]:
@@ -341,6 +475,78 @@ def phoneme_emitter(
         return np.asarray(reply["log_probs"], dtype=float), reply["vocab"]
 
     return emit
+
+
+def espeak_phonemizer(
+    *,
+    model: str = DFLT_PHONEME_MODEL,
+    threads: int | None = None,
+    rootdir: str | os.PathLike | None = None,
+) -> Phonemizer:
+    """The default :data:`Phonemizer`: espeak-ng (bundled by ``espeakng-loader``), run in
+    the recogniser's env, so its IPA is the recogniser's own alphabet."""
+
+    def phonemize(texts: Sequence[str], language: str) -> list[str]:
+        worker = _phoneme_worker(model, threads, str(rootdir) if rootdir else None)
+        reply = worker.call(
+            "phonemize", texts=list(texts), language=ESPEAK_LANGUAGES.get(language, language)
+        )
+        return reply["ipa"]
+
+    return phonemize
+
+
+def known_symbols(ipa: str, vocab: Sequence[str]) -> list[str]:
+    """The symbols of ``ipa`` the recogniser knows, longest first; stress marks, spaces
+    and anything else it never emits are dropped.
+
+    >>> known_symbols("ˈtʁist ɛ", ["<pad>", "t", "ʁ", "i", "s", "ɛ"])
+    ['t', 'ʁ', 'i', 's', 't', 'ɛ']
+    """
+    index = set(vocab)
+    longest = max(map(len, vocab))
+    out, i = [], 0
+    while i < len(ipa):
+        for size in range(min(longest, len(ipa) - i), 0, -1):
+            if ipa[i : i + size] in index and not ipa[i : i + size].isspace():
+                out.append(ipa[i : i + size])
+                i += size
+                break
+        else:
+            i += 1
+    return out
+
+
+def phrase_readings(
+    log_probs: np.ndarray,
+    vocab: Sequence[str],
+    readings: Mapping[str, str],
+    *,
+    before: str = "",
+    after: str = "",
+    blank: int | None = None,
+) -> dict[str, float]:
+    """Each reading's CTC log-likelihood as the whole phrase ``before + reading + after``.
+
+    The words around the flagged one are written out (IPA) and are the same in every
+    candidate, so the comparison isolates the word: its neighbours' sounds cannot be
+    credited to a longer reading, as they are when the word is cropped or spotted alone.
+
+    >>> vocab = ["<pad>", "ɛ", "s", "t", "l", "ə"]
+    >>> lp = log_probs_from_path([2, 3, 1, 4, 5], vocab_size=6)  # "(trist)e" s t ɛ l ə
+    >>> s = phrase_readings(lp, vocab, {"verb": "ɛ", "noun": "ɛst"}, before="st", after="lə")
+    >>> s["verb"] > s["noun"]
+    True
+    """
+    if blank is None:
+        blank = list(vocab).index(BLANK_SYMBOL) if BLANK_SYMBOL in vocab else 0
+    head, tail = known_symbols(before, vocab), known_symbols(after, vocab)
+    return {
+        name: ctc_log_likelihood(
+            log_probs, tokenize_phonemes(head + known_symbols(reading, vocab) + tail, vocab), blank=blank
+        )
+        for name, reading in readings.items()
+    }
 
 
 # 4. re-rendering the lines that fail -------------------------------------------
@@ -587,3 +793,233 @@ def load_readings(path: str | os.PathLike) -> dict[str, dict[str, str]]:
         word, name, ipa = (f.strip() for f in fields)
         table.setdefault(word, {})[name] = ipa
     return table
+
+
+# 5. auditing a finished render -------------------------------------------------
+
+#: The heteronym tables voxy ships, one ``<language>.json`` per language.
+HETERONYMS_DIR = Path(__file__).parent / "data" / "heteronyms"
+
+
+def heteronym_readings(language: str = "fr") -> dict[str, dict[str, str]]:
+    """voxy's own heteronym table for ``language``: ``{word: {reading name: IPA}}``.
+
+    A short, hand-made list (French: *est*, *fils*, *plus*, *tous*, the *-ent* verbs...);
+    merge a fuller one (e.g. derived from Lexique) read with :func:`load_readings`.
+
+    >>> heteronym_readings("fr")["est"]["noun"]
+    'ɛst'
+    """
+    import json
+
+    path = HETERONYMS_DIR / f"{language}.json"
+    if not path.exists():
+        have = sorted(p.stem for p in HETERONYMS_DIR.glob("*.json"))
+        raise ValueError(
+            f"voxy has no heteronym table for {language!r} (it has {have}); "
+            "pass your own readings (see load_readings)"
+        )
+    table = json.loads(path.read_text("utf-8"))
+    return {w: dict(r) for w, r in table.items() if not w.startswith("_")}
+
+
+def _normal_word(word: str) -> str:
+    return word.strip().strip(".,;:!?«»\"()…“”").replace("’", "'").casefold()
+
+
+def _text_words(text: str) -> list[tuple[int, str]]:
+    """``(line, word)`` of every word of ``text``, in order (lines count from 1)."""
+    from voxy.speechtext import _WORD
+
+    return [
+        (number, match.group(0))
+        for number, line in enumerate(text.split("\n"), 1)
+        for match in _WORD.finditer(line)
+    ]
+
+
+def align_words(text: str, words: Sequence[Mapping]) -> dict[int, int]:
+    """``{index of a word of text: index of the ASR word heard for it}``.
+
+    Words are matched by aligning the two sequences (``difflib``), so a word ASR missed,
+    merged or added elsewhere does not shift the others; a text word with no exact
+    counterpart is left out.
+
+    >>> align_words("Il est là", [{"text": " Il"}, {"text": " et"}, {"text": " est"}, {"text": " là."}])
+    {0: 0, 1: 2, 2: 3}
+    """
+    from difflib import SequenceMatcher
+
+    said = [_normal_word(w) for _, w in _text_words(text)]
+    heard = [_normal_word(w["text"]) for w in words]
+    matcher = SequenceMatcher(None, said, heard, autojunk=False)
+    return {
+        block.a + k: block.b + k
+        for block in matcher.get_matching_blocks()
+        for k in range(block.size)
+    }
+
+
+def _risk_places(text: str, risks: Sequence) -> list[int | None]:
+    """The index in ``_text_words(text)`` of each risk (by line and order on the line)."""
+    taken: set[int] = set()
+    tokens = _text_words(text)
+    places = []
+    for risk in risks:
+        place = next(
+            (
+                i
+                for i, (line, word) in enumerate(tokens)
+                if i not in taken and line == risk.line and word == risk.word
+            ),
+            None,
+        )
+        if place is not None:
+            taken.add(place)
+        places.append(place)
+    return places
+
+
+@dataclass(frozen=True)
+class Finding:
+    """One flagged word of a render: the risk, and what the audio said about it.
+
+    ``verdict`` is None when the word could not be located in the audio (ASR heard it
+    a different number of times than the text has it): listen to that one.
+    """
+
+    risk: object
+    verdict: Verdict | None = None
+
+    @property
+    def ok(self) -> bool | None:
+        """As :attr:`Verdict.ok`; None when unchecked or undecided."""
+        return None if self.verdict is None else self.verdict.ok
+
+
+def audit(
+    text: str,
+    audio: str | os.PathLike,
+    *,
+    readings: Mapping[str, Mapping[str, str]] | None = None,
+    language: str = "fr",
+    expected: Mapping[str, str] | Callable[[object], "str | None"] | None = None,
+    detectors: Iterable[Callable[[str], Iterable]] = (),
+    emitter: Emitter | None = None,
+    words_of: Callable[[str], Iterable[Mapping]] = _transcribed_words,
+    scoring: str = "phrase",
+    phonemize: Phonemizer | None = None,
+    context: int = DFLT_CONTEXT_WORDS,
+    filler_penalty: float = DFLT_FILLER_PENALTY,
+    padding: float = DFLT_CROP_PADDING,
+    margin: float | None = None,
+) -> list[Finding]:
+    """Which reading did each heteronym of ``text`` get in the finished ``audio``?
+
+    ASR (WER) checks cannot answer this: Whisper writes "est" whether the model said
+    /ɛ/ or /ɛst/. This flags the words of ``text`` that have several readings
+    (:func:`voxy.speechtext.flag_risks`), finds each in the audio (ASR word times; the
+    n-th time the text has a word is the n-th time ASR heard it) and scores its
+    readings with the phoneme recogniser.
+
+    Args:
+        text: What the model was given (the speech text, not the display text).
+        audio: The render.
+        readings: ``{word: {reading name: IPA}}``; default :func:`heteronym_readings`
+            for ``language``.
+        expected: The reading each word should have: ``{word: reading}``, or
+            ``risk -> reading`` to decide per occurrence (``risk.line``, ``risk.word``).
+            Otherwise what a ``detectors`` entry found for that word on that line
+            (e.g. :func:`voxy.speechtext.pos_detector`), else None (just report).
+        detectors: ``text -> risks`` proposers of expected readings.
+        emitter: The phoneme recogniser; default :func:`phoneme_emitter`.
+        words_of: ``audio -> timed words``; default ASR (``voxy.refprep.transcribe``).
+        scoring: How a reading is scored in the audio. ``"phrase"`` (default): the
+            ``context`` words on each side are written out with ``phonemize`` and each
+            reading is scored as the whole phrase (:func:`phrase_readings`); the
+            neighbours are the same in every candidate, so only the word decides.
+            ``"spot"``: the reading is spotted in that window, the rest left to filler
+            (:func:`spot_readings`; no phonemizer, but a neighbour's /s/ or /t/ can be
+            credited to the longer reading). ``"crop"``: the word alone, cut at its ASR
+            times (``padding`` each side), scored by :func:`score_readings`; ASR word
+            times are often too loose for this.
+        phonemize: For ``"phrase"``; default :func:`espeak_phonemizer`.
+        context: Words kept on each side of the flagged one.
+        margin: See :attr:`Verdict.decided`; default :data:`DFLT_CONTEXT_MARGIN`,
+            :data:`DFLT_SPOT_MARGIN` or :data:`DFLT_MARGIN` by ``scoring``.
+
+    Returns the findings in text order; ``[f for f in findings if f.ok is False]`` are
+    the words decidedly misread (re-render those), ``f.ok is None`` ones were not
+    decided or not found.
+    """
+    from voxy.speechtext import flag_risks
+
+    table = {
+        k.casefold(): dict(v) for k, v in (readings or heteronym_readings(language)).items()
+    }
+    risks = flag_risks(text, heteronyms=table)
+    proposed: dict[tuple[int, str], list] = {}
+    for detector in detectors:
+        for risk in detector(text):
+            if getattr(risk, "expected", None) is not None:
+                proposed.setdefault((risk.line, risk.word.casefold()), []).append(
+                    risk.expected
+                )
+
+    def expected_of(risk, nth_on_line):
+        if callable(expected):
+            return expected(risk)
+        if expected is not None and risk.word.casefold() in expected:
+            return expected[risk.word.casefold()]
+        found = proposed.get((risk.line, risk.word.casefold()), [])
+        return found[nth_on_line] if nth_on_line < len(found) else None
+
+    if not risks:
+        return []
+    emit = emitter or phoneme_emitter()
+    margins = {"phrase": DFLT_CONTEXT_MARGIN, "spot": DFLT_SPOT_MARGIN, "crop": DFLT_MARGIN}
+    if scoring not in margins:
+        raise ValueError(f"scoring must be one of {sorted(margins)}, not {scoring!r}")
+    margin = margins[scoring] if margin is None else margin
+    if scoring == "phrase" and phonemize is None:
+        phonemize = espeak_phonemizer()
+    words = list(words_of(str(audio)))
+    heard_at = align_words(text, words)
+    where = {(w["start"], w["end"]): i for i, w in enumerate(words)}
+
+    def spoken(ws):
+        return " ".join(w["text"].strip().strip(".,;:!?«»\"()…") for w in ws).strip()
+
+    def scores_at(key, start, end):
+        if scoring == "crop":
+            log_probs, vocab = emit(str(audio), max(0.0, start - padding), end + padding)
+            return score_readings(log_probs, vocab, table[key])
+        i = where[(start, end)]
+        lo, hi = max(0, i - context), min(len(words) - 1, i + context)
+        log_probs, vocab = emit(
+            str(audio), max(0.0, words[lo]["start"] - padding), words[hi]["end"] + padding
+        )
+        if scoring == "spot":
+            return spot_readings(log_probs, vocab, table[key], filler_penalty=filler_penalty)
+        before, after = spoken(words[lo:i]), spoken(words[i + 1 : hi + 1])
+        said = [t for t in (before, after) if t]  # phonemizers drop empty texts
+        ipa = dict(zip(said, phonemize(said, language))) if said else {}
+        return phrase_readings(
+            log_probs, vocab, table[key], before=ipa.get(before, ""), after=ipa.get(after, "")
+        )
+
+    places = _risk_places(text, risks)
+    on_line: dict[tuple[int, str], int] = {}
+    findings = []
+    for risk, place in zip(risks, places):
+        key = risk.word.casefold()
+        line_key = (risk.line, key)
+        nth_on_line, on_line[line_key] = on_line.get(line_key, 0), on_line.get(line_key, 0) + 1
+        want = expected_of(risk, nth_on_line)
+        if heard_at.get(place) is None:
+            findings.append(Finding(risk))
+            continue
+        start, end = words[heard_at[place]]["start"], words[heard_at[place]]["end"]
+        scores = scores_at(key, start, end)
+        findings.append(Finding(risk, Verdict(risk.word, start, end, scores, want, margin)))
+    return findings

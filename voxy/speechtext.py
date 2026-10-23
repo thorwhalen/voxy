@@ -233,15 +233,29 @@ Tagger = Callable[[str], Iterable[tuple[int, str, str]]]
 DFLT_SPACY_MODEL = "fr_core_news_sm"
 
 #: French heteronyms whose part of speech picks the reading: ``{word: {UPOS: reading}}``.
-#: The reading names are the keys of the IPA table given to ``voxy.pronounce``.
+#: The reading names are those of voxy's French table (``voxy.pronounce.heteronym_readings``).
+#: Not here: *fils* and *plus*, whose readings share a part of speech (meaning decides).
+_VERB = {"AUX": "verb", "VERB": "verb"}
+_NOUN = {"NOUN": "noun", "PROPN": "noun"}
+_ADJECTIVE = {"ADJ": "adjective"}
+#: 3rd-plural verbs whose *-ent* is silent, against a noun or adjective in /ɑ̃/.
+_ENT_NOUNS = ("parent", "président", "résident", "talent", "ferment", "équivalent", "affluent", "expédient")
+_ENT_ADJECTIVES = ("content", "violent", "excellent", "négligent", "influent", "convergent", "divergent",
+                   "émergent", "évident", "insolent", "somnolent", "urgent", "coïncident")
+#: Nouns in *-tions* against a 1st-plural verb (*nous portions*).
+_TIONS = ("portions", "inventions", "intentions", "relations", "mentions", "options", "éditions",
+          "affections", "exceptions")
 FRENCH_POS_HETERONYMS: Mapping[str, Mapping[str, str]] = {
-    "est": {
-        "AUX": "verb",
-        "VERB": "verb",
-        "NOUN": "noun",
-        "PROPN": "noun",
-        "ADJ": "noun",
-    },
+    "est": {**_VERB, **_NOUN, "ADJ": "noun"},
+    "sens": {**_NOUN, **_VERB},
+    "as": {**_VERB, **_NOUN},
+    "lis": {**_NOUN, **_VERB},
+    "couvent": {**_NOUN, **_VERB},
+    "fier": {**_ADJECTIVE, **_VERB},
+    "vis": {**_VERB, **_NOUN},
+    "tous": {"DET": "det", "PRON": "pronoun"},
+    **{w: {**_NOUN, **_VERB} for w in _ENT_NOUNS + _TIONS},
+    **{w: {**_ADJECTIVE, **_VERB} for w in _ENT_ADJECTIVES},
 }
 
 
