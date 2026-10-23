@@ -50,7 +50,17 @@ To put music under a narration (an audiobook bed, ducked under speech and swelli
 
 Add a service with `voxy.register_speech_model("name", factory)`: a `SpeechModel` subclass implementing `synthesize(text, voice) -> Speech` (and optionally `list_voices`, `clone_voice`, `design_voice`). Synthesis costs credits: draft with `say`, render the final with the real voice.
 
-## 3. New voices
+## 3. Prepare the text, then check what was said (heteronyms)
+
+Speech models misread words that are spelled one way and said two ways, and an ASR (WER) check never catches it: Whisper writes "est" whether the model said /ɛ/ (verb) or /ɛst/ ("l'Est"). Measured on a Qwen3-TTS clone: a verse line starting "Est moins cité..." was read as the noun in 4 of 4 takes, and lowercased in 4 of 4 correctly; the capital, not the line break, is the trigger. ElevenLabs multilingual v2 takes no phonemes either (aliases only), so for every engine the text sent is the lever. Before rendering any verse, devotional text or long French text:
+
+1. **Speech text, not display text:** `voxy.speechtext.prepare_speech_text(display, keep={...})` lowercases verse-initial capitals that do not start a sentence (keeping deliberate capitals such as a deference "Vous"), applies respellings and name aliases, and lists its changes. Send `.speech`; show `.display`.
+2. **Flag what is left:** `voxy.speechtext.flag_risks(speech, heteronyms=voxy.pronounce.heteronym_readings("fr"), extra=[pos_detector()])` (the POS detector needs `voxy[pos]`; `llm_detector()` proposes readings for the rest). Words whose readings share a part of speech (*fils*, *plus*) need a rule or a person.
+3. **Check the audio, not the transcript:** `voxy.pronounce.audit(speech, audio, expected=...)` finds each flagged word in the render and scores its readings with a phoneme recogniser; re-render the segments with `f.ok is False`. While rendering, `voxy.pronounce.render_verified` does this per line and retries. A respelling fixes a word that keeps failing (French *-ent* verbs written singular: *ils conte*).
+
+Cross-lingual clones have the same problem: a French-reference clone speaking English said "son" as /sɔ̃/; a respelling (`respellings={"son": "sun"}`) fixed it.
+
+## 4. New voices
 
 - **Clone** a real person, only with their consent (a parent for a child), never a public figure or creator who hasn't agreed: put 1-2 min of clean, single-speaker audio in `voxy.samples_store(name)`, then `voxy.clone_from_samples(name, record_fields={"aliases": [...], "consent": "..."})`. Prepare samples first: separate the voice from music (Demucs), keep only the target speaker (VAD + speaker embeddings), at most 25 files. Show the user the sample summary before uploading.
 - **Design** a voice from a description (no real person): `model = voxy.get_speech_model("elevenlabs")`, `previews = model.design_voice_previews(description, text=...)` (text: 100-1000 characters, or omit it), save each `preview.save(path)` for the user to listen to, then `voxy.design_from_description(name, description, preview=chosen)`.
