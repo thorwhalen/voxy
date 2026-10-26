@@ -38,6 +38,49 @@ from dataclasses import dataclass, field
 
 #: What closes a sentence: the next line's capital then starts a new one.
 SENTENCE_END = re.compile(r"[.!?…]['\"”’»)\]]*\s*$")
+#: Elided clitics as said before a vowel, by language: a phonemizer reads one left
+#: standalone (``l'`` split by ASR from ``Est``) as a letter name (espeak: ``l'`` /ɛl/,
+#: ``d'`` /de/, ``j'`` /ʒi/), a vowel that is not in the audio.
+ELISIONS: dict[str, dict[str, str]] = {
+    "fr": {
+        "l'": "l",
+        "d'": "d",
+        "j'": "ʒ",
+        "m'": "m",
+        "t'": "t",
+        "s'": "s",
+        "n'": "n",
+        "c'": "s",
+        "qu'": "k",
+        "jusqu'": "ʒysk",
+        "lorsqu'": "lɔʁsk",
+        "puisqu'": "pɥisk",
+        "quoiqu'": "kwak",
+    },
+}
+
+#: Clitics after which a heteronym is still flagged, by language: those that can come
+#: before its noun reading ("l'Est", "vent d'est"). After the others ("c'est", "s'est",
+#: "n'est") only the verb fits, and flagging every "c'est" would swamp a French text.
+NOUN_CLITICS: dict[str, tuple[str, ...]] = {"fr": ("l'", "d'")}
+
+
+def split_clitic(word: str, clitics: Collection[str]) -> tuple[str, str]:
+    """``(clitic, rest)`` of ``word`` when it starts with one of ``clitics`` (written
+    with a straight apostrophe, lowercase), else ``("", word)``.
+
+    >>> split_clitic("L’Est", ("l'",)), split_clitic("c'est", ("l'",))
+    (('L’', 'Est'), ('', "c'est"))
+    >>> split_clitic("l'", ("l'",))  # a clitic alone is a word
+    ('', "l'")
+    """
+    normal = word.replace("’", "'").casefold()
+    for clitic in sorted(clitics, key=len, reverse=True):
+        if normal.startswith(clitic) and len(word) > len(clitic):
+            return word[: len(clitic)], word[len(clitic) :]
+    return "", word
+
+
 _WORD = re.compile(r"[^\W\d_][\w'’-]*", re.UNICODE)
 _LEADING_WORD = re.compile(r"^(\s*[\"'“‘«(\[—–-]*\s*)([^\W\d_][\w'’-]*)", re.UNICODE)
 
@@ -75,6 +118,8 @@ class Risk:
     line_initial_capital: bool = False
     #: The reading the context picks (a name among ``readings``), when a detector knows it.
     expected: str | None = None
+    #: The clitic the word is elided onto, as written ("l'" of "l'Est"); ``word`` is "Est".
+    clitic: str = ""
 
 
 def _starts_sentence(previous_line: str | None) -> bool:
@@ -176,6 +221,7 @@ def flag_risks(
     *,
     heteronyms: Mapping[str, Iterable[str]] | Collection[str] = (),
     extra: Iterable[Callable[[str], Iterable[Risk]]] = (),
+    clitics: Collection[str] = (),
 ) -> list[Risk]:
     """Words of ``text`` a model may misread, in text order.
 
@@ -186,6 +232,9 @@ def flag_risks(
             ``{word: readings}`` (e.g. from Lexique). Matched case-insensitively.
         extra: More detectors, each ``text -> risks`` (a part-of-speech rule, an LLM
             proposer). Their risks are merged in by line.
+        clitics: Clitics a heteronym may be elided onto and still be flagged
+            (e.g. :data:`NOUN_CLITICS`): "l'Est" is then the risk ``Est`` with
+            ``clitic="l'"``.
 
     A heteronym that is capitalised at a line start where no sentence begins is flagged
     with ``line_initial_capital=True``: that is where the capital trigger bites.
@@ -200,12 +249,12 @@ def flag_risks(
     for number, line in enumerate(text.split("\n"), 1):
         lead = _LEADING_WORD.match(line)
         for match in _WORD.finditer(line):
-            word = match.group(0)
+            clitic, word = split_clitic(match.group(0), clitics)
             if word.casefold() not in table:
                 continue
             first = bool(lead) and match.start() == lead.start(2)
             capital_trigger = (
-                first and word[0].isupper() and not _starts_sentence(previous)
+                first and match.group(0)[0].isupper() and not _starts_sentence(previous)
             )
             risks.append(
                 Risk(
@@ -216,6 +265,7 @@ def flag_risks(
                     else "a word with more than one reading",
                     table[word.casefold()],
                     capital_trigger,
+                    clitic=clitic,
                 )
             )
         previous = line if line.strip() else None
@@ -323,6 +373,7 @@ def pos_detector(
     rules: Mapping[str, Mapping[str, str]] = FRENCH_POS_HETERONYMS,
     *,
     tagger: Tagger | None = None,
+    clitics: Collection[str] = tuple(ELISIONS["fr"]),
 ) -> Callable[[str], list[Risk]]:
     """A :func:`flag_risks` ``extra`` detector: heteronyms whose part of speech picks the reading.
 
@@ -334,10 +385,19 @@ def pos_detector(
             (default :data:`FRENCH_POS_HETERONYMS`).
         tagger: ``text -> (offset, token, UPOS)``; default :func:`spacy_tagger`
             (French), loaded on first use.
+        clitics: Elision clitics (straight apostrophe, lowercase): a risk right after
+            one of them ("l'" then "Est") gets it as its ``clitic``; an opening quote
+            does not count.
 
     >>> fake = lambda text: [(0, "Il", "PRON"), (3, "est", "AUX"), (7, "parti", "VERB")]
     >>> [(r.word, r.expected) for r in pos_detector(tagger=fake)("Il est parti")]
     [('est', 'verb')]
+    >>> fake = lambda text: [(0, "à", "ADP"), (2, "l'", "DET"), (4, "Est", "PROPN")]
+    >>> [(r.clitic, r.word, r.expected) for r in pos_detector(tagger=fake)("à l'Est")]
+    [("l'", 'Est', 'noun')]
+    >>> fake = lambda text: [(0, "'", "PUNCT"), (1, "est", "AUX")]  # a quote, not a clitic
+    >>> [(r.clitic, r.word) for r in pos_detector(tagger=fake)("'est")]
+    [('', 'est')]
     """
     table = {w.casefold(): dict(by_tag) for w, by_tag in rules.items()}
     tag = tagger
@@ -347,7 +407,12 @@ def pos_detector(
         if tag is None:
             tag = spacy_tagger()
         risks = []
+        previous_end, previous = -1, ""
         for offset, token, pos in tag(text):
+            # an elided token ("l'" then "Est", adjacent) is the risk's clitic
+            elided = previous.replace("’", "'").casefold() in clitics
+            clitic = previous if elided and previous_end == offset else ""
+            previous_end, previous = offset + len(token), token
             by_tag = table.get(token.casefold())
             if not by_tag:
                 continue
@@ -361,6 +426,7 @@ def pos_detector(
                     else f"tagged {pos}, which picks no known reading",
                     tuple(dict.fromkeys(by_tag.values())),
                     expected=reading,
+                    clitic=clitic,
                 )
             )
         return risks

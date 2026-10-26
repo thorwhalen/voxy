@@ -267,7 +267,11 @@ def test_audit_checks_each_occurrence_against_its_own_expected_reading():
 
     findings = audit(text, "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
                      scoring="spot", emitter=emitter, words_of=lambda audio: words)
-    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (3, False)]
+    # "l'est" (line 2) is flagged too since #47, but {"est": ...} does not name it: report only
+    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (2, None), (3, False)]
+    findings = audit(text, "take.wav", readings={"est": READINGS}, expected={"est": "verb", "l’est": "noun"},
+                     scoring="spot", emitter=emitter, words_of=lambda audio: words)
+    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (2, True), (3, False)]
 
 
 def test_audit_aligns_text_and_asr_words_and_leaves_missing_ones_unchecked():
@@ -429,3 +433,98 @@ def test_an_explicit_margin_wins_over_the_scorers_in_audit_and_render_verified()
     [line] = render_verified(["est"], {1: [("est", READINGS, "verb")]}, render=lambda *a: "take",
                              emitter=emitter, words_of=lambda audio: words, scorer="crop", margin=7.0)
     assert line.chosen.verdicts[0].margin == 7.0
+
+
+# heteronyms elided onto a clitic (#47) ----------------------------------------
+
+
+def test_flag_risks_flags_a_heteronym_after_a_noun_clitic_only():
+    from voxy.speechtext import NOUN_CLITICS
+
+    text = "Il est à l'Est, c'est loin, vent d’est"
+    risks = flag_risks(text, heteronyms={"est": ()}, clitics=NOUN_CLITICS["fr"])
+    assert [(r.clitic, r.word) for r in risks] == [("", "est"), ("l'", "Est"), ("d’", "est")]
+    assert [r.word for r in flag_risks(text, heteronyms={"est": ()})] == ["est"]  # default: as before
+
+
+def test_audit_keeps_c_est_l_est_and_est_apart_on_one_line():
+    from voxy.speechtext import Risk
+
+    text = "C'est à l'Est, il est là"
+    # Whisper's split: the apostrophe goes with the word
+    said = [" C", "'est", " à", " l", "'est", " il", " est", " là."]
+    words = [{"start": float(i), "end": i + 0.3, "text": w} for i, w in enumerate(said)]
+
+    def emitter(audio, start, end):  # the noun around "l'Est" (t = 4), the verb elsewhere
+        noun, verb = ["a", "ɛ", "ɛ", "s", "s", "t", "t", "a"], ["a", "ɛ", "ɛ", "<pad>", "a"]
+        heard = noun if 3 <= start + 0.08 < 5 else verb
+        return log_probs_from_path(_ids(heard), vocab_size=len(VOCAB)), VOCAB
+
+    def spacy_like(text):  # what pos_detector proposes: c'est's est comes first
+        return [Risk(1, "est", "pos", expected="verb", clitic="C'"),
+                Risk(1, "Est", "pos", expected="noun", clitic="l'"),
+                Risk(1, "est", "pos", expected="verb")]
+
+    findings = audit(text, "take.wav", readings={"est": READINGS}, detectors=[spacy_like],
+                     scoring="spot", context=0, emitter=emitter, words_of=lambda audio: words)
+    assert [(f.risk.clitic, f.verdict.expected, f.verdict.start, f.ok) for f in findings] == [
+        ("l'", "noun", 4.0, True), ("", "verb", 6.0, True)]
+
+
+def test_render_checks_skip_elided_risks_and_leave_that_words_reading_open():
+    from voxy.speechtext import Risk
+
+    risks = [Risk(1, "est", "pos", expected="verb"), Risk(1, "Est", "pos", expected="noun", clitic="l'"),
+             Risk(2, "est", "pos", expected="verb"), Risk(3, "Est", "pos", expected="noun", clitic="l'")]
+    # line 1: an ASR hearing "l'" | "Est" would judge that noun by "verb", so no reading;
+    # line 2: no elided form, checked as before; line 3: only the elided form, not checked
+    assert checks_by_line(risks, readings={"est": READINGS}) == {
+        1: [("est", READINGS, None)], 2: [("est", READINGS, "verb")]}
+
+
+def test_noun_clitics_are_elisions_and_a_line_initial_elided_capital_is_the_trigger():
+    from voxy.speechtext import ELISIONS, NOUN_CLITICS
+
+    for language, clitics in NOUN_CLITICS.items():
+        assert set(clitics) <= set(ELISIONS[language]), language
+    [risk] = flag_risks("Il dort,\nL'est du ciel", heteronyms={"est": ()}, clitics=("l'",))
+    assert (risk.clitic, risk.word, risk.line_initial_capital) == ("L'", "est", True)
+
+
+def test_phrase_scoring_writes_an_elided_clitic_instead_of_its_letter_name():
+    from voxy.pronounce import phrase_readings, phrase_scorer, spoken_context
+
+    fr = {"l'": "l", "d'": "d"}
+    # Whisper's split inside the context, and a curly, capitalised clitic left at the end
+    assert spoken_context([{"text": " l"}, {"text": "'aube"}, {"text": " L’"}], elisions=fr) == ("l'aube", "l")
+    assert spoken_context([{"text": " read"}, {"text": " 'War"}], elisions=fr) == ("read 'War", "")
+    vocab = ["<pad>", "ɛ", "s", "t", "a", "l", "d"]
+    # "à l'Est d'": the clitics on both sides are written out, never phonemized
+    words = [{"start": 0.0, "end": 0.2, "text": "à"}, {"start": 0.2, "end": 0.3, "text": "l'"},
+             {"start": 0.3, "end": 0.6, "text": "Est"}, {"start": 0.6, "end": 0.7, "text": "d'"}]
+    log_probs = log_probs_from_path([4, 5, 1, 2, 3, 6], vocab_size=len(vocab))
+    asked = []
+
+    def phonemize(texts, language):  # espeak's habit: a standalone l' is /ɛl/
+        asked.extend(texts)
+        return [t.replace("à", "a").replace("l'", "ɛl").replace(" ", "") for t in texts]
+
+    emit = lambda audio, start, end: (log_probs, vocab)
+    scores = phrase_scorer(emitter=emit, phonemize=phonemize, context=2)("take.wav", words, 2, READINGS)
+    assert asked == ["à"] and scores == phrase_readings(log_probs, vocab, READINGS, before="al", after="d")
+    asked.clear()  # no elision table: the old behaviour
+    phrase_scorer(emitter=emit, phonemize=phonemize, context=2, elisions={})("take.wav", words, 2, READINGS)
+    assert asked == ["à l'", "d'"]
+
+
+def test_c_est_does_not_turn_off_the_check_of_a_plain_est():
+    from voxy.speechtext import Risk, pos_detector
+
+    tags = [(0, "C'", "PRON"), (2, "est", "AUX"), (6, "ici", "ADV"), (10, "qu'", "SCONJ"),
+            (13, "il", "PRON"), (16, "est", "AUX"), (20, "né", "VERB")]
+    risks = pos_detector(tagger=lambda text: tags)("C'est ici qu'il est né")
+    assert [r.clitic for r in risks] == ["C'", ""]
+    assert checks_by_line(risks, readings={"est": READINGS}) == {1: [("est", READINGS, "verb")]}
+    # a clitic token that is not right against the word ("l' Est") is not its clitic
+    spaced = pos_detector(tagger=lambda text: [(0, "l'", "DET"), (3, "Est", "PROPN")])("l' Est")
+    assert [r.clitic for r in spaced] == [""]
