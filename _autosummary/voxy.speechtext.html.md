@@ -45,13 +45,14 @@ True
 
 ### Functions
 
-| [`flag_risks`](#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra, clitics])   | Words of `text` a model may misread, in text order.                                                                                  |
-|-------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| [`llm_detector`](#voxy.speechtext.llm_detector)(\*[, chat, language, prompt])           | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector that asks a language model for risky words.         |
-| [`pos_detector`](#voxy.speechtext.pos_detector)([rules, tagger, clitics])               | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading. |
-| [`prepare_speech_text`](#voxy.speechtext.prepare_speech_text)(text, \*[, ...])                 | Display text in, speech text out, with a record of every change.                                                                     |
-| [`spacy_tagger`](#voxy.speechtext.spacy_tagger)([model])                                | A [`Tagger`](#voxy.speechtext.Tagger) over a spaCy pipeline, loaded on first use.                                |
-| [`split_clitic`](#voxy.speechtext.split_clitic)(word, clitics)                          | `(clitic, rest)` of `word` when it starts with one of `clitics` (written with a straight apostrophe, lowercase), else `("", word)`.  |
+| [`elided_words`](#voxy.speechtext.elided_words)(line, clitics)                        | `(word, clitic)` of each word of `line`, as written (clitic `""` when none).                                                         |
+|-----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| [`flag_risks`](#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra, clitics]) | Words of `text` a model may misread, in text order.                                                                                  |
+| [`llm_detector`](#voxy.speechtext.llm_detector)(\*[, chat, language, prompt, ...])    | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector that asks a language model for risky words.         |
+| [`pos_detector`](#voxy.speechtext.pos_detector)([rules, tagger, clitics])             | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading. |
+| [`prepare_speech_text`](#voxy.speechtext.prepare_speech_text)(text, \*[, ...])               | Display text in, speech text out, with a record of every change.                                                                     |
+| [`spacy_tagger`](#voxy.speechtext.spacy_tagger)([model])                              | A [`Tagger`](#voxy.speechtext.Tagger) over a spaCy pipeline, loaded on first use.                                |
+| [`split_clitic`](#voxy.speechtext.split_clitic)(word, clitics)                        | `(clitic, rest)` of `word` when it starts with one of `clitics` (written with a straight apostrophe, lowercase), else `("", word)`.  |
 
 ### Classes
 
@@ -128,6 +129,18 @@ The text to show (`display`), the text to speak (`speech`) and what changed.
 
 alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
 
+### voxy.speechtext.elided_words(line, clitics)
+
+`(word, clitic)` of each word of `line`, as written (clitic `""` when none).
+
+```pycon
+>>> elided_words("Il est à l’Est", ("l'",))
+[('Il', ''), ('est', ''), ('à', ''), ('Est', 'l’')]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
+
 ### voxy.speechtext.flag_risks(text, , heteronyms=(), extra=(), clitics=())
 
 Words of `text` a model may misread, in text order.
@@ -148,7 +161,7 @@ Words of `text` a model may misread, in text order.
 A heteronym that is capitalised at a line start where no sentence begins is flagged
 with `line_initial_capital=True`: that is where the capital trigger bites.
 
-### voxy.speechtext.llm_detector(, chat=None, language='French', prompt='You help a text-to-speech system avoid misreadings. Below is a $language text, its lines numbered. List the words a speech model may misread: heteronyms (words with more than one pronunciation, such as French "est" as a verb or as a noun), names, abbreviations. For each, give the line, the word exactly as written, short names of its possible readings, and the reading this context needs.\\n\\nAnswer with a JSON list only, one object per word:\\n[{"line": 2, "word": "est", "readings": ["verb", "noun"], "expected": "verb", "why": "..."}]\\nUse "expected": null when the context does not decide. Answer [] if nothing is risky.\\n\\n$text\\n')
+### voxy.speechtext.llm_detector(, chat=None, language='French', prompt='You help a text-to-speech system avoid misreadings. Below is a $language text, its lines numbered. List the words a speech model may misread: heteronyms (words with more than one pronunciation, such as French "est" as a verb or as a noun), names, abbreviations. For each, give the line, the word exactly as written, short names of its possible readings, and the reading this context needs.\\n\\nAnswer with a JSON list only, one object per word:\\n[{"line": 2, "word": "est", "readings": ["verb", "noun"], "expected": "verb", "why": "..."}]\\nUse "expected": null when the context does not decide. Answer [] if nothing is risky.\\n\\n$text\\n', clitics=("l'", "d'", "j'", "m'", "t'", "s'", "n'", "c'", "qu'", "jusqu'", "lorsqu'", "puisqu'", "quoiqu'"))
 
 A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector that asks a language model for risky words.
 
@@ -161,6 +174,9 @@ reply that is not a JSON list proposes nothing.
     keys and model from aix’s own config). Each call costs a model request.
   * **language** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The text’s language, named in the prompt.
   * **prompt** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – A `string.Template` with `$language` and `$text` (numbered lines).
+  * **clitics** ([`Collection`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – The clitics a word is elided onto in `language` (as `pos_detector`); a proposal for
+    “l’Est” (or for “Est”, when the line only has it elided) carries the
+    `clitic`, as [`flag_risks()`](#voxy.speechtext.flag_risks) gives it.
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Risk`](#voxy.speechtext.Risk)]]
 

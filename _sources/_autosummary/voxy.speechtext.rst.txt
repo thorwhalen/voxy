@@ -19,6 +19,7 @@ voxy.speechtext
 
    .. autosummary::
    
+      elided_words
       flag_risks
       llm_detector
       pos_detector
