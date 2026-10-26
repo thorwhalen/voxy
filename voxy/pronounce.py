@@ -31,6 +31,7 @@ without torch.
 
 from __future__ import annotations
 
+import inspect
 import os
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -86,6 +87,9 @@ DFLT_SCORING = "phrase"
 
 #: In a reading name, what separates a reading from one of its variants (``verb~liaison``).
 VARIANT_SEPARATOR = "~"
+
+#: Punctuation stripped from the edges of an ASR or text word before it is matched or spoken.
+EDGE_PUNCTUATION = '.,;:!?«»"()…“”'
 
 #: The CTC blank of the recogniser's vocabulary (wav2vec2 uses its pad token).
 BLANK_SYMBOL = "<pad>"
@@ -665,7 +669,7 @@ def phrase_scorer(
         phonemize = espeak_phonemizer()
 
     def spoken(ws):
-        return " ".join(w["text"].strip().strip('.,;:!?«»"()…') for w in ws).strip()
+        return " ".join(w["text"].strip().strip(EDGE_PUNCTUATION) for w in ws).strip()
 
     def score(audio, words, i, readings):
         log_probs, vocab, lo, hi = _window(
@@ -999,7 +1003,7 @@ def heteronym_readings(language: str = DFLT_LANGUAGE) -> dict[str, dict[str, str
 
 
 def _normal_word(word: str) -> str:
-    return word.strip().strip('.,;:!?«»"()…“”').replace("’", "'").casefold()
+    return word.strip().strip(EDGE_PUNCTUATION).replace("’", "'").casefold()
 
 
 def _text_words(text: str) -> list[tuple[int, str]]:
@@ -1053,14 +1057,6 @@ def _risk_places(text: str, risks: Sequence) -> list[int | None]:
             taken.add(place)
         places.append(place)
     return places
-
-
-#: The :func:`audit` options each scoring takes (the rest are ignored).
-_SCORING_OPTIONS = {
-    "phrase": ("phonemize", "language", "context", "padding"),
-    "spot": ("context", "padding", "filler_penalty"),
-    "crop": ("padding",),
-}
 
 
 @dataclass(frozen=True)
@@ -1164,8 +1160,9 @@ def audit(
             filler_penalty=filler_penalty,
             padding=padding,
         )
-        taken = _SCORING_OPTIONS.get(scoring, ())
-        scorer = reading_scorer(
+        factory = SCORERS.get(scoring)
+        taken = inspect.signature(factory).parameters if factory else {}
+        scorer = reading_scorer(  # each scoring gets the options it takes
             scoring,
             emitter=emitter or phoneme_emitter(),
             **{k: v for k, v in options.items() if k in taken},

@@ -395,3 +395,37 @@ def test_audit_takes_a_ready_scorer_over_its_scoring_options():
                     scoring="crop", phonemize=_triste_phonemize, emitter=_triste_emitter,
                     words_of=lambda audio: TRISTE_WORDS)
     assert (crop.verdict.reading, crop.verdict.margin) == ("noun", 0.5)  # options it does not take are ignored
+
+
+def test_audit_forwards_each_option_to_the_scorer_that_takes_it():
+    words = [{"start": float(i), "end": i + 0.5, "text": w} for i, w in enumerate(["a", "b", "est", "c", "d"])]
+    windows, languages = [], []
+
+    def emitter(audio, start, end):
+        windows.append((start, end))
+        return log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB
+
+    def phonemize(texts, language):
+        languages.append(language)
+        return ["a" for _ in texts]
+
+    common = dict(readings={"est": READINGS}, emitter=emitter, words_of=lambda audio: words)
+    audit("a b est c d", "t.wav", scoring="phrase", context=2, padding=0.0, language="en",
+          phonemize=phonemize, **common)
+    assert windows[-1] == (0.0, 4.5) and languages == ["en"]  # context and language reached it
+    audit("a b est c d", "t.wav", scoring="crop", padding=0.25, **common)
+    assert windows[-1] == (1.75, 2.75)  # padding reached the crop scorer
+    lo, hi = (audit("a b est c d", "t.wav", scoring="spot", filler_penalty=f, **common)[0].verdict.scores
+              for f in (0.5, 3.0))
+    assert lo != hi  # filler_penalty reached the spot scorer
+
+
+def test_an_explicit_margin_wins_over_the_scorers_in_audit_and_render_verified():
+    words = [{"start": 0.0, "end": 0.3, "text": "est"}]
+    emitter = _emitter_hearing({"take": ["ɛ"]})
+    [finding] = audit("est", "take", readings={"est": READINGS}, scoring="crop", margin=7.0,
+                      emitter=emitter, words_of=lambda audio: words)
+    assert finding.verdict.margin == 7.0
+    [line] = render_verified(["est"], {1: [("est", READINGS, "verb")]}, render=lambda *a: "take",
+                             emitter=emitter, words_of=lambda audio: words, scorer="crop", margin=7.0)
+    assert line.chosen.verdicts[0].margin == 7.0
