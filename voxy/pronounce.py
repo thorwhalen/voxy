@@ -431,7 +431,7 @@ def checks_from_risks(
     reading each word should have, and otherwise the risks' own ``expected`` (what a
     detector such as ``voxy.speechtext.pos_detector`` found) is used. Words with no
     entry are skipped, and so are words elided onto a clitic (a risk with a ``clitic``,
-    "l'Est"; see thorwhalen/voxy#48), whose word's reading is then left open: ``verify_words``
+    "l'Est"; see thorwhalen/voxy#48), whose differing reading then leaves the word's open: ``verify_words``
     matches spellings, not places. Each word is checked once: ``verify_words`` finds every place
     it is spoken, so a word whose risks name *different* readings gets none here
     (group the risks by line with :func:`checks_by_line` to check each one).
@@ -443,9 +443,10 @@ def checks_from_risks(
         key = risk.word.casefold()
         if getattr(risk, "clitic", ""):
             # "l'Est": verify_words matches spellings, not places, so it is not checked,
-            # and the word's reading is left open: an ASR that hears "l'" | "Est" would
-            # otherwise judge that noun by the plain word's reading
-            found.setdefault(key, set()).add(None)
+            # but its reading counts: one that differs from the plain word's ("l'Est"
+            # noun, "est" verb) leaves the word open, or an ASR hearing "l'" | "Est"
+            # would judge that noun by the verb; "c'est" (a verb too) changes nothing
+            found.setdefault(key, set()).add(getattr(risk, "expected", None))
             continue
         if key in table:
             words.setdefault(key, risk.word)

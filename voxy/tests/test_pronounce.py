@@ -515,3 +515,16 @@ def test_phrase_scoring_writes_an_elided_clitic_instead_of_its_letter_name():
     asked.clear()  # no elision table: the old behaviour
     phrase_scorer(emitter=emit, phonemize=phonemize, context=2, elisions={})("take.wav", words, 2, READINGS)
     assert asked == ["à l'", "d'"]
+
+
+def test_c_est_does_not_turn_off_the_check_of_a_plain_est():
+    from voxy.speechtext import Risk, pos_detector
+
+    tags = [(0, "C'", "PRON"), (2, "est", "AUX"), (6, "ici", "ADV"), (10, "qu'", "SCONJ"),
+            (13, "il", "PRON"), (16, "est", "AUX"), (20, "né", "VERB")]
+    risks = pos_detector(tagger=lambda text: tags)("C'est ici qu'il est né")
+    assert [r.clitic for r in risks] == ["C'", ""]
+    assert checks_by_line(risks, readings={"est": READINGS}) == {1: [("est", READINGS, "verb")]}
+    # a clitic token that is not right against the word ("l' Est") is not its clitic
+    spaced = pos_detector(tagger=lambda text: [(0, "l'", "DET"), (3, "Est", "PROPN")])("l' Est")
+    assert [r.clitic for r in spaced] == [""]
