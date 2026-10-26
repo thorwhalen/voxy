@@ -528,3 +528,49 @@ def test_c_est_does_not_turn_off_the_check_of_a_plain_est():
     # a clitic token that is not right against the word ("l' Est") is not its clitic
     spaced = pos_detector(tagger=lambda text: [(0, "l'", "DET"), (3, "Est", "PROPN")])("l' Est")
     assert [r.clitic for r in spaced] == [""]
+
+
+# render_verified through audit (#48) --------------------------------------------
+
+
+def test_render_verified_with_audit_options_retries_an_elided_heteronym():
+    heard = {}
+
+    def render(text, line, attempt):
+        heard[f"{line}-{attempt}"] = ["ɛ"] if attempt == 0 else ["ɛ", "s", "t"]  # noun on take 2
+        return f"{line}-{attempt}"
+
+    words = lambda audio: [{"start": 0.0, "end": 0.1, "text": " à"}, {"start": 0.1, "end": 0.2, "text": " l'"},
+                           {"start": 0.2, "end": 0.5, "text": "Est"}]
+    [line] = render_verified(
+        ["à l'Est"], render=render, emitter=_emitter_hearing(heard), words_of=words, scorer="crop",
+        audit_options=dict(readings={"est": READINGS}, expected={"l'est": "noun"}),
+    )
+    assert [t.audio for t in line.takes] == ["1-0", "1-1"]  # the misread "l'Est" was retried
+    assert line.chosen.attempt == 1 and line.verified and line.unconfirmed == []
+
+
+def test_render_verified_with_audit_options_tells_occurrences_apart_and_gives_real_line_numbers():
+    seen = []
+
+    def expected(risk):  # one reading per occurrence, decided by the risk, on its real line
+        seen.append(risk.line)
+        return "noun" if risk.clitic else "verb"
+
+    heard = {"2-0": ["ɛ"]}  # every window sounds like the verb: "l'Est" must fail, "est" pass
+    said = [" il", " est", " à", " l'", "Est"]
+    words = lambda audio: [{"start": i * 0.3, "end": i * 0.3 + 0.2, "text": w} for i, w in enumerate(said)]
+    first, second = render_verified(
+        ["rien", "il est à l'Est"], render=lambda text, line, attempt: f"{line}-{attempt}",
+        emitter=_emitter_hearing(heard), words_of=words, scorer="crop", max_attempts=1,
+        audit_options=dict(readings={"est": READINGS}, expected=expected),
+    )
+    assert first.verified and first.chosen.findings == ()
+    assert set(seen) == {2}
+    assert [(f.risk.clitic, f.ok) for f in second.chosen.findings] == [("", True), ("l'", False)]
+    assert not second.verified
+
+
+def test_render_verified_takes_checks_or_audit_options_not_both():
+    with pytest.raises(ValueError, match="not both"):
+        render_verified([], {}, audit_options={}, render=None)

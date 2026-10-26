@@ -431,8 +431,9 @@ def checks_from_risks(
     reading each word should have, and otherwise the risks' own ``expected`` (what a
     detector such as ``voxy.speechtext.pos_detector`` found) is used. Words with no
     entry are skipped, and so are words elided onto a clitic (a risk with a ``clitic``,
-    "l'Est"; see thorwhalen/voxy#48), whose differing reading then leaves the word's open: ``verify_words``
-    matches spellings, not places. Each word is checked once: ``verify_words`` finds every place
+    "l'Est"), whose differing reading then leaves the word's open: ``verify_words``
+    matches spellings, not places (``render_verified(audit_options=...)`` checks
+    places). Each word is checked once: ``verify_words`` finds every place
     it is spoken, so a word whose risks name *different* readings gets none here
     (group the risks by line with :func:`checks_by_line` to check each one).
     """
@@ -790,6 +791,8 @@ class Take:
     attempt: int
     audio: str
     verdicts: tuple[Verdict, ...] = ()
+    #: With ``audit_options`` (:func:`render_verified`): every flagged word of the take.
+    findings: tuple["Finding", ...] = ()
 
     @property
     def failing(self) -> list[Verdict]:
@@ -823,12 +826,13 @@ class LineTakes:
         could not decide.
         """
         verdicts = self.chosen.verdicts if self.chosen else ()
+        findings = self.chosen.findings if self.chosen else ()
         return [
             word
             for word, _, expected in self.checks
             if expected is not None
             and not any(v.word == word and v.ok for v in verdicts)
-        ]
+        ] + [f.risk.word for f in findings if f.expected is not None and not f.ok]
 
     @property
     def verified(self) -> bool:
@@ -882,8 +886,9 @@ def _transcribed_words(audio: str) -> list[Mapping]:
 
 def render_verified(
     lines: Iterable[str],
-    checks: Mapping[int, Sequence[Check]],
+    checks: Mapping[int, Sequence[Check]] | None = None,
     *,
+    audit_options: Mapping | None = None,
     render: Callable[[str, int, int], "str | os.PathLike"],
     emitter: Emitter | None = None,
     words_of: Callable[[str], Iterable[Mapping]] = _transcribed_words,
@@ -900,6 +905,15 @@ def render_verified(
     :attr:`LineTakes.chosen` is the take to keep; :attr:`LineTakes.verified` also
     requires each expected reading to be confirmed (a word ASR did not find, or the
     recogniser could not decide, leaves the line unverified rather than retried).
+
+    ``checks`` match words by spelling. With ``audit_options`` instead, each take of
+    each line goes through :func:`audit`, which tells the occurrences of a word apart
+    ("l'Est" from "est", the n-th "est" on the line from the others) and flags the
+    line's heteronyms itself. The options are ``audit``'s own (``readings``,
+    ``expected``, ``detectors``, ``language``...), applied to the one line, so an
+    ``expected`` function sees the risk with its real line number; ``emitter``,
+    ``words_of``, ``scorer`` and ``margin`` here are the defaults for ``audit``'s.
+    Give ``checks`` or ``audit_options``, not both.
 
     Args:
         lines: The lines to speak, in order (line numbers start at 1).
@@ -936,18 +950,37 @@ def render_verified(
     """
     if max_attempts < 1:
         raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
-    scorer = _resolve_scorer(scorer, emitter)
+    if checks is not None and audit_options is not None:
+        raise ValueError("give checks or audit_options, not both")
+    if audit_options is None:
+        scorer = _resolve_scorer(scorer, emitter)
     results = []
     for number, text in enumerate(lines, 1):
-        line_checks = list(checks.get(number, ()))
+        line_checks = list((checks or {}).get(number, ()))
         if not text.strip():
             results.append(LineTakes(number, text))
             continue
         takes: list[Take] = []
-        for attempt in range(max_attempts if line_checks else 1):
+        for attempt in range(max_attempts if line_checks or audit_options else 1):
             audio = str(render(text, number, attempt))
-            verdicts = ()
-            if line_checks:
+            verdicts, findings = (), ()
+            if audit_options is not None:
+                findings = tuple(
+                    audit(
+                        text,
+                        audio,
+                        **_line_audit_options(
+                            audit_options,
+                            number,
+                            emitter=emitter,
+                            words_of=words_of,
+                            scorer=scorer,
+                            margin=margin,
+                        ),
+                    )
+                )
+                verdicts = tuple(f.verdict for f in findings if f.verdict)
+            elif line_checks:
                 verdicts = tuple(
                     verify_words(
                         audio,
@@ -957,11 +990,29 @@ def render_verified(
                         margin=margin,
                     )
                 )
-            takes.append(Take(attempt, audio, verdicts))
+            takes.append(Take(attempt, audio, verdicts, findings))
             if not failing(verdicts):
                 break
         results.append(LineTakes(number, text, tuple(takes), tuple(line_checks)))
     return results
+
+
+def _line_audit_options(
+    options: Mapping, line: int, *, scorer: Scorer | str, **defaults
+) -> dict:
+    """``audit``'s keyword arguments for line number ``line``, which it sees as line 1.
+
+    ``options`` win over ``defaults``; an ``expected`` function is given the risk with
+    its real line number.
+    """
+    from dataclasses import replace
+
+    scoring = {"scoring": scorer} if isinstance(scorer, str) else {"scorer": scorer}
+    kwargs = {**defaults, **scoring, **options}
+    expected = kwargs.get("expected")
+    if callable(expected):
+        kwargs["expected"] = lambda risk: expected(replace(risk, line=line))
+    return kwargs
 
 
 def speech_renderer(
@@ -1179,6 +1230,8 @@ class Finding:
 
     risk: object
     verdict: Verdict | None = None
+    #: The reading the word should have, when known (also when ``verdict`` is None).
+    expected: str | None = None
 
     @property
     def ok(self) -> bool | None:
@@ -1311,12 +1364,14 @@ def audit(
         )
         want = expected_of(risk, nth_on_line)
         if heard_at.get(place) is None:
-            findings.append(Finding(risk))
+            findings.append(Finding(risk, expected=want))
             continue
         i = heard_at[place]
         start, end = words[i]["start"], words[i]["end"]
         scores = scorer(str(audio), words, i, table[key])
         findings.append(
-            Finding(risk, Verdict(risk.word, start, end, scores, want, margin))
+            Finding(
+                risk, Verdict(risk.word, start, end, scores, want, margin), want
+            )
         )
     return findings
