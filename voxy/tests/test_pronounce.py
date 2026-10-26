@@ -267,8 +267,11 @@ def test_audit_checks_each_occurrence_against_its_own_expected_reading():
 
     findings = audit(text, "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
                      scoring="spot", emitter=emitter, words_of=lambda audio: words)
-    # "l'est" (line 2) is flagged too since #47; {"est": "verb"} asks for the verb there
-    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (2, False), (3, False)]
+    # "l'est" (line 2) is flagged too since #47, but {"est": ...} does not name it: report only
+    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (2, None), (3, False)]
+    findings = audit(text, "take.wav", readings={"est": READINGS}, expected={"est": "verb", "l’est": "noun"},
+                     scoring="spot", emitter=emitter, words_of=lambda audio: words)
+    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (2, True), (3, False)]
 
 
 def test_audit_aligns_text_and_asr_words_and_leaves_missing_ones_unchecked():
@@ -468,8 +471,47 @@ def test_audit_keeps_c_est_l_est_and_est_apart_on_one_line():
         ("l'", "noun", 4.0, True), ("", "verb", 6.0, True)]
 
 
-def test_render_checks_skip_elided_risks_and_keep_the_plain_word_checked():
+def test_render_checks_skip_elided_risks_and_leave_that_words_reading_open():
     from voxy.speechtext import Risk
 
-    risks = [Risk(1, "est", "pos", expected="verb"), Risk(1, "Est", "pos", expected="noun", clitic="l'")]
-    assert checks_by_line(risks, readings={"est": READINGS}) == {1: [("est", READINGS, "verb")]}
+    risks = [Risk(1, "est", "pos", expected="verb"), Risk(1, "Est", "pos", expected="noun", clitic="l'"),
+             Risk(2, "est", "pos", expected="verb"), Risk(3, "Est", "pos", expected="noun", clitic="l'")]
+    # line 1: an ASR hearing "l'" | "Est" would judge that noun by "verb", so no reading;
+    # line 2: no elided form, checked as before; line 3: only the elided form, not checked
+    assert checks_by_line(risks, readings={"est": READINGS}) == {
+        1: [("est", READINGS, None)], 2: [("est", READINGS, "verb")]}
+
+
+def test_noun_clitics_are_elisions_and_a_line_initial_elided_capital_is_the_trigger():
+    from voxy.speechtext import ELISIONS, NOUN_CLITICS
+
+    for language, clitics in NOUN_CLITICS.items():
+        assert set(clitics) <= set(ELISIONS[language]), language
+    [risk] = flag_risks("Il dort,\nL'est du ciel", heteronyms={"est": ()}, clitics=("l'",))
+    assert (risk.clitic, risk.word, risk.line_initial_capital) == ("L'", "est", True)
+
+
+def test_phrase_scoring_writes_an_elided_clitic_instead_of_its_letter_name():
+    from voxy.pronounce import phrase_readings, phrase_scorer, spoken_context
+
+    fr = {"l'": "l", "d'": "d"}
+    # Whisper's split inside the context, and a curly, capitalised clitic left at the end
+    assert spoken_context([{"text": " l"}, {"text": "'aube"}, {"text": " L’"}], elisions=fr) == ("l'aube", "l")
+    assert spoken_context([{"text": " read"}, {"text": " 'War"}], elisions=fr) == ("read 'War", "")
+    vocab = ["<pad>", "ɛ", "s", "t", "a", "l", "d"]
+    # "à l'Est d'": the clitics on both sides are written out, never phonemized
+    words = [{"start": 0.0, "end": 0.2, "text": "à"}, {"start": 0.2, "end": 0.3, "text": "l'"},
+             {"start": 0.3, "end": 0.6, "text": "Est"}, {"start": 0.6, "end": 0.7, "text": "d'"}]
+    log_probs = log_probs_from_path([4, 5, 1, 2, 3, 6], vocab_size=len(vocab))
+    asked = []
+
+    def phonemize(texts, language):  # espeak's habit: a standalone l' is /ɛl/
+        asked.extend(texts)
+        return [t.replace("à", "a").replace("l'", "ɛl").replace(" ", "") for t in texts]
+
+    emit = lambda audio, start, end: (log_probs, vocab)
+    scores = phrase_scorer(emitter=emit, phonemize=phonemize, context=2)("take.wav", words, 2, READINGS)
+    assert asked == ["à"] and scores == phrase_readings(log_probs, vocab, READINGS, before="al", after="d")
+    asked.clear()  # no elision table: the old behaviour
+    phrase_scorer(emitter=emit, phonemize=phonemize, context=2, elisions={})("take.wav", words, 2, READINGS)
+    assert asked == ["à l'", "d'"]

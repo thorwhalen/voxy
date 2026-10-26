@@ -41,7 +41,7 @@ from typing import Protocol
 import numpy as np
 
 from voxy.envs import EnvSpec, ensure_env, worker_environ
-from voxy.speechtext import _WORD, ELISIONS, NOUN_CLITICS, split_clitic
+from voxy.speechtext import _WORD, ELISIONS, NOUN_CLITICS, flag_risks, split_clitic
 
 #: The phoneme recogniser: wav2vec2 fine-tuned to emit espeak IPA (CTC, 16 kHz).
 DFLT_PHONEME_MODEL = "facebook/wav2vec2-lv-60-espeak-cv-ft"
@@ -431,7 +431,8 @@ def checks_from_risks(
     reading each word should have, and otherwise the risks' own ``expected`` (what a
     detector such as ``voxy.speechtext.pos_detector`` found) is used. Words with no
     entry are skipped, and so are words elided onto a clitic (a risk with a ``clitic``,
-    "l'Est"): ``verify_words`` matches words, not places. Each word is checked once: ``verify_words`` finds every place
+    "l'Est"; see thorwhalen/voxy#48), whose word's reading is then left open: ``verify_words``
+    matches spellings, not places. Each word is checked once: ``verify_words`` finds every place
     it is spoken, so a word whose risks name *different* readings gets none here
     (group the risks by line with :func:`checks_by_line` to check each one).
     """
@@ -439,9 +440,13 @@ def checks_from_risks(
     wanted = {k.casefold(): v for k, v in (expected or {}).items()}
     words, found = {}, {}  # first spelling seen; the risks' expected readings
     for risk in risks:
-        if getattr(risk, "clitic", ""):
-            continue  # "l'Est": verify_words matches words, not places, so it is not checked
         key = risk.word.casefold()
+        if getattr(risk, "clitic", ""):
+            # "l'Est": verify_words matches spellings, not places, so it is not checked,
+            # and the word's reading is left open: an ASR that hears "l'" | "Est" would
+            # otherwise judge that noun by the plain word's reading
+            found.setdefault(key, set()).add(None)
+            continue
         if key in table:
             words.setdefault(key, risk.word)
             if (reading := getattr(risk, "expected", None)) is not None:
@@ -1186,6 +1191,8 @@ def audit(
     *,
     readings: Mapping[str, Mapping[str, str]] | None = None,
     language: str = DFLT_LANGUAGE,
+    elisions: Mapping[str, str] | None = None,
+    clitics: Collection[str] | None = None,
     expected: Mapping[str, str] | Callable[[object], "str | None"] | None = None,
     detectors: Iterable[Callable[[str], Iterable]] = (),
     emitter: Emitter | None = None,
@@ -1211,10 +1218,16 @@ def audit(
         audio: The render.
         readings: ``{word: {reading name: IPA}}``; default :func:`heteronym_readings`
             for ``language``.
+        elisions: ``{clitic: IPA}`` of the language's elisions (default
+            ``ELISIONS[language]``): text and ASR words are split there to be aligned.
+        clitics: The clitics a heteronym is still flagged after (default
+            ``NOUN_CLITICS[language]``): "l'Est" is the risk ``Est``, clitic ``l'``.
         expected: The reading each word should have: ``{word: reading}``, or
-            ``risk -> reading`` to decide per occurrence (``risk.line``, ``risk.word``).
-            Otherwise what a ``detectors`` entry found for that word on that line
-            (e.g. :func:`voxy.speechtext.pos_detector`), else None (just report).
+            ``risk -> reading`` to decide per occurrence (``risk.line``, ``risk.word``,
+            ``risk.clitic``). A mapping names an elided form by its clitic
+            (``{"est": "verb", "l'est": "noun"}``); ``"est"`` alone does not cover
+            "l'Est". Otherwise what a ``detectors`` entry found for that word on that
+            line (e.g. :func:`voxy.speechtext.pos_detector`), else None (just report).
         detectors: ``text -> risks`` proposers of expected readings.
         emitter: The phoneme recogniser; default :func:`phoneme_emitter`.
         words_of: ``audio -> timed words``; default ASR (``voxy.refprep.transcribe``).
@@ -1233,14 +1246,15 @@ def audit(
     the words decidedly misread (re-render those), ``f.ok is None`` ones were not
     decided or not found.
     """
-    from voxy.speechtext import flag_risks
-
     table = {
         k.casefold(): dict(v)
         for k, v in (readings or heteronym_readings(language)).items()
     }
-    elisions = ELISIONS.get(language, {})
-    risks = flag_risks(text, heteronyms=table, clitics=NOUN_CLITICS.get(language, ()))
+    if elisions is None:
+        elisions = ELISIONS.get(language, {})
+    if clitics is None:
+        clitics = NOUN_CLITICS.get(language, ())
+    risks = flag_risks(text, heteronyms=table, clitics=clitics)
 
     def place_key(risk):  # where a risk is on its line: "l'Est" is not "est"
         return risk.line, risk.word.casefold(), _clitic_key(getattr(risk, "clitic", ""))
@@ -1254,15 +1268,19 @@ def audit(
     def expected_of(risk, nth_on_line):
         if callable(expected):
             return expected(risk)
-        if expected is not None and risk.word.casefold() in expected:
-            return expected[risk.word.casefold()]
+        named = _clitic_key(getattr(risk, "clitic", "")) + risk.word.casefold()
+        if expected is not None and named in expected:
+            return expected[named]
         found = proposed.get(place_key(risk), [])
         return found[nth_on_line] if nth_on_line < len(found) else None
 
+    if isinstance(expected, Mapping):
+        expected = {_clitic_key(k): v for k, v in expected.items()}
     if scorer is None:
         options = dict(
             phonemize=phonemize,
             language=language,
+            elisions=elisions,
             context=context,
             filler_penalty=filler_penalty,
             padding=padding,

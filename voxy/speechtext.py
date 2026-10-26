@@ -373,6 +373,7 @@ def pos_detector(
     rules: Mapping[str, Mapping[str, str]] = FRENCH_POS_HETERONYMS,
     *,
     tagger: Tagger | None = None,
+    clitics: Collection[str] = tuple(ELISIONS["fr"]),
 ) -> Callable[[str], list[Risk]]:
     """A :func:`flag_risks` ``extra`` detector: heteronyms whose part of speech picks the reading.
 
@@ -384,6 +385,9 @@ def pos_detector(
             (default :data:`FRENCH_POS_HETERONYMS`).
         tagger: ``text -> (offset, token, UPOS)``; default :func:`spacy_tagger`
             (French), loaded on first use.
+        clitics: Elision clitics (straight apostrophe, lowercase): a risk right after
+            one of them ("l'" then "Est") gets it as its ``clitic``; an opening quote
+            does not count.
 
     >>> fake = lambda text: [(0, "Il", "PRON"), (3, "est", "AUX"), (7, "parti", "VERB")]
     >>> [(r.word, r.expected) for r in pos_detector(tagger=fake)("Il est parti")]
@@ -391,6 +395,9 @@ def pos_detector(
     >>> fake = lambda text: [(0, "à", "ADP"), (2, "l'", "DET"), (4, "Est", "PROPN")]
     >>> [(r.clitic, r.word, r.expected) for r in pos_detector(tagger=fake)("à l'Est")]
     [("l'", 'Est', 'noun')]
+    >>> fake = lambda text: [(0, "'", "PUNCT"), (1, "est", "AUX")]  # a quote, not a clitic
+    >>> [(r.clitic, r.word) for r in pos_detector(tagger=fake)("'est")]
+    [('', 'est')]
     """
     table = {w.casefold(): dict(by_tag) for w, by_tag in rules.items()}
     tag = tagger
@@ -403,9 +410,8 @@ def pos_detector(
         previous_end, previous = -1, ""
         for offset, token, pos in tag(text):
             # an elided token ("l'" then "Est", adjacent) is the risk's clitic
-            clitic = (
-                previous if previous_end == offset and previous[-1:] in "'’" else ""
-            )
+            elided = previous.replace("’", "'").casefold() in clitics
+            clitic = previous if elided and previous_end == offset else ""
             previous_end, previous = offset + len(token), token
             by_tag = table.get(token.casefold())
             if not by_tag:
