@@ -961,7 +961,9 @@ def render_verified(
             results.append(LineTakes(number, text))
             continue
         takes: list[Take] = []
-        for attempt in range(max_attempts if line_checks or audit_options is not None else 1):
+        for attempt in range(
+            max_attempts if line_checks or audit_options is not None else 1
+        ):
             audio = str(render(text, number, attempt))
             verdicts, findings = (), ()
             if audit_options is not None:
@@ -1371,8 +1373,6 @@ def audit(
         start, end = words[i]["start"], words[i]["end"]
         scores = scorer(str(audio), words, i, table[key])
         findings.append(
-            Finding(
-                risk, Verdict(risk.word, start, end, scores, want, margin), want
-            )
+            Finding(risk, Verdict(risk.word, start, end, scores, want, margin), want)
         )
     return findings
