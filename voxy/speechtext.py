@@ -599,7 +599,8 @@ def llm_detector(
         if not isinstance(reply, str):  # a streaming chat yields chunks
             reply = "".join(reply)
         used: set[tuple[int, int]] = set()
-        risks = (_proposed_risk(item, lines, used, clitics=clitics)
+        risks = (
+            _proposed_risk(item, lines, used, clitics=clitics)
             for item in _json_list(reply)
         )
         return [r for r in risks if r is not None]
