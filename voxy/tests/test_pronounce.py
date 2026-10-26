@@ -12,7 +12,11 @@ from voxy.pronounce import (
     heteronym_readings,
     checks_by_line,
     checks_from_risks,
+    crop_scorer,
     load_readings,
+    phrase_scorer,
+    reading_scorer,
+    spot_scorer,
     render_verified,
     speech_renderer,
     ctc_log_likelihood,
@@ -106,7 +110,7 @@ def test_verify_words_flags_the_take_that_said_the_noun():
         heard = _ids(["ɛ", "s", "t", "<pad>"])
         return log_probs_from_path(heard, vocab_size=len(VOCAB)), VOCAB
 
-    verdicts = verify_words("take.wav", checks, words=words, emitter=emitter, scoring="crop")
+    verdicts = verify_words("take.wav", checks, words=words, emitter=emitter, scorer="crop")
     assert calls == [("take.wav", pytest.approx(0.82), pytest.approx(1.18))]
     (verdict,) = verdicts
     assert (verdict.heard, verdict.decided, verdict.ok) == ("noun", True, False)
@@ -160,6 +164,7 @@ def test_render_verified_stops_at_max_attempts_and_keeps_the_least_bad_take():
         emitter=_emitter_hearing(heard),
         words_of=_words,
         max_attempts=3,
+        scorer="crop",
     )
     assert [t.audio for t in first.takes] == ["1-0"]  # no checks: rendered once
     assert first.verified and first.chosen.verdicts == ()
@@ -180,6 +185,7 @@ def test_a_line_whose_word_asr_never_found_is_not_verified_and_blank_lines_are_s
         render=render,
         emitter=_emitter_hearing(heard),
         words_of=lambda audio: [{"start": 0.0, "end": 0.3, "text": "L'Est"}],
+        scorer="crop",
     )
     assert blank.takes == () and blank.chosen is None and blank.verified
     assert len(line.takes) == 1 and line.unconfirmed == ["Est"] and not line.verified
@@ -322,31 +328,70 @@ def _triste_emitter(audio, start, end):
     return log_probs_from_path(_ids(TRISTE_HEARD), vocab_size=len(VOCAB)), VOCAB
 
 
-def test_verify_words_scores_whole_phrases_by_default():
+TRISTE_PHRASE = phrase_scorer(emitter=_triste_emitter, phonemize=_triste_phonemize)
+
+
+def test_verify_words_scores_whole_phrases_and_carries_the_scorers_margin():
     checks = [("est", READINGS, "verb")]
-    kwargs = dict(words=TRISTE_WORDS, emitter=_triste_emitter, phonemize=_triste_phonemize)
-    (phrase,) = verify_words("take.wav", checks, **kwargs)
+    kwargs = dict(words=TRISTE_WORDS, emitter=_triste_emitter)
+    (phrase,) = verify_words("take.wav", checks, scorer=TRISTE_PHRASE, **kwargs)
     assert (phrase.reading, phrase.ok, phrase.margin) == ("verb", True, 2.0)
-    (crop,) = verify_words("take.wav", checks, scoring="crop", **kwargs)
+    (crop,) = verify_words("take.wav", checks, scorer="crop", **kwargs)
     assert (crop.reading, crop.margin) == ("noun", 0.5)  # what cropping got wrong
+    (crop,) = verify_words("take.wav", checks, scorer=crop_scorer(emitter=_triste_emitter), **kwargs)
+    assert crop.margin == 0.5
+    (forced,) = verify_words("take.wav", checks, scorer=TRISTE_PHRASE, margin=9.0, **kwargs)
+    assert forced.margin == 9.0 and forced.ok is None  # a margin given wins
     with pytest.raises(ValueError, match="scoring"):
-        verify_words("take.wav", checks, scoring="nope", **kwargs)
+        verify_words("take.wav", checks, scorer="nope", **kwargs)
 
 
-def test_render_verified_passes_its_scoring_to_verify_words():
+def test_render_verified_passes_its_scorer_to_verify_words():
     renders = []
 
     def render(text, line, attempt):
         renders.append(attempt)
         return f"take-{attempt}"
 
-    kwargs = dict(render=render, emitter=_triste_emitter, words_of=lambda audio: TRISTE_WORDS,
-                  phonemize=_triste_phonemize)
+    kwargs = dict(render=render, emitter=_triste_emitter, words_of=lambda audio: TRISTE_WORDS)
     checks = {1: [("est", READINGS, "verb")]}
-    [line] = render_verified(["triste est le"], checks, **kwargs)
+    [line] = render_verified(["triste est le"], checks, scorer=TRISTE_PHRASE, **kwargs)
     assert line.verified and renders == [0]  # phrase scoring hears the verb: one take
     renders.clear()
-    [line] = render_verified(["triste est le"], checks, scoring="crop", **kwargs)
+    [line] = render_verified(["triste est le"], checks, scorer="crop", **kwargs)
     assert not line.verified and renders == [0, 1, 2]  # cropping "hears" the noun every take
     with pytest.raises(ValueError, match="scoring"):
-        render_verified([], {}, render=render, emitter=None, scoring="nope")
+        render_verified([], {}, render=render, emitter=None, scorer="nope")
+
+
+def test_reading_scorer_rejects_an_unknown_scoring():
+    with pytest.raises(ValueError, match="scoring"):
+        reading_scorer("nope", emitter=_triste_emitter)
+
+
+def test_each_scorer_carries_the_margin_it_is_calibrated_for():
+    margins = {
+        "phrase": phrase_scorer(emitter=_triste_emitter, phonemize=_triste_phonemize).margin,
+        "spot": spot_scorer(emitter=_triste_emitter).margin,
+        "crop": crop_scorer(emitter=_triste_emitter).margin,
+    }
+    assert margins == {"phrase": 2.0, "spot": 2.0, "crop": 0.5}
+    assert reading_scorer("crop", emitter=_triste_emitter, margin=1.0).margin == 1.0
+    with pytest.raises(TypeError):  # a scorer takes only its own options
+        crop_scorer(emitter=_triste_emitter, phonemize=_triste_phonemize)
+
+
+def test_a_phonemizer_that_drops_texts_is_an_error_not_a_short_zip():
+    scorer = phrase_scorer(emitter=_triste_emitter, phonemize=lambda texts, language: ["st"])
+    with pytest.raises(ValueError, match="1 IPA for 2 texts"):
+        scorer("take.wav", TRISTE_WORDS, 1, READINGS)
+
+
+def test_audit_takes_a_ready_scorer_over_its_scoring_options():
+    findings = audit("triste est le", "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                     scorer=TRISTE_PHRASE, scoring="crop", words_of=lambda audio: TRISTE_WORDS)
+    assert [(f.ok, f.verdict.margin) for f in findings] == [(True, 2.0)]
+    (crop,) = audit("triste est le", "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                    scoring="crop", phonemize=_triste_phonemize, emitter=_triste_emitter,
+                    words_of=lambda audio: TRISTE_WORDS)
+    assert (crop.verdict.reading, crop.verdict.margin) == ("noun", 0.5)  # options it does not take are ignored
