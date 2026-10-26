@@ -574,3 +574,33 @@ def test_render_verified_with_audit_options_tells_occurrences_apart_and_gives_re
 def test_render_verified_takes_checks_or_audit_options_not_both():
     with pytest.raises(ValueError, match="not both"):
         render_verified([], {}, audit_options={}, render=None)
+
+
+def test_render_verified_audit_mode_empty_options_still_retries_and_reports_real_lines():
+    heard = {}
+
+    def render(text, line, attempt):
+        heard[f"{line}-{attempt}"] = ["ɛ"]  # always the verb; the noun is expected
+        return f"{line}-{attempt}"
+
+    words = lambda audio: [{"start": 0.0, "end": 0.3, "text": "est"}]
+    blank, line = render_verified(
+        ["", "est"], render=render, emitter=_emitter_hearing(heard), words_of=words, scorer="crop",
+        max_attempts=2, audit_options={"readings": {"est": READINGS}, "expected": {"est": "noun"}},
+    )
+    assert blank.takes == () and len(line.takes) == 2  # retried: the word was misread
+    assert [f.risk.line for f in line.chosen.findings] == [2]
+    [only] = render_verified(["rien"], render=render, audit_options={}, max_attempts=3,
+                             emitter=_emitter_hearing(heard), words_of=words)
+    assert len(only.takes) == 1  # no risk, one render
+    [empty] = render_verified(["est"], render=render, audit_options={"readings": {"est": READINGS},
+                              "expected": {"est": "noun"}}, max_attempts=2, emitter=_emitter_hearing(heard),
+                              words_of=lambda audio: [], scorer="crop")
+    assert empty.unconfirmed == ["est"] and not empty.verified  # ASR never found it
+
+
+def test_audit_options_scoring_beats_the_outer_scorer():
+    from voxy.pronounce import _line_audit_options
+
+    kwargs = _line_audit_options({"scoring": "spot"}, 3, scorer=TRISTE_PHRASE)
+    assert kwargs["scoring"] == "spot" and "scorer" not in kwargs

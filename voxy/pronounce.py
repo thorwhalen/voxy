@@ -34,7 +34,7 @@ from __future__ import annotations
 import inspect
 import os
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Protocol
 
@@ -961,12 +961,13 @@ def render_verified(
             results.append(LineTakes(number, text))
             continue
         takes: list[Take] = []
-        for attempt in range(max_attempts if line_checks or audit_options else 1):
+        for attempt in range(max_attempts if line_checks or audit_options is not None else 1):
             audio = str(render(text, number, attempt))
             verdicts, findings = (), ()
             if audit_options is not None:
                 findings = tuple(
-                    audit(
+                    replace(f, risk=replace(f.risk, line=number))  # audit saw line 1
+                    for f in audit(
                         text,
                         audio,
                         **_line_audit_options(
@@ -1005,9 +1006,9 @@ def _line_audit_options(
     ``options`` win over ``defaults``; an ``expected`` function is given the risk with
     its real line number.
     """
-    from dataclasses import replace
-
     scoring = {"scoring": scorer} if isinstance(scorer, str) else {"scorer": scorer}
+    if {"scorer", "scoring"} & options.keys():  # the options pick how to score
+        scoring = {}
     kwargs = {**defaults, **scoring, **options}
     expected = kwargs.get("expected")
     if callable(expected):
