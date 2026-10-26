@@ -604,3 +604,19 @@ def test_audit_options_scoring_beats_the_outer_scorer():
 
     kwargs = _line_audit_options({"scoring": "spot"}, 3, scorer=TRISTE_PHRASE)
     assert kwargs["scoring"] == "spot" and "scorer" not in kwargs
+
+
+def test_an_llm_proposal_for_an_elided_noun_reaches_audit_on_the_elided_place():
+    from voxy.speechtext import llm_detector
+
+    chat = lambda _: '[{"line": 1, "word": "l\'Est", "readings": ["verb", "noun"], "expected": "noun"}]'
+    said = [" Il", " est", " à", " l", "'Est"]
+    words = [{"start": float(i), "end": i + 0.3, "text": w} for i, w in enumerate(said)]
+
+    def emitter(audio, start, end):  # the verb around "est" (t = 1), the noun around "l'Est"
+        heard = ["a", "ɛ", "s", "t", "a"] if start + 0.08 > 3 else ["a", "ɛ", "a"]
+        return log_probs_from_path([VOCAB.index(x) for x in heard], vocab_size=len(VOCAB)), VOCAB
+
+    findings = audit("Il est à l'Est", "t.wav", readings={"est": READINGS}, detectors=[llm_detector(chat=chat)],
+                     scoring="spot", context=0, emitter=emitter, words_of=lambda audio: words)
+    assert [(f.risk.clitic, f.verdict.expected) for f in findings] == [("", None), ("l'", "noun")]

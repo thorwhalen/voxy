@@ -468,14 +468,38 @@ def _json_list(reply: str) -> list:
     return []
 
 
+def elided_words(line: str, clitics: Collection[str]) -> list[tuple[str, str]]:
+    """``(word, clitic)`` of each word of ``line``, as written (clitic ``""`` when none).
+
+    >>> elided_words("Il est à l’Est", ("l'",))
+    [('Il', ''), ('est', ''), ('à', ''), ('Est', 'l’')]
+    """
+    out = []
+    for match in _WORD.finditer(line):
+        clitic, word = split_clitic(match.group(0), clitics)
+        out.append((word, clitic))
+    return out
+
+
+def _same_clitic(a: str, b: str) -> bool:
+    return a.replace("’", "'").casefold() == b.replace("’", "'").casefold()
+
+
 def _proposed_risk(
-    item, lines: list[str], elisions: Collection[str] = ()
+    item,
+    lines: list[str],
+    used: set[tuple[int, int]],
+    *,
+    clitics: Collection[str] = (),
 ) -> Risk | None:
     """``item`` as a :class:`Risk` if it names a word really on its line, else ``None``.
 
-    A word elided onto one of ``elisions`` ("l'Est") is the risk ``Est`` with that
-    ``clitic``, whether the model wrote it elided or bare (a bare word the line holds
-    only elided takes that clitic).
+    A word elided onto one of ``clitics`` ("l'Est") is the risk ``Est`` with that
+    ``clitic``. The model may write it elided or bare: a bare word takes the place whose
+    spelling (case included) fits, the plain word before an elided one; the n-th
+    proposal of a word takes the n-th place (``used`` holds those taken), so a bare
+    word that fits several elided places equally ("c'est", "l'est") takes the first:
+    write it elided to say which.
     """
     if not isinstance(item, dict):
         return None
@@ -484,34 +508,34 @@ def _proposed_risk(
         isinstance(line, int) and isinstance(word, str) and 1 <= line <= len(lines)
     ):
         return None
-    tokens = [m.group(0) for m in _WORD.finditer(lines[line - 1])]
-    on_line = {
-        part.casefold()
-        for token in tokens
-        for part in (token, *re.split(r"['’]", token))  # "d'ici" holds "ici"
-    }
     bare = word.rstrip(".")  # "Dr." is the word "Dr"
-    clitic, rest = split_clitic(bare, elisions)
-    if clitic:  # the model wrote "l'Est": it must be on the line, elided so
-        written = (clitic.casefold(), rest.casefold())
-        if not any(
-            tuple(p.casefold() for p in split_clitic(t, elisions)) == written
-            for t in tokens
-        ):
-            return None
-        word = rest
-    else:
-        if bare.casefold() not in on_line:
+    asked_clitic, asked = split_clitic(bare, clitics)
+    places = [
+        (i, token)
+        for i, token in enumerate(elided_words(lines[line - 1], clitics))
+        if (line, i) not in used
+        and token[0].casefold() == asked.casefold()
+        and (not asked_clitic or _same_clitic(token[1], asked_clitic))
+    ]
+    clitic = ""
+    if places:
+
+        def fit(place):  # the spelling fits (case included), then the plain word first
+            _, (spelled, elided) = place
+            return spelled != asked, elided != ""
+
+        places.sort(key=fit)  # stable: ties go in text order
+        (i, (_, clitic)) = places[0]
+        used.add((line, i))
+        word = asked if asked_clitic else word
+    else:  # "d'ici" holds "ici" (an apostrophe that is not one of the clitics)
+        parts = {
+            part.casefold()
+            for m in _WORD.finditer(lines[line - 1])
+            for part in re.split(r"['’]", m.group(0))
+        }
+        if asked_clitic or bare.casefold() not in parts:
             return None  # a word the model made up, or put on the wrong line
-        if bare.casefold() not in {t.casefold() for t in tokens}:  # only elided here
-            clitic = next(
-                (
-                    c
-                    for c, r in (split_clitic(t, elisions) for t in tokens)
-                    if c and r.casefold() == bare.casefold()
-                ),
-                "",
-            )
     readings = tuple(r for r in item.get("readings") or () if isinstance(r, str))
     expected = item.get("expected")
     why = item.get("why")
@@ -574,7 +598,10 @@ def llm_detector(
         reply = chat(template.substitute(language=language, text=numbered))
         if not isinstance(reply, str):  # a streaming chat yields chunks
             reply = "".join(reply)
-        risks = (_proposed_risk(item, lines, clitics) for item in _json_list(reply))
+        used: set[tuple[int, int]] = set()
+        risks = (_proposed_risk(item, lines, used, clitics=clitics)
+            for item in _json_list(reply)
+        )
         return [r for r in risks if r is not None]
 
     return detect
