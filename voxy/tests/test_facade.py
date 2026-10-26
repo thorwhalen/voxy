@@ -302,3 +302,15 @@ def test_voicestudio_backend_uses_description_as_voice(tmp_path):
     profile = model.design_voice("a bright voice")
     assert model.synthesize("Yo", profile).voice == "a bright voice"
     assert model.synthesize("Yo").voice == model.dflt_voice
+
+
+def test_speech_to_speech_sends_audio_and_returns_wav():
+    client = FakeClient()
+    model = ElevenLabsSpeechModel(api_key="k", client_factory=lambda key: client)
+    speech = voxy.speech_to_speech(b"RIFF....WAVEfmt ", "vid", model=model, output_format="pcm_24000", seed=1)
+    op, vid, kwargs = client.calls[-1]
+    assert (op, vid, kwargs["seed"]) == ("sts", "vid", 1)
+    assert kwargs["audio"][0].endswith(".wav") and kwargs["model_id"] == "eleven_multilingual_sts_v2"
+    assert speech.format == "wav" and speech.audio[:4] == b"RIFF" and speech.voice == "vid"
+    with pytest.raises(NotImplementedError):
+        voxy.speech_to_speech(b"x", "v", model=Recorder())

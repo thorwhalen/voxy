@@ -54,6 +54,9 @@ DFLT_ELEVENLABS_OUTPUT_FORMAT = "pcm_24000"
 DFLT_CLONE_NAME_TEMPLATE = "voxy-{speaker_id}"
 # What synthesize() returns by default: a playable file, on every tier.
 DFLT_ELEVENLABS_SYNTH_FORMAT = "mp3_44100_128"
+DFLT_ELEVENLABS_STS_MODEL_ID = os.environ.get(
+    "VOXY_ELEVENLABS_STS_MODEL_ID", "eleven_multilingual_sts_v2"
+)
 DFLT_VOICE_DESIGN_MODEL_ID = "eleven_multilingual_ttv_v2"
 # The ElevenLabs IVC form accepts at most this many sample files per voice.
 DFLT_MAX_CLONE_FILES = 25
@@ -556,6 +559,47 @@ class ElevenLabsSpeechModel(SpeechModel):
             voice=_voice_id(voice),
             sample_rate=rate,
             text=text,
+        )
+
+    def speech_to_speech(
+        self,
+        audio: AudioInput,
+        voice: VoiceProfile | str | None = None,
+        *,
+        model_id: str = DFLT_ELEVENLABS_STS_MODEL_ID,
+        output_format: str = DFLT_ELEVENLABS_SYNTH_FORMAT,
+        **kwargs,
+    ) -> Speech:
+        """Voice changer: ``audio`` (anyone's speech) re-spoken in ``voice``, timing and intonation kept.
+
+        ``audio`` is anything voxy takes as audio (path, bytes, file-like, tensor).
+        Extra keyword arguments (``voice_settings``, ``seed``,
+        ``remove_background_noise``...) go to ``client.speech_to_speech.convert``.
+        """
+        if voice is None:
+            raise ValueError(
+                "ElevenLabs needs a voice: pass a VoiceProfile or a voice id"
+            )
+        upload = _to_upload_file(
+            audio, index=0, sample_rate=self.sample_rate, cleanup_audio_fn=None
+        )
+        codec, rate = _output_format_parts(output_format)
+        chunks = self.client.speech_to_speech.convert(
+            _voice_id(voice),
+            audio=upload,
+            model_id=model_id,
+            output_format=output_format,
+            **kwargs,
+        )
+        payload = chunks if isinstance(chunks, bytes) else b"".join(chunks)
+        if codec == "pcm":
+            payload, codec = _wav_bytes(_pcm16_to_tensor(payload), rate), "wav"
+        return Speech(
+            payload,
+            format=codec,
+            backend=self.name,
+            voice=_voice_id(voice),
+            sample_rate=rate,
         )
 
     def delete_voice(self, voice: VoiceProfile | str) -> None:
