@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import inspect
 import os
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
@@ -41,6 +41,7 @@ from typing import Protocol
 import numpy as np
 
 from voxy.envs import EnvSpec, ensure_env, worker_environ
+from voxy.speechtext import _WORD, ELISIONS, NOUN_CLITICS, split_clitic
 
 #: The phoneme recogniser: wav2vec2 fine-tuned to emit espeak IPA (CTC, 16 kHz).
 DFLT_PHONEME_MODEL = "facebook/wav2vec2-lv-60-espeak-cv-ft"
@@ -429,7 +430,8 @@ def checks_from_risks(
     Lexique-derived heteronym list the caller supplies; ``expected`` names the
     reading each word should have, and otherwise the risks' own ``expected`` (what a
     detector such as ``voxy.speechtext.pos_detector`` found) is used. Words with no
-    entry are skipped. Each word is checked once: ``verify_words`` finds every place
+    entry are skipped, and so are words elided onto a clitic (a risk with a ``clitic``,
+    "l'Est"): ``verify_words`` matches words, not places. Each word is checked once: ``verify_words`` finds every place
     it is spoken, so a word whose risks name *different* readings gets none here
     (group the risks by line with :func:`checks_by_line` to check each one).
     """
@@ -437,6 +439,8 @@ def checks_from_risks(
     wanted = {k.casefold(): v for k, v in (expected or {}).items()}
     words, found = {}, {}  # first spelling seen; the risks' expected readings
     for risk in risks:
+        if getattr(risk, "clitic", ""):
+            continue  # "l'Est": verify_words matches words, not places, so it is not checked
         key = risk.word.casefold()
         if key in table:
             words.setdefault(key, risk.word)
@@ -649,11 +653,49 @@ def spot_scorer(
     return _Scorer(score, margin)
 
 
+def spoken_context(
+    words: Sequence[Mapping], *, elisions: Mapping[str, str] | None = None
+) -> tuple[str, str]:
+    """``(text, tail)``: what ``words`` say, for a phonemizer, and the IPA of an elided
+    clitic they end with.
+
+    A clitic of ``elisions`` (``{clitic: IPA}``, e.g. ``ELISIONS["fr"]``) that ASR split
+    from its word is joined back to it, whichever side the apostrophe went
+    (``L'`` | ``homme``, or Whisper's ``l`` | ``'aube``). One left at the end (its word
+    is the flagged one, or outside the window) is written from ``elisions`` instead of
+    being left to the phonemizer, which reads a standalone ``l'`` as /ɛl/. Anything
+    not in ``elisions`` (an English quote, ``James'``) is left as it is.
+
+    >>> fr = {"l'": "l", "d'": "d"}
+    >>> spoken_context([{"text": " L'"}, {"text": " homme,"}, {"text": " d’"}], elisions=fr)
+    ("L'homme", 'd')
+    >>> spoken_context([{"text": " avant"}, {"text": " l"}, {"text": "'aube."}], elisions=fr)
+    ("avant l'aube", '')
+    >>> spoken_context([{"text": " read"}, {"text": " 'War"}], elisions=fr)
+    ("read 'War", '')
+    """
+    elisions = elisions or {}
+    text = ""
+    for word in words:
+        token = word["text"].strip().strip(EDGE_PUNCTUATION).replace("’", "'")
+        if not token:
+            continue
+        last = text.rpartition(" ")[2].casefold()
+        joined = last in elisions or (token[0] == "'" and last + "'" in elisions)
+        text += token if joined or not text else " " + token
+    head, _, last = text.rpartition(" ")
+    tail = elisions.get(last.casefold())
+    if tail is None:
+        return text, ""
+    return head, tail
+
+
 def phrase_scorer(
     *,
     emitter: Emitter,
     phonemize: Phonemizer | None = None,
     language: str = DFLT_LANGUAGE,
+    elisions: Mapping[str, str] | None = None,
     context: int = DFLT_CONTEXT_WORDS,
     padding: float = DFLT_CROP_PADDING,
     margin: float = DFLT_CONTEXT_MARGIN,
@@ -663,19 +705,23 @@ def phrase_scorer(
 
     The neighbours are the same in every candidate, so only the word decides.
     ``phonemize`` defaults to :func:`espeak_phonemizer` (its worker starts on the first
-    call); it must give one IPA per text, or a ``ValueError`` is raised.
+    call); it must give one IPA per text, or a ``ValueError`` is raised. An elided
+    clitic next to the word (``l'`` before ``Est``) is written from ``elisions``
+    (default ``ELISIONS[language]``, see :func:`spoken_context`).
     """
     if phonemize is None:
         phonemize = espeak_phonemizer()
-
-    def spoken(ws):
-        return " ".join(w["text"].strip().strip(EDGE_PUNCTUATION) for w in ws).strip()
+    if elisions is None:
+        elisions = ELISIONS.get(language, {})
 
     def score(audio, words, i, readings):
         log_probs, vocab, lo, hi = _window(
             emitter, audio, words, i, context=context, padding=padding
         )
-        before, after = spoken(words[lo:i]), spoken(words[i + 1 : hi + 1])
+        (before, before_tail), (after, after_tail) = (
+            spoken_context(ws, elisions=elisions)
+            for ws in (words[lo:i], words[i + 1 : hi + 1])
+        )
         said = [t for t in (before, after) if t]  # phonemizers drop empty texts
         ipa = list(phonemize(said, language)) if said else []
         if len(ipa) != len(said):
@@ -687,8 +733,8 @@ def phrase_scorer(
             log_probs,
             vocab,
             readings,
-            before=written.get(before, ""),
-            after=written.get(after, ""),
+            before=written.get(before, "") + before_tail,
+            after=written.get(after, "") + after_tail,
         )
 
     return _Scorer(score, margin)
@@ -1006,30 +1052,81 @@ def _normal_word(word: str) -> str:
     return word.strip().strip(EDGE_PUNCTUATION).replace("’", "'").casefold()
 
 
-def _text_words(text: str) -> list[tuple[int, str]]:
-    """``(line, word)`` of every word of ``text``, in order (lines count from 1)."""
-    from voxy.speechtext import _WORD
-
-    return [
-        (number, match.group(0))
-        for number, line in enumerate(text.split("\n"), 1)
-        for match in _WORD.finditer(line)
-    ]
+def _clitic_key(clitic: str) -> str:
+    return clitic.replace("’", "'").casefold()
 
 
-def align_words(text: str, words: Sequence[Mapping]) -> dict[int, int]:
+def _text_words(
+    text: str, *, elisions: Collection[str] = ()
+) -> list[tuple[int, str, str]]:
+    """``(line, word, clitic)`` of every word of ``text``, in order (lines count from 1).
+
+    A word elided onto one of ``elisions`` is two words, as ASR's are once split
+    (:func:`split_elisions`): "l'Est" is ``"l'"`` then ``"Est"`` (clitic ``"l'"``).
+    """
+    out = []
+    for number, line in enumerate(text.split("\n"), 1):
+        for match in _WORD.finditer(line):
+            clitic, word = split_clitic(match.group(0), elisions)
+            if clitic:
+                out.append((number, clitic, ""))
+            out.append((number, word, clitic))
+    return out
+
+
+def split_elisions(
+    words: Iterable[Mapping], *, elisions: Collection[str] = ()
+) -> list[dict]:
+    """Timed words split at each elision of ``elisions``, as :func:`_text_words` splits
+    the text, so :func:`align_words` can match them.
+
+    Whisper's ``" l" | "'est"`` becomes ``" l'" | "est"`` (the apostrophe moved back);
+    a word heard whole, ``" l'est"``, becomes ``" l'"`` (empty, at its start) and
+    ``"est"`` (its whole span). Other apostrophes (an English opening quote) are left
+    alone.
+
+    >>> words = [{"text": " à", "start": 0, "end": 1}, {"text": " l", "start": 1, "end": 2},
+    ...          {"text": "'est", "start": 2, "end": 3}, {"text": " l'est", "start": 3, "end": 4},
+    ...          {"text": " 'War", "start": 4, "end": 5}]
+    >>> [(w["text"], w["start"], w["end"]) for w in split_elisions(words, elisions={"l'": "l"})]
+    [(' à', 0, 1), (" l'", 1, 2), ('est', 2, 3), (" l'", 3, 3), ('est', 3, 4), (" 'War", 4, 5)]
+    """
+    out: list[dict] = []
+    for word in words:
+        word = dict(word)
+        text = word["text"].lstrip()
+        if (
+            out
+            and text[:1] in ("'", "’")
+            and _clitic_key(out[-1]["text"].strip()) + "'" in elisions
+        ):
+            out[-1]["text"] = out[-1]["text"].rstrip() + text[0]
+            word["text"] = text[1:]
+        clitic, rest = split_clitic(word["text"].strip(), elisions)
+        if clitic:
+            lead = word["text"][: len(word["text"]) - len(word["text"].lstrip())]
+            out.append({**word, "text": lead + clitic, "end": word["start"]})
+            word["text"] = rest
+        out.append(word)
+    return out
+
+
+def align_words(
+    text: str, words: Sequence[Mapping], *, elisions: Collection[str] = ()
+) -> dict[int, int]:
     """``{index of a word of text: index of the ASR word heard for it}``.
 
     Words are matched by aligning the two sequences (``difflib``), so a word ASR missed,
     merged or added elsewhere does not shift the others; a text word with no exact
-    counterpart is left out.
+    counterpart is left out. A word elided onto one of ``elisions`` counts as two
+    (:func:`_text_words`).
 
     >>> align_words("Il est là", [{"text": " Il"}, {"text": " et"}, {"text": " est"}, {"text": " là."}])
     {0: 0, 1: 2, 2: 3}
     """
     from difflib import SequenceMatcher
 
-    said = [_normal_word(w) for _, w in _text_words(text)]
+    said = [_normal_word(w) for _, w, _ in _text_words(text, elisions=elisions)]
     heard = [_normal_word(w["text"]) for w in words]
     matcher = SequenceMatcher(None, said, heard, autojunk=False)
     return {
@@ -1039,17 +1136,24 @@ def align_words(text: str, words: Sequence[Mapping]) -> dict[int, int]:
     }
 
 
-def _risk_places(text: str, risks: Sequence) -> list[int | None]:
-    """The index in ``_text_words(text)`` of each risk (by line and order on the line)."""
+def _risk_places(
+    text: str, risks: Sequence, *, elisions: Collection[str] = ()
+) -> list[int | None]:
+    """The index in ``_text_words(text)`` of each risk (by line, clitic and order on the
+    line: the "est" of "c'est" is not the risk "est")."""
     taken: set[int] = set()
-    tokens = _text_words(text)
+    tokens = _text_words(text, elisions=elisions)
     places = []
     for risk in risks:
+        clitic = _clitic_key(getattr(risk, "clitic", ""))
         place = next(
             (
                 i
-                for i, (line, word) in enumerate(tokens)
-                if i not in taken and line == risk.line and word == risk.word
+                for i, (line, word, elided) in enumerate(tokens)
+                if i not in taken
+                and line == risk.line
+                and word == risk.word
+                and _clitic_key(elided) == clitic
             ),
             None,
         )
@@ -1135,21 +1239,24 @@ def audit(
         k.casefold(): dict(v)
         for k, v in (readings or heteronym_readings(language)).items()
     }
-    risks = flag_risks(text, heteronyms=table)
-    proposed: dict[tuple[int, str], list] = {}
+    elisions = ELISIONS.get(language, {})
+    risks = flag_risks(text, heteronyms=table, clitics=NOUN_CLITICS.get(language, ()))
+
+    def place_key(risk):  # where a risk is on its line: "l'Est" is not "est"
+        return risk.line, risk.word.casefold(), _clitic_key(getattr(risk, "clitic", ""))
+
+    proposed: dict[tuple[int, str, str], list] = {}
     for detector in detectors:
         for risk in detector(text):
             if getattr(risk, "expected", None) is not None:
-                proposed.setdefault((risk.line, risk.word.casefold()), []).append(
-                    risk.expected
-                )
+                proposed.setdefault(place_key(risk), []).append(risk.expected)
 
     def expected_of(risk, nth_on_line):
         if callable(expected):
             return expected(risk)
         if expected is not None and risk.word.casefold() in expected:
             return expected[risk.word.casefold()]
-        found = proposed.get((risk.line, risk.word.casefold()), [])
+        found = proposed.get(place_key(risk), [])
         return found[nth_on_line] if nth_on_line < len(found) else None
 
     if scorer is None:
@@ -1170,15 +1277,15 @@ def audit(
     margin = scorer.margin if margin is None else margin
     if not risks:
         return []
-    words = list(words_of(str(audio)))
-    heard_at = align_words(text, words)
+    words = split_elisions(words_of(str(audio)), elisions=elisions)
+    heard_at = align_words(text, words, elisions=elisions)
 
-    places = _risk_places(text, risks)
-    on_line: dict[tuple[int, str], int] = {}
+    places = _risk_places(text, risks, elisions=elisions)
+    on_line: dict[tuple, int] = {}
     findings = []
     for risk, place in zip(risks, places):
         key = risk.word.casefold()
-        line_key = (risk.line, key)
+        line_key = place_key(risk)
         nth_on_line, on_line[line_key] = (
             on_line.get(line_key, 0),
             on_line.get(line_key, 0) + 1,

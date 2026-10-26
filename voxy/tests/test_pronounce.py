@@ -267,7 +267,8 @@ def test_audit_checks_each_occurrence_against_its_own_expected_reading():
 
     findings = audit(text, "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
                      scoring="spot", emitter=emitter, words_of=lambda audio: words)
-    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (3, False)]
+    # "l'est" (line 2) is flagged too since #47; {"est": "verb"} asks for the verb there
+    assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (2, False), (3, False)]
 
 
 def test_audit_aligns_text_and_asr_words_and_leaves_missing_ones_unchecked():
@@ -429,3 +430,46 @@ def test_an_explicit_margin_wins_over_the_scorers_in_audit_and_render_verified()
     [line] = render_verified(["est"], {1: [("est", READINGS, "verb")]}, render=lambda *a: "take",
                              emitter=emitter, words_of=lambda audio: words, scorer="crop", margin=7.0)
     assert line.chosen.verdicts[0].margin == 7.0
+
+
+# heteronyms elided onto a clitic (#47) ----------------------------------------
+
+
+def test_flag_risks_flags_a_heteronym_after_a_noun_clitic_only():
+    from voxy.speechtext import NOUN_CLITICS
+
+    text = "Il est à l'Est, c'est loin, vent d’est"
+    risks = flag_risks(text, heteronyms={"est": ()}, clitics=NOUN_CLITICS["fr"])
+    assert [(r.clitic, r.word) for r in risks] == [("", "est"), ("l'", "Est"), ("d’", "est")]
+    assert [r.word for r in flag_risks(text, heteronyms={"est": ()})] == ["est"]  # default: as before
+
+
+def test_audit_keeps_c_est_l_est_and_est_apart_on_one_line():
+    from voxy.speechtext import Risk
+
+    text = "C'est à l'Est, il est là"
+    # Whisper's split: the apostrophe goes with the word
+    said = [" C", "'est", " à", " l", "'est", " il", " est", " là."]
+    words = [{"start": float(i), "end": i + 0.3, "text": w} for i, w in enumerate(said)]
+
+    def emitter(audio, start, end):  # the noun around "l'Est" (t = 4), the verb elsewhere
+        noun, verb = ["a", "ɛ", "ɛ", "s", "s", "t", "t", "a"], ["a", "ɛ", "ɛ", "<pad>", "a"]
+        heard = noun if 3 <= start + 0.08 < 5 else verb
+        return log_probs_from_path(_ids(heard), vocab_size=len(VOCAB)), VOCAB
+
+    def spacy_like(text):  # what pos_detector proposes: c'est's est comes first
+        return [Risk(1, "est", "pos", expected="verb", clitic="C'"),
+                Risk(1, "Est", "pos", expected="noun", clitic="l'"),
+                Risk(1, "est", "pos", expected="verb")]
+
+    findings = audit(text, "take.wav", readings={"est": READINGS}, detectors=[spacy_like],
+                     scoring="spot", context=0, emitter=emitter, words_of=lambda audio: words)
+    assert [(f.risk.clitic, f.verdict.expected, f.verdict.start, f.ok) for f in findings] == [
+        ("l'", "noun", 4.0, True), ("", "verb", 6.0, True)]
+
+
+def test_render_checks_skip_elided_risks_and_keep_the_plain_word_checked():
+    from voxy.speechtext import Risk
+
+    risks = [Risk(1, "est", "pos", expected="verb"), Risk(1, "Est", "pos", expected="noun", clitic="l'")]
+    assert checks_by_line(risks, readings={"est": READINGS}) == {1: [("est", READINGS, "verb")]}
