@@ -1,0 +1,20 @@
+voxy.script
+===========
+
+.. automodule:: voxy.script
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      add_take
+      finish_section
+      lengthen_pauses
+      load_voice_profile
+      missing_takes
+      plan_script
+      render_script
+      segment_key
+      status
+   

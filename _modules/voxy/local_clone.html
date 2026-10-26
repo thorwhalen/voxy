@@ -128,6 +128,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.pronounce.html">voxy.pronounce</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.say_model.html">voxy.say_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.script.html">voxy.script</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.speakers.html">voxy.speakers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.speechtext.html">voxy.speechtext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.stores.html">voxy.stores</a></li>
@@ -791,51 +792,54 @@
 </span><span id="line-551">        <span class="n">stores</span><span class="o">.</span><span class="n">audio_store</span><span class="p">(</span><span class="n">stores</span><span class="o">.</span><span class="n">SAMPLES_KIND</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)[</span>
 </span><span id="line-552">            <span class="n">DESIGN_CLIP_NAME</span>
 </span><span id="line-553">        <span class="p">]</span> <span class="o">=</span> <span class="n">preview</span><span class="o">.</span><span class="n">audio</span>
-</span><span id="line-554">        <span class="n">path</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">kind_dir</span><span class="p">(</span><span class="n">stores</span><span class="o">.</span><span class="n">SAMPLES_KIND</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span> <span class="o">/</span> <span class="n">DESIGN_CLIP_NAME</span>
-</span><span id="line-555">        <span class="k">return</span> <span class="n">reference_profile</span><span class="p">(</span>
-</span><span id="line-556">            <span class="n">path</span><span class="p">,</span>
-</span><span id="line-557">            <span class="n">preview</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
-</span><span id="line-558">            <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-</span><span id="line-559">            <span class="n">sample_rate</span><span class="o">=</span><span class="n">preview</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">,</span>
-</span><span id="line-560">            <span class="n">designed_from</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
-</span><span id="line-561">            <span class="n">seed</span><span class="o">=</span><span class="n">preview</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span>
-</span><span id="line-562">        <span class="p">)</span></div>
+</span><span id="line-554">        <span class="n">path</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-555">            <span class="n">stores</span><span class="o">.</span><span class="n">kind_dir</span><span class="p">(</span><span class="n">stores</span><span class="o">.</span><span class="n">SAMPLES_KIND</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-556">            <span class="o">/</span> <span class="n">DESIGN_CLIP_NAME</span>
+</span><span id="line-557">        <span class="p">)</span>
+</span><span id="line-558">        <span class="k">return</span> <span class="n">reference_profile</span><span class="p">(</span>
+</span><span id="line-559">            <span class="n">path</span><span class="p">,</span>
+</span><span id="line-560">            <span class="n">preview</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+</span><span id="line-561">            <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="line-562">            <span class="n">sample_rate</span><span class="o">=</span><span class="n">preview</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">,</span>
+</span><span id="line-563">            <span class="n">designed_from</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+</span><span id="line-564">            <span class="n">seed</span><span class="o">=</span><span class="n">preview</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span>
+</span><span id="line-565">        <span class="p">)</span></div>
 </div>
 
-</span><span id="line-563">
-</span><span id="line-564">
+</span><span id="line-566">
+</span><span id="line-567">
 <div class="viewcode-block" id="XTTSSpeechModel">
 <a class="viewcode-back" href="../../_autosummary/voxy.local_clone.html#voxy.local_clone.XTTSSpeechModel">[docs]</a>
-</span><span id="line-565"><span class="k">class</span><span class="w"> </span><span class="nc">XTTSSpeechModel</span><span class="p">(</span><span class="n">LocalCloneSpeechModel</span><span class="p">):</span>
-</span><span id="line-566"><span class="w">    </span><span class="sd">"""XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).</span>
-</span><span id="line-567">
-</span><span id="line-568"><span class="sd">    The weights' licence must be accepted once: ``accept_licence=True`` or</span>
-</span><span id="line-569"><span class="sd">    ``$VOXY_ACCEPT_COQUI_CPML=1`` (else loading would stop to ask on a terminal).</span>
-</span><span id="line-570"><span class="sd">    """</span>
-</span><span id="line-571">
-</span><span id="line-572">    <span class="n">backend_name</span> <span class="o">=</span> <span class="s2">"xtts"</span>
-</span><span id="line-573">    <span class="n">LICENCE_ENVVAR</span> <span class="o">=</span> <span class="s2">"VOXY_ACCEPT_COQUI_CPML"</span>
+</span><span id="line-568"><span class="k">class</span><span class="w"> </span><span class="nc">XTTSSpeechModel</span><span class="p">(</span><span class="n">LocalCloneSpeechModel</span><span class="p">):</span>
+</span><span id="line-569"><span class="w">    </span><span class="sd">"""XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).</span>
+</span><span id="line-570">
+</span><span id="line-571"><span class="sd">    The weights' licence must be accepted once: ``accept_licence=True`` or</span>
+</span><span id="line-572"><span class="sd">    ``$VOXY_ACCEPT_COQUI_CPML=1`` (else loading would stop to ask on a terminal).</span>
+</span><span id="line-573"><span class="sd">    """</span>
 </span><span id="line-574">
-</span><span id="line-575">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">accept_licence</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-</span><span id="line-576">        <span class="k">if</span> <span class="n">accept_licence</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-577">            <span class="n">accept_licence</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LICENCE_ENVVAR</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"1"</span>
-</span><span id="line-578">        <span class="n">env_vars</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"env_vars"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
-</span><span id="line-579">        <span class="k">if</span> <span class="n">accept_licence</span><span class="p">:</span>
-</span><span id="line-580">            <span class="n">env_vars</span><span class="p">[</span><span class="s2">"COQUI_TOS_AGREED"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1"</span>
-</span><span id="line-581">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">env_vars</span><span class="o">=</span><span class="n">env_vars</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="line-582">        <span class="bp">self</span><span class="o">.</span><span class="n">accept_licence</span> <span class="o">=</span> <span class="n">accept_licence</span>
-</span><span id="line-583">
+</span><span id="line-575">    <span class="n">backend_name</span> <span class="o">=</span> <span class="s2">"xtts"</span>
+</span><span id="line-576">    <span class="n">LICENCE_ENVVAR</span> <span class="o">=</span> <span class="s2">"VOXY_ACCEPT_COQUI_CPML"</span>
+</span><span id="line-577">
+</span><span id="line-578">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">accept_licence</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span id="line-579">        <span class="k">if</span> <span class="n">accept_licence</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-580">            <span class="n">accept_licence</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LICENCE_ENVVAR</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"1"</span>
+</span><span id="line-581">        <span class="n">env_vars</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"env_vars"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
+</span><span id="line-582">        <span class="k">if</span> <span class="n">accept_licence</span><span class="p">:</span>
+</span><span id="line-583">            <span class="n">env_vars</span><span class="p">[</span><span class="s2">"COQUI_TOS_AGREED"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1"</span>
+</span><span id="line-584">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">env_vars</span><span class="o">=</span><span class="n">env_vars</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="line-585">        <span class="bp">self</span><span class="o">.</span><span class="n">accept_licence</span> <span class="o">=</span> <span class="n">accept_licence</span>
+</span><span id="line-586">
 <div class="viewcode-block" id="XTTSSpeechModel.synthesize">
 <a class="viewcode-back" href="../../_autosummary/voxy.local_clone.html#voxy.local_clone.XTTSSpeechModel.synthesize">[docs]</a>
-</span><span id="line-584">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-585"><span class="w">        </span><span class="sd">"""As ``LocalCloneSpeechModel.synthesize``, once the licence is accepted."""</span>
-</span><span id="line-586">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">accept_licence</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_path"</span><span class="p">):</span>
-</span><span id="line-587">            <span class="k">raise</span> <span class="ne">PermissionError</span><span class="p">(</span>
-</span><span id="line-588">                <span class="s2">"XTTS-v2 weights are under the Coqui Public Model Licence "</span>
-</span><span id="line-589">                <span class="s2">"(non-commercial, https://coqui.ai/cpml). Accept it with "</span>
-</span><span id="line-590">                <span class="sa">f</span><span class="s2">"accept_licence=True or </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">LICENCE_ENVVAR</span><span class="si">}</span><span class="s2">=1."</span>
-</span><span id="line-591">            <span class="p">)</span>
-</span><span id="line-592">        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span></div>
+</span><span id="line-587">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-588"><span class="w">        </span><span class="sd">"""As ``LocalCloneSpeechModel.synthesize``, once the licence is accepted."""</span>
+</span><span id="line-589">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">accept_licence</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_path"</span><span class="p">):</span>
+</span><span id="line-590">            <span class="k">raise</span> <span class="ne">PermissionError</span><span class="p">(</span>
+</span><span id="line-591">                <span class="s2">"XTTS-v2 weights are under the Coqui Public Model Licence "</span>
+</span><span id="line-592">                <span class="s2">"(non-commercial, https://coqui.ai/cpml). Accept it with "</span>
+</span><span id="line-593">                <span class="sa">f</span><span class="s2">"accept_licence=True or </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">LICENCE_ENVVAR</span><span class="si">}</span><span class="s2">=1."</span>
+</span><span id="line-594">            <span class="p">)</span>
+</span><span id="line-595">        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span></div>
 </div>
 
 </span></code></pre></div>
@@ -851,7 +855,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=6a9d8632"></script>
+    <script src="../../_static/documentation_options.js?v=cee5022b"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

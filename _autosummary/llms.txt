@@ -20,6 +20,7 @@
 - [voxy.pronounce](voxy.pronounce.html.md): Checking, in the audio, which reading of a flagged word a render used.
 - [voxy.refprep](voxy.refprep.html.md): Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
 - [voxy.say_model](voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
+- [voxy.script](voxy.script.html.md): Render a cast script: text segments, each read by its own voice, one audio file per section.
 - [voxy.speakers](voxy.speakers.html.md): Keep one speaker: find their voice in a recording and mark everyone else’s words.
 - [voxy.speechtext](voxy.speechtext.html.md): Display text vs speech text, and spotting words a model may misread.
 - [voxy.stores](voxy.stores.html.md): Where voxy keeps its data: voice records and audio, as &#96;MutableMapping&#96; stores.
