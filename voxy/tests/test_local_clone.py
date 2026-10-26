@@ -369,3 +369,46 @@ def test_deepfilternet_lowers_noise_for_real(tmp_path):
     refprep.deepfilternet_denoise(src, dst)
     cleaned, _ = read_wav(dst)
     assert np.sqrt(np.mean(cleaned**2)) < np.sqrt(np.mean(noisy**2))
+
+
+# local voice design -------------------------------------------------------------
+
+
+def test_qwen_designs_a_voice_then_clones_from_the_chosen_preview(tmp_path):
+    designed = []
+
+    def design(text, *, instruct, seed, **kw):
+        designed.append((instruct, seed))
+        return 0.1 * np.sin(np.linspace(0, 50 + seed, SR)).astype(np.float32), SR
+
+    calls = []
+    model = voxy.create_speech_model(
+        "qwen3tts", generate=fake_generate(calls), design=design
+    )
+    previews = model.design_voice_previews("A calm deep voice", seeds=[3, 5])
+    assert [p.seed for p in previews] == [3, 5]
+    assert designed == [("A calm deep voice", 3), ("A calm deep voice", 5)]
+
+    voices = voices_store(rootdir=tmp_path)
+    profile = voxy.design_from_description(
+        "calm", "A calm deep voice", preview=previews[1], model=model,
+        voices=voices, rootdir=tmp_path,
+    )
+    clip = Path(profile.segment["ref_audio"])
+    assert clip == tmp_path / "samples" / "calm" / "design.wav"
+    assert clip.read_bytes() == previews[1].audio
+    loaded = load_voice("calm", model_type="qwen3tts", voices=voices)
+    speech = model.synthesize("Hello there.", loaded)  # rendering goes through cloning
+    assert speech.backend == "qwen3tts" and calls[0]["ref_audio"] == str(clip)
+
+
+def test_design_voice_without_preview_takes_the_first_generated(tmp_path):
+    model = voxy.create_speech_model(
+        "qwen3tts",
+        generate=fake_generate([]),
+        design=lambda text, **kw: (np.zeros(80, np.float32), SR),
+    )
+    profile = model.design_voice("x", name="n", rootdir=tmp_path, seeds=[9])
+    assert profile.metadata["seed"] == 9 and profile.metadata["designed_from"] == "x"
+    with pytest.raises(TypeError, match="design_voice_previews"):
+        model.design_voice("x", name="n", preview=model.design_voice_previews("x")[0], seeds=[1])

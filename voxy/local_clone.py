@@ -35,7 +35,7 @@ Seams (keyword arguments of every model):
 
 import os
 import uuid
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
@@ -54,6 +54,11 @@ DFLT_GAP_MS = 250
 DFLT_PARAGRAPH_GAP_MS = 700
 REFERENCE_SPEAKER_ID = 0
 DFLT_REFERENCE_SAMPLE_RATE = 24000
+DFLT_DESIGN_SEEDS = (0, 1, 2)
+DFLT_DESIGN_PREVIEW_TEXT = (
+    "The morning light crossed the water, and for a moment nothing else moved."
+)
+DESIGN_CLIP_NAME = "design.wav"
 
 
 def voxy_cache_dir(*parts: str) -> Path:
@@ -297,24 +302,27 @@ class WorkerGenerate:
             log_path=voxy_cache_dir("logs", f"{self.backend.name}.log"),
         )
 
-    def __call__(self, text: str, *, ref_audio, ref_text: str, **params):
+    def _run(self, op: str, **request):
+        """One worker operation that writes a WAV: ``(samples, sample_rate)``."""
         if self._worker is None:
             self._worker = self._make_worker()
         scratch = voxy_cache_dir("tmp")
         scratch.mkdir(parents=True, exist_ok=True)
         out_path = scratch / f"{self.backend.name}-{uuid.uuid4().hex}.wav"
         try:
-            self._worker.call(
-                "synthesize",
-                text=text,
-                ref_audio=ref_audio,
-                ref_text=ref_text,
-                out_path=str(out_path),
-                **params,
-            )
+            self._worker.call(op, out_path=str(out_path), **request)
             return read_wav(out_path)
         finally:
             out_path.unlink(missing_ok=True)
+
+    def __call__(self, text: str, *, ref_audio, ref_text: str, **params):
+        return self._run(
+            "synthesize", text=text, ref_audio=ref_audio, ref_text=ref_text, **params
+        )
+
+    def design(self, text: str, *, instruct: str, **params):
+        """The adapter's ``design`` operation (backends that can design voices)."""
+        return self._run("design", text=text, instruct=instruct, **params)
 
     def close(self) -> None:
         """Stop the worker and free its memory."""
@@ -463,10 +471,95 @@ class VoxCPMSpeechModel(LocalCloneSpeechModel):
     backend_name = "voxcpm"
 
 
+@dataclass
+class DesignPreview:
+    """One candidate voice from ``design_voice_previews``: listen, then pick."""
+
+    seed: int
+    audio: bytes  # WAV of ``text`` spoken in the candidate voice
+    text: str
+    sample_rate: int
+    description: str
+
+    def save(self, path) -> str:
+        """Write the clip to ``path`` (to audition it)."""
+        return Speech(self.audio, format="wav").save(str(path))
+
+
 class Qwen3TTSSpeechModel(LocalCloneSpeechModel):
-    """Qwen3-TTS Base: stable cloning (``init``: model_id 1.7B or 0.6B)."""
+    """Qwen3-TTS: stable cloning (``init``: model_id 1.7B or 0.6B) and local voice design.
+
+    Designing follows Qwen's design-then-clone recipe: ``design_voice_previews``
+    speaks a sample text in voices made from a description (one per seed, no real
+    person involved); ``design_voice`` keeps the chosen sample as a reference
+    profile, so long texts render through Base cloning with one stable voice.
+
+    Args (beyond ``LocalCloneSpeechModel``):
+        design: ``(text, *, instruct, **params) -> (samples, sample_rate)``, the
+            VoiceDesign model call. Default: the worker's ``design`` operation.
+    """
 
     backend_name = "qwen3tts"
+
+    def __init__(self, *args, design: Callable | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._design = design or getattr(self._generate, "design", None)
+
+    def design_voice_previews(
+        self,
+        description: str,
+        *,
+        text: str = DFLT_DESIGN_PREVIEW_TEXT,
+        seeds: Sequence[int] = DFLT_DESIGN_SEEDS,
+        language: str = "English",
+        **params,
+    ) -> list[DesignPreview]:
+        """Candidate voices for ``description``, each speaking ``text`` (one per seed)."""
+        if self._design is None:
+            raise NotImplementedError("This Qwen3TTS model has no design function")
+        previews = []
+        for seed in seeds:
+            samples, sr = self._design(
+                text, instruct=description, seed=seed, language=language, **params
+            )
+            audio = write_wav(np.asarray(samples, dtype=np.float32).reshape(-1), sr)
+            previews.append(DesignPreview(seed, audio, text, sr, description))
+        return previews
+
+    def design_voice(
+        self,
+        description: str,
+        *,
+        name: str,
+        preview: DesignPreview | None = None,
+        rootdir: str | os.PathLike | None = None,
+        **preview_kwargs,
+    ) -> VoiceProfile:
+        """A reference profile from the chosen ``preview`` (default: the first generated).
+
+        The clip is kept at ``samples/{name}/design.wav`` under the data root, and
+        the profile points at it, so the voice survives like a cloned one.
+        """
+        from voxy import stores
+
+        if preview is None:
+            preview = self.design_voice_previews(description, **preview_kwargs)[0]
+        elif preview_kwargs:
+            raise TypeError(
+                "pass preview options to design_voice_previews, not with a chosen preview"
+            )
+        stores.audio_store(stores.SAMPLES_KIND, name, rootdir=rootdir)[
+            DESIGN_CLIP_NAME
+        ] = preview.audio
+        path = stores.kind_dir(stores.SAMPLES_KIND, name, rootdir=rootdir) / DESIGN_CLIP_NAME
+        return reference_profile(
+            path,
+            preview.text,
+            backend=self.name,
+            sample_rate=preview.sample_rate,
+            designed_from=description,
+            seed=preview.seed,
+        )
 
 
 class XTTSSpeechModel(LocalCloneSpeechModel):
