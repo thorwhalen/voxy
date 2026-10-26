@@ -1,4 +1,4 @@
-> built 2026-10-26 11:19 UTC from dca9410 (main) · voxy 0.0.31. Details: build_info.json
+> built 2026-10-26 14:18 UTC from b507a8f (main) · voxy 0.0.32. Details: build_info.json
 
 # index.html.md
 
@@ -264,7 +264,7 @@ findings = audit(
 misread = [f for f in findings if f.ok is False]  # re-render these
 ```
 
-`audit` finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from `expected` (a mapping, or a function of each risk) or from a detector such as `voxy.speechtext.pos_detector()`. A heteronym elided onto a clitic that can precede its noun reading (French *l’Est*, *vent d’est*) is flagged and checked too; name it in the mapping by its clitic (`{"est": "verb", "l'est": "noun"}`), since `"est"` alone does not cover it. While rendering, `render_verified` (and `verify_words`, which it calls on each take) scores the same way and re-renders a line whose word came out wrong. `audit` takes `scoring=` (`"phrase"`, `"spot"` or `"crop"`), and all three take a `scorer=` (a name or a scorer from `phrase_scorer`/`spot_scorer`/`crop_scorer`, each carrying the margin it is calibrated for); cropping the word at its ASR times credits a neighbour’s /s/ or /t/ to the longer reading, so keep the default.
+`audit` finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from `expected` (a mapping, or a function of each risk) or from a detector such as `voxy.speechtext.pos_detector()`. A heteronym elided onto a clitic that can precede its noun reading (French *l’Est*, *vent d’est*) is flagged and checked too; name it in the mapping by its clitic (`{"est": "verb", "l'est": "noun"}`), since `"est"` alone does not cover it. While rendering, `render_verified` scores the same way and re-renders a line whose word came out wrong; give it `audit_options={"readings": ..., "expected": ...}` (`audit`’s own options) and each take goes through `audit`, occurrence by occurrence, elided forms included. Its older `checks` (`verify_words`) match words by spelling. `audit` takes `scoring=` (`"phrase"`, `"spot"` or `"crop"`), and all three take a `scorer=` (a name or a scorer from `phrase_scorer`/`spot_scorer`/`crop_scorer`, each carrying the margin it is calibrated for); cropping the word at its ASR times credits a neighbour’s /s/ or /t/ to the longer reading, so keep the default.
 
 ### The voice library: clone once, reuse by name
 
@@ -2172,7 +2172,7 @@ without torch.
 | [`phrase_scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.phrase_scorer)(\*, emitter[, phonemize, ...])       | Each reading as the whole phrase around the word ([`phrase_readings()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.phrase_readings)), the `context` words on each side written out by `phonemize` in `language`.                                    |
 | [`reading_name`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.reading_name)(name)                                 | The reading a name stands for: `"verb~liaison"` is a variant of `"verb"`.                                                                                                                                                            |
 | [`reading_scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.reading_scorer)([scoring])                          | The [`Scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Scorer) named `scoring` in [`SCORERS`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.SCORERS), made with `options`.                                                                        |
-| [`render_verified`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.render_verified)(lines, checks, \*, render[, ...])  | Render each line, and re-render the ones whose flagged words came out wrong.                                                                                                                                                         |
+| [`render_verified`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.render_verified)(lines[, checks, ...])              | Render each line, and re-render the ones whose flagged words came out wrong.                                                                                                                                                         |
 | [`score_readings`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.score_readings)(log_probs, vocab, readings, \*)     | Each reading's CTC log-likelihood per target symbol (higher is better).                                                                                                                                                              |
 | [`speech_renderer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.speech_renderer)(model[, voice, outdir, ...])       | A `render` for [`render_verified()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.render_verified) over a [`voxy.base.SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel).                                               |
 | [`split_elisions`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.split_elisions)(words, \*[, elisions])              | Timed words split at each elision of `elisions`, as `_text_words()` splits the text, so [`align_words()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.align_words) can match them.                                                               |
@@ -2188,12 +2188,12 @@ without torch.
 
 ### Classes
 
-| [`Finding`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Finding)(risk[, verdict])                 | One flagged word of a render: the risk, and what the audio said about it.                                                               |
-|-------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| [`LineTakes`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.LineTakes)(line, text[, takes, checks])   | Every take of one line (1-based `line`, as [`voxy.speechtext.Risk`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Risk)). |
-| [`Scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Scorer)(\*args, \*\*kwargs)               | Scores the readings of timed ASR word `words[i]` in `audio` (higher is better).                                                         |
-| [`Take`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Take)(attempt, audio[, verdicts])         | One render of a line and what the audio says about its flagged words.                                                                   |
-| [`Verdict`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Verdict)(word, start, end, scores[, ...]) | What the audio says about one flagged word.                                                                                             |
+| [`Finding`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Finding)(risk[, verdict, expected])         | One flagged word of a render: the risk, and what the audio said about it.                                                               |
+|---------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| [`LineTakes`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.LineTakes)(line, text[, takes, checks])     | Every take of one line (1-based `line`, as [`voxy.speechtext.Risk`](_autosummary/voxy.speechtext.html.md#voxy.speechtext.Risk)). |
+| [`Scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Scorer)(\*args, \*\*kwargs)                 | Scores the readings of timed ASR word `words[i]` in `audio` (higher is better).                                                         |
+| [`Take`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Take)(attempt, audio[, verdicts, findings]) | One render of a line and what the audio says about its flagged words.                                                                   |
+| [`Verdict`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Verdict)(word, start, end, scores[, ...])   | What the audio says about one flagged word.                                                                                             |
 
 ### voxy.pronounce.BLANK_SYMBOL *= '<pad>'*
 
@@ -2268,7 +2268,7 @@ espeak voices for [`audit()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce
 
 alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
 
-### *class* voxy.pronounce.Finding(risk, verdict=None)
+### *class* voxy.pronounce.Finding(risk, verdict=None, expected=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2276,6 +2276,10 @@ One flagged word of a render: the risk, and what the audio said about it.
 
 `verdict` is None when the word could not be located in the audio (ASR heard it
 a different number of times than the text has it): listen to that one.
+
+#### expected *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+The reading the word should have, when known (also when `verdict` is None).
 
 #### *property* ok *: [bool](https://docs.python.org/3/builtins/functions.html#bool) | [None](https://docs.python.org/3/builtins/constants.html#None)*
 
@@ -2338,7 +2342,7 @@ Scores the readings of timed ASR word `words[i]` in `audio` (higher is better).
 
 `margin` is the margin its scores are calibrated for, on their own scale.
 
-### *class* voxy.pronounce.Take(attempt, audio, verdicts=())
+### *class* voxy.pronounce.Take(attempt, audio, verdicts=(), findings=())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2347,6 +2351,13 @@ One render of a line and what the audio says about its flagged words.
 #### *property* failing *: [list](https://docs.python.org/3/builtins/stdtypes.html#list)[[Verdict](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Verdict)]*
 
 The verdicts of this take whose word was decidedly misread.
+
+#### findings *: [tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[Finding](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Finding), ...]* *= ()*
+
+every flagged word of the take.
+
+* **Type:**
+  With `audit_options` ([`render_verified()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.render_verified))
 
 ### voxy.pronounce.VARIANT_SEPARATOR *= '~'*
 
@@ -2469,8 +2480,9 @@ Lexique-derived heteronym list the caller supplies; `expected` names the
 reading each word should have, and otherwise the risks’ own `expected` (what a
 detector such as `voxy.speechtext.pos_detector` found) is used. Words with no
 entry are skipped, and so are words elided onto a clitic (a risk with a `clitic`,
-“l’Est”; see thorwhalen/voxy#48), whose differing reading then leaves the word’s open: `verify_words`
-matches spellings, not places. Each word is checked once: `verify_words` finds every place
+“l’Est”), whose differing reading then leaves the word’s open: `verify_words`
+matches spellings, not places (`render_verified(audit_options=...)` checks
+places). Each word is checked once: `verify_words` finds every place
 it is spoken, so a word whose risks name *different* readings gets none here
 (group the risks by line with [`checks_by_line()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.checks_by_line) to check each one).
 
@@ -2637,7 +2649,7 @@ The [`Scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Scorer) named 
 * **Return type:**
   [`Scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Scorer)
 
-### voxy.pronounce.render_verified(lines, checks, \*, render, emitter=None, words_of=<function \_transcribed_words>, max_attempts=3, scorer='phrase', margin=None)
+### voxy.pronounce.render_verified(lines, checks=None, \*, audit_options=None, render, emitter=None, words_of=<function \_transcribed_words>, max_attempts=3, scorer='phrase', margin=None)
 
 Render each line, and re-render the ones whose flagged words came out wrong.
 
@@ -2649,9 +2661,18 @@ line not at all (line numbers still count it, as `flag_risks` does).
 requires each expected reading to be confirmed (a word ASR did not find, or the
 recogniser could not decide, leaves the line unverified rather than retried).
 
+`checks` match words by spelling. With `audit_options` instead, each take of
+each line goes through [`audit()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.audit), which tells the occurrences of a word apart
+(“l’Est” from “est”, the n-th “est” on the line from the others) and flags the
+line’s heteronyms itself. The options are `audit`’s own (`readings`,
+`expected`, `detectors`, `language`…), applied to the one line, so an
+`expected` function sees the risk with its real line number; `emitter`,
+`words_of`, `scorer` and `margin` here are the defaults for `audit`’s.
+Give `checks` or `audit_options`, not both.
+
 * **Parameters:**
   * **lines** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – The lines to speak, in order (line numbers start at 1).
-  * **checks** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]]) – By line number, the words to check ([`checks_by_line()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.checks_by_line)).
+  * **checks** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – By line number, the words to check ([`checks_by_line()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.checks_by_line)).
   * **render** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike)]) – `(text, line, attempt) -> audio path`; each call should give a
     new take (a new seed, or a service’s own variation).
     [`speech_renderer()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.speech_renderer) adapts a [`voxy.base.SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel).
@@ -4467,18 +4488,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-26 11:19 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/dca9410cec1e860a55cb1e57545dbee266e69fc0"><code>dca9410</code></a> on branch <code>main</code>, for **voxy 0.0.31** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-26 14:18 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/b507a8f1ce5c141f5d1adf06086dc86bcf8fe6da"><code>b507a8f</code></a> on branch <code>main</code>, for **voxy 0.0.32** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.31) is behind the latest release on PyPI (0.0.32): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.32) is behind the latest release on PyPI (0.0.33): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/dca9410cec1e860a55cb1e57545dbee266e69fc0"><code>dca9410cec1e860a55cb1e57545dbee266e69fc0</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/b507a8f1ce5c141f5d1adf06086dc86bcf8fe6da"><code>b507a8f1ce5c141f5d1adf06086dc86bcf8fe6da</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -4489,9 +4510,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/40313805388">40313805388</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/40337872037">40337872037</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>dca9410cec1e860a55cb1e57545dbee266e69fc0</code> (in the history of the built commit) |
+| Event commit | <code>b507a8f1ce5c141f5d1adf06086dc86bcf8fe6da</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4516,13 +4537,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.32/">0.0.32</a>, newer than the documented version (0.0.31).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.33/">0.0.33</a>, newer than the documented version (0.0.32).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout dca9410cec1e860a55cb1e57545dbee266e69fc0
+git checkout b507a8f1ce5c141f5d1adf06086dc86bcf8fe6da
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
