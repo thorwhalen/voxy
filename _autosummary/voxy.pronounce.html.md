@@ -573,6 +573,8 @@ line’s heteronyms itself. The options are `audit`’s own (`readings`,
 `expected`, `detectors`, `language`…), applied to the one line, so an
 `expected` function sees the risk with its real line number; `emitter`,
 `words_of`, `scorer` and `margin` here are the defaults for `audit`’s.
+The `detectors` run once on all the lines, so they read a sentence that spans two
+lines in context; the risks they propose for a line outside the text are dropped.
 Give `checks` or `audit_options`, not both.
 
 * **Parameters:**

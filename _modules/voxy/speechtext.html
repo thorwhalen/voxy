@@ -814,12 +814,13 @@
 </span><span id="line-599">        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># a streaming chat yields chunks</span>
 </span><span id="line-600">            <span class="n">reply</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">reply</span><span class="p">)</span>
 </span><span id="line-601">        <span class="n">used</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-</span><span id="line-602">        <span class="n">risks</span> <span class="o">=</span> <span class="p">(</span><span class="n">_proposed_risk</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">used</span><span class="p">,</span> <span class="n">clitics</span><span class="o">=</span><span class="n">clitics</span><span class="p">)</span>
-</span><span id="line-603">            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">_json_list</span><span class="p">(</span><span class="n">reply</span><span class="p">)</span>
-</span><span id="line-604">        <span class="p">)</span>
-</span><span id="line-605">        <span class="k">return</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">risks</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
-</span><span id="line-606">
-</span><span id="line-607">    <span class="k">return</span> <span class="n">detect</span></div>
+</span><span id="line-602">        <span class="n">risks</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-603">            <span class="n">_proposed_risk</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">used</span><span class="p">,</span> <span class="n">clitics</span><span class="o">=</span><span class="n">clitics</span><span class="p">)</span>
+</span><span id="line-604">            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">_json_list</span><span class="p">(</span><span class="n">reply</span><span class="p">)</span>
+</span><span id="line-605">        <span class="p">)</span>
+</span><span id="line-606">        <span class="k">return</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">risks</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+</span><span id="line-607">
+</span><span id="line-608">    <span class="k">return</span> <span class="n">detect</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -834,7 +835,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=565bc8c8"></script>
+    <script src="../../_static/documentation_options.js?v=9dd25805"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

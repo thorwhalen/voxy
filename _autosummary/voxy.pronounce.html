@@ -901,6 +901,8 @@ line’s heteronyms itself. The options are <code class="docutils literal notran
 <code class="docutils literal notranslate"><span class="pre">expected</span></code>, <code class="docutils literal notranslate"><span class="pre">detectors</span></code>, <code class="docutils literal notranslate"><span class="pre">language</span></code>…), applied to the one line, so an
 <code class="docutils literal notranslate"><span class="pre">expected</span></code> function sees the risk with its real line number; <code class="docutils literal notranslate"><span class="pre">emitter</span></code>,
 <code class="docutils literal notranslate"><span class="pre">words_of</span></code>, <code class="docutils literal notranslate"><span class="pre">scorer</span></code> and <code class="docutils literal notranslate"><span class="pre">margin</span></code> here are the defaults for <code class="docutils literal notranslate"><span class="pre">audit</span></code>’s.
+The <code class="docutils literal notranslate"><span class="pre">detectors</span></code> run once on all the lines, so they read a sentence that spans two
+lines in context; the risks they propose for a line outside the text are dropped.
 Give <code class="docutils literal notranslate"><span class="pre">checks</span></code> or <code class="docutils literal notranslate"><span class="pre">audit_options</span></code>, not both.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1251,7 +1253,7 @@ inject <code class="docutils literal notranslate"><span class="pre">phrase_score
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=565bc8c8"></script>
+<script src="../_static/documentation_options.js?v=9dd25805"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
