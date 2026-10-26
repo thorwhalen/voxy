@@ -41,7 +41,13 @@ from typing import Protocol
 import numpy as np
 
 from voxy.envs import EnvSpec, ensure_env, worker_environ
-from voxy.speechtext import _WORD, ELISIONS, NOUN_CLITICS, flag_risks, split_clitic
+from voxy.speechtext import (
+    ELISIONS,
+    NOUN_CLITICS,
+    elided_words,
+    flag_risks,
+    split_clitic,
+)
 
 #: The phoneme recogniser: wav2vec2 fine-tuned to emit espeak IPA (CTC, 16 kHz).
 DFLT_PHONEME_MODEL = "facebook/wav2vec2-lv-60-espeak-cv-ft"
@@ -1126,8 +1132,7 @@ def _text_words(
     """
     out = []
     for number, line in enumerate(text.split("\n"), 1):
-        for match in _WORD.finditer(line):
-            clitic, word = split_clitic(match.group(0), elisions)
+        for word, clitic in elided_words(line, elisions):
             if clitic:
                 out.append((number, clitic, ""))
             out.append((number, word, clitic))

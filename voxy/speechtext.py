@@ -468,8 +468,39 @@ def _json_list(reply: str) -> list:
     return []
 
 
-def _proposed_risk(item, lines: list[str]) -> Risk | None:
-    """``item`` as a :class:`Risk` if it names a word really on its line, else ``None``."""
+def elided_words(line: str, clitics: Collection[str]) -> list[tuple[str, str]]:
+    """``(word, clitic)`` of each word of ``line``, as written (clitic ``""`` when none).
+
+    >>> elided_words("Il est à l’Est", ("l'",))
+    [('Il', ''), ('est', ''), ('à', ''), ('Est', 'l’')]
+    """
+    out = []
+    for match in _WORD.finditer(line):
+        clitic, word = split_clitic(match.group(0), clitics)
+        out.append((word, clitic))
+    return out
+
+
+def _same_clitic(a: str, b: str) -> bool:
+    return a.replace("’", "'").casefold() == b.replace("’", "'").casefold()
+
+
+def _proposed_risk(
+    item,
+    lines: list[str],
+    used: set[tuple[int, int]],
+    *,
+    clitics: Collection[str] = (),
+) -> Risk | None:
+    """``item`` as a :class:`Risk` if it names a word really on its line, else ``None``.
+
+    A word elided onto one of ``clitics`` ("l'Est") is the risk ``Est`` with that
+    ``clitic``. The model may write it elided or bare: a bare word takes the place whose
+    spelling (case included) fits, the plain word before an elided one; the n-th
+    proposal of a word takes the n-th place (``used`` holds those taken), so a bare
+    word that fits several elided places equally ("c'est", "l'est") takes the first:
+    write it elided to say which.
+    """
     if not isinstance(item, dict):
         return None
     line, word = item.get("line"), item.get("word")
@@ -477,13 +508,34 @@ def _proposed_risk(item, lines: list[str]) -> Risk | None:
         isinstance(line, int) and isinstance(word, str) and 1 <= line <= len(lines)
     ):
         return None
-    on_line = {
-        part.casefold()
-        for m in _WORD.finditer(lines[line - 1])
-        for part in (m.group(0), *re.split(r"['’]", m.group(0)))  # "d'ici" holds "ici"
-    }
-    if word.rstrip(".").casefold() not in on_line:  # "Dr." is the word "Dr"
-        return None  # a word the model made up, or put on the wrong line
+    bare = word.rstrip(".")  # "Dr." is the word "Dr"
+    asked_clitic, asked = split_clitic(bare, clitics)
+    places = [
+        (i, token)
+        for i, token in enumerate(elided_words(lines[line - 1], clitics))
+        if (line, i) not in used
+        and token[0].casefold() == asked.casefold()
+        and (not asked_clitic or _same_clitic(token[1], asked_clitic))
+    ]
+    clitic = ""
+    if places:
+
+        def fit(place):  # the spelling fits (case included), then the plain word first
+            _, (spelled, elided) = place
+            return spelled != asked, elided != ""
+
+        places.sort(key=fit)  # stable: ties go in text order
+        (i, (_, clitic)) = places[0]
+        used.add((line, i))
+        word = asked if asked_clitic else word
+    else:  # "d'ici" holds "ici" (an apostrophe that is not one of the clitics)
+        parts = {
+            part.casefold()
+            for m in _WORD.finditer(lines[line - 1])
+            for part in re.split(r"['’]", m.group(0))
+        }
+        if asked_clitic or bare.casefold() not in parts:
+            return None  # a word the model made up, or put on the wrong line
     readings = tuple(r for r in item.get("readings") or () if isinstance(r, str))
     expected = item.get("expected")
     why = item.get("why")
@@ -497,6 +549,7 @@ def _proposed_risk(item, lines: list[str]) -> Risk | None:
         expected=expected
         if isinstance(expected, str) and expected in readings
         else None,
+        clitic=clitic,
     )
 
 
@@ -505,6 +558,7 @@ def llm_detector(
     chat: Callable[[str], str] | None = None,
     language: str = "French",
     prompt: str = LLM_RISK_PROMPT,
+    clitics: Collection[str] = tuple(ELISIONS["fr"]),
 ) -> Callable[[str], list[Risk]]:
     """A :func:`flag_risks` ``extra`` detector that asks a language model for risky words.
 
@@ -517,6 +571,9 @@ def llm_detector(
             keys and model from aix's own config). Each call costs a model request.
         language: The text's language, named in the prompt.
         prompt: A ``string.Template`` with ``$language`` and ``$text`` (numbered lines).
+        clitics: The clitics a word is elided onto in ``language`` (as ``pos_detector``); a proposal for
+            "l'Est" (or for "Est", when the line only has it elided) carries the
+            ``clitic``, as :func:`flag_risks` gives it.
 
     >>> fake = lambda prompt: '[{"line": 1, "word": "est", "readings": ["verb", "noun"], "expected": "verb"}]'
     >>> [(r.line, r.word, r.expected) for r in llm_detector(chat=fake)("Il est parti")]
@@ -541,7 +598,10 @@ def llm_detector(
         reply = chat(template.substitute(language=language, text=numbered))
         if not isinstance(reply, str):  # a streaming chat yields chunks
             reply = "".join(reply)
-        risks = (_proposed_risk(item, lines) for item in _json_list(reply))
+        used: set[tuple[int, int]] = set()
+        risks = (_proposed_risk(item, lines, used, clitics=clitics)
+            for item in _json_list(reply)
+        )
         return [r for r in risks if r is not None]
 
     return detect

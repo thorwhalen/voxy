@@ -161,3 +161,50 @@ def test_llm_detector_live():
 
     risks = llm_detector()("Mon frere\nest parti vers l'est.")
     assert all(r.line in (1, 2) for r in risks)
+
+
+def test_llm_detector_proposals_carry_the_clitic_of_an_elided_word():
+    import json
+
+    from voxy.speechtext import llm_detector
+
+    def detect(text, *proposals):
+        return llm_detector(chat=lambda prompt: json.dumps(list(proposals)))(text)
+
+    def p(line, word, expected="noun"):
+        return {"line": line, "word": word, "readings": ["verb", "noun"], "expected": expected}
+
+    # the model writes it elided
+    (risk,) = detect("Il est à l'Est", p(1, "l'Est"))
+    assert (risk.clitic, risk.word, risk.expected) == ("l'", "Est", "noun")
+    # the model writes it bare and the line only holds it elided
+    (risk,) = detect("Loin, à l’Est", p(1, "Est"))
+    assert (risk.clitic, risk.word) == ("l’", "Est")
+    # the plain word on the line stays plain, even when the line has the elided form too
+    (risk,) = detect("Il est à l'Est", p(1, "est", "verb"))
+    assert (risk.clitic, risk.word) == ("", "est")
+    # any elision counts (as pos_detector's); one the line does not hold adds nothing
+    assert detect("Loin d'ici", p(1, "ici"))[0].clitic == "d'"
+    assert llm_detector(chat=lambda _: json.dumps([p(1, "ici")]), clitics=())("Loin d'ici")[0].clitic == ""
+    assert detect("Il est là", p(1, "l'Est")) == []
+    assert [(r.clitic, r.word) for r in detect("Il est c'est", p(1, "c'est"))] == [("c'", "est")]
+
+
+def test_llm_detector_places_a_bare_word_by_case_apostrophe_and_occurrence():
+    import json
+
+    from voxy.speechtext import llm_detector
+
+    def detect(text, *words):
+        proposals = [{"line": 1, "word": w, "readings": ["verb", "noun"]} for w in words]
+        return [(r.word, r.clitic) for r in llm_detector(chat=lambda _: json.dumps(proposals))(text)]
+
+    assert detect("Il est à l'Est", "Est") == [("Est", "l'")]  # case picks the elided noun
+    assert detect("Il est à l'Est", "est", "Est") == [("est", ""), ("Est", "l'")]  # nth place
+    assert detect("C'est à l'Est", "Est") == [("Est", "l'")]
+    assert detect("l’Est", "l'Est") == [("Est", "l’")]  # either apostrophe; the line's spelling
+    assert detect("Il est c'est", "est") == [("est", "")]  # the plain word first
+    assert detect("C'est le vent de l'est", "est") == [("est", "C'")]  # a tie: the first place
+    assert detect("C'est le vent de l'est", "l'est") == [("est", "l'")]  # elided: that place
+    assert detect("l'Est et d'Est", "Est", "Est") == [("Est", "l'"), ("Est", "d'")]
+
