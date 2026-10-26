@@ -106,7 +106,7 @@ def test_verify_words_flags_the_take_that_said_the_noun():
         heard = _ids(["ɛ", "s", "t", "<pad>"])
         return log_probs_from_path(heard, vocab_size=len(VOCAB)), VOCAB
 
-    verdicts = verify_words("take.wav", checks, words=words, emitter=emitter)
+    verdicts = verify_words("take.wav", checks, words=words, emitter=emitter, scoring="crop")
     assert calls == [("take.wav", pytest.approx(0.82), pytest.approx(1.18))]
     (verdict,) = verdicts
     assert (verdict.heard, verdict.decided, verdict.ok) == ("noun", True, False)
@@ -303,3 +303,50 @@ def test_audit_scores_whole_phrases_so_a_neighbours_s_t_is_not_the_nouns():
     assert [f.ok for f in findings] == [True]
     with pytest.raises(ValueError, match="scoring"):
         audit("est", "take.wav", readings={"est": READINGS}, scoring="nope", words_of=lambda audio: words)
+
+
+# "triste est le": the audio has s t (end of "triste") then ɛ, the verb said right
+TRISTE_WORDS = [{"start": 0.0, "end": 0.4, "text": "triste"}, {"start": 0.4, "end": 0.6, "text": "est"},
+                {"start": 0.6, "end": 0.8, "text": "le"}]
+TRISTE_HEARD = ["s", "s", "t", "t", "ɛ", "ɛ", "<pad>", "a", "a"]
+
+
+def _triste_phonemize(texts, language):
+    ipa = {"triste": "st", "le": "a"}  # VOCAB has no l, ə
+    return [ipa[t] for t in texts]
+
+
+def _triste_emitter(audio, start, end):
+    if start > 0.3:  # a crop of "est" alone still holds triste's s t
+        return log_probs_from_path(_ids(["s", "t", "ɛ", "<pad>"]), vocab_size=len(VOCAB)), VOCAB
+    return log_probs_from_path(_ids(TRISTE_HEARD), vocab_size=len(VOCAB)), VOCAB
+
+
+def test_verify_words_scores_whole_phrases_by_default():
+    checks = [("est", READINGS, "verb")]
+    kwargs = dict(words=TRISTE_WORDS, emitter=_triste_emitter, phonemize=_triste_phonemize)
+    (phrase,) = verify_words("take.wav", checks, **kwargs)
+    assert (phrase.reading, phrase.ok, phrase.margin) == ("verb", True, 2.0)
+    (crop,) = verify_words("take.wav", checks, scoring="crop", **kwargs)
+    assert (crop.reading, crop.margin) == ("noun", 0.5)  # what cropping got wrong
+    with pytest.raises(ValueError, match="scoring"):
+        verify_words("take.wav", checks, scoring="nope", **kwargs)
+
+
+def test_render_verified_passes_its_scoring_to_verify_words():
+    renders = []
+
+    def render(text, line, attempt):
+        renders.append(attempt)
+        return f"take-{attempt}"
+
+    kwargs = dict(render=render, emitter=_triste_emitter, words_of=lambda audio: TRISTE_WORDS,
+                  phonemize=_triste_phonemize)
+    checks = {1: [("est", READINGS, "verb")]}
+    [line] = render_verified(["triste est le"], checks, **kwargs)
+    assert line.verified and renders == [0]  # phrase scoring hears the verb: one take
+    renders.clear()
+    [line] = render_verified(["triste est le"], checks, scoring="crop", **kwargs)
+    assert not line.verified and renders == [0, 1, 2]  # cropping "hears" the noun every take
+    with pytest.raises(ValueError, match="scoring"):
+        render_verified([], {}, render=render, emitter=None, scoring="nope")

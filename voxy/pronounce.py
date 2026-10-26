@@ -9,9 +9,10 @@ whose word came out as the wrong one can be re-rendered.
 
 ASR word times are loose, so a word cropped alone carries bits of its neighbours, and a
 neighbour's /s/ or /t/ then reads as the longer reading. :func:`audit` (the call for a
-finished render) therefore scores each reading as the whole phrase around it, the
+finished render), :func:`verify_words` and :func:`render_verified` (the calls while
+rendering) therefore score each reading as the whole phrase around it by default, the
 neighbours written out by espeak (:func:`phrase_readings`, :func:`espeak_phonemizer`);
-:func:`verify_words` and :func:`render_verified` still crop.
+:func:`reading_scorer` holds the ways of scoring they share.
 
 The recogniser is ``facebook/wav2vec2-lv-60-espeak-cv-ft``, run in its own torch env
 (:data:`PHONEME_ENV`, built by ``voxy.envs``, with a bundled espeak-ng). Its
@@ -54,8 +55,9 @@ PHONEME_ENV = EnvSpec(
 )
 #: Seconds kept on each side of a word's ASR timestamps: ASR word edges are loose.
 DFLT_CROP_PADDING = 0.08
-#: A reading must beat the runner-up by this much (mean log-likelihood per target
-#: symbol) for a verdict to count as decided.
+#: With ``scoring="crop"``, a reading must beat the runner-up by this much (mean
+#: log-likelihood per target symbol) for a verdict to count as decided. Phrase and spot
+#: scores are totals in nats, on another scale: see :data:`SCORING_MARGINS`.
 DFLT_MARGIN = 0.5
 
 #: What spotting a word in its context charges per frame left to filler (nats).
@@ -72,6 +74,18 @@ Phonemizer = Callable[[Sequence[str], str], Sequence[str]]
 DFLT_CONTEXT_WORDS = 1
 #: A reading must beat the runner-up by this many nats when spotted in context.
 DFLT_SPOT_MARGIN = 2.0
+
+#: The ways a reading can be scored in the audio (see :func:`reading_scorer`), each with
+#: the margin it is calibrated for: phrase scoring was calibrated on 250 flagged words of
+#: a French audiobook (one decided misread, a real one), crop scoring flagged 46 correct
+#: "est" there as the noun.
+SCORING_MARGINS = {
+    "phrase": DFLT_CONTEXT_MARGIN,
+    "spot": DFLT_SPOT_MARGIN,
+    "crop": DFLT_MARGIN,
+}
+#: How readings are scored unless told otherwise.
+DFLT_SCORING = "phrase"
 
 #: In a reading name, what separates a reading from one of its variants (``verb~liaison``).
 VARIANT_SEPARATOR = "~"
@@ -344,10 +358,20 @@ def word_spans(words: Iterable[Mapping], word: str) -> list[tuple[float, float]]
     >>> word_spans([{"start": 0.1, "end": 0.3, "text": " Est,"}], "est")
     [(0.1, 0.3)]
     """
+    words = list(words)
+    return [(words[i]["start"], words[i]["end"]) for i in word_indices(words, word)]
+
+
+def word_indices(words: Sequence[Mapping], word: str) -> list[int]:
+    """Indices of the ASR words matching ``word`` (case and punctuation aside).
+
+    >>> word_indices([{"text": " Il"}, {"text": " est,"}, {"text": "Est"}], "est")
+    [1, 2]
+    """
     target = word.casefold()
     return [
-        (w["start"], w["end"])
-        for w in words
+        i
+        for i, w in enumerate(words)
         if w["text"].strip().strip(".,;:!?«»\"'()").casefold() == target
     ]
 
@@ -358,8 +382,13 @@ def verify_words(
     *,
     words: Iterable[Mapping],
     emitter: Emitter,
+    scoring: str = DFLT_SCORING,
+    phonemize: Phonemizer | None = None,
+    language: str = "fr",
+    context: int = DFLT_CONTEXT_WORDS,
+    filler_penalty: float = DFLT_FILLER_PENALTY,
     padding: float = DFLT_CROP_PADDING,
-    margin: float = DFLT_MARGIN,
+    margin: float | None = None,
 ) -> list[Verdict]:
     """Verdicts for each ``(word, readings, expected)`` at each place ASR found it.
 
@@ -371,26 +400,29 @@ def verify_words(
         words: Timed words of the render (``transcribe(audio)``'s segments' words).
         emitter: ``(audio, start, end) -> (log_probs, vocab)``; the default worker
             is :func:`phoneme_emitter`.
-        padding: Seconds added to each side of the ASR span.
-        margin: See :attr:`Verdict.decided`.
+        scoring, phonemize, language, context, filler_penalty, padding: How each
+            reading is scored (:func:`reading_scorer`); by default as the whole
+            phrase around the word, its neighbours written out by espeak.
+        margin: See :attr:`Verdict.decided`; default the one ``scoring`` is
+            calibrated for (:data:`SCORING_MARGINS`).
     """
     words = list(words)
+    margin = scoring_margin(scoring, margin)
+    score = reading_scorer(
+        scoring,
+        emitter=emitter,
+        phonemize=phonemize,
+        language=language,
+        context=context,
+        filler_penalty=filler_penalty,
+        padding=padding,
+    )
     verdicts = []
     for word, readings, expected in checks:
-        for start, end in word_spans(words, word):
-            log_probs, vocab = emitter(
-                str(audio), max(0.0, start - padding), end + padding
-            )
-            verdicts.append(
-                Verdict(
-                    word,
-                    start,
-                    end,
-                    score_readings(log_probs, vocab, readings),
-                    expected,
-                    margin,
-                )
-            )
+        for i in word_indices(words, word):
+            start, end = words[i]["start"], words[i]["end"]
+            scores = score(str(audio), words, i, readings)
+            verdicts.append(Verdict(word, start, end, scores, expected, margin))
     return verdicts
 
 
@@ -556,6 +588,86 @@ def phrase_readings(
     }
 
 
+#: ``(audio, words, i, readings) -> {reading name: score}``: scores the readings of
+#: ``words[i]`` (timed ASR words) in ``audio``; higher is better.
+ReadingScorer = Callable[[str, Sequence[Mapping], int, Mapping[str, str]], dict]
+
+
+def scoring_margin(scoring: str, margin: float | None = None) -> float:
+    """``margin``, or the one ``scoring`` is calibrated for (:data:`SCORING_MARGINS`).
+
+    >>> scoring_margin("phrase"), scoring_margin("crop"), scoring_margin("crop", 1.0)
+    (2.0, 0.5, 1.0)
+    """
+    if scoring not in SCORING_MARGINS:
+        raise ValueError(
+            f"scoring must be one of {sorted(SCORING_MARGINS)}, not {scoring!r}"
+        )
+    return SCORING_MARGINS[scoring] if margin is None else margin
+
+
+def reading_scorer(
+    scoring: str = DFLT_SCORING,
+    *,
+    emitter: Emitter,
+    phonemize: Phonemizer | None = None,
+    language: str = "fr",
+    context: int = DFLT_CONTEXT_WORDS,
+    filler_penalty: float = DFLT_FILLER_PENALTY,
+    padding: float = DFLT_CROP_PADDING,
+) -> ReadingScorer:
+    """How a flagged word's readings are scored in the audio, as a :data:`ReadingScorer`.
+
+    ``"phrase"`` (default): the ``context`` words on each side are written out with
+    ``phonemize`` (default :func:`espeak_phonemizer`, in ``language``) and each reading
+    is scored as the whole phrase (:func:`phrase_readings`); the neighbours are the same
+    in every candidate, so only the word decides. ``"spot"``: the reading is spotted in
+    that window, the rest left to filler (:func:`spot_readings`; no phonemizer, but a
+    neighbour's /s/ or /t/ can be credited to the longer reading). ``"crop"``: the word
+    alone, cut at its ASR times (``padding`` each side), scored by
+    :func:`score_readings`; ASR word times are often too loose for this.
+
+    Scores are on different scales by ``scoring``; :func:`scoring_margin` gives the
+    margin each is calibrated for.
+    """
+    scoring_margin(scoring)  # validates scoring
+    if scoring == "phrase" and phonemize is None:
+        phonemize = espeak_phonemizer()
+
+    def spoken(ws):
+        return " ".join(w["text"].strip().strip('.,;:!?«»"()…') for w in ws).strip()
+
+    def score(audio, words, i, readings):
+        if scoring == "crop":
+            start, end = words[i]["start"], words[i]["end"]
+            log_probs, vocab = emitter(
+                str(audio), max(0.0, start - padding), end + padding
+            )
+            return score_readings(log_probs, vocab, readings)
+        lo, hi = max(0, i - context), min(len(words) - 1, i + context)
+        log_probs, vocab = emitter(
+            str(audio),
+            max(0.0, words[lo]["start"] - padding),
+            words[hi]["end"] + padding,
+        )
+        if scoring == "spot":
+            return spot_readings(
+                log_probs, vocab, readings, filler_penalty=filler_penalty
+            )
+        before, after = spoken(words[lo:i]), spoken(words[i + 1 : hi + 1])
+        said = [t for t in (before, after) if t]  # phonemizers drop empty texts
+        ipa = dict(zip(said, phonemize(said, language))) if said else {}
+        return phrase_readings(
+            log_probs,
+            vocab,
+            readings,
+            before=ipa.get(before, ""),
+            after=ipa.get(after, ""),
+        )
+
+    return score
+
+
 # 4. re-rendering the lines that fail -------------------------------------------
 
 #: Renders of one line at most (the first take included).
@@ -670,8 +782,13 @@ def render_verified(
     emitter: Emitter,
     words_of: Callable[[str], Iterable[Mapping]] = _transcribed_words,
     max_attempts: int = DFLT_MAX_ATTEMPTS,
+    scoring: str = DFLT_SCORING,
+    phonemize: Phonemizer | None = None,
+    language: str = "fr",
+    context: int = DFLT_CONTEXT_WORDS,
+    filler_penalty: float = DFLT_FILLER_PENALTY,
     padding: float = DFLT_CROP_PADDING,
-    margin: float = DFLT_MARGIN,
+    margin: float | None = None,
 ) -> list[LineTakes]:
     """Render each line, and re-render the ones whose flagged words came out wrong.
 
@@ -693,25 +810,31 @@ def render_verified(
         words_of: ``audio -> timed words``; the default transcribes with
             ``voxy.refprep.transcribe``.
         max_attempts: Renders of one line at most.
-        padding, margin: As in :func:`verify_words`.
+        scoring, phonemize, language, context, filler_penalty, padding, margin: As
+            in :func:`verify_words` (default: phrase scoring, espeak neighbours).
 
     >>> heard = {"est": "ɛ"}  # a fake recogniser: what each word sounds like
     >>> def emitter(audio, start, end):
-    ...     vocab = ["<pad>", "ɛ", "s", "t"]
-    ...     path = [vocab.index(s) for s in heard["est"]]
-    ...     return log_probs_from_path(path, vocab_size=4), vocab
+    ...     vocab = ["<pad>", "ɛ", "s", "t", "l"]
+    ...     path = [vocab.index(s) for s in "l" + heard["est"]]
+    ...     return log_probs_from_path(path, vocab_size=5), vocab
     >>> def render(text, line, attempt):
     ...     heard["est"] = "ɛst" if attempt else "ɛ"  # the second take is right
     ...     return f"take-{line}-{attempt}.wav"
-    >>> words = lambda audio: [{"start": 0.0, "end": 0.3, "text": "Est"}]
+    >>> words = lambda audio: [{"start": 0.0, "end": 0.1, "text": "L'"},
+    ...                        {"start": 0.1, "end": 0.3, "text": "Est"}]
+    >>> phonemize = lambda texts, language: ["l" for _ in texts]  # a fake espeak
     >>> checks = {1: [("Est", {"verb": "ɛ", "noun": "ɛst"}, "noun")]}
     >>> [result] = render_verified(["L'Est"], checks, render=render, emitter=emitter,
-    ...                            words_of=words)
+    ...                            words_of=words, phonemize=phonemize)
     >>> [t.audio for t in result.takes], result.chosen.attempt, result.verified
     (['take-1-0.wav', 'take-1-1.wav'], 1, True)
     """
     if max_attempts < 1:
         raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
+    margin = scoring_margin(scoring, margin)
+    if scoring == "phrase" and phonemize is None:
+        phonemize = espeak_phonemizer()
     results = []
     for number, text in enumerate(lines, 1):
         line_checks = list(checks.get(number, ()))
@@ -729,6 +852,11 @@ def render_verified(
                         line_checks,
                         words=words_of(audio),
                         emitter=emitter,
+                        scoring=scoring,
+                        phonemize=phonemize,
+                        language=language,
+                        context=context,
+                        filler_penalty=filler_penalty,
                         padding=padding,
                         margin=margin,
                     )
@@ -914,7 +1042,7 @@ def audit(
     detectors: Iterable[Callable[[str], Iterable]] = (),
     emitter: Emitter | None = None,
     words_of: Callable[[str], Iterable[Mapping]] = _transcribed_words,
-    scoring: str = "phrase",
+    scoring: str = DFLT_SCORING,
     phonemize: Phonemizer | None = None,
     context: int = DFLT_CONTEXT_WORDS,
     filler_penalty: float = DFLT_FILLER_PENALTY,
@@ -941,19 +1069,14 @@ def audit(
         detectors: ``text -> risks`` proposers of expected readings.
         emitter: The phoneme recogniser; default :func:`phoneme_emitter`.
         words_of: ``audio -> timed words``; default ASR (``voxy.refprep.transcribe``).
-        scoring: How a reading is scored in the audio. ``"phrase"`` (default): the
-            ``context`` words on each side are written out with ``phonemize`` and each
-            reading is scored as the whole phrase (:func:`phrase_readings`); the
-            neighbours are the same in every candidate, so only the word decides.
-            ``"spot"``: the reading is spotted in that window, the rest left to filler
-            (:func:`spot_readings`; no phonemizer, but a neighbour's /s/ or /t/ can be
-            credited to the longer reading). ``"crop"``: the word alone, cut at its ASR
-            times (``padding`` each side), scored by :func:`score_readings`; ASR word
-            times are often too loose for this.
+        scoring: How a reading is scored in the audio (:func:`reading_scorer`).
+            ``"phrase"`` (default): as the whole phrase around the word, its
+            ``context`` neighbours written out with ``phonemize``. ``"spot"``: spotted
+            in that window. ``"crop"``: the word alone, cut at its ASR times.
         phonemize: For ``"phrase"``; default :func:`espeak_phonemizer`.
         context: Words kept on each side of the flagged one.
-        margin: See :attr:`Verdict.decided`; default :data:`DFLT_CONTEXT_MARGIN`,
-            :data:`DFLT_SPOT_MARGIN` or :data:`DFLT_MARGIN` by ``scoring``.
+        margin: See :attr:`Verdict.decided`; default the one ``scoring`` is
+            calibrated for (:data:`SCORING_MARGINS`).
 
     Returns the findings in text order; ``[f for f in findings if f.ok is False]`` are
     the words decidedly misread (re-render those), ``f.ok is None`` ones were not
@@ -982,53 +1105,20 @@ def audit(
         found = proposed.get((risk.line, risk.word.casefold()), [])
         return found[nth_on_line] if nth_on_line < len(found) else None
 
+    margin = scoring_margin(scoring, margin)
     if not risks:
         return []
-    emit = emitter or phoneme_emitter()
-    margins = {
-        "phrase": DFLT_CONTEXT_MARGIN,
-        "spot": DFLT_SPOT_MARGIN,
-        "crop": DFLT_MARGIN,
-    }
-    if scoring not in margins:
-        raise ValueError(f"scoring must be one of {sorted(margins)}, not {scoring!r}")
-    margin = margins[scoring] if margin is None else margin
-    if scoring == "phrase" and phonemize is None:
-        phonemize = espeak_phonemizer()
+    score = reading_scorer(
+        scoring,
+        emitter=emitter or phoneme_emitter(),
+        phonemize=phonemize,
+        language=language,
+        context=context,
+        filler_penalty=filler_penalty,
+        padding=padding,
+    )
     words = list(words_of(str(audio)))
     heard_at = align_words(text, words)
-    where = {(w["start"], w["end"]): i for i, w in enumerate(words)}
-
-    def spoken(ws):
-        return " ".join(w["text"].strip().strip('.,;:!?«»"()…') for w in ws).strip()
-
-    def scores_at(key, start, end):
-        if scoring == "crop":
-            log_probs, vocab = emit(
-                str(audio), max(0.0, start - padding), end + padding
-            )
-            return score_readings(log_probs, vocab, table[key])
-        i = where[(start, end)]
-        lo, hi = max(0, i - context), min(len(words) - 1, i + context)
-        log_probs, vocab = emit(
-            str(audio),
-            max(0.0, words[lo]["start"] - padding),
-            words[hi]["end"] + padding,
-        )
-        if scoring == "spot":
-            return spot_readings(
-                log_probs, vocab, table[key], filler_penalty=filler_penalty
-            )
-        before, after = spoken(words[lo:i]), spoken(words[i + 1 : hi + 1])
-        said = [t for t in (before, after) if t]  # phonemizers drop empty texts
-        ipa = dict(zip(said, phonemize(said, language))) if said else {}
-        return phrase_readings(
-            log_probs,
-            vocab,
-            table[key],
-            before=ipa.get(before, ""),
-            after=ipa.get(after, ""),
-        )
 
     places = _risk_places(text, risks)
     on_line: dict[tuple[int, str], int] = {}
@@ -1044,8 +1134,9 @@ def audit(
         if heard_at.get(place) is None:
             findings.append(Finding(risk))
             continue
-        start, end = words[heard_at[place]]["start"], words[heard_at[place]]["end"]
-        scores = scores_at(key, start, end)
+        i = heard_at[place]
+        start, end = words[i]["start"], words[i]["end"]
+        scores = score(str(audio), words, i, table[key])
         findings.append(
             Finding(risk, Verdict(risk.word, start, end, scores, want, margin))
         )
