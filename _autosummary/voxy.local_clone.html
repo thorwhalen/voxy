@@ -189,25 +189,28 @@ own environment (built on first use under <code class="docutils literal notransl
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.local_clone.ChatterboxSpeechModel" title="voxy.local_clone.ChatterboxSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ChatterboxSpeechModel</span></code></a>([backend, generate, ...])</p></td>
 <td><p>Chatterbox: expressive zero-shot cloning (<code class="docutils literal notranslate"><span class="pre">variant='original'|'turbo'</span></code>).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.local_clone.F5TTSSpeechModel" title="voxy.local_clone.F5TTSSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">F5TTSSpeechModel</span></code></a>([backend, generate, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.local_clone.DesignPreview" title="voxy.local_clone.DesignPreview"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DesignPreview</span></code></a>(seed, audio, text, ...)</p></td>
+<td><p>One candidate voice from <code class="docutils literal notranslate"><span class="pre">design_voice_previews</span></code>: listen, then pick.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.local_clone.F5TTSSpeechModel" title="voxy.local_clone.F5TTSSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">F5TTSSpeechModel</span></code></a>([backend, generate, ...])</p></td>
 <td><p>F5-TTS: flow-matching zero-shot cloning (<code class="docutils literal notranslate"><span class="pre">params</span></code>: nfe_step, cfg_strength, speed...).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.local_clone.LocalCloneBackend" title="voxy.local_clone.LocalCloneBackend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LocalCloneBackend</span></code></a>(name, env[, init, params, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.local_clone.LocalCloneBackend" title="voxy.local_clone.LocalCloneBackend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LocalCloneBackend</span></code></a>(name, env[, init, params, ...])</p></td>
 <td><p>What voxy knows about one local cloning model.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.local_clone.LocalCloneSpeechModel" title="voxy.local_clone.LocalCloneSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LocalCloneSpeechModel</span></code></a>([backend, generate, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.local_clone.LocalCloneSpeechModel" title="voxy.local_clone.LocalCloneSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LocalCloneSpeechModel</span></code></a>([backend, generate, ...])</p></td>
 <td><p>A local voice-cloning model as a voxy backend.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.local_clone.Qwen3TTSSpeechModel" title="voxy.local_clone.Qwen3TTSSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Qwen3TTSSpeechModel</span></code></a>([backend, generate, ...])</p></td>
-<td><p>Qwen3-TTS Base: stable cloning (<code class="docutils literal notranslate"><span class="pre">init</span></code>: model_id 1.7B or 0.6B).</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.local_clone.Qwen3TTSSpeechModel" title="voxy.local_clone.Qwen3TTSSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Qwen3TTSSpeechModel</span></code></a>(*args[, design])</p></td>
+<td><p>Qwen3-TTS: stable cloning (<code class="docutils literal notranslate"><span class="pre">init</span></code>: model_id 1.7B or 0.6B) and local voice design.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.local_clone.VoxCPMSpeechModel" title="voxy.local_clone.VoxCPMSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VoxCPMSpeechModel</span></code></a>([backend, generate, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.local_clone.VoxCPMSpeechModel" title="voxy.local_clone.VoxCPMSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VoxCPMSpeechModel</span></code></a>([backend, generate, ...])</p></td>
 <td><p>VoxCPM2: high-similarity cloning (<code class="docutils literal notranslate"><span class="pre">params</span></code>: cfg_value, inference_timesteps, prompt_mode).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.local_clone.WorkerGenerate" title="voxy.local_clone.WorkerGenerate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WorkerGenerate</span></code></a>(backend, *[, init, threads, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.local_clone.WorkerGenerate" title="voxy.local_clone.WorkerGenerate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WorkerGenerate</span></code></a>(backend, *[, init, threads, ...])</p></td>
 <td><p>The default <code class="docutils literal notranslate"><span class="pre">generate</span></code>: the backend's adapter in its own environment.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.local_clone.XTTSSpeechModel" title="voxy.local_clone.XTTSSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">XTTSSpeechModel</span></code></a>(*args[, accept_licence])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.local_clone.XTTSSpeechModel" title="voxy.local_clone.XTTSSpeechModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">XTTSSpeechModel</span></code></a>(*args[, accept_licence])</p></td>
 <td><p>XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).</p></td>
 </tr>
 </tbody>
@@ -219,6 +222,24 @@ own environment (built on first use under <code class="docutils literal notransl
 <p>Chatterbox: expressive zero-shot cloning (<code class="docutils literal notranslate"><span class="pre">variant='original'|'turbo'</span></code>).</p>
 <dl class="field-list simple">
 </dl>
+</dd></dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="voxy.local_clone.DesignPreview">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">voxy.local_clone.</span></span><span class="sig-name descname"><span class="pre">DesignPreview</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">audio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/local_clone.html#DesignPreview"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.local_clone.DesignPreview" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.local_clone.DesignPreview'">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></p>
+<p>One candidate voice from <code class="docutils literal notranslate"><span class="pre">design_voice_previews</span></code>: listen, then pick.</p>
+<dl class="field-list simple">
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="voxy.local_clone.DesignPreview.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/local_clone.html#DesignPreview.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.local_clone.DesignPreview.save" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.local_clone.DesignPreview.save'">¶</a></dt>
+<dd><p>Write the clip to <code class="docutils literal notranslate"><span class="pre">path</span></code> (to audition it).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
+</dd>
+</dl>
+</dd></dl>
 </dd></dl>
 <dl class="py class">
 <dt class="sig sig-object py" id="voxy.local_clone.F5TTSSpeechModel">
@@ -308,11 +329,44 @@ them to <code class="docutils literal notranslate"><span class="pre">synthesize<
 </dd></dl>
 <dl class="py class">
 <dt class="sig sig-object py" id="voxy.local_clone.Qwen3TTSSpeechModel">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">voxy.local_clone.</span></span><span class="sig-name descname"><span class="pre">Qwen3TTSSpeechModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">generate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunker</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text_prep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">250</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paragraph_gap_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">700</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_setup</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env_vars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">init_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/local_clone.html#Qwen3TTSSpeechModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.local_clone.Qwen3TTSSpeechModel" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.local_clone.Qwen3TTSSpeechModel'">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">voxy.local_clone.</span></span><span class="sig-name descname"><span class="pre">Qwen3TTSSpeechModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">design</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/local_clone.html#Qwen3TTSSpeechModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.local_clone.Qwen3TTSSpeechModel" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.local_clone.Qwen3TTSSpeechModel'">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#voxy.local_clone.LocalCloneSpeechModel" title="voxy.local_clone.LocalCloneSpeechModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">LocalCloneSpeechModel</span></code></a></p>
-<p>Qwen3-TTS Base: stable cloning (<code class="docutils literal notranslate"><span class="pre">init</span></code>: model_id 1.7B or 0.6B).</p>
+<p>Qwen3-TTS: stable cloning (<code class="docutils literal notranslate"><span class="pre">init</span></code>: model_id 1.7B or 0.6B) and local voice design.</p>
+<p>Designing follows Qwen’s design-then-clone recipe: <code class="docutils literal notranslate"><span class="pre">design_voice_previews</span></code>
+speaks a sample text in voices made from a description (one per seed, no real
+person involved); <code class="docutils literal notranslate"><span class="pre">design_voice</span></code> keeps the chosen sample as a reference
+profile, so long texts render through Base cloning with one stable voice.</p>
+<dl class="simple">
+<dt>Args (beyond <code class="docutils literal notranslate"><span class="pre">LocalCloneSpeechModel</span></code>):</dt><dd><dl class="simple">
+<dt>design: <code class="docutils literal notranslate"><span class="pre">(text,</span> <span class="pre">*,</span> <span class="pre">instruct,</span> <span class="pre">**params)</span> <span class="pre">-&gt;</span> <span class="pre">(samples,</span> <span class="pre">sample_rate)</span></code>, the</dt><dd><p>VoiceDesign model call. Default: the worker’s <code class="docutils literal notranslate"><span class="pre">design</span></code> operation.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 <dl class="field-list simple">
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="voxy.local_clone.Qwen3TTSSpeechModel.design_voice">
+<span class="sig-name descname"><span class="pre">design_voice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">description</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preview</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">preview_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/local_clone.html#Qwen3TTSSpeechModel.design_voice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.local_clone.Qwen3TTSSpeechModel.design_voice" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.local_clone.Qwen3TTSSpeechModel.design_voice'">¶</a></dt>
+<dd><p>A reference profile from the chosen <code class="docutils literal notranslate"><span class="pre">preview</span></code> (default: the first generated).</p>
+<p>The clip is kept at <code class="docutils literal notranslate"><span class="pre">samples/{name}/design.wav</span></code> under the data root, and
+the profile points at it, so the voice survives like a cloned one.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="voxy.base.html#voxy.base.VoiceProfile" title="voxy.base.VoiceProfile"><code class="xref py py-class docutils literal notranslate"><span class="pre">VoiceProfile</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="voxy.local_clone.Qwen3TTSSpeechModel.design_voice_previews">
+<span class="sig-name descname"><span class="pre">design_voice_previews</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">description</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'The</span> <span class="pre">morning</span> <span class="pre">light</span> <span class="pre">crossed</span> <span class="pre">the</span> <span class="pre">water,</span> <span class="pre">and</span> <span class="pre">for</span> <span class="pre">a</span> <span class="pre">moment</span> <span class="pre">nothing</span> <span class="pre">else</span> <span class="pre">moved.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seeds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0,</span> <span class="pre">1,</span> <span class="pre">2)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'English'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/local_clone.html#Qwen3TTSSpeechModel.design_voice_previews"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.local_clone.Qwen3TTSSpeechModel.design_voice_previews" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.local_clone.Qwen3TTSSpeechModel.design_voice_previews'">¶</a></dt>
+<dd><p>Candidate voices for <code class="docutils literal notranslate"><span class="pre">description</span></code>, each speaking <code class="docutils literal notranslate"><span class="pre">text</span></code> (one per seed).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference internal" href="#voxy.local_clone.DesignPreview" title="voxy.local_clone.DesignPreview"><code class="xref py py-class docutils literal notranslate"><span class="pre">DesignPreview</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
 </dd></dl>
 <dl class="py class">
 <dt class="sig sig-object py" id="voxy.local_clone.VoxCPMSpeechModel">
@@ -339,6 +393,13 @@ keeps it (and the weights) alive until <code class="docutils literal notranslate
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></span></p>
 </dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="voxy.local_clone.WorkerGenerate.design">
+<span class="sig-name descname"><span class="pre">design</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">instruct</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/local_clone.html#WorkerGenerate.design"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.local_clone.WorkerGenerate.design" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.local_clone.WorkerGenerate.design'">¶</a></dt>
+<dd><p>The adapter’s <code class="docutils literal notranslate"><span class="pre">design</span></code> operation (backends that can design voices).</p>
+<dl class="field-list simple">
 </dl>
 </dd></dl>
 </dd></dl>
@@ -401,6 +462,10 @@ keeps it (and the weights) alive until <code class="docutils literal notranslate
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
 <li><a :data-current="activeSection === '#voxy.local_clone.ChatterboxSpeechModel'" class="reference internal" href="#voxy.local_clone.ChatterboxSpeechModel"><code class="docutils literal notranslate"><span class="pre">ChatterboxSpeechModel</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.local_clone.DesignPreview'" class="reference internal" href="#voxy.local_clone.DesignPreview"><code class="docutils literal notranslate"><span class="pre">DesignPreview</span></code></a><ul>
+<li><a :data-current="activeSection === '#voxy.local_clone.DesignPreview.save'" class="reference internal" href="#voxy.local_clone.DesignPreview.save"><code class="docutils literal notranslate"><span class="pre">DesignPreview.save()</span></code></a></li>
+</ul>
+</li>
 <li><a :data-current="activeSection === '#voxy.local_clone.F5TTSSpeechModel'" class="reference internal" href="#voxy.local_clone.F5TTSSpeechModel"><code class="docutils literal notranslate"><span class="pre">F5TTSSpeechModel</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.local_clone.LocalCloneBackend'" class="reference internal" href="#voxy.local_clone.LocalCloneBackend"><code class="docutils literal notranslate"><span class="pre">LocalCloneBackend</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.local_clone.LocalCloneSpeechModel'" class="reference internal" href="#voxy.local_clone.LocalCloneSpeechModel"><code class="docutils literal notranslate"><span class="pre">LocalCloneSpeechModel</span></code></a><ul>
@@ -409,10 +474,15 @@ keeps it (and the weights) alive until <code class="docutils literal notranslate
 <li><a :data-current="activeSection === '#voxy.local_clone.LocalCloneSpeechModel.synthesize'" class="reference internal" href="#voxy.local_clone.LocalCloneSpeechModel.synthesize"><code class="docutils literal notranslate"><span class="pre">LocalCloneSpeechModel.synthesize()</span></code></a></li>
 </ul>
 </li>
-<li><a :data-current="activeSection === '#voxy.local_clone.Qwen3TTSSpeechModel'" class="reference internal" href="#voxy.local_clone.Qwen3TTSSpeechModel"><code class="docutils literal notranslate"><span class="pre">Qwen3TTSSpeechModel</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.local_clone.Qwen3TTSSpeechModel'" class="reference internal" href="#voxy.local_clone.Qwen3TTSSpeechModel"><code class="docutils literal notranslate"><span class="pre">Qwen3TTSSpeechModel</span></code></a><ul>
+<li><a :data-current="activeSection === '#voxy.local_clone.Qwen3TTSSpeechModel.design_voice'" class="reference internal" href="#voxy.local_clone.Qwen3TTSSpeechModel.design_voice"><code class="docutils literal notranslate"><span class="pre">Qwen3TTSSpeechModel.design_voice()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.local_clone.Qwen3TTSSpeechModel.design_voice_previews'" class="reference internal" href="#voxy.local_clone.Qwen3TTSSpeechModel.design_voice_previews"><code class="docutils literal notranslate"><span class="pre">Qwen3TTSSpeechModel.design_voice_previews()</span></code></a></li>
+</ul>
+</li>
 <li><a :data-current="activeSection === '#voxy.local_clone.VoxCPMSpeechModel'" class="reference internal" href="#voxy.local_clone.VoxCPMSpeechModel"><code class="docutils literal notranslate"><span class="pre">VoxCPMSpeechModel</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.local_clone.WorkerGenerate'" class="reference internal" href="#voxy.local_clone.WorkerGenerate"><code class="docutils literal notranslate"><span class="pre">WorkerGenerate</span></code></a><ul>
 <li><a :data-current="activeSection === '#voxy.local_clone.WorkerGenerate.close'" class="reference internal" href="#voxy.local_clone.WorkerGenerate.close"><code class="docutils literal notranslate"><span class="pre">WorkerGenerate.close()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.local_clone.WorkerGenerate.design'" class="reference internal" href="#voxy.local_clone.WorkerGenerate.design"><code class="docutils literal notranslate"><span class="pre">WorkerGenerate.design()</span></code></a></li>
 </ul>
 </li>
 <li><a :data-current="activeSection === '#voxy.local_clone.XTTSSpeechModel'" class="reference internal" href="#voxy.local_clone.XTTSSpeechModel"><code class="docutils literal notranslate"><span class="pre">XTTSSpeechModel</span></code></a><ul>
@@ -435,7 +505,7 @@ keeps it (and the weights) alive until <code class="docutils literal notranslate
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=5d650c58"></script>
+<script src="../_static/documentation_options.js?v=6a9d8632"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

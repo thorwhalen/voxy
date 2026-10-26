@@ -1,4 +1,4 @@
-> built 2026-10-23 07:14 UTC from 1e9dfa1 (main) · voxy 0.0.25. Details: build_info.json
+> built 2026-10-26 08:21 UTC from f4bc512 (main) · voxy 0.0.26. Details: build_info.json
 
 # index.html.md
 
@@ -248,10 +248,14 @@ Speech models misread words with two pronunciations (French *est* as the verb /�
 from voxy.speechtext import prepare_speech_text
 from voxy.pronounce import audit
 
-text = prepare_speech_text(verse, keep={"Vous"}).speech   # verse capitals lowercased, deliberate ones kept
+text = prepare_speech_text(
+    verse, keep={"Vous"}
+).speech  # verse capitals lowercased, deliberate ones kept
 # ... render `text` to take.wav with any backend ...
-findings = audit(text, "take.wav", expected={"est": "verb"})  # voxy's French heteronym table by default
-misread = [f for f in findings if f.ok is False]           # re-render these
+findings = audit(
+    text, "take.wav", expected={"est": "verb"}
+)  # voxy's French heteronym table by default
+misread = [f for f in findings if f.ok is False]  # re-render these
 ```
 
 `audit` finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from `expected` (a mapping, or a function of each risk) or from a detector such as `voxy.speechtext.pos_detector()`.
@@ -1858,10 +1862,11 @@ Seams (keyword arguments of every model):
 
 | [`ChatterboxSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.ChatterboxSpeechModel)([backend, generate, ...])   | Chatterbox: expressive zero-shot cloning (`variant='original'|'turbo'`).                  |
 |----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| [`DesignPreview`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.DesignPreview)(seed, audio, text, ...)             | One candidate voice from `design_voice_previews`: listen, then pick.                      |
 | [`F5TTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.F5TTSSpeechModel)([backend, generate, ...])        | F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed...).     |
 | [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)(name, env[, init, params, ...]) | What voxy knows about one local cloning model.                                            |
 | [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)([backend, generate, ...])   | A local voice-cloning model as a voxy backend.                                            |
-| [`Qwen3TTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.Qwen3TTSSpeechModel)([backend, generate, ...])     | Qwen3-TTS Base: stable cloning (`init`: model_id 1.7B or 0.6B).                           |
+| [`Qwen3TTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.Qwen3TTSSpeechModel)(\*args[, design])             | Qwen3-TTS: stable cloning (`init`: model_id 1.7B or 0.6B) and local voice design.         |
 | [`VoxCPMSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.VoxCPMSpeechModel)([backend, generate, ...])       | VoxCPM2: high-similarity cloning (`params`: cfg_value, inference_timesteps, prompt_mode). |
 | [`WorkerGenerate`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.WorkerGenerate)(backend, \*[, init, threads, ...]) | The default `generate`: the backend's adapter in its own environment.                     |
 | [`XTTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.XTTSSpeechModel)(\*args[, accept_licence])         | XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).               |
@@ -1871,6 +1876,19 @@ Seams (keyword arguments of every model):
 Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
 
 Chatterbox: expressive zero-shot cloning (`variant='original'|'turbo'`).
+
+### *class* voxy.local_clone.DesignPreview(seed, audio, text, sample_rate, description)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One candidate voice from `design_voice_previews`: listen, then pick.
+
+#### save(path)
+
+Write the clip to `path` (to audition it).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### *class* voxy.local_clone.F5TTSSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
@@ -1941,11 +1959,37 @@ Speak `text` (any length) in the reference `voice`.
 * **Return type:**
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
-### *class* voxy.local_clone.Qwen3TTSSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.Qwen3TTSSpeechModel(\*args, design=None, \*\*kwargs)
 
 Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)
 
-Qwen3-TTS Base: stable cloning (`init`: model_id 1.7B or 0.6B).
+Qwen3-TTS: stable cloning (`init`: model_id 1.7B or 0.6B) and local voice design.
+
+Designing follows Qwen’s design-then-clone recipe: `design_voice_previews`
+speaks a sample text in voices made from a description (one per seed, no real
+person involved); `design_voice` keeps the chosen sample as a reference
+profile, so long texts render through Base cloning with one stable voice.
+
+Args (beyond `LocalCloneSpeechModel`):
+: design: `(text, *, instruct, **params) -> (samples, sample_rate)`, the
+  : VoiceDesign model call. Default: the worker’s `design` operation.
+
+#### design_voice(description, , name, preview=None, rootdir=None, \*\*preview_kwargs)
+
+A reference profile from the chosen `preview` (default: the first generated).
+
+The clip is kept at `samples/{name}/design.wav` under the data root, and
+the profile points at it, so the voice survives like a cloned one.
+
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+#### design_voice_previews(description, , text='The morning light crossed the water, and for a moment nothing else moved.', seeds=(0, 1, 2), language='English', \*\*params)
+
+Candidate voices for `description`, each speaking `text` (one per seed).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DesignPreview`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.DesignPreview)]
 
 ### *class* voxy.local_clone.VoxCPMSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
@@ -1968,6 +2012,10 @@ Stop the worker and free its memory.
 
 * **Return type:**
   [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### design(text, , instruct, \*\*params)
+
+The adapter’s `design` operation (backends that can design voices).
 
 ### *class* voxy.local_clone.XTTSSpeechModel(\*args, accept_licence=None, \*\*kwargs)
 
@@ -3879,7 +3927,7 @@ The adapter file for `name` (e.g. ‘f5tts’ -> `f5tts_adapter.py`).
 | [`chatterbox_adapter`](_autosummary/voxy.workers.chatterbox_adapter.html.md#module-voxy.workers.chatterbox_adapter) | Chatterbox (Resemble AI): 'original' (emotion exaggeration, CFG), 'turbo' (faster), or 'multilingual' (23 languages; pass `language`, e.g. 'fr'). |
 | [`f5tts_adapter`](_autosummary/voxy.workers.f5tts_adapter.html.md#module-voxy.workers.f5tts_adapter)           | F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).                                                                     |
 | [`phonemes_adapter`](_autosummary/voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.                                      |
-| [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).                                                                 |
+| [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).                   |
 | [`serve`](_autosummary/voxy.workers.serve.html.md#module-voxy.workers.serve)                           | Worker entry point: run a backend adapter inside its own environment.                                                                             |
 | [`speaker_adapter`](_autosummary/voxy.workers.speaker_adapter.html.md#module-voxy.workers.speaker_adapter)       | Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.                                                            |
 | [`voxcpm_adapter`](_autosummary/voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.                                                                |
@@ -3920,13 +3968,20 @@ espeak IPA of each text (the symbols the recogniser was trained on), stress mark
 
 # voxy.workers.qwen3tts_adapter
 
-Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).
+Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).
+
+The VoiceDesign model is loaded on the first `design` call, apart from Base.
 
 ### Functions
 
-| `load`(\*[, model_id, device, dtype])                |    |
-|------------------------------------------------------|----|
-| `synthesize`(state, \*, text, ref_audio, ...[, ...]) |    |
+| [`design`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#voxy.workers.qwen3tts_adapter.design)(state, \*, text, instruct, out_path[, ...])   | Speak `text` in a voice described by `instruct` (a new voice per seed).   |
+|-------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| `load`(\*[, model_id, design_model_id, device, ...])                                                  |                                                                           |
+| `synthesize`(state, \*, text, ref_audio, ...[, ...])                                                  |                                                                           |
+
+### voxy.workers.qwen3tts_adapter.design(state, , text, instruct, out_path, seed=None, language='English', non_streaming_mode=True, \*\*params)
+
+Speak `text` in a voice described by `instruct` (a new voice per seed).
 
 
 # _autosummary/voxy.workers.serve.html.md
@@ -4010,18 +4065,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-23 07:14 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/1e9dfa128220c90bc4f3cbe07c550afcc1b97d56"><code>1e9dfa1</code></a> on branch <code>main</code>, for **voxy 0.0.25** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-26 08:21 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/f4bc5127e882874c82b092ee8856cc9d3a01d0f0"><code>f4bc512</code></a> on branch <code>main</code>, for **voxy 0.0.26** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.25) is behind the latest release on PyPI (0.0.26): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.26) is behind the latest release on PyPI (0.0.27): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/1e9dfa128220c90bc4f3cbe07c550afcc1b97d56"><code>1e9dfa128220c90bc4f3cbe07c550afcc1b97d56</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/f4bc5127e882874c82b092ee8856cc9d3a01d0f0"><code>f4bc5127e882874c82b092ee8856cc9d3a01d0f0</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -4032,9 +4087,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/39916094643">39916094643</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/40291227811">40291227811</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>1e9dfa128220c90bc4f3cbe07c550afcc1b97d56</code> (in the history of the built commit) |
+| Event commit | <code>f4bc5127e882874c82b092ee8856cc9d3a01d0f0</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4059,13 +4114,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.26/">0.0.26</a>, newer than the documented version (0.0.25).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.27/">0.0.27</a>, newer than the documented version (0.0.26).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 1e9dfa128220c90bc4f3cbe07c550afcc1b97d56
+git checkout f4bc5127e882874c82b092ee8856cc9d3a01d0f0
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

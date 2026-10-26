@@ -138,20 +138,35 @@
 <div id="content" role="main">
 <section id="module-voxy.workers.qwen3tts_adapter">
 <span id="voxy-workers-qwen3tts-adapter"></span><h1>voxy.workers.qwen3tts_adapter<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#module-voxy.workers.qwen3tts_adapter">¶</a></h1>
-<p>Qwen3-TTS Base (Alibaba Qwen): voice cloning from a clip and its text (ICL mode).</p>
+<p>Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).</p>
+<p>The VoiceDesign model is loaded on the first <code class="docutils literal notranslate"><span class="pre">design</span></code> call, apart from Base.</p>
 <p class="rubric">Functions</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(*[, model_id, device, dtype])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.qwen3tts_adapter.design" title="voxy.workers.qwen3tts_adapter.design"><code class="xref py py-obj docutils literal notranslate"><span class="pre">design</span></code></a>(state, *, text, instruct, out_path[, ...])</p></td>
+<td><p>Speak <code class="docutils literal notranslate"><span class="pre">text</span></code> in a voice described by <code class="docutils literal notranslate"><span class="pre">instruct</span></code> (a new voice per seed).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(*[, model_id, design_model_id, device, ...])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">synthesize</span></code>(state, *, text, ref_audio, ...[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">synthesize</span></code>(state, *, text, ref_audio, ...[, ...])</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
 </table>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.workers.qwen3tts_adapter.design">
+<span class="sig-prename descclassname"><span class="pre">voxy.workers.qwen3tts_adapter.</span></span><span class="sig-name descname"><span class="pre">design</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instruct</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'English'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">non_streaming_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/workers/qwen3tts_adapter.html#design"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.qwen3tts_adapter.design" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.qwen3tts_adapter.design'">¶</a></dt>
+<dd><p>Speak <code class="docutils literal notranslate"><span class="pre">text</span></code> in a voice described by <code class="docutils literal notranslate"><span class="pre">instruct</span></code> (a new voice per seed).</p>
+</dd></dl>
 </section>
-</div></div>
+</div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
+<div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
+<ul>
+<li><a :data-current="activeSection === '#voxy.workers.qwen3tts_adapter.design'" class="reference internal" href="#voxy.workers.qwen3tts_adapter.design"><code class="docutils literal notranslate"><span class="pre">design()</span></code></a></li>
+</ul>
+</div>
+</aside>
 </main>
 </div>
 </div><footer class="py-6 border-t border-border md:py-0">
@@ -162,7 +177,7 @@
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=5d650c58"></script>
+<script src="../_static/documentation_options.js?v=6a9d8632"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

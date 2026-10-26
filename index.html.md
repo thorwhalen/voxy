@@ -244,10 +244,14 @@ Speech models misread words with two pronunciations (French *est* as the verb /É
 from voxy.speechtext import prepare_speech_text
 from voxy.pronounce import audit
 
-text = prepare_speech_text(verse, keep={"Vous"}).speech   # verse capitals lowercased, deliberate ones kept
+text = prepare_speech_text(
+    verse, keep={"Vous"}
+).speech  # verse capitals lowercased, deliberate ones kept
 # ... render `text` to take.wav with any backend ...
-findings = audit(text, "take.wav", expected={"est": "verb"})  # voxy's French heteronym table by default
-misread = [f for f in findings if f.ok is False]           # re-render these
+findings = audit(
+    text, "take.wav", expected={"est": "verb"}
+)  # voxy's French heteronym table by default
+misread = [f for f in findings if f.ok is False]  # re-render these
 ```
 
 `audit` finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from `expected` (a mapping, or a function of each risk) or from a detector such as `voxy.speechtext.pos_detector()`.

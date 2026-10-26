@@ -17,6 +17,7 @@ voxy.local\_clone
    .. autosummary::
    
       ChatterboxSpeechModel
+      DesignPreview
       F5TTSSpeechModel
       LocalCloneBackend
       LocalCloneSpeechModel

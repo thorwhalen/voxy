@@ -48,10 +48,11 @@ Seams (keyword arguments of every model):
 
 | [`ChatterboxSpeechModel`](#voxy.local_clone.ChatterboxSpeechModel)([backend, generate, ...])   | Chatterbox: expressive zero-shot cloning (`variant='original'|'turbo'`).                  |
 |----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| [`DesignPreview`](#voxy.local_clone.DesignPreview)(seed, audio, text, ...)             | One candidate voice from `design_voice_previews`: listen, then pick.                      |
 | [`F5TTSSpeechModel`](#voxy.local_clone.F5TTSSpeechModel)([backend, generate, ...])        | F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed...).     |
 | [`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend)(name, env[, init, params, ...]) | What voxy knows about one local cloning model.                                            |
 | [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)([backend, generate, ...])   | A local voice-cloning model as a voxy backend.                                            |
-| [`Qwen3TTSSpeechModel`](#voxy.local_clone.Qwen3TTSSpeechModel)([backend, generate, ...])     | Qwen3-TTS Base: stable cloning (`init`: model_id 1.7B or 0.6B).                           |
+| [`Qwen3TTSSpeechModel`](#voxy.local_clone.Qwen3TTSSpeechModel)(\*args[, design])             | Qwen3-TTS: stable cloning (`init`: model_id 1.7B or 0.6B) and local voice design.         |
 | [`VoxCPMSpeechModel`](#voxy.local_clone.VoxCPMSpeechModel)([backend, generate, ...])       | VoxCPM2: high-similarity cloning (`params`: cfg_value, inference_timesteps, prompt_mode). |
 | [`WorkerGenerate`](#voxy.local_clone.WorkerGenerate)(backend, \*[, init, threads, ...]) | The default `generate`: the backend's adapter in its own environment.                     |
 | [`XTTSSpeechModel`](#voxy.local_clone.XTTSSpeechModel)(\*args[, accept_licence])         | XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).               |
@@ -61,6 +62,19 @@ Seams (keyword arguments of every model):
 Bases: [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)
 
 Chatterbox: expressive zero-shot cloning (`variant='original'|'turbo'`).
+
+### *class* voxy.local_clone.DesignPreview(seed, audio, text, sample_rate, description)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One candidate voice from `design_voice_previews`: listen, then pick.
+
+#### save(path)
+
+Write the clip to `path` (to audition it).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### *class* voxy.local_clone.F5TTSSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
@@ -131,11 +145,37 @@ Speak `text` (any length) in the reference `voice`.
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)
 
-### *class* voxy.local_clone.Qwen3TTSSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+### *class* voxy.local_clone.Qwen3TTSSpeechModel(\*args, design=None, \*\*kwargs)
 
 Bases: [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)
 
-Qwen3-TTS Base: stable cloning (`init`: model_id 1.7B or 0.6B).
+Qwen3-TTS: stable cloning (`init`: model_id 1.7B or 0.6B) and local voice design.
+
+Designing follows Qwen’s design-then-clone recipe: `design_voice_previews`
+speaks a sample text in voices made from a description (one per seed, no real
+person involved); `design_voice` keeps the chosen sample as a reference
+profile, so long texts render through Base cloning with one stable voice.
+
+Args (beyond `LocalCloneSpeechModel`):
+: design: `(text, *, instruct, **params) -> (samples, sample_rate)`, the
+  : VoiceDesign model call. Default: the worker’s `design` operation.
+
+#### design_voice(description, , name, preview=None, rootdir=None, \*\*preview_kwargs)
+
+A reference profile from the chosen `preview` (default: the first generated).
+
+The clip is kept at `samples/{name}/design.wav` under the data root, and
+the profile points at it, so the voice survives like a cloned one.
+
+* **Return type:**
+  [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
+
+#### design_voice_previews(description, , text='The morning light crossed the water, and for a moment nothing else moved.', seeds=(0, 1, 2), language='English', \*\*params)
+
+Candidate voices for `description`, each speaking `text` (one per seed).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`DesignPreview`](#voxy.local_clone.DesignPreview)]
 
 ### *class* voxy.local_clone.VoxCPMSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
@@ -158,6 +198,10 @@ Stop the worker and free its memory.
 
 * **Return type:**
   [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### design(text, , instruct, \*\*params)
+
+The adapter’s `design` operation (backends that can design voices).
 
 ### *class* voxy.local_clone.XTTSSpeechModel(\*args, accept_licence=None, \*\*kwargs)
 

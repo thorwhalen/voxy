@@ -351,10 +351,14 @@ to install the CSM model and its dependencies.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.speechtext</span><span class="w"> </span><span class="kn">import</span> <span class="n">prepare_speech_text</span>
 </span><span id="line-2"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.pronounce</span><span class="w"> </span><span class="kn">import</span> <span class="n">audit</span>
 </span><span id="line-3">
-</span><span id="line-4"><span class="n">text</span> <span class="o">=</span> <span class="n">prepare_speech_text</span><span class="p">(</span><span class="n">verse</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="p">{</span><span class="s2">"Vous"</span><span class="p">})</span><span class="o">.</span><span class="n">speech</span>   <span class="c1"># verse capitals lowercased, deliberate ones kept</span>
-</span><span id="line-5"><span class="c1"># ... render `text` to take.wav with any backend ...</span>
-</span><span id="line-6"><span class="n">findings</span> <span class="o">=</span> <span class="n">audit</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="s2">"take.wav"</span><span class="p">,</span> <span class="n">expected</span><span class="o">=</span><span class="p">{</span><span class="s2">"est"</span><span class="p">:</span> <span class="s2">"verb"</span><span class="p">})</span>  <span class="c1"># voxy's French heteronym table by default</span>
-</span><span id="line-7"><span class="n">misread</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">findings</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">ok</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">]</span>           <span class="c1"># re-render these</span>
+</span><span id="line-4"><span class="n">text</span> <span class="o">=</span> <span class="n">prepare_speech_text</span><span class="p">(</span>
+</span><span id="line-5">    <span class="n">verse</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="p">{</span><span class="s2">"Vous"</span><span class="p">}</span>
+</span><span id="line-6"><span class="p">)</span><span class="o">.</span><span class="n">speech</span>  <span class="c1"># verse capitals lowercased, deliberate ones kept</span>
+</span><span id="line-7"><span class="c1"># ... render `text` to take.wav with any backend ...</span>
+</span><span id="line-8"><span class="n">findings</span> <span class="o">=</span> <span class="n">audit</span><span class="p">(</span>
+</span><span id="line-9">    <span class="n">text</span><span class="p">,</span> <span class="s2">"take.wav"</span><span class="p">,</span> <span class="n">expected</span><span class="o">=</span><span class="p">{</span><span class="s2">"est"</span><span class="p">:</span> <span class="s2">"verb"</span><span class="p">}</span>
+</span><span id="line-10"><span class="p">)</span>  <span class="c1"># voxy's French heteronym table by default</span>
+</span><span id="line-11"><span class="n">misread</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">findings</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">ok</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">]</span>  <span class="c1"># re-render these</span>
 </span></code></pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">audit</span></code> finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from <code class="docutils literal notranslate"><span class="pre">expected</span></code> (a mapping, or a function of each risk) or from a detector such as <code class="docutils literal notranslate"><span class="pre">voxy.speechtext.pos_detector()</span></code>.</p>
@@ -440,7 +444,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-23 07:14 UTC from <a href="https://github.com/thorwhalen/voxy/commit/1e9dfa128220c90bc4f3cbe07c550afcc1b97d56">1e9dfa1</a> (main) · voxy 0.0.25 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-26 08:21 UTC from <a href="https://github.com/thorwhalen/voxy/commit/f4bc5127e882874c82b092ee8856cc9d3a01d0f0">f4bc512</a> (main) · voxy 0.0.26 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -485,7 +489,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=5d650c58"></script>
+<script src="_static/documentation_options.js?v=6a9d8632"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

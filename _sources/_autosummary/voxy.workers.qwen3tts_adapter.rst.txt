@@ -8,6 +8,7 @@ voxy.workers.qwen3tts\_adapter
 
    .. autosummary::
    
+      design
       load
       synthesize
    
