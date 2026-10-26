@@ -1,4 +1,4 @@
-> built 2026-10-26 09:06 UTC from 6f31fe3 (main) · voxy 0.0.27. Details: build_info.json
+> built 2026-10-26 09:18 UTC from 9be850c (main) · voxy 0.0.28. Details: build_info.json
 
 # index.html.md
 
@@ -1202,6 +1202,17 @@ Registry name of the backend (also each profile’s `model_type`).
 
 Sample rate of the audio `generate_speech` returns.
 
+#### speech_to_speech(audio, voice=None, , model_id='eleven_multilingual_sts_v2', output_format='mp3_44100_128', \*\*kwargs)
+
+Voice changer: `audio` (anyone’s speech) re-spoken in `voice`, timing and intonation kept.
+
+`audio` is anything voxy takes as audio (path, bytes, file-like, tensor).
+Extra keyword arguments (`voice_settings`, `seed`,
+`remove_background_noise`…) go to `client.speech_to_speech.convert`.
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
 #### synthesize(text, voice=None, , output_format='mp3_44100_128', \*\*kwargs)
 
 Encoded speech (mp3 by default) in `voice` (a profile or voice id).
@@ -1446,6 +1457,7 @@ Backends are entries of `voxy.speech_model_factories`; add one with
 | [`get_speech_model`](_autosummary/voxy.facade.html.md#voxy.facade.get_speech_model)([backend, models])              | The (cached) model for `backend`; `models` replaces the shared cache.           |
 | [`list_voices`](_autosummary/voxy.facade.html.md#voxy.facade.list_voices)([backend, voices, model, models])    | Our named voices (`backend=None`), or the voices a backend offers.              |
 | [`resolve_voice`](_autosummary/voxy.facade.html.md#voxy.facade.resolve_voice)(voice, \*[, backend, voices, ...]) | `(backend, voice)` to synthesize with (see the module docstring for the rules). |
+| [`speech_to_speech`](_autosummary/voxy.facade.html.md#voxy.facade.speech_to_speech)(audio[, voice, backend, ...])   | Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.  |
 | [`text_to_speech`](_autosummary/voxy.facade.html.md#voxy.facade.text_to_speech)(text[, voice, backend, ...])      | Speak `text` in `voice` and return the encoded audio (`.save(path)`).           |
 | [`voice_id`](_autosummary/voxy.facade.html.md#voxy.facade.voice_id)(name, \*[, backend, voices])            | The provider's id for library voice `name` (for code that calls a provider).    |
 
@@ -1501,6 +1513,18 @@ Our named voices (`backend=None`), or the voices a backend offers.
 
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
+
+### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
+
+Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.
+
+Same voice resolution as `text_to_speech`. Needs a backend with a
+`speech_to_speech` method (ElevenLabs). `audio` is a path, bytes, file-like
+or tensor. Use it to correct a word: say the fix yourself, convert it to the
+narrator’s voice, splice.
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
 ### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
 
@@ -4222,16 +4246,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-26 09:06 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/6f31fe3bfd6c360475f7df82be4617b2f5dc4165"><code>6f31fe3</code></a> on branch <code>main</code>, for **voxy 0.0.27** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-10-26 09:18 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/9be850cc963da371508ce01a483d060981814454"><code>9be850c</code></a> on branch <code>main</code>, for **voxy 0.0.28** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.28) is behind the latest release on PyPI (0.0.29): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/6f31fe3bfd6c360475f7df82be4617b2f5dc4165"><code>6f31fe3bfd6c360475f7df82be4617b2f5dc4165</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/9be850cc963da371508ce01a483d060981814454"><code>9be850cc963da371508ce01a483d060981814454</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -4242,9 +4268,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/40296510225">40296510225</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/40298082540">40298082540</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>6f31fe3bfd6c360475f7df82be4617b2f5dc4165</code> (in the history of the built commit) |
+| Event commit | <code>9be850cc963da371508ce01a483d060981814454</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4269,13 +4295,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.27/">0.0.27</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.29/">0.0.29</a>, newer than the documented version (0.0.28).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 6f31fe3bfd6c360475f7df82be4617b2f5dc4165
+git checkout 9be850cc963da371508ce01a483d060981814454
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

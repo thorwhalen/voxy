@@ -153,6 +153,17 @@ Registry name of the backend (also each profile’s `model_type`).
 
 Sample rate of the audio `generate_speech` returns.
 
+#### speech_to_speech(audio, voice=None, , model_id='eleven_multilingual_sts_v2', output_format='mp3_44100_128', \*\*kwargs)
+
+Voice changer: `audio` (anyone’s speech) re-spoken in `voice`, timing and intonation kept.
+
+`audio` is anything voxy takes as audio (path, bytes, file-like, tensor).
+Extra keyword arguments (`voice_settings`, `seed`,
+`remove_background_noise`…) go to `client.speech_to_speech.convert`.
+
+* **Return type:**
+  [`Speech`](voxy.base.html.md#voxy.base.Speech)
+
 #### synthesize(text, voice=None, , output_format='mp3_44100_128', \*\*kwargs)
 
 Encoded speech (mp3 by default) in `voice` (a profile or voice id).

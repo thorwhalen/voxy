@@ -13,6 +13,7 @@ voxy.facade
       get_speech_model
       list_voices
       resolve_voice
+      speech_to_speech
       text_to_speech
       voice_id
    

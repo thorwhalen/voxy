@@ -35,6 +35,7 @@ Backends are entries of `voxy.speech_model_factories`; add one with
 | [`get_speech_model`](#voxy.facade.get_speech_model)([backend, models])              | The (cached) model for `backend`; `models` replaces the shared cache.           |
 | [`list_voices`](#voxy.facade.list_voices)([backend, voices, model, models])    | Our named voices (`backend=None`), or the voices a backend offers.              |
 | [`resolve_voice`](#voxy.facade.resolve_voice)(voice, \*[, backend, voices, ...]) | `(backend, voice)` to synthesize with (see the module docstring for the rules). |
+| [`speech_to_speech`](#voxy.facade.speech_to_speech)(audio[, voice, backend, ...])   | Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.  |
 | [`text_to_speech`](#voxy.facade.text_to_speech)(text[, voice, backend, ...])      | Speak `text` in `voice` and return the encoded audio (`.save(path)`).           |
 | [`voice_id`](#voxy.facade.voice_id)(name, \*[, backend, voices])            | The provider's id for library voice `name` (for code that calls a provider).    |
 
@@ -90,6 +91,18 @@ Our named voices (`backend=None`), or the voices a backend offers.
 
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
+
+### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
+
+Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.
+
+Same voice resolution as `text_to_speech`. Needs a backend with a
+`speech_to_speech` method (ElevenLabs). `audio` is a path, bytes, file-like
+or tensor. Use it to correct a word: say the fix yourself, convert it to the
+narrator’s voice, splice.
+
+* **Return type:**
+  [`Speech`](voxy.base.html.md#voxy.base.Speech)
 
 ### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
 
