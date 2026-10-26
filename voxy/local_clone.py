@@ -551,7 +551,10 @@ class Qwen3TTSSpeechModel(LocalCloneSpeechModel):
         stores.audio_store(stores.SAMPLES_KIND, name, rootdir=rootdir)[
             DESIGN_CLIP_NAME
         ] = preview.audio
-        path = stores.kind_dir(stores.SAMPLES_KIND, name, rootdir=rootdir) / DESIGN_CLIP_NAME
+        path = (
+            stores.kind_dir(stores.SAMPLES_KIND, name, rootdir=rootdir)
+            / DESIGN_CLIP_NAME
+        )
         return reference_profile(
             path,
             preview.text,
