@@ -468,8 +468,15 @@ def _json_list(reply: str) -> list:
     return []
 
 
-def _proposed_risk(item, lines: list[str]) -> Risk | None:
-    """``item`` as a :class:`Risk` if it names a word really on its line, else ``None``."""
+def _proposed_risk(
+    item, lines: list[str], elisions: Collection[str] = ()
+) -> Risk | None:
+    """``item`` as a :class:`Risk` if it names a word really on its line, else ``None``.
+
+    A word elided onto one of ``elisions`` ("l'Est") is the risk ``Est`` with that
+    ``clitic``, whether the model wrote it elided or bare (a bare word the line holds
+    only elided takes that clitic).
+    """
     if not isinstance(item, dict):
         return None
     line, word = item.get("line"), item.get("word")
@@ -477,13 +484,34 @@ def _proposed_risk(item, lines: list[str]) -> Risk | None:
         isinstance(line, int) and isinstance(word, str) and 1 <= line <= len(lines)
     ):
         return None
+    tokens = [m.group(0) for m in _WORD.finditer(lines[line - 1])]
     on_line = {
         part.casefold()
-        for m in _WORD.finditer(lines[line - 1])
-        for part in (m.group(0), *re.split(r"['’]", m.group(0)))  # "d'ici" holds "ici"
+        for token in tokens
+        for part in (token, *re.split(r"['’]", token))  # "d'ici" holds "ici"
     }
-    if word.rstrip(".").casefold() not in on_line:  # "Dr." is the word "Dr"
-        return None  # a word the model made up, or put on the wrong line
+    bare = word.rstrip(".")  # "Dr." is the word "Dr"
+    clitic, rest = split_clitic(bare, elisions)
+    if clitic:  # the model wrote "l'Est": it must be on the line, elided so
+        written = (clitic.casefold(), rest.casefold())
+        if not any(
+            tuple(p.casefold() for p in split_clitic(t, elisions)) == written
+            for t in tokens
+        ):
+            return None
+        word = rest
+    else:
+        if bare.casefold() not in on_line:
+            return None  # a word the model made up, or put on the wrong line
+        if bare.casefold() not in {t.casefold() for t in tokens}:  # only elided here
+            clitic = next(
+                (
+                    c
+                    for c, r in (split_clitic(t, elisions) for t in tokens)
+                    if c and r.casefold() == bare.casefold()
+                ),
+                "",
+            )
     readings = tuple(r for r in item.get("readings") or () if isinstance(r, str))
     expected = item.get("expected")
     why = item.get("why")
@@ -497,6 +525,7 @@ def _proposed_risk(item, lines: list[str]) -> Risk | None:
         expected=expected
         if isinstance(expected, str) and expected in readings
         else None,
+        clitic=clitic,
     )
 
 
@@ -505,6 +534,7 @@ def llm_detector(
     chat: Callable[[str], str] | None = None,
     language: str = "French",
     prompt: str = LLM_RISK_PROMPT,
+    clitics: Collection[str] = tuple(ELISIONS["fr"]),
 ) -> Callable[[str], list[Risk]]:
     """A :func:`flag_risks` ``extra`` detector that asks a language model for risky words.
 
@@ -517,6 +547,9 @@ def llm_detector(
             keys and model from aix's own config). Each call costs a model request.
         language: The text's language, named in the prompt.
         prompt: A ``string.Template`` with ``$language`` and ``$text`` (numbered lines).
+        clitics: The clitics a word is elided onto in ``language`` (as ``pos_detector``); a proposal for
+            "l'Est" (or for "Est", when the line only has it elided) carries the
+            ``clitic``, as :func:`flag_risks` gives it.
 
     >>> fake = lambda prompt: '[{"line": 1, "word": "est", "readings": ["verb", "noun"], "expected": "verb"}]'
     >>> [(r.line, r.word, r.expected) for r in llm_detector(chat=fake)("Il est parti")]
@@ -541,7 +574,7 @@ def llm_detector(
         reply = chat(template.substitute(language=language, text=numbered))
         if not isinstance(reply, str):  # a streaming chat yields chunks
             reply = "".join(reply)
-        risks = (_proposed_risk(item, lines) for item in _json_list(reply))
+        risks = (_proposed_risk(item, lines, clitics) for item in _json_list(reply))
         return [r for r in risks if r is not None]
 
     return detect
