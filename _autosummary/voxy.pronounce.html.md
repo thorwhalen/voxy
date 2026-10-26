@@ -58,7 +58,7 @@ without torch.
 
 ### Functions
 
-| [`align_words`](#voxy.pronounce.align_words)(text, words)                           | `{index of a word of text: index of the ASR word heard for it}`.                                                                                                                                                                     |
+| [`align_words`](#voxy.pronounce.align_words)(text, words, \*[, elisions])           | `{index of a word of text: index of the ASR word heard for it}`.                                                                                                                                                                     |
 |-----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [`audit`](#voxy.pronounce.audit)(text, audio, \*[, readings, language, ...])  | Which reading did each heteronym of `text` get in the finished `audio`?                                                                                                                                                              |
 | [`best_reading`](#voxy.pronounce.best_reading)(log_probs, vocab, readings, \*)       | The name of the reading `log_probs` support best.                                                                                                                                                                                    |
@@ -80,6 +80,8 @@ without torch.
 | [`render_verified`](#voxy.pronounce.render_verified)(lines, checks, \*, render[, ...])  | Render each line, and re-render the ones whose flagged words came out wrong.                                                                                                                                                         |
 | [`score_readings`](#voxy.pronounce.score_readings)(log_probs, vocab, readings, \*)     | Each reading's CTC log-likelihood per target symbol (higher is better).                                                                                                                                                              |
 | [`speech_renderer`](#voxy.pronounce.speech_renderer)(model[, voice, outdir, ...])       | A `render` for [`render_verified()`](#voxy.pronounce.render_verified) over a [`voxy.base.SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel).                                               |
+| [`split_elisions`](#voxy.pronounce.split_elisions)(words, \*[, elisions])              | Timed words split at each elision of `elisions`, as `_text_words()` splits the text, so [`align_words()`](#voxy.pronounce.align_words) can match them.                                                               |
+| [`spoken_context`](#voxy.pronounce.spoken_context)(words, \*[, elisions])              | `(text, tail)`: what `words` say, for a phonemizer, and the IPA of an elided clitic they end with.                                                                                                                                   |
 | [`spot_log_likelihood`](#voxy.pronounce.spot_log_likelihood)(log_probs, target, \*[, ...])  | `log P` of `target` said somewhere in `log_probs`, the rest being filler.                                                                                                                                                            |
 | [`spot_readings`](#voxy.pronounce.spot_readings)(log_probs, vocab, readings, \*)      | Each reading's [`spot_log_likelihood()`](#voxy.pronounce.spot_log_likelihood), less that of filler alone (higher is better).                                                                                                 |
 | [`spot_scorer`](#voxy.pronounce.spot_scorer)(\*, emitter[, context, padding, ...])  | The reading spotted in the window of `context` words on each side, the rest left to filler ([`spot_readings()`](#voxy.pronounce.spot_readings)); a neighbour's /s/ or /t/ can still be credited to the longer reading. |
@@ -287,13 +289,14 @@ The reading the audio supports best, variants folded in (`verb~e` is `verb`).
 
 `scores` with each reading’s variants (`name~variant`) merged by their best.
 
-### voxy.pronounce.align_words(text, words)
+### voxy.pronounce.align_words(text, words, , elisions=())
 
 `{index of a word of text: index of the ASR word heard for it}`.
 
 Words are matched by aligning the two sequences (`difflib`), so a word ASR missed,
 merged or added elsewhere does not shift the others; a text word with no exact
-counterpart is left out.
+counterpart is left out. A word elided onto one of `elisions` counts as two
+(`_text_words()`).
 
 ```pycon
 >>> align_words("Il est là", [{"text": " Il"}, {"text": " et"}, {"text": " est"}, {"text": " là."}])
@@ -303,7 +306,7 @@ counterpart is left out.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)]
 
-### voxy.pronounce.audit(text, audio, \*, readings=None, language='fr', expected=None, detectors=(), emitter=None, words_of=<function \_transcribed_words>, scoring='phrase', phonemize=None, context=1, filler_penalty=1.0, padding=0.08, margin=None, scorer=None)
+### voxy.pronounce.audit(text, audio, \*, readings=None, language='fr', elisions=None, clitics=None, expected=None, detectors=(), emitter=None, words_of=<function \_transcribed_words>, scoring='phrase', phonemize=None, context=1, filler_penalty=1.0, padding=0.08, margin=None, scorer=None)
 
 Which reading did each heteronym of `text` get in the finished `audio`?
 
@@ -318,10 +321,16 @@ readings with the phoneme recogniser.
   * **audio** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike)) – The render.
   * **readings** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `{word: {reading name: IPA}}`; default [`heteronym_readings()`](#voxy.pronounce.heteronym_readings)
     for `language`.
+  * **elisions** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `{clitic: IPA}` of the language’s elisions (default
+    `ELISIONS[language]`): text and ASR words are split there to be aligned.
+  * **clitics** ([`Collection`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The clitics a heteronym is still flagged after (default
+    `NOUN_CLITICS[language]`): “l’Est” is the risk `Est`, clitic `l'`.
   * **expected** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`object`](https://docs.python.org/3/builtins/functions.html#object)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The reading each word should have: `{word: reading}`, or
-    `risk -> reading` to decide per occurrence (`risk.line`, `risk.word`).
-    Otherwise what a `detectors` entry found for that word on that line
-    (e.g. [`voxy.speechtext.pos_detector()`](voxy.speechtext.html.md#voxy.speechtext.pos_detector)), else None (just report).
+    `risk -> reading` to decide per occurrence (`risk.line`, `risk.word`,
+    `risk.clitic`). A mapping names an elided form by its clitic
+    (`{"est": "verb", "l'est": "noun"}`); `"est"` alone does not cover
+    “l’Est”. Otherwise what a `detectors` entry found for that word on that
+    line (e.g. [`voxy.speechtext.pos_detector()`](voxy.speechtext.html.md#voxy.speechtext.pos_detector)), else None (just report).
   * **detectors** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)]]) – `text -> risks` proposers of expected readings.
   * **emitter** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The phoneme recogniser; default [`phoneme_emitter()`](#voxy.pronounce.phoneme_emitter).
   * **words_of** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]]) – `audio -> timed words`; default ASR (`voxy.refprep.transcribe`).
@@ -364,7 +373,9 @@ The name of the reading `log_probs` support best.
 Lexique-derived heteronym list the caller supplies; `expected` names the
 reading each word should have, and otherwise the risks’ own `expected` (what a
 detector such as `voxy.speechtext.pos_detector` found) is used. Words with no
-entry are skipped. Each word is checked once: `verify_words` finds every place
+entry are skipped, and so are words elided onto a clitic (a risk with a `clitic`,
+“l’Est”; see thorwhalen/voxy#48), whose differing reading then leaves the word’s open: `verify_words`
+matches spellings, not places. Each word is checked once: `verify_words` finds every place
 it is spoken, so a word whose risks name *different* readings gets none here
 (group the risks by line with [`checks_by_line()`](#voxy.pronounce.checks_by_line) to check each one).
 
@@ -493,14 +504,16 @@ True
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
-### voxy.pronounce.phrase_scorer(, emitter, phonemize=None, language='fr', context=1, padding=0.08, margin=2.0)
+### voxy.pronounce.phrase_scorer(, emitter, phonemize=None, language='fr', elisions=None, context=1, padding=0.08, margin=2.0)
 
 Each reading as the whole phrase around the word ([`phrase_readings()`](#voxy.pronounce.phrase_readings)), the
 `context` words on each side written out by `phonemize` in `language`.
 
 The neighbours are the same in every candidate, so only the word decides.
 `phonemize` defaults to [`espeak_phonemizer()`](#voxy.pronounce.espeak_phonemizer) (its worker starts on the first
-call); it must give one IPA per text, or a `ValueError` is raised.
+call); it must give one IPA per text, or a `ValueError` is raised. An elided
+clitic next to the word (`l'` before `Est`) is written from `elisions`
+(default `ELISIONS[language]`, see [`spoken_context()`](#voxy.pronounce.spoken_context)).
 
 * **Return type:**
   [`Scorer`](#voxy.pronounce.Scorer)
@@ -604,6 +617,52 @@ a new take; without it, the model is simply called again.
 
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### voxy.pronounce.split_elisions(words, , elisions=())
+
+Timed words split at each elision of `elisions`, as `_text_words()` splits
+the text, so [`align_words()`](#voxy.pronounce.align_words) can match them.
+
+Whisper’s `" l" | "'est"` becomes `" l'" | "est"` (the apostrophe moved back);
+a word heard whole, `" l'est"`, becomes `" l'"` (empty, at its start) and
+`"est"` (its whole span). Other apostrophes (an English opening quote) are left
+alone.
+
+```pycon
+>>> words = [{"text": " à", "start": 0, "end": 1}, {"text": " l", "start": 1, "end": 2},
+...          {"text": "'est", "start": 2, "end": 3}, {"text": " l'est", "start": 3, "end": 4},
+...          {"text": " 'War", "start": 4, "end": 5}]
+>>> [(w["text"], w["start"], w["end"]) for w in split_elisions(words, elisions={"l'": "l"})]
+[(' à', 0, 1), (" l'", 1, 2), ('est', 2, 3), (" l'", 3, 3), ('est', 3, 4), (" 'War", 4, 5)]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### voxy.pronounce.spoken_context(words, , elisions=None)
+
+`(text, tail)`: what `words` say, for a phonemizer, and the IPA of an elided
+clitic they end with.
+
+A clitic of `elisions` (`{clitic: IPA}`, e.g. `ELISIONS["fr"]`) that ASR split
+from its word is joined back to it, whichever side the apostrophe went
+(`L'` | `homme`, or Whisper’s `l` | `'aube`). One left at the end (its word
+is the flagged one, or outside the window) is written from `elisions` instead of
+being left to the phonemizer, which reads a standalone `l'` as /ɛl/. Anything
+not in `elisions` (an English quote, `James'`) is left as it is.
+
+```pycon
+>>> fr = {"l'": "l", "d'": "d"}
+>>> spoken_context([{"text": " L'"}, {"text": " homme,"}, {"text": " d’"}], elisions=fr)
+("L'homme", 'd')
+>>> spoken_context([{"text": " avant"}, {"text": " l"}, {"text": "'aube."}], elisions=fr)
+("avant l'aube", '')
+>>> spoken_context([{"text": " read"}, {"text": " 'War"}], elisions=fr)
+("read 'War", '')
+```
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ### voxy.pronounce.spot_log_likelihood(log_probs, target, , blank=0, filler_penalty=None)
 

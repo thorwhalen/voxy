@@ -54,6 +54,8 @@ voxy.pronounce
       render_verified
       score_readings
       speech_renderer
+      split_elisions
+      spoken_context
       spot_log_likelihood
       spot_readings
       spot_scorer

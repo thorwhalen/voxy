@@ -9,6 +9,8 @@ voxy.speechtext
    .. autosummary::
    
       SENTENCE_END
+      ELISIONS
+      NOUN_CLITICS
       Tagger
       DFLT_SPACY_MODEL
       LLM_RISK_PROMPT
@@ -22,6 +24,7 @@ voxy.speechtext
       pos_detector
       prepare_speech_text
       spacy_tagger
+      split_clitic
    
    .. rubric:: Classes
 

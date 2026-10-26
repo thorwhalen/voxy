@@ -35,20 +35,23 @@ True
 
 ### Module Attributes
 
-| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)     | the next line's capital then starts a new one.                                                                           |
-|-------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
-| [`Tagger`](#voxy.speechtext.Tagger)           | `text -> (char offset, token, universal POS tag)` for every token.                                                       |
-| [`DFLT_SPACY_MODEL`](#voxy.speechtext.DFLT_SPACY_MODEL) | The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).               |
-| [`LLM_RISK_PROMPT`](#voxy.speechtext.LLM_RISK_PROMPT)  | The prompt [`llm_detector()`](#voxy.speechtext.llm_detector) sends; `$language` and `$text` are filled in. |
+| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)     | the next line's capital then starts a new one.                                                                                                                      |
+|-------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`ELISIONS`](#voxy.speechtext.ELISIONS)         | a phonemizer reads one left standalone (`l'` split by ASR from `Est`) as a letter name (espeak: `l'` /ɛl/, `d'` /de/, `j'` /ʒi/), a vowel that is not in the audio. |
+| [`NOUN_CLITICS`](#voxy.speechtext.NOUN_CLITICS)     | those that can come before its noun reading ("l'Est", "vent d'est").                                                                                                |
+| [`Tagger`](#voxy.speechtext.Tagger)           | `text -> (char offset, token, universal POS tag)` for every token.                                                                                                  |
+| [`DFLT_SPACY_MODEL`](#voxy.speechtext.DFLT_SPACY_MODEL) | The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).                                                          |
+| [`LLM_RISK_PROMPT`](#voxy.speechtext.LLM_RISK_PROMPT)  | The prompt [`llm_detector()`](#voxy.speechtext.llm_detector) sends; `$language` and `$text` are filled in.                                            |
 
 ### Functions
 
-| [`flag_risks`](#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra])   | Words of `text` a model may misread, in text order.                                                                                  |
-|----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| [`llm_detector`](#voxy.speechtext.llm_detector)(\*[, chat, language, prompt])  | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector that asks a language model for risky words.         |
-| [`pos_detector`](#voxy.speechtext.pos_detector)([rules, tagger])               | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading. |
-| [`prepare_speech_text`](#voxy.speechtext.prepare_speech_text)(text, \*[, ...])        | Display text in, speech text out, with a record of every change.                                                                     |
-| [`spacy_tagger`](#voxy.speechtext.spacy_tagger)([model])                       | A [`Tagger`](#voxy.speechtext.Tagger) over a spaCy pipeline, loaded on first use.                                |
+| [`flag_risks`](#voxy.speechtext.flag_risks)(text, \*[, heteronyms, extra, clitics])   | Words of `text` a model may misread, in text order.                                                                                  |
+|-------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| [`llm_detector`](#voxy.speechtext.llm_detector)(\*[, chat, language, prompt])           | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector that asks a language model for risky words.         |
+| [`pos_detector`](#voxy.speechtext.pos_detector)([rules, tagger, clitics])               | A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading. |
+| [`prepare_speech_text`](#voxy.speechtext.prepare_speech_text)(text, \*[, ...])                 | Display text in, speech text out, with a record of every change.                                                                     |
+| [`spacy_tagger`](#voxy.speechtext.spacy_tagger)([model])                                | A [`Tagger`](#voxy.speechtext.Tagger) over a spaCy pipeline, loaded on first use.                                |
+| [`split_clitic`](#voxy.speechtext.split_clitic)(word, clitics)                          | `(clitic, rest)` of `word` when it starts with one of `clitics` (written with a straight apostrophe, lowercase), else `("", word)`.  |
 
 ### Classes
 
@@ -67,15 +70,37 @@ One edit [`prepare_speech_text()`](#voxy.speechtext.prepare_speech_text) made (`
 
 The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).
 
+### voxy.speechtext.ELISIONS *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]]* *= {'fr': {"c'": 's', "d'": 'd', "j'": 'ʒ', "jusqu'": 'ʒysk', "l'": 'l', "lorsqu'": 'lɔʁsk', "m'": 'm', "n'": 'n', "puisqu'": 'pɥisk', "qu'": 'k', "quoiqu'": 'kwak', "s'": 's', "t'": 't'}}*
+
+a phonemizer reads one left
+standalone (`l'` split by ASR from `Est`) as a letter name (espeak: `l'` /ɛl/,
+`d'` /de/, `j'` /ʒi/), a vowel that is not in the audio.
+
+* **Type:**
+  Elided clitics as said before a vowel, by language
+
 ### voxy.speechtext.LLM_RISK_PROMPT *= 'You help a text-to-speech system avoid misreadings. Below is a $language text, its lines numbered. List the words a speech model may misread: heteronyms (words with more than one pronunciation, such as French "est" as a verb or as a noun), names, abbreviations. For each, give the line, the word exactly as written, short names of its possible readings, and the reading this context needs.\\n\\nAnswer with a JSON list only, one object per word:\\n[{"line": 2, "word": "est", "readings": ["verb", "noun"], "expected": "verb", "why": "..."}]\\nUse "expected": null when the context does not decide. Answer [] if nothing is risky.\\n\\n$text\\n'*
 
 The prompt [`llm_detector()`](#voxy.speechtext.llm_detector) sends; `$language` and `$text` are filled in.
 
-### *class* voxy.speechtext.Risk(line, word, reason, readings=(), line_initial_capital=False, expected=None)
+### voxy.speechtext.NOUN_CLITICS *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), ...]]* *= {'fr': ("l'", "d'")}*
+
+those that can come
+before its noun reading (“l’Est”, “vent d’est”). After the others (“c’est”, “s’est”,
+“n’est”) only the verb fits, and flagging every “c’est” would swamp a French text.
+
+* **Type:**
+  Clitics after which a heteronym is still flagged, by language
+
+### *class* voxy.speechtext.Risk(line, word, reason, readings=(), line_initial_capital=False, expected=None, clitic='')
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 A word a model may misread: where it is, why it is flagged, its known readings.
+
+#### clitic *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= ''*
+
+The clitic the word is elided onto, as written (“l’” of “l’Est”); `word` is “Est”.
 
 #### expected *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
 
@@ -103,7 +128,7 @@ The text to show (`display`), the text to speak (`speech`) and what changed.
 
 alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
 
-### voxy.speechtext.flag_risks(text, , heteronyms=(), extra=())
+### voxy.speechtext.flag_risks(text, , heteronyms=(), extra=(), clitics=())
 
 Words of `text` a model may misread, in text order.
 
@@ -114,6 +139,9 @@ Words of `text` a model may misread, in text order.
     `{word: readings}` (e.g. from Lexique). Matched case-insensitively.
   * **extra** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Risk`](#voxy.speechtext.Risk)]]]) – More detectors, each `text -> risks` (a part-of-speech rule, an LLM
     proposer). Their risks are merged in by line.
+  * **clitics** ([`Collection`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – Clitics a heteronym may be elided onto and still be flagged
+    (e.g. [`NOUN_CLITICS`](#voxy.speechtext.NOUN_CLITICS)): “l’Est” is then the risk `Est` with
+    `clitic="l'"`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Risk`](#voxy.speechtext.Risk)]
 
@@ -142,7 +170,7 @@ reply that is not a JSON list proposes nothing.
 [(1, 'est', 'verb')]
 ```
 
-### voxy.speechtext.pos_detector(rules={'affections': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'affluent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'as': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'content': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'convergent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'couvent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'coïncident': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'divergent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'excellent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'exceptions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'expédient': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'ferment': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'fier': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'influent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'insolent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'intentions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'inventions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'lis': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'mentions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'négligent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'options': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'parent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'portions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'président': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'relations': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'résident': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'sens': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'somnolent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'talent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'tous': {'DET': 'det', 'PRON': 'pronoun'}, 'urgent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'violent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'vis': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'éditions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'émergent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'équivalent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'évident': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}}, , tagger=None)
+### voxy.speechtext.pos_detector(rules={'affections': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'affluent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'as': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'content': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'convergent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'couvent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'coïncident': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'divergent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'est': {'ADJ': 'noun', 'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'excellent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'exceptions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'expédient': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'ferment': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'fier': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'influent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'insolent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'intentions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'inventions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'lis': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'mentions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'négligent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'options': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'parent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'portions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'président': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'relations': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'résident': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'sens': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'somnolent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'talent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'tous': {'DET': 'det', 'PRON': 'pronoun'}, 'urgent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'violent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'vis': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'éditions': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'émergent': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}, 'équivalent': {'AUX': 'verb', 'NOUN': 'noun', 'PROPN': 'noun', 'VERB': 'verb'}, 'évident': {'ADJ': 'adjective', 'AUX': 'verb', 'VERB': 'verb'}}, , tagger=None, clitics=("l'", "d'", "j'", "m'", "t'", "s'", "n'", "c'", "qu'", "jusqu'", "lorsqu'", "puisqu'", "quoiqu'"))
 
 A [`flag_risks()`](#voxy.speechtext.flag_risks) `extra` detector: heteronyms whose part of speech picks the reading.
 
@@ -154,6 +182,9 @@ capital fools the tagger the same way it fools the speech model.
     (default `FRENCH_POS_HETERONYMS`).
   * **tagger** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> (offset, token, UPOS)`; default [`spacy_tagger()`](#voxy.speechtext.spacy_tagger)
     (French), loaded on first use.
+  * **clitics** ([`Collection`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Collection)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – Elision clitics (straight apostrophe, lowercase): a risk right after
+    one of them (“l’” then “Est”) gets it as its `clitic`; an opening quote
+    does not count.
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Risk`](#voxy.speechtext.Risk)]]
 
@@ -161,6 +192,12 @@ capital fools the tagger the same way it fools the speech model.
 >>> fake = lambda text: [(0, "Il", "PRON"), (3, "est", "AUX"), (7, "parti", "VERB")]
 >>> [(r.word, r.expected) for r in pos_detector(tagger=fake)("Il est parti")]
 [('est', 'verb')]
+>>> fake = lambda text: [(0, "à", "ADP"), (2, "l'", "DET"), (4, "Est", "PROPN")]
+>>> [(r.clitic, r.word, r.expected) for r in pos_detector(tagger=fake)("à l'Est")]
+[("l'", 'Est', 'noun')]
+>>> fake = lambda text: [(0, "'", "PUNCT"), (1, "est", "AUX")]  # a quote, not a clitic
+>>> [(r.clitic, r.word) for r in pos_detector(tagger=fake)("'est")]
+[('', 'est')]
 ```
 
 ### voxy.speechtext.prepare_speech_text(text, , lowercase_verse_initial=True, keep=(), respellings=None, aliases=None, transforms=())
@@ -192,3 +229,18 @@ Needs `pip install 'voxy[pos]'` and the model itself
 
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
+
+### voxy.speechtext.split_clitic(word, clitics)
+
+`(clitic, rest)` of `word` when it starts with one of `clitics` (written
+with a straight apostrophe, lowercase), else `("", word)`.
+
+```pycon
+>>> split_clitic("L’Est", ("l'",)), split_clitic("c'est", ("l'",))
+(('L’', 'Est'), ('', "c'est"))
+>>> split_clitic("l'", ("l'",))  # a clitic alone is a word
+('', "l'")
+```
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
