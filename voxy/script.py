@@ -53,8 +53,13 @@ INDEX_FILE = "index.json"
 SEGMENTS_DIR = "segments"
 SECTIONS_DIR = "sections"
 AWAITING = "awaiting voice"  # a role whose voice is not chosen yet
-AWAITING_TAKE = "awaiting take"  # an external voice has not returned this section's take
-FINISHING_KEYS = ("tempo", "effect")  # voice settings applied when finishing, not synthesising
+AWAITING_TAKE = (
+    "awaiting take"  # an external voice has not returned this section's take
+)
+FINISHING_KEYS = (
+    "tempo",
+    "effect",
+)  # voice settings applied when finishing, not synthesising
 DFLT_BACKEND = "qwen3tts"
 FRAME_S = 0.01
 DFLT_FINISH = {
@@ -89,7 +94,9 @@ def plan_script(
         for seg in section["segments"]:
             role = seg.get("role") or default
             if role not in roles:
-                raise ValueError(f"{section['id']}: no voice for role {role!r} in casting['roles']")
+                raise ValueError(
+                    f"{section['id']}: no voice for role {role!r} in casting['roles']"
+                )
             text = seg["text"]
             segments.append(
                 {
@@ -100,7 +107,13 @@ def plan_script(
                     "take": take,
                 }
             )
-        plan.append({"id": section["id"], "title": section.get("title", ""), "segments": segments})
+        plan.append(
+            {
+                "id": section["id"],
+                "title": section.get("title", ""),
+                "segments": segments,
+            }
+        )
     return plan
 
 
@@ -150,7 +163,9 @@ def _params(voice: Mapping, take: int) -> dict:
     return params
 
 
-def lengthen_pauses(samples, sr: int, *, tiers: Sequence[Sequence[float]], floor_db: float = -35.0):
+def lengthen_pauses(
+    samples, sr: int, *, tiers: Sequence[Sequence[float]], floor_db: float = -35.0
+):
     """``samples`` (mono float array) with each inner pause lengthened by its tier's extra seconds.
 
     A pause is a run of 10 ms frames ``floor_db`` below the loud frames (95th percentile);
@@ -196,13 +211,17 @@ def _with_pauses(path: Path, finish: Mapping, tmp: Path) -> Path:
     if not finish.get("pauses"):
         return path
     samples, sr = read_wav(path)
-    longer = lengthen_pauses(samples, sr, tiers=finish["pauses"], floor_db=finish["pause_floor_db"])
+    longer = lengthen_pauses(
+        samples, sr, tiers=finish["pauses"], floor_db=finish["pause_floor_db"]
+    )
     out = tmp / path.name
     out.write_bytes(write_wav(longer, sr))
     return out
 
 
-def finish_section(wavs: Sequence[tuple[Path, Mapping]], out: Path, finish: Mapping) -> None:
+def finish_section(
+    wavs: Sequence[tuple[Path, Mapping]], out: Path, finish: Mapping
+) -> None:
     """Join takes (each ``(wav path, voice spec)``) into one MP3 at ``out``.
 
     Per take: pauses, then tempo, effect and loudness; a silent gap follows each take but
@@ -212,13 +231,20 @@ def finish_section(wavs: Sequence[tuple[Path, Mapping]], out: Path, finish: Mapp
         wavs = [(_with_pauses(p, finish, Path(tmp)), voice) for p, voice in wavs]
         last, chains = len(wavs) - 1, []
         for k, (_, voice) in enumerate(wavs):
-            steps = [f"aresample={finish['sample_rate']}", "aformat=channel_layouts=mono"]
+            steps = [
+                f"aresample={finish['sample_rate']}",
+                "aformat=channel_layouts=mono",
+            ]
             if (tempo := voice.get("tempo", 1)) != 1:
                 steps.append(f"rubberband=tempo={tempo}")
             if effect := voice.get("effect"):
                 steps.append(effect)
-            steps.append(f"loudnorm=I={finish['loudness_lufs']}:TP={finish['true_peak_db']}:LRA=11")
-            steps.append(f"aresample={finish['sample_rate']}")  # loudnorm upsamples internally
+            steps.append(
+                f"loudnorm=I={finish['loudness_lufs']}:TP={finish['true_peak_db']}:LRA=11"
+            )
+            steps.append(
+                f"aresample={finish['sample_rate']}"
+            )  # loudnorm upsamples internally
             if k < last:
                 steps.append(f"apad=pad_dur={finish['segment_gap_s']}")
             chains.append(f"[{k}:a]" + ",".join(steps) + f"[a{k}]")
@@ -227,16 +253,41 @@ def finish_section(wavs: Sequence[tuple[Path, Mapping]], out: Path, finish: Mapp
         out.parent.mkdir(parents=True, exist_ok=True)
         inputs = [x for p, _ in wavs for x in ("-i", str(p))]
         subprocess.run(
-            ["ffmpeg", "-y", "-v", "error", *inputs, "-filter_complex", graph, "-map", "[out]",
-             "-c:a", "libmp3lame", "-b:a", finish["bitrate"], str(out)],
+            [
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                *inputs,
+                "-filter_complex",
+                graph,
+                "-map",
+                "[out]",
+                "-c:a",
+                "libmp3lame",
+                "-b:a",
+                finish["bitrate"],
+                str(out),
+            ],
             check=True,
         )
 
 
 def _seconds(path: Path) -> float:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-        capture_output=True, text=True, check=True,
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     return round(float(out), 2)
 
@@ -262,9 +313,23 @@ def add_take(
     wav.write_bytes(audio)
     samples, sr = read_wav(audio)
     meta = {
-        **{k: segment[k] for k in ("section", "role", "voice", "text", "tts_text", "take", "key", "voice_spec")},
+        **{
+            k: segment[k]
+            for k in (
+                "section",
+                "role",
+                "voice",
+                "text",
+                "tts_text",
+                "take",
+                "key",
+                "voice_spec",
+            )
+        },
         "seconds": round(len(samples) / sr, 2),
-        "generation_seconds": None if generation_seconds is None else round(generation_seconds, 1),
+        "generation_seconds": None
+        if generation_seconds is None
+        else round(generation_seconds, 1),
         "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
     wav.with_suffix(".json").write_text(json.dumps(meta, indent=1, ensure_ascii=False))
@@ -301,7 +366,9 @@ def missing_takes(
                 continue
             key = segment_key(seg, voice)
             if not _take_path(root, key).exists():
-                out.append({**seg, "section": section["id"], "key": key, "voice_spec": voice})
+                out.append(
+                    {**seg, "section": section["id"], "key": key, "voice_spec": voice}
+                )
     return out
 
 
@@ -336,7 +403,11 @@ def render_script(
     only = set(only) if only is not None else None
     plan = plan_script(script, casting, text_prep=text_prep)
     index_path = root / INDEX_FILE
-    old = {i["id"]: i for i in json.loads(index_path.read_text())["items"]} if index_path.exists() else {}
+    old = (
+        {i["id"]: i for i in json.loads(index_path.read_text())["items"]}
+        if index_path.exists()
+        else {}
+    )
     models, profiles = {}, {}
 
     def model_for(backend, init):
@@ -353,38 +424,78 @@ def render_script(
         if wav.exists() and wav.with_suffix(".json").exists():
             return wav
         if voice.get("external"):
-            raise LookupError(f"{seg['section']}: external voice {seg['voice']} has no take {key} yet")
+            raise LookupError(
+                f"{seg['section']}: external voice {seg['voice']} has no take {key} yet"
+            )
         name = seg["voice"]
         if name not in profiles:
             profiles[name] = voice_loader(voice, root=root)
         log(f"voxy.script: {seg['section']} {name} ({len(seg['tts_text'])} chars)")
         model = model_for(voice.get("backend", DFLT_BACKEND), voice.get("init", {}))
         start = time.perf_counter()
-        speech = model.synthesize(seg["tts_text"], profiles[name], **_params(voice, seg["take"]))
+        speech = model.synthesize(
+            seg["tts_text"], profiles[name], **_params(voice, seg["take"])
+        )
         took = time.perf_counter() - start
-        return add_take(root, {**seg, "key": key, "voice_spec": voice}, speech.audio, generation_seconds=took)
+        return add_take(
+            root,
+            {**seg, "key": key, "voice_spec": voice},
+            speech.audio,
+            generation_seconds=took,
+        )
 
     def entry(section, status, segs, file=None, seconds=None, finished_with=None):
-        return {"id": section["id"], "title": section["title"], "status": status, "segments": segs,
-                "file": file, "seconds": seconds, "finished_with": finished_with}
+        return {
+            "id": section["id"],
+            "title": section["title"],
+            "status": status,
+            "segments": segs,
+            "file": file,
+            "seconds": seconds,
+            "finished_with": finished_with,
+        }
 
     def save(entries):
         root.mkdir(parents=True, exist_ok=True)
-        index_path.write_text(json.dumps({"items": entries}, indent=1, ensure_ascii=False))
+        index_path.write_text(
+            json.dumps({"items": entries}, indent=1, ensure_ascii=False)
+        )
 
     entries = []
     for section in plan:  # what exists already, so the index is whole from the start
         if unknown := {s["voice"] for s in section["segments"]} - set(voices) - {None}:
-            raise ValueError(f"{section['id']}: voice(s) {sorted(unknown)} not in the voices")
-        segs = [{"role": s["role"], "voice": s["voice"], "take": s["take"],
-                 "key": segment_key(s, voices[s["voice"]]) if s["voice"] else None}
-                for s in section["segments"]]
+            raise ValueError(
+                f"{section['id']}: voice(s) {sorted(unknown)} not in the voices"
+            )
+        segs = [
+            {
+                "role": s["role"],
+                "voice": s["voice"],
+                "take": s["take"],
+                "key": segment_key(s, voices[s["voice"]]) if s["voice"] else None,
+            }
+            for s in section["segments"]
+        ]
         prev = old.get(section["id"], {})
-        done = prev.get("status") == "done" and [s["key"] for s in prev.get("segments", [])] == [s["key"] for s in segs]
+        done = prev.get("status") == "done" and [
+            s["key"] for s in prev.get("segments", [])
+        ] == [s["key"] for s in segs]
         waiting = any(s["voice"] is None for s in segs)
-        owed = any(voices[s["voice"]].get("external") and not _take_path(root, s["key"]).exists()
-                   for s in segs if s["voice"])
-        entries.append(prev if done else entry(section, AWAITING if waiting else AWAITING_TAKE if owed else "pending", segs))
+        owed = any(
+            voices[s["voice"]].get("external")
+            and not _take_path(root, s["key"]).exists()
+            for s in segs
+            if s["voice"]
+        )
+        entries.append(
+            prev
+            if done
+            else entry(
+                section,
+                AWAITING if waiting else AWAITING_TAKE if owed else "pending",
+                segs,
+            )
+        )
     save(entries)
     try:
         for n, section in enumerate(plan):
@@ -393,14 +504,31 @@ def render_script(
             segs = entries[n]["segments"]
             if entries[n]["status"] in (AWAITING, AWAITING_TAKE):
                 continue
-            stamp = {"finish": finish, "finishing": [{k: voices[s["voice"]].get(k) for k in FINISHING_KEYS} for s in segs]}
+            stamp = {
+                "finish": finish,
+                "finishing": [
+                    {k: voices[s["voice"]].get(k) for k in FINISHING_KEYS} for s in segs
+                ],
+            }
             file = Path(SECTIONS_DIR) / f"{section['id']}.mp3"
-            if entries[n]["status"] == "done" and entries[n].get("finished_with") == stamp and (root / file).exists():
+            if (
+                entries[n]["status"] == "done"
+                and entries[n].get("finished_with") == stamp
+                and (root / file).exists()
+            ):
                 continue
-            wavs = [take_of({**s, "section": section["id"]}, voices[s["voice"]], k["key"])
-                    for s, k in zip(section["segments"], segs)]
-            finish_section([(w, voices[s["voice"]]) for w, s in zip(wavs, segs)], root / file, finish)
-            entries[n] = entry(section, "done", segs, str(file), _seconds(root / file), stamp)
+            wavs = [
+                take_of({**s, "section": section["id"]}, voices[s["voice"]], k["key"])
+                for s, k in zip(section["segments"], segs)
+            ]
+            finish_section(
+                [(w, voices[s["voice"]]) for w, s in zip(wavs, segs)],
+                root / file,
+                finish,
+            )
+            entries[n] = entry(
+                section, "done", segs, str(file), _seconds(root / file), stamp
+            )
             save(entries)
             log(f"voxy.script: {section['id']} done ({entries[n]['seconds']} s)")
     finally:
@@ -414,11 +542,20 @@ def render_script(
 def status(root: str | os.PathLike) -> dict:
     """Progress from ``index.json``: counts per status, total ``seconds``, ``segments_by_voice``."""
     items = json.loads((Path(root) / INDEX_FILE).read_text())["items"]
-    out = {"done": 0, "pending": 0, AWAITING: 0, AWAITING_TAKE: 0, "seconds": 0.0, "segments_by_voice": {}}
+    out = {
+        "done": 0,
+        "pending": 0,
+        AWAITING: 0,
+        AWAITING_TAKE: 0,
+        "seconds": 0.0,
+        "segments_by_voice": {},
+    }
     for i in items:
         out[i["status"]] = out.get(i["status"], 0) + 1
         out["seconds"] += i["seconds"] or 0
         for s in i["segments"]:
-            out["segments_by_voice"][s["voice"]] = out["segments_by_voice"].get(s["voice"], 0) + 1
+            out["segments_by_voice"][s["voice"]] = (
+                out["segments_by_voice"].get(s["voice"], 0) + 1
+            )
     out["seconds"] = round(out["seconds"], 1)
     return out
