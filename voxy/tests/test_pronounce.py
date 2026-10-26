@@ -571,6 +571,32 @@ def test_render_verified_with_audit_options_tells_occurrences_apart_and_gives_re
     assert not second.verified
 
 
+def test_render_verified_runs_detectors_once_on_the_full_text():
+    from voxy.speechtext import Risk
+
+    texts = []
+
+    def detector(text):  # sees the whole text; proposes the noun for the "est" of line 2
+        texts.append(text)
+        return [Risk(line=2, word="est", reason="heteronym", expected="noun")]
+
+    heard = {"1-0": ["ɛ"], "2-0": ["ɛ"], "2-1": ["ɛ", "s", "t"]}
+    words = lambda audio: [{"start": 0.0, "end": 0.3, "text": "est"}]
+    first, second = render_verified(
+        ["il est la", "est finie"], render=lambda text, line, attempt: f"{line}-{attempt}",
+        emitter=_emitter_hearing(heard), words_of=words, scorer="crop", max_attempts=2,
+        audit_options=dict(readings={"est": READINGS}, detectors=[detector]),
+    )
+    assert texts == ["il est la\nest finie"]  # once, not once per take or line
+    assert [f.expected for f in first.chosen.findings] == [None]  # not line 2's proposal
+    assert second.chosen.attempt == 1 and second.verified  # the proposal reached line 2
+
+
+def test_render_verified_refuses_a_line_with_a_newline():
+    with pytest.raises(ValueError, match="single line"):
+        render_verified(["a\nb"], render=None, audit_options={})
+
+
 def test_render_verified_takes_checks_or_audit_options_not_both():
     with pytest.raises(ValueError, match="not both"):
         render_verified([], {}, audit_options={}, render=None)

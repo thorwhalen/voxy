@@ -919,6 +919,8 @@ def render_verified(
     ``expected``, ``detectors``, ``language``...), applied to the one line, so an
     ``expected`` function sees the risk with its real line number; ``emitter``,
     ``words_of``, ``scorer`` and ``margin`` here are the defaults for ``audit``'s.
+    The ``detectors`` run once on all the lines, so they read a sentence that spans two
+    lines in context; the risks they propose for a line outside the text are dropped.
     Give ``checks`` or ``audit_options``, not both.
 
     Args:
@@ -960,6 +962,10 @@ def render_verified(
         raise ValueError("give checks or audit_options, not both")
     if audit_options is None:
         scorer = _resolve_scorer(scorer, emitter)
+    lines = list(lines)
+    if any("\n" in line for line in lines):
+        raise ValueError("each line must be a single line (no newline inside)")
+    proposals = _proposals_by_line(lines, audit_options)
     results = []
     for number, text in enumerate(lines, 1):
         line_checks = list((checks or {}).get(number, ()))
@@ -979,7 +985,12 @@ def render_verified(
                         text,
                         audio,
                         **_line_audit_options(
-                            audit_options,
+                            {
+                                **audit_options,
+                                "detectors": [
+                                    lambda _text, n=number: proposals.get(n, [])
+                                ],
+                            },
                             number,
                             emitter=emitter,
                             words_of=words_of,
@@ -1004,6 +1015,22 @@ def render_verified(
                 break
         results.append(LineTakes(number, text, tuple(takes), tuple(line_checks)))
     return results
+
+
+def _proposals_by_line(
+    lines: Sequence[str], options: Mapping | None
+) -> dict[int, list]:
+    """The risks the ``detectors`` in ``options`` propose, run once on the whole text.
+
+    A detector (POS, LLM) reads a sentence that spans lines in context this way. The
+    risks are keyed by their line, and renumbered to line 1 (what ``audit`` sees of
+    a single line).
+    """
+    proposals: dict[int, list] = {}
+    for detector in (options or {}).get("detectors", ()):
+        for risk in detector("\n".join(lines)):
+            proposals.setdefault(risk.line, []).append(replace(risk, line=1))
+    return proposals
 
 
 def _line_audit_options(
