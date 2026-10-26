@@ -150,6 +150,39 @@ def text_to_speech(
     return speech
 
 
+def speech_to_speech(
+    audio,
+    voice: VoiceProfile | str | None = None,
+    *,
+    backend: str | None = "elevenlabs",
+    output_path: str | None = None,
+    voices: Mapping | None = None,
+    model: SpeechModel | None = None,
+    models: MutableMapping | None = None,
+    use_library: bool = True,
+    **kwargs,
+) -> Speech:
+    """Voice changer: re-speak ``audio`` in ``voice``, keeping its timing and intonation.
+
+    Same voice resolution as ``text_to_speech``. Needs a backend with a
+    ``speech_to_speech`` method (ElevenLabs). ``audio`` is a path, bytes, file-like
+    or tensor. Use it to correct a word: say the fix yourself, convert it to the
+    narrator's voice, splice.
+    """
+    if model is not None:
+        backend = model.name
+    backend, voice = resolve_voice(
+        voice, backend=backend, voices=voices, use_library=use_library
+    )
+    model = model or get_speech_model(backend, models=models)
+    if not hasattr(model, "speech_to_speech"):
+        raise NotImplementedError(f"Backend {backend!r} has no speech-to-speech")
+    speech = model.speech_to_speech(audio, voice, **kwargs)
+    if output_path:
+        speech.save(output_path)
+    return speech
+
+
 def list_voices(
     backend: str | None = None,
     *,

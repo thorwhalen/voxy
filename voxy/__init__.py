@@ -29,6 +29,7 @@ from voxy.library import (
 )
 from voxy.facade import (
     text_to_speech,
+    speech_to_speech,
     list_voices,
     voice_id,
     resolve_voice,

@@ -25,6 +25,7 @@ class FakeClient:
             ivc=SimpleNamespace(create=self._ivc_create), delete=self._delete
         )
         self.text_to_speech = SimpleNamespace(convert=self._convert)
+        self.speech_to_speech = SimpleNamespace(convert=self._sts)
         self.text_to_voice = SimpleNamespace(design=self._design, create=self._create)
 
     def _design(self, **kwargs):
@@ -47,6 +48,10 @@ class FakeClient:
 
     def _delete(self, voice_id):
         self.calls.append(("delete", voice_id))
+
+    def _sts(self, voice_id, **kwargs):
+        self.calls.append(("sts", voice_id, kwargs))
+        return iter([self.pcm])
 
     def _convert(self, voice_id, **kwargs):
         self.calls.append(("convert", voice_id, kwargs))
