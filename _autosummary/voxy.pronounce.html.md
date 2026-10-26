@@ -11,9 +11,12 @@ whose word came out as the wrong one can be re-rendered.
 
 ASR word times are loose, so a word cropped alone carries bits of its neighbours, and a
 neighbour’s /s/ or /t/ then reads as the longer reading. [`audit()`](#voxy.pronounce.audit) (the call for a
-finished render) therefore scores each reading as the whole phrase around it, the
-neighbours written out by espeak ([`phrase_readings()`](#voxy.pronounce.phrase_readings), [`espeak_phonemizer()`](#voxy.pronounce.espeak_phonemizer));
-[`verify_words()`](#voxy.pronounce.verify_words) and [`render_verified()`](#voxy.pronounce.render_verified) still crop.
+finished render), [`verify_words()`](#voxy.pronounce.verify_words) and [`render_verified()`](#voxy.pronounce.render_verified) (the calls while
+rendering) therefore score each reading as the whole phrase around it by default, the
+neighbours written out by espeak ([`phrase_readings()`](#voxy.pronounce.phrase_readings), [`espeak_phonemizer()`](#voxy.pronounce.espeak_phonemizer)).
+They share one seam, a [`Scorer`](#voxy.pronounce.Scorer): [`phrase_scorer()`](#voxy.pronounce.phrase_scorer), [`spot_scorer()`](#voxy.pronounce.spot_scorer) and
+[`crop_scorer()`](#voxy.pronounce.crop_scorer) make one, each carrying the margin it is calibrated for, and
+[`reading_scorer()`](#voxy.pronounce.reading_scorer) makes one by name ([`SCORERS`](#voxy.pronounce.SCORERS)).
 
 The recogniser is `facebook/wav2vec2-lv-60-espeak-cv-ft`, run in its own torch env
 ([`PHONEME_ENV`](#voxy.pronounce.PHONEME_ENV), built by `voxy.envs`, with a bundled espeak-ng). Its
@@ -31,57 +34,67 @@ without torch.
 
 ### Module Attributes
 
-| [`DFLT_PHONEME_MODEL`](#voxy.pronounce.DFLT_PHONEME_MODEL)   | wav2vec2 fine-tuned to emit espeak IPA (CTC, 16 kHz).                                                                          |
-|-----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
-| [`PHONEME_ENV`](#voxy.pronounce.PHONEME_ENV)          | CPU torch plus transformers (the processor's vocab.json is all it needs).                                                      |
-| [`DFLT_CROP_PADDING`](#voxy.pronounce.DFLT_CROP_PADDING)    | ASR word edges are loose.                                                                                                      |
-| [`DFLT_MARGIN`](#voxy.pronounce.DFLT_MARGIN)          | A reading must beat the runner-up by this much (mean log-likelihood per target symbol) for a verdict to count as decided.      |
-| [`DFLT_FILLER_PENALTY`](#voxy.pronounce.DFLT_FILLER_PENALTY)  | What spotting a word in its context charges per frame left to filler (nats).                                                   |
-| [`DFLT_CONTEXT_MARGIN`](#voxy.pronounce.DFLT_CONTEXT_MARGIN)  | A reading must beat the runner-up by this many nats when scored as a whole phrase.                                             |
-| [`ESPEAK_LANGUAGES`](#voxy.pronounce.ESPEAK_LANGUAGES)     | espeak voices for [`audit()`](#voxy.pronounce.audit)'s `language` codes (others are passed as they are). |
-| [`Phonemizer`](#voxy.pronounce.Phonemizer)           | writes out the words around a flagged one.                                                                                     |
-| [`DFLT_CONTEXT_WORDS`](#voxy.pronounce.DFLT_CONTEXT_WORDS)   | Words of context on each side of a flagged word when [`audit()`](#voxy.pronounce.audit) scores it.       |
-| [`DFLT_SPOT_MARGIN`](#voxy.pronounce.DFLT_SPOT_MARGIN)     | A reading must beat the runner-up by this many nats when spotted in context.                                                   |
-| [`VARIANT_SEPARATOR`](#voxy.pronounce.VARIANT_SEPARATOR)    | In a reading name, what separates a reading from one of its variants (`verb~liaison`).                                         |
-| [`BLANK_SYMBOL`](#voxy.pronounce.BLANK_SYMBOL)         | The CTC blank of the recogniser's vocabulary (wav2vec2 uses its pad token).                                                    |
-| [`Emitter`](#voxy.pronounce.Emitter)              | `(audio, start, end) -> (log_probs [frames x vocab], vocab)`.                                                                  |
-| [`DFLT_MAX_ATTEMPTS`](#voxy.pronounce.DFLT_MAX_ATTEMPTS)    | Renders of one line at most (the first take included).                                                                         |
-| [`Check`](#voxy.pronounce.Check)                | one word to check.                                                                                                             |
-| [`HETERONYMS_DIR`](#voxy.pronounce.HETERONYMS_DIR)       | The heteronym tables voxy ships, one `<language>.json` per language.                                                           |
+| [`DFLT_PHONEME_MODEL`](#voxy.pronounce.DFLT_PHONEME_MODEL)   | wav2vec2 fine-tuned to emit espeak IPA (CTC, 16 kHz).                                                                                                                                                                                                   |
+|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`PHONEME_ENV`](#voxy.pronounce.PHONEME_ENV)          | CPU torch plus transformers (the processor's vocab.json is all it needs).                                                                                                                                                                               |
+| [`DFLT_CROP_PADDING`](#voxy.pronounce.DFLT_CROP_PADDING)    | ASR word edges are loose.                                                                                                                                                                                                                               |
+| [`DFLT_MARGIN`](#voxy.pronounce.DFLT_MARGIN)          | The margin of [`crop_scorer()`](#voxy.pronounce.crop_scorer) (mean log-likelihood per target symbol).                                                                                                                                   |
+| [`DFLT_CONTEXT_MARGIN`](#voxy.pronounce.DFLT_CONTEXT_MARGIN)  | The margin of [`phrase_scorer()`](#voxy.pronounce.phrase_scorer) (total nats).                                                                                                                                                            |
+| [`DFLT_FILLER_PENALTY`](#voxy.pronounce.DFLT_FILLER_PENALTY)  | What spotting a word in its context charges per frame left to filler (nats).                                                                                                                                                                            |
+| [`DFLT_LANGUAGE`](#voxy.pronounce.DFLT_LANGUAGE)        | The language of the texts checked, unless told otherwise.                                                                                                                                                                                               |
+| [`ESPEAK_LANGUAGES`](#voxy.pronounce.ESPEAK_LANGUAGES)     | espeak voices for [`audit()`](#voxy.pronounce.audit)'s `language` codes (others are passed as they are).                                                                                                                          |
+| [`Phonemizer`](#voxy.pronounce.Phonemizer)           | writes out the words around a flagged one.                                                                                                                                                                                                              |
+| [`DFLT_CONTEXT_WORDS`](#voxy.pronounce.DFLT_CONTEXT_WORDS)   | Words of context on each side of a flagged word when [`audit()`](#voxy.pronounce.audit) scores it.                                                                                                                                |
+| [`DFLT_SPOT_MARGIN`](#voxy.pronounce.DFLT_SPOT_MARGIN)     | The margin of [`spot_scorer()`](#voxy.pronounce.spot_scorer) (total nats).                                                                                                                                                              |
+| [`DFLT_SCORING`](#voxy.pronounce.DFLT_SCORING)         | How readings are scored unless told otherwise (a name in [`SCORERS`](#voxy.pronounce.SCORERS)).                                                                                                                                     |
+| [`VARIANT_SEPARATOR`](#voxy.pronounce.VARIANT_SEPARATOR)    | In a reading name, what separates a reading from one of its variants (`verb~liaison`).                                                                                                                                                                  |
+| [`EDGE_PUNCTUATION`](#voxy.pronounce.EDGE_PUNCTUATION)     | Punctuation stripped from the edges of an ASR or text word before it is matched or spoken.                                                                                                                                                              |
+| [`BLANK_SYMBOL`](#voxy.pronounce.BLANK_SYMBOL)         | The CTC blank of the recogniser's vocabulary (wav2vec2 uses its pad token).                                                                                                                                                                             |
+| [`Emitter`](#voxy.pronounce.Emitter)              | `(audio, start, end) -> (log_probs [frames x vocab], vocab)`.                                                                                                                                                                                           |
+| [`SCORERS`](#voxy.pronounce.SCORERS)              | The ways a reading can be scored in the audio, by name (see [`reading_scorer()`](#voxy.pronounce.reading_scorer)); each scorer carries the margin it is calibrated for (see [`DFLT_MARGIN`](#voxy.pronounce.DFLT_MARGIN)). |
+| [`DFLT_MAX_ATTEMPTS`](#voxy.pronounce.DFLT_MAX_ATTEMPTS)    | Renders of one line at most (the first take included).                                                                                                                                                                                                  |
+| [`Check`](#voxy.pronounce.Check)                | one word to check.                                                                                                                                                                                                                                      |
+| [`HETERONYMS_DIR`](#voxy.pronounce.HETERONYMS_DIR)       | The heteronym tables voxy ships, one `<language>.json` per language.                                                                                                                                                                                    |
 
 ### Functions
 
-| [`align_words`](#voxy.pronounce.align_words)(text, words)                           | `{index of a word of text: index of the ASR word heard for it}`.                                                                                                                             |
-|-----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`audit`](#voxy.pronounce.audit)(text, audio, \*[, readings, language, ...])  | Which reading did each heteronym of `text` get in the finished `audio`?                                                                                                                      |
-| [`best_reading`](#voxy.pronounce.best_reading)(log_probs, vocab, readings, \*)       | The name of the reading `log_probs` support best.                                                                                                                                            |
-| [`checks_by_line`](#voxy.pronounce.checks_by_line)(risks, \*, readings[, expected])    | [`checks_from_risks()`](#voxy.pronounce.checks_from_risks), grouped by the line each risk is on.                                                                                   |
-| [`checks_from_risks`](#voxy.pronounce.checks_from_risks)(risks, \*, readings[, expected]) | `verify_words` checks for the flagged words that have known IPA readings.                                                                                                                    |
-| [`ctc_log_likelihood`](#voxy.pronounce.ctc_log_likelihood)(log_probs, target, \*[, blank]) | `log P(target | log_probs)` under CTC (the forward algorithm, in log space).                                                                                                                 |
-| [`espeak_phonemizer`](#voxy.pronounce.espeak_phonemizer)(\*[, model, threads, rootdir])   | The default [`Phonemizer`](#voxy.pronounce.Phonemizer): espeak-ng (bundled by `espeakng-loader`), run in the recogniser's env, so its IPA is the recogniser's own alphabet. |
-| [`failing`](#voxy.pronounce.failing)(verdicts)                                  | The verdicts whose word was decidedly read the wrong way (`ok is False`).                                                                                                                    |
-| [`heteronym_readings`](#voxy.pronounce.heteronym_readings)([language])                     | voxy's own heteronym table for `language`: `{word: {reading name: IPA}}`.                                                                                                                    |
-| [`known_symbols`](#voxy.pronounce.known_symbols)(ipa, vocab)                          | The symbols of `ipa` the recogniser knows, longest first; stress marks, spaces and anything else it never emits are dropped.                                                                 |
-| [`load_readings`](#voxy.pronounce.load_readings)(path)                                | Heteronym readings `{word: {reading name: IPA}}` from a caller's file.                                                                                                                       |
-| [`log_probs_from_path`](#voxy.pronounce.log_probs_from_path)(path, \*, vocab_size[, ...])   | Log-probabilities of a recogniser that hears `path` (one id per frame).                                                                                                                      |
-| [`phoneme_emitter`](#voxy.pronounce.phoneme_emitter)(\*[, model, threads, rootdir])     | The default [`Emitter`](#voxy.pronounce.Emitter): the wav2vec2 phoneme recogniser in its own env.                                                                        |
-| [`phrase_readings`](#voxy.pronounce.phrase_readings)(log_probs, vocab, readings, \*)    | Each reading's CTC log-likelihood as the whole phrase `before + reading + after`.                                                                                                            |
-| [`reading_name`](#voxy.pronounce.reading_name)(name)                                 | The reading a name stands for: `"verb~liaison"` is a variant of `"verb"`.                                                                                                                    |
-| [`render_verified`](#voxy.pronounce.render_verified)(lines, checks, \*, render, ...)    | Render each line, and re-render the ones whose flagged words came out wrong.                                                                                                                 |
-| [`score_readings`](#voxy.pronounce.score_readings)(log_probs, vocab, readings, \*)     | Each reading's CTC log-likelihood per target symbol (higher is better).                                                                                                                      |
-| [`speech_renderer`](#voxy.pronounce.speech_renderer)(model[, voice, outdir, ...])       | A `render` for [`render_verified()`](#voxy.pronounce.render_verified) over a [`voxy.base.SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel).       |
-| [`spot_log_likelihood`](#voxy.pronounce.spot_log_likelihood)(log_probs, target, \*[, ...])  | `log P` of `target` said somewhere in `log_probs`, the rest being filler.                                                                                                                    |
-| [`spot_readings`](#voxy.pronounce.spot_readings)(log_probs, vocab, readings, \*)      | Each reading's [`spot_log_likelihood()`](#voxy.pronounce.spot_log_likelihood), less that of filler alone (higher is better).                                                         |
-| [`timed_words`](#voxy.pronounce.timed_words)(segments)                              | The timed words of ASR segments (`voxy.refprep.transcribe`'s output).                                                                                                                        |
-| [`tokenize_phonemes`](#voxy.pronounce.tokenize_phonemes)(reading, vocab)                  | Vocabulary ids of an IPA `reading`, longest symbol first; spaces are ignored.                                                                                                                |
-| [`verify_words`](#voxy.pronounce.verify_words)(audio, checks, \*, words, emitter)    | Verdicts for each `(word, readings, expected)` at each place ASR found it.                                                                                                                   |
-| [`word_spans`](#voxy.pronounce.word_spans)(words, word)                            | `(start, end)` of every ASR word matching `word` (case and punctuation aside).                                                                                                               |
+| [`align_words`](#voxy.pronounce.align_words)(text, words)                           | `{index of a word of text: index of the ASR word heard for it}`.                                                                                                                                                                     |
+|-----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`audit`](#voxy.pronounce.audit)(text, audio, \*[, readings, language, ...])  | Which reading did each heteronym of `text` get in the finished `audio`?                                                                                                                                                              |
+| [`best_reading`](#voxy.pronounce.best_reading)(log_probs, vocab, readings, \*)       | The name of the reading `log_probs` support best.                                                                                                                                                                                    |
+| [`checks_by_line`](#voxy.pronounce.checks_by_line)(risks, \*, readings[, expected])    | [`checks_from_risks()`](#voxy.pronounce.checks_from_risks), grouped by the line each risk is on.                                                                                                                           |
+| [`checks_from_risks`](#voxy.pronounce.checks_from_risks)(risks, \*, readings[, expected]) | `verify_words` checks for the flagged words that have known IPA readings.                                                                                                                                                            |
+| [`crop_scorer`](#voxy.pronounce.crop_scorer)(\*, emitter[, padding, margin])        | The word alone, cut at its ASR times (`padding` each side), scored by [`score_readings()`](#voxy.pronounce.score_readings); ASR word times are often too loose for this.                                                |
+| [`ctc_log_likelihood`](#voxy.pronounce.ctc_log_likelihood)(log_probs, target, \*[, blank]) | `log P(target | log_probs)` under CTC (the forward algorithm, in log space).                                                                                                                                                         |
+| [`espeak_phonemizer`](#voxy.pronounce.espeak_phonemizer)(\*[, model, threads, rootdir])   | The default [`Phonemizer`](#voxy.pronounce.Phonemizer): espeak-ng (bundled by `espeakng-loader`), run in the recogniser's env, so its IPA is the recogniser's own alphabet.                                         |
+| [`failing`](#voxy.pronounce.failing)(verdicts)                                  | The verdicts whose word was decidedly read the wrong way (`ok is False`).                                                                                                                                                            |
+| [`heteronym_readings`](#voxy.pronounce.heteronym_readings)([language])                     | voxy's own heteronym table for `language`: `{word: {reading name: IPA}}`.                                                                                                                                                            |
+| [`known_symbols`](#voxy.pronounce.known_symbols)(ipa, vocab)                          | The symbols of `ipa` the recogniser knows, longest first; stress marks, spaces and anything else it never emits are dropped.                                                                                                         |
+| [`load_readings`](#voxy.pronounce.load_readings)(path)                                | Heteronym readings `{word: {reading name: IPA}}` from a caller's file.                                                                                                                                                               |
+| [`log_probs_from_path`](#voxy.pronounce.log_probs_from_path)(path, \*, vocab_size[, ...])   | Log-probabilities of a recogniser that hears `path` (one id per frame).                                                                                                                                                              |
+| [`phoneme_emitter`](#voxy.pronounce.phoneme_emitter)(\*[, model, threads, rootdir])     | The default [`Emitter`](#voxy.pronounce.Emitter): the wav2vec2 phoneme recogniser in its own env.                                                                                                                |
+| [`phrase_readings`](#voxy.pronounce.phrase_readings)(log_probs, vocab, readings, \*)    | Each reading's CTC log-likelihood as the whole phrase `before + reading + after`.                                                                                                                                                    |
+| [`phrase_scorer`](#voxy.pronounce.phrase_scorer)(\*, emitter[, phonemize, ...])       | Each reading as the whole phrase around the word ([`phrase_readings()`](#voxy.pronounce.phrase_readings)), the `context` words on each side written out by `phonemize` in `language`.                                    |
+| [`reading_name`](#voxy.pronounce.reading_name)(name)                                 | The reading a name stands for: `"verb~liaison"` is a variant of `"verb"`.                                                                                                                                                            |
+| [`reading_scorer`](#voxy.pronounce.reading_scorer)([scoring])                          | The [`Scorer`](#voxy.pronounce.Scorer) named `scoring` in [`SCORERS`](#voxy.pronounce.SCORERS), made with `options`.                                                                        |
+| [`render_verified`](#voxy.pronounce.render_verified)(lines, checks, \*, render[, ...])  | Render each line, and re-render the ones whose flagged words came out wrong.                                                                                                                                                         |
+| [`score_readings`](#voxy.pronounce.score_readings)(log_probs, vocab, readings, \*)     | Each reading's CTC log-likelihood per target symbol (higher is better).                                                                                                                                                              |
+| [`speech_renderer`](#voxy.pronounce.speech_renderer)(model[, voice, outdir, ...])       | A `render` for [`render_verified()`](#voxy.pronounce.render_verified) over a [`voxy.base.SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel).                                               |
+| [`spot_log_likelihood`](#voxy.pronounce.spot_log_likelihood)(log_probs, target, \*[, ...])  | `log P` of `target` said somewhere in `log_probs`, the rest being filler.                                                                                                                                                            |
+| [`spot_readings`](#voxy.pronounce.spot_readings)(log_probs, vocab, readings, \*)      | Each reading's [`spot_log_likelihood()`](#voxy.pronounce.spot_log_likelihood), less that of filler alone (higher is better).                                                                                                 |
+| [`spot_scorer`](#voxy.pronounce.spot_scorer)(\*, emitter[, context, padding, ...])  | The reading spotted in the window of `context` words on each side, the rest left to filler ([`spot_readings()`](#voxy.pronounce.spot_readings)); a neighbour's /s/ or /t/ can still be credited to the longer reading. |
+| [`timed_words`](#voxy.pronounce.timed_words)(segments)                              | The timed words of ASR segments (`voxy.refprep.transcribe`'s output).                                                                                                                                                                |
+| [`tokenize_phonemes`](#voxy.pronounce.tokenize_phonemes)(reading, vocab)                  | Vocabulary ids of an IPA `reading`, longest symbol first; spaces are ignored.                                                                                                                                                        |
+| [`verify_words`](#voxy.pronounce.verify_words)(audio, checks, \*, words[, ...])      | Verdicts for each `(word, readings, expected)` at each place ASR found it.                                                                                                                                                           |
+| [`word_indices`](#voxy.pronounce.word_indices)(words, word)                          | Indices of the ASR words matching `word` (case and punctuation aside).                                                                                                                                                               |
+| [`word_spans`](#voxy.pronounce.word_spans)(words, word)                            | `(start, end)` of every ASR word matching `word` (case and punctuation aside).                                                                                                                                                       |
 
 ### Classes
 
 | [`Finding`](#voxy.pronounce.Finding)(risk[, verdict])                 | One flagged word of a render: the risk, and what the audio said about it.                                                               |
 |-------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
 | [`LineTakes`](#voxy.pronounce.LineTakes)(line, text[, takes, checks])   | Every take of one line (1-based `line`, as [`voxy.speechtext.Risk`](voxy.speechtext.html.md#voxy.speechtext.Risk)). |
+| [`Scorer`](#voxy.pronounce.Scorer)(\*args, \*\*kwargs)               | Scores the readings of timed ASR word `words[i]` in `audio` (higher is better).                                                         |
 | [`Take`](#voxy.pronounce.Take)(attempt, audio[, verdicts])         | One render of a line and what the audio says about its flagged words.                                                                   |
 | [`Verdict`](#voxy.pronounce.Verdict)(word, start, end, scores[, ...]) | What the audio says about one flagged word.                                                                                             |
 
@@ -100,7 +113,7 @@ alias of [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str
 
 ### voxy.pronounce.DFLT_CONTEXT_MARGIN *= 2.0*
 
-A reading must beat the runner-up by this many nats when scored as a whole phrase.
+The margin of [`phrase_scorer()`](#voxy.pronounce.phrase_scorer) (total nats).
 
 ### voxy.pronounce.DFLT_CONTEXT_WORDS *= 1*
 
@@ -117,10 +130,13 @@ ASR word edges are loose.
 
 What spotting a word in its context charges per frame left to filler (nats).
 
+### voxy.pronounce.DFLT_LANGUAGE *= 'fr'*
+
+The language of the texts checked, unless told otherwise.
+
 ### voxy.pronounce.DFLT_MARGIN *= 0.5*
 
-A reading must beat the runner-up by this much (mean log-likelihood per target
-symbol) for a verdict to count as decided.
+The margin of [`crop_scorer()`](#voxy.pronounce.crop_scorer) (mean log-likelihood per target symbol).
 
 ### voxy.pronounce.DFLT_MAX_ATTEMPTS *= 3*
 
@@ -133,9 +149,17 @@ wav2vec2 fine-tuned to emit espeak IPA (CTC, 16 kHz).
 * **Type:**
   The phoneme recogniser
 
+### voxy.pronounce.DFLT_SCORING *= 'phrase'*
+
+How readings are scored unless told otherwise (a name in [`SCORERS`](#voxy.pronounce.SCORERS)).
+
 ### voxy.pronounce.DFLT_SPOT_MARGIN *= 2.0*
 
-A reading must beat the runner-up by this many nats when spotted in context.
+The margin of [`spot_scorer()`](#voxy.pronounce.spot_scorer) (total nats).
+
+### voxy.pronounce.EDGE_PUNCTUATION *= '.,;:!?«»"()…“”'*
+
+Punctuation stripped from the edges of an ASR or text word before it is matched or spoken.
 
 ### voxy.pronounce.ESPEAK_LANGUAGES *= {'en': 'en-us', 'fr': 'fr-fr'}*
 
@@ -204,6 +228,19 @@ writes out the words around a flagged one.
 
 alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
 
+### voxy.pronounce.SCORERS *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[..., [Scorer](#voxy.pronounce.Scorer)]]* *= {'crop': <function crop_scorer>, 'phrase': <function phrase_scorer>, 'spot': <function spot_scorer>}*
+
+The ways a reading can be scored in the audio, by name (see [`reading_scorer()`](#voxy.pronounce.reading_scorer));
+each scorer carries the margin it is calibrated for (see [`DFLT_MARGIN`](#voxy.pronounce.DFLT_MARGIN)).
+
+### *class* voxy.pronounce.Scorer(\*args, \*\*kwargs)
+
+Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol)
+
+Scores the readings of timed ASR word `words[i]` in `audio` (higher is better).
+
+`margin` is the margin its scores are calibrated for, on their own scale.
+
 ### *class* voxy.pronounce.Take(attempt, audio, verdicts=())
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -223,6 +260,10 @@ In a reading name, what separates a reading from one of its variants (`verb~liai
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
 What the audio says about one flagged word.
+
+`margin` defaults to [`DFLT_MARGIN`](#voxy.pronounce.DFLT_MARGIN), the crop scale; [`verify_words()`](#voxy.pronounce.verify_words)
+and [`audit()`](#voxy.pronounce.audit) give each verdict their scorer’s margin (phrase and spot scores
+are totals in nats).
 
 #### *property* decided *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
 
@@ -262,7 +303,7 @@ counterpart is left out.
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)]
 
-### voxy.pronounce.audit(text, audio, \*, readings=None, language='fr', expected=None, detectors=(), emitter=None, words_of=<function \_transcribed_words>, scoring='phrase', phonemize=None, context=1, filler_penalty=1.0, padding=0.08, margin=None)
+### voxy.pronounce.audit(text, audio, \*, readings=None, language='fr', expected=None, detectors=(), emitter=None, words_of=<function \_transcribed_words>, scoring='phrase', phonemize=None, context=1, filler_penalty=1.0, padding=0.08, margin=None, scorer=None)
 
 Which reading did each heteronym of `text` get in the finished `audio`?
 
@@ -284,19 +325,16 @@ readings with the phoneme recogniser.
   * **detectors** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)]]) – `text -> risks` proposers of expected readings.
   * **emitter** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The phoneme recogniser; default [`phoneme_emitter()`](#voxy.pronounce.phoneme_emitter).
   * **words_of** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]]) – `audio -> timed words`; default ASR (`voxy.refprep.transcribe`).
-  * **scoring** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – How a reading is scored in the audio. `"phrase"` (default): the
-    `context` words on each side are written out with `phonemize` and each
-    reading is scored as the whole phrase ([`phrase_readings()`](#voxy.pronounce.phrase_readings)); the
-    neighbours are the same in every candidate, so only the word decides.
-    `"spot"`: the reading is spotted in that window, the rest left to filler
-    ([`spot_readings()`](#voxy.pronounce.spot_readings); no phonemizer, but a neighbour’s /s/ or /t/ can be
-    credited to the longer reading). `"crop"`: the word alone, cut at its ASR
-    times (`padding` each side), scored by [`score_readings()`](#voxy.pronounce.score_readings); ASR word
-    times are often too loose for this.
+  * **scoring** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – How a reading is scored in the audio ([`SCORERS`](#voxy.pronounce.SCORERS)).
+    `"phrase"` (default): as the whole phrase around the word, its
+    `context` neighbours written out with `phonemize`
+    ([`phrase_scorer()`](#voxy.pronounce.phrase_scorer)). `"spot"`: spotted in that window
+    ([`spot_scorer()`](#voxy.pronounce.spot_scorer)). `"crop"`: the word alone, cut at its ASR times
+    ([`crop_scorer()`](#voxy.pronounce.crop_scorer)). Only the options that scoring takes are used.
   * **phonemize** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – For `"phrase"`; default [`espeak_phonemizer()`](#voxy.pronounce.espeak_phonemizer).
   * **context** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Words kept on each side of the flagged one.
-  * **margin** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`Verdict.decided`](#voxy.pronounce.Verdict.decided); default [`DFLT_CONTEXT_MARGIN`](#voxy.pronounce.DFLT_CONTEXT_MARGIN),
-    [`DFLT_SPOT_MARGIN`](#voxy.pronounce.DFLT_SPOT_MARGIN) or [`DFLT_MARGIN`](#voxy.pronounce.DFLT_MARGIN) by `scoring`.
+  * **margin** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`Verdict.decided`](#voxy.pronounce.Verdict.decided); default `scorer.margin`.
+  * **scorer** ([`Scorer`](#voxy.pronounce.Scorer) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready [`Scorer`](#voxy.pronounce.Scorer); wins over `scoring` and its options.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Finding`](#voxy.pronounce.Finding)]
 
@@ -332,6 +370,14 @@ it is spoken, so a word whose risks name *different* readings gets none here
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]
+
+### voxy.pronounce.crop_scorer(, emitter, padding=0.08, margin=0.5)
+
+The word alone, cut at its ASR times (`padding` each side), scored by
+[`score_readings()`](#voxy.pronounce.score_readings); ASR word times are often too loose for this.
+
+* **Return type:**
+  [`Scorer`](#voxy.pronounce.Scorer)
 
 ### voxy.pronounce.ctc_log_likelihood(log_probs, target, , blank=0)
 
@@ -447,6 +493,18 @@ True
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
+### voxy.pronounce.phrase_scorer(, emitter, phonemize=None, language='fr', context=1, padding=0.08, margin=2.0)
+
+Each reading as the whole phrase around the word ([`phrase_readings()`](#voxy.pronounce.phrase_readings)), the
+`context` words on each side written out by `phonemize` in `language`.
+
+The neighbours are the same in every candidate, so only the word decides.
+`phonemize` defaults to [`espeak_phonemizer()`](#voxy.pronounce.espeak_phonemizer) (its worker starts on the first
+call); it must give one IPA per text, or a `ValueError` is raised.
+
+* **Return type:**
+  [`Scorer`](#voxy.pronounce.Scorer)
+
 ### voxy.pronounce.reading_name(name)
 
 The reading a name stands for: `"verb~liaison"` is a variant of `"verb"`.
@@ -459,7 +517,19 @@ The reading a name stands for: `"verb~liaison"` is a variant of `"verb"`.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### voxy.pronounce.render_verified(lines, checks, \*, render, emitter, words_of=<function \_transcribed_words>, max_attempts=3, padding=0.08, margin=0.5)
+### voxy.pronounce.reading_scorer(scoring='phrase', \*\*options)
+
+The [`Scorer`](#voxy.pronounce.Scorer) named `scoring` in [`SCORERS`](#voxy.pronounce.SCORERS), made with `options`.
+
+```pycon
+>>> reading_scorer("crop", emitter=None).margin
+0.5
+```
+
+* **Return type:**
+  [`Scorer`](#voxy.pronounce.Scorer)
+
+### voxy.pronounce.render_verified(lines, checks, \*, render, emitter=None, words_of=<function \_transcribed_words>, max_attempts=3, scorer='phrase', margin=None)
 
 Render each line, and re-render the ones whose flagged words came out wrong.
 
@@ -477,28 +547,36 @@ recogniser could not decide, leaves the line unverified rather than retried).
   * **render** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike)]) – `(text, line, attempt) -> audio path`; each call should give a
     new take (a new seed, or a service’s own variation).
     [`speech_renderer()`](#voxy.pronounce.speech_renderer) adapts a [`voxy.base.SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel).
-  * **emitter** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]) – The phoneme recogniser ([`phoneme_emitter()`](#voxy.pronounce.phoneme_emitter)).
+  * **emitter** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The phoneme recogniser for a `scorer` given by name; default
+    [`phoneme_emitter()`](#voxy.pronounce.phoneme_emitter).
   * **words_of** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]]) – `audio -> timed words`; the default transcribes with
     `voxy.refprep.transcribe`.
   * **max_attempts** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Renders of one line at most.
-  * **padding** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – As in [`verify_words()`](#voxy.pronounce.verify_words).
-  * **margin** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – As in [`verify_words()`](#voxy.pronounce.verify_words).
+  * **scorer** ([`Scorer`](#voxy.pronounce.Scorer) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – As in [`verify_words()`](#voxy.pronounce.verify_words) (default: phrase scoring, its
+    neighbours written out by the real espeak worker, so offline tests
+    inject `phrase_scorer(emitter=..., phonemize=fake)` or use `"crop"`).
+  * **margin** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As in [`verify_words()`](#voxy.pronounce.verify_words) (default: phrase scoring, its
+    neighbours written out by the real espeak worker, so offline tests
+    inject `phrase_scorer(emitter=..., phonemize=fake)` or use `"crop"`).
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`LineTakes`](#voxy.pronounce.LineTakes)]
 
 ```pycon
 >>> heard = {"est": "ɛ"}  # a fake recogniser: what each word sounds like
 >>> def emitter(audio, start, end):
-...     vocab = ["<pad>", "ɛ", "s", "t"]
-...     path = [vocab.index(s) for s in heard["est"]]
-...     return log_probs_from_path(path, vocab_size=4), vocab
+...     vocab = ["<pad>", "ɛ", "s", "t", "l"]
+...     path = [vocab.index(s) for s in "l" + heard["est"]]
+...     return log_probs_from_path(path, vocab_size=5), vocab
 >>> def render(text, line, attempt):
 ...     heard["est"] = "ɛst" if attempt else "ɛ"  # the second take is right
 ...     return f"take-{line}-{attempt}.wav"
->>> words = lambda audio: [{"start": 0.0, "end": 0.3, "text": "Est"}]
+>>> words = lambda audio: [{"start": 0.0, "end": 0.1, "text": "L'"},
+...                        {"start": 0.1, "end": 0.3, "text": "Est"}]
+>>> phonemize = lambda texts, language: ["l" for _ in texts]  # a fake espeak
+>>> scorer = phrase_scorer(emitter=emitter, phonemize=phonemize)
 >>> checks = {1: [("Est", {"verb": "ɛ", "noun": "ɛst"}, "noun")]}
->>> [result] = render_verified(["L'Est"], checks, render=render, emitter=emitter,
-...                            words_of=words)
+>>> [result] = render_verified(["L'Est"], checks, render=render, words_of=words,
+...                            scorer=scorer)
 >>> [t.audio for t in result.takes], result.chosen.attempt, result.verified
 (['take-1-0.wav', 'take-1-1.wav'], 1, True)
 ```
@@ -555,6 +633,15 @@ Each reading’s [`spot_log_likelihood()`](#voxy.pronounce.spot_log_likelihood),
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
 
+### voxy.pronounce.spot_scorer(, emitter, context=1, padding=0.08, filler_penalty=1.0, margin=2.0)
+
+The reading spotted in the window of `context` words on each side, the rest
+left to filler ([`spot_readings()`](#voxy.pronounce.spot_readings)); a neighbour’s /s/ or /t/ can still be
+credited to the longer reading.
+
+* **Return type:**
+  [`Scorer`](#voxy.pronounce.Scorer)
+
 ### voxy.pronounce.timed_words(segments)
 
 The timed words of ASR segments (`voxy.refprep.transcribe`’s output).
@@ -586,7 +673,7 @@ symbol the recogniser does not know, since it could never be heard.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]
 
-### voxy.pronounce.verify_words(audio, checks, , words, emitter, padding=0.08, margin=0.5)
+### voxy.pronounce.verify_words(audio, checks, , words, emitter=None, scorer='phrase', margin=None)
 
 Verdicts for each `(word, readings, expected)` at each place ASR found it.
 
@@ -596,12 +683,29 @@ Verdicts for each `(word, readings, expected)` at each place ASR found it.
     (`{name: IPA}`) and the reading it should have (or None to just
     report). [`checks_from_risks()`](#voxy.pronounce.checks_from_risks) builds them from `flag_risks`.
   * **words** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]) – Timed words of the render (`transcribe(audio)`’s segments’ words).
-  * **emitter** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]) – `(audio, start, end) -> (log_probs, vocab)`; the default worker
-    is [`phoneme_emitter()`](#voxy.pronounce.phoneme_emitter).
-  * **padding** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Seconds added to each side of the ASR span.
-  * **margin** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – See [`Verdict.decided`](#voxy.pronounce.Verdict.decided).
+  * **emitter** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio, start, end) -> (log_probs, vocab)` for a `scorer`
+    given by name; default [`phoneme_emitter()`](#voxy.pronounce.phoneme_emitter).
+  * **scorer** ([`Scorer`](#voxy.pronounce.Scorer) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – How each reading is scored: a [`Scorer`](#voxy.pronounce.Scorer), or a name in
+    [`SCORERS`](#voxy.pronounce.SCORERS) (default `"phrase"`: the whole phrase around the word,
+    its neighbours written out by the real espeak worker, so offline tests
+    inject `phrase_scorer(emitter=..., phonemize=fake)` or use `"crop"`).
+  * **margin** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`Verdict.decided`](#voxy.pronounce.Verdict.decided); default `scorer.margin`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Verdict`](#voxy.pronounce.Verdict)]
+
+### voxy.pronounce.word_indices(words, word)
+
+Indices of the ASR words matching `word` (case and punctuation aside).
+
+```pycon
+>>> word_indices([{"text": " Il"}, {"text": " est,"}, {"text": "Est"}], "est")
+[1, 2]
+>>> word_indices([{"text": " est…"}], "est")
+[0]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`int`](https://docs.python.org/3/builtins/functions.html#int)]
 
 ### voxy.pronounce.word_spans(words, word)
 

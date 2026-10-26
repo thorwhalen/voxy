@@ -366,7 +366,7 @@ to install the CSM model and its dependencies.</p>
 </span><span id="line-11"><span class="n">misread</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">findings</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">ok</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">]</span>  <span class="c1"># re-render these</span>
 </span></code></pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">audit</span></code> finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from <code class="docutils literal notranslate"><span class="pre">expected</span></code> (a mapping, or a function of each risk) or from a detector such as <code class="docutils literal notranslate"><span class="pre">voxy.speechtext.pos_detector()</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">audit</span></code> finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from <code class="docutils literal notranslate"><span class="pre">expected</span></code> (a mapping, or a function of each risk) or from a detector such as <code class="docutils literal notranslate"><span class="pre">voxy.speechtext.pos_detector()</span></code>. While rendering, <code class="docutils literal notranslate"><span class="pre">render_verified</span></code> (and <code class="docutils literal notranslate"><span class="pre">verify_words</span></code>, which it calls on each take) scores the same way and re-renders a line whose word came out wrong. <code class="docutils literal notranslate"><span class="pre">audit</span></code> takes <code class="docutils literal notranslate"><span class="pre">scoring=</span></code> (<code class="docutils literal notranslate"><span class="pre">"phrase"</span></code>, <code class="docutils literal notranslate"><span class="pre">"spot"</span></code> or <code class="docutils literal notranslate"><span class="pre">"crop"</span></code>), and all three take a <code class="docutils literal notranslate"><span class="pre">scorer=</span></code> (a name or a scorer from <code class="docutils literal notranslate"><span class="pre">phrase_scorer</span></code>/<code class="docutils literal notranslate"><span class="pre">spot_scorer</span></code>/<code class="docutils literal notranslate"><span class="pre">crop_scorer</span></code>, each carrying the margin it is calibrated for); cropping the word at its ASR times credits a neighbour’s /s/ or /t/ to the longer reading, so keep the default.</p>
 </section>
 <section id="the-voice-library-clone-once-reuse-by-name">
 <h3>The voice library: clone once, reuse by name<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#the-voice-library-clone-once-reuse-by-name" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#the-voice-library-clone-once-reuse-by-name'">¶</a></h3>
@@ -449,7 +449,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-26 09:29 UTC from <a href="https://github.com/thorwhalen/voxy/commit/5ac1c3ded9cfc5f9cff134a0ac36b6b5979a68aa">5ac1c3d</a> (main) · voxy 0.0.29 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-10-26 09:41 UTC from <a href="https://github.com/thorwhalen/voxy/commit/7dd4999425a5a25e5637a4322500564bf4a8c5ac">7dd4999</a> (main) · voxy 0.0.30 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -494,7 +494,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=828725f0"></script>
+<script src="_static/documentation_options.js?v=61a342a2"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>
