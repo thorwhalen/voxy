@@ -39,6 +39,12 @@ voxy.design_from_description(
 )
 ```
 
+Change the voice of a recording (speech to speech, ElevenLabs): the words, timing and intonation stay the recording’s, the voice becomes the target’s. A correction can be spoken by anyone and come out in the narrator’s voice:
+
+```python
+voxy.speech_to_speech("my_take.wav", voice="ada").save("ada_take.mp3")
+```
+
 ## Features
 
 - Voice cloning from audio samples
