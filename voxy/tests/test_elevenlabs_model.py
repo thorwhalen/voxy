@@ -170,6 +170,24 @@ def test_missing_key_is_reported_without_a_request(monkeypatch):
         m.generate_speech("Hi", "vid")
 
 
+def test_key_order_and_per_request_binding(monkeypatch):
+    """The chain is ocracy's facade kit: explicit, then a bound key, then env vars."""
+    from ocracy.kit import using_credentials
+
+    from voxy.elevenlabs_model import resolve_elevenlabs_api_key
+
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "second")
+    monkeypatch.setenv("ELEVEN_API_KEY", "first")
+    assert resolve_elevenlabs_api_key() == "first"  # ELEVEN_API_KEY is checked first
+    with using_credentials(elevenlabs="per-request"):
+        assert resolve_elevenlabs_api_key() == "per-request"
+        seen = []
+        m = ElevenLabsSpeechModel(client_factory=lambda key: seen.append(key) or object())
+        m.client
+        assert seen == ["per-request"]
+        assert resolve_elevenlabs_api_key("explicit") == "explicit"
+
+
 def test_repr_hides_the_key():
     assert "secret" not in repr(ElevenLabsSpeechModel(api_key="secret"))
 

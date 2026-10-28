@@ -31,6 +31,7 @@ from typing import Any, BinaryIO
 
 import numpy as np
 import torch
+from ocracy.kit import resolve_credential
 
 from voxy.base import (
     DFLT_ASSUMED_SAMPLE_RATE,
@@ -69,16 +70,19 @@ def resolve_elevenlabs_api_key(
     *,
     envvars: Iterable[str] = ELEVENLABS_API_KEY_ENVVARS,
 ) -> str | None:
-    """The explicit ``api_key`` if given, else the first set env var, else None.
+    """The explicit ``api_key`` if given, else a key bound for ``"elevenlabs"`` with
+    ``ocracy.kit.using_credentials``, else the first set env var, else None.
+
+    The chain is the fleet's facade kit (``ocracy.kit.resolve_credential``).
 
     >>> resolve_elevenlabs_api_key("explicit")
     'explicit'
     >>> resolve_elevenlabs_api_key(envvars=["VOXY_SURELY_UNSET_VAR"]) is None
     True
     """
-    if api_key:
-        return api_key
-    return next((os.environ[v] for v in envvars if os.environ.get(v)), None)
+    return resolve_credential(
+        "elevenlabs", api_key=api_key, env_var=tuple(envvars), required=False
+    )
 
 
 def default_elevenlabs_client_factory(api_key: str):
