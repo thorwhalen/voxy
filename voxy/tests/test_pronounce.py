@@ -17,6 +17,7 @@ from voxy.pronounce import (
     phrase_scorer,
     reading_scorer,
     spot_scorer,
+    audit_verifier,
     render_verified,
     speech_renderer,
     ctc_log_likelihood,
@@ -159,7 +160,7 @@ def test_render_verified_stops_at_max_attempts_and_keeps_the_least_bad_take():
     checks = {2: [("Est", READINGS, "noun")]}
     first, second = render_verified(
         ["plain line", "à l'Est"],
-        checks,
+        checks=checks,
         render=render,
         emitter=_emitter_hearing(heard),
         words_of=_words,
@@ -167,7 +168,7 @@ def test_render_verified_stops_at_max_attempts_and_keeps_the_least_bad_take():
         scorer="crop",
     )
     assert [t.audio for t in first.takes] == ["1-0"]  # no checks: rendered once
-    assert first.verified and first.chosen.verdicts == ()
+    assert first.verified and first.chosen.findings == () and first.chosen.verdicts == ()
     assert [t.attempt for t in second.takes] == [0, 1, 2]
     assert not second.verified and second.chosen.attempt == 0
 
@@ -181,7 +182,7 @@ def test_a_line_whose_word_asr_never_found_is_not_verified_and_blank_lines_are_s
 
     blank, line = render_verified(
         ["", "L'Est"],
-        {2: [("Est", READINGS, "noun")]},
+        checks={2: [("Est", READINGS, "noun")]},
         render=render,
         emitter=_emitter_hearing(heard),
         words_of=lambda audio: [{"start": 0.0, "end": 0.3, "text": "L'Est"}],
@@ -193,7 +194,7 @@ def test_a_line_whose_word_asr_never_found_is_not_verified_and_blank_lines_are_s
 
 def test_render_verified_validates_max_attempts():
     with pytest.raises(ValueError, match="max_attempts"):
-        render_verified([], {}, render=None, emitter=None, max_attempts=0)
+        render_verified([], checks={}, render=None, emitter=None, max_attempts=0)
 
 
 def test_checks_by_line_groups_risks_with_known_readings():
@@ -359,13 +360,13 @@ def test_render_verified_passes_its_scorer_to_verify_words():
 
     kwargs = dict(render=render, emitter=_triste_emitter, words_of=lambda audio: TRISTE_WORDS)
     checks = {1: [("est", READINGS, "verb")]}
-    [line] = render_verified(["triste est le"], checks, scorer=TRISTE_PHRASE, **kwargs)
+    [line] = render_verified(["triste est le"], checks=checks, scorer=TRISTE_PHRASE, **kwargs)
     assert line.verified and renders == [0]  # phrase scoring hears the verb: one take
     renders.clear()
-    [line] = render_verified(["triste est le"], checks, scorer="crop", **kwargs)
+    [line] = render_verified(["triste est le"], checks=checks, scorer="crop", **kwargs)
     assert not line.verified and renders == [0, 1, 2]  # cropping "hears" the noun every take
     with pytest.raises(ValueError, match="scoring"):
-        render_verified([], {}, render=render, emitter=None, scorer="nope")
+        render_verified([], checks={}, render=render, emitter=None, scorer="nope")
 
 
 def test_reading_scorer_rejects_an_unknown_scoring():
@@ -430,7 +431,7 @@ def test_an_explicit_margin_wins_over_the_scorers_in_audit_and_render_verified()
     [finding] = audit("est", "take", readings={"est": READINGS}, scoring="crop", margin=7.0,
                       emitter=emitter, words_of=lambda audio: words)
     assert finding.verdict.margin == 7.0
-    [line] = render_verified(["est"], {1: [("est", READINGS, "verb")]}, render=lambda *a: "take",
+    [line] = render_verified(["est"], checks={1: [("est", READINGS, "verb")]}, render=lambda *a: "take",
                              emitter=emitter, words_of=lambda audio: words, scorer="crop", margin=7.0)
     assert line.chosen.verdicts[0].margin == 7.0
 
@@ -542,10 +543,11 @@ def test_render_verified_with_audit_options_retries_an_elided_heteronym():
 
     words = lambda audio: [{"start": 0.0, "end": 0.1, "text": " à"}, {"start": 0.1, "end": 0.2, "text": " l'"},
                            {"start": 0.2, "end": 0.5, "text": "Est"}]
-    [line] = render_verified(
-        ["à l'Est"], render=render, emitter=_emitter_hearing(heard), words_of=words, scorer="crop",
-        audit_options=dict(readings={"est": READINGS}, expected={"l'est": "noun"}),
+    verify = audit_verifier(
+        ["à l'Est"], emitter=_emitter_hearing(heard), words_of=words, scorer="crop",
+        readings={"est": READINGS}, expected={"l'est": "noun"},
     )
+    [line] = render_verified(["à l'Est"], render=render, verify=verify)
     assert [t.audio for t in line.takes] == ["1-0", "1-1"]  # the misread "l'Est" was retried
     assert line.chosen.attempt == 1 and line.verified and line.unconfirmed == []
 
@@ -560,10 +562,13 @@ def test_render_verified_with_audit_options_tells_occurrences_apart_and_gives_re
     heard = {"2-0": ["ɛ"]}  # every window sounds like the verb: "l'Est" must fail, "est" pass
     said = [" il", " est", " à", " l'", "Est"]
     words = lambda audio: [{"start": i * 0.3, "end": i * 0.3 + 0.2, "text": w} for i, w in enumerate(said)]
+    lines = ["rien", "il est à l'Est"]
+    verify = audit_verifier(
+        lines, emitter=_emitter_hearing(heard), words_of=words, scorer="crop",
+        readings={"est": READINGS}, expected=expected,
+    )
     first, second = render_verified(
-        ["rien", "il est à l'Est"], render=lambda text, line, attempt: f"{line}-{attempt}",
-        emitter=_emitter_hearing(heard), words_of=words, scorer="crop", max_attempts=1,
-        audit_options=dict(readings={"est": READINGS}, expected=expected),
+        lines, render=lambda text, line, attempt: f"{line}-{attempt}", verify=verify, max_attempts=1,
     )
     assert first.verified and first.chosen.findings == ()
     assert set(seen) == {2}
@@ -582,10 +587,13 @@ def test_render_verified_runs_detectors_once_on_the_full_text():
 
     heard = {"1-0": ["ɛ"], "2-0": ["ɛ"], "2-1": ["ɛ", "s", "t"]}
     words = lambda audio: [{"start": 0.0, "end": 0.3, "text": "est"}]
+    lines = ["il est la", "est finie"]
+    verify = audit_verifier(
+        lines, emitter=_emitter_hearing(heard), words_of=words, scorer="crop",
+        readings={"est": READINGS}, detectors=[detector],
+    )
     first, second = render_verified(
-        ["il est la", "est finie"], render=lambda text, line, attempt: f"{line}-{attempt}",
-        emitter=_emitter_hearing(heard), words_of=words, scorer="crop", max_attempts=2,
-        audit_options=dict(readings={"est": READINGS}, detectors=[detector]),
+        lines, render=lambda text, line, attempt: f"{line}-{attempt}", verify=verify, max_attempts=2,
     )
     assert texts == ["il est la\nest finie"]  # once, not once per take or line
     assert [f.expected for f in first.chosen.findings] == [None]  # not line 2's proposal
@@ -594,12 +602,31 @@ def test_render_verified_runs_detectors_once_on_the_full_text():
 
 def test_render_verified_refuses_a_line_with_a_newline():
     with pytest.raises(ValueError, match="single line"):
-        render_verified(["a\nb"], render=None, audit_options={})
+        audit_verifier(["a\nb"])
 
 
-def test_render_verified_takes_checks_or_audit_options_not_both():
+def test_render_verified_takes_verify_or_checks_not_both():
     with pytest.raises(ValueError, match="not both"):
-        render_verified([], {}, audit_options={}, render=None)
+        render_verified([], checks={}, verify=lambda *a: [], render=None)
+
+
+def test_render_verified_takes_any_verifier_and_derives_verdicts_from_findings():
+    from voxy.pronounce import Finding, Verdict
+    from voxy.speechtext import Risk
+
+    bad = Verdict("est", 0, 1, {"verb": -9.0, "noun": -1.0}, expected="verb")
+    calls = []
+
+    def verify(text, audio, line):  # a custom seam: bad on the first take, then clean
+        calls.append((text, audio, line))
+        risk = Risk(line, "est", "heteronym")
+        return [Finding(risk, bad if audio.endswith("-0") else None)]
+
+    [line] = render_verified(["il est"], render=lambda t, n, a: f"{n}-{a}", verify=verify)
+    assert calls == [("il est", "1-0", 1), ("il est", "1-1", 1)]
+    first, second = line.takes
+    assert first.verdicts == (bad,) and first.failing == [bad] and second.verdicts == ()
+    assert line.chosen is second
 
 
 def test_render_verified_audit_mode_empty_options_still_retries_and_reports_real_lines():
@@ -610,22 +637,26 @@ def test_render_verified_audit_mode_empty_options_still_retries_and_reports_real
         return f"{line}-{attempt}"
 
     words = lambda audio: [{"start": 0.0, "end": 0.3, "text": "est"}]
+    lines = ["", "est"]
     blank, line = render_verified(
-        ["", "est"], render=render, emitter=_emitter_hearing(heard), words_of=words, scorer="crop",
-        max_attempts=2, audit_options={"readings": {"est": READINGS}, "expected": {"est": "noun"}},
+        lines, render=render, max_attempts=2,
+        verify=audit_verifier(lines, emitter=_emitter_hearing(heard), words_of=words, scorer="crop",
+                              readings={"est": READINGS}, expected={"est": "noun"}),
     )
     assert blank.takes == () and len(line.takes) == 2  # retried: the word was misread
     assert [f.risk.line for f in line.chosen.findings] == [2]
-    [only] = render_verified(["rien"], render=render, audit_options={}, max_attempts=3,
-                             emitter=_emitter_hearing(heard), words_of=words)
+    [only] = render_verified(["rien"], render=render, max_attempts=3,
+                             verify=audit_verifier(["rien"], readings={"est": READINGS},
+                                                   emitter=_emitter_hearing(heard), words_of=words))
     assert len(only.takes) == 1  # no risk, one render
-    [empty] = render_verified(["est"], render=render, audit_options={"readings": {"est": READINGS},
-                              "expected": {"est": "noun"}}, max_attempts=2, emitter=_emitter_hearing(heard),
-                              words_of=lambda audio: [], scorer="crop")
+    [empty] = render_verified(
+        ["est"], render=render, max_attempts=2,
+        verify=audit_verifier(["est"], readings={"est": READINGS}, expected={"est": "noun"},
+                              emitter=_emitter_hearing(heard), words_of=lambda audio: [], scorer="crop"))
     assert empty.unconfirmed == ["est"] and not empty.verified  # ASR never found it
 
 
-def test_audit_options_scoring_beats_the_outer_scorer():
+def test_audit_verifier_options_scoring_beats_the_outer_scorer():
     from voxy.pronounce import _line_audit_options
 
     kwargs = _line_audit_options({"scoring": "spot"}, 3, scorer=TRISTE_PHRASE)
