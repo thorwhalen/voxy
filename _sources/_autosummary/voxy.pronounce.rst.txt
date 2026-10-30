@@ -27,6 +27,7 @@ voxy.pronounce
       SCORERS
       DFLT_MAX_ATTEMPTS
       Check
+      Verifier
       HETERONYMS_DIR
    
    .. rubric:: Functions
@@ -35,9 +36,11 @@ voxy.pronounce
    
       align_words
       audit
+      audit_verifier
       best_reading
       checks_by_line
       checks_from_risks
+      checks_verifier
       crop_scorer
       ctc_log_likelihood
       espeak_phonemizer
