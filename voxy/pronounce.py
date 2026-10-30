@@ -432,13 +432,16 @@ def checks_from_risks(
 ) -> list[tuple[str, Mapping[str, str], str | None]]:
     """``verify_words`` checks for the flagged words that have known IPA readings.
 
+    Legacy: :func:`audit` (``render_verified``'s default verifier) does this per
+    occurrence; this feeds ``render_verified``'s ``checks=`` adapter.
+
     ``readings`` maps a word (case-insensitively) to ``{name: IPA}``, e.g. from a
     Lexique-derived heteronym list the caller supplies; ``expected`` names the
     reading each word should have, and otherwise the risks' own ``expected`` (what a
     detector such as ``voxy.speechtext.pos_detector`` found) is used. Words with no
     entry are skipped, and so are words elided onto a clitic (a risk with a ``clitic``,
     "l'Est"), whose differing reading then leaves the word's open: ``verify_words``
-    matches spellings, not places (``render_verified(audit_options=...)`` checks
+    matches spellings, not places (``render_verified``'s default verifier checks
     places). Each word is checked once: ``verify_words`` finds every place
     it is spoken, so a word whose risks name *different* readings gets none here
     (group the risks by line with :func:`checks_by_line` to check each one).
@@ -796,9 +799,12 @@ class Take:
 
     attempt: int
     audio: str
-    verdicts: tuple[Verdict, ...] = ()
-    #: With ``audit_options`` (:func:`render_verified`): every flagged word of the take.
     findings: tuple["Finding", ...] = ()
+
+    @property
+    def verdicts(self) -> tuple[Verdict, ...]:
+        """The verdicts of the findings whose word was located in the audio."""
+        return tuple(f.verdict for f in self.findings if f.verdict)
 
     @property
     def failing(self) -> list[Verdict]:
@@ -816,7 +822,6 @@ class LineTakes:
     line: int
     text: str
     takes: tuple[Take, ...] = field(default_factory=tuple)
-    checks: tuple = ()
 
     @property
     def chosen(self) -> Take | None:
@@ -825,24 +830,18 @@ class LineTakes:
 
     @property
     def unconfirmed(self) -> list[str]:
-        """Checked words with an expected reading that the chosen take did not confirm.
+        """Words with an expected reading that the chosen take did not confirm.
 
-        A word is confirmed when the audio decidedly gave the expected reading at least
-        once. It stays unconfirmed when ASR never found it, or when the recogniser
-        could not decide.
+        A word is confirmed when the audio decidedly gave the expected reading. It
+        stays unconfirmed when ASR never found it, or when the recogniser could not
+        decide.
         """
-        verdicts = self.chosen.verdicts if self.chosen else ()
         findings = self.chosen.findings if self.chosen else ()
-        return [
-            word
-            for word, _, expected in self.checks
-            if expected is not None
-            and not any(v.word == word and v.ok for v in verdicts)
-        ] + [f.risk.word for f in findings if f.expected is not None and not f.ok]
+        return [f.risk.word for f in findings if f.expected is not None and not f.ok]
 
     @property
     def verified(self) -> bool:
-        """No checked word misread, and every one with an expected reading confirmed."""
+        """No word misread, and every one with an expected reading confirmed."""
         return not (self.chosen and self.chosen.failing) and not self.unconfirmed
 
 
@@ -852,7 +851,11 @@ def checks_by_line(
     readings: Mapping[str, Mapping[str, str]],
     expected: Mapping[str, str] | None = None,
 ) -> dict[int, list[Check]]:
-    """:func:`checks_from_risks`, grouped by the line each risk is on."""
+    """:func:`checks_from_risks`, grouped by the line each risk is on.
+
+    Legacy: ``render_verified``'s default verifier finds and tells apart the
+    occurrences itself; this feeds its ``checks=`` adapter.
+    """
     by_line: dict[int, list] = {}
     for risk in risks:
         by_line.setdefault(risk.line, []).append(risk)
@@ -890,12 +893,92 @@ def _transcribed_words(audio: str) -> list[Mapping]:
     return timed_words(transcribe(audio))
 
 
+#: ``(text, audio, line) -> findings``: what the audio of one line says about its words.
+Verifier = Callable[[str, str, int], Sequence["Finding"]]
+
+
+def audit_verifier(
+    lines: Iterable[str],
+    *,
+    emitter: Emitter | None = None,
+    words_of: Callable[[str], Iterable[Mapping]] = _transcribed_words,
+    scorer: Scorer | str = DFLT_SCORING,
+    margin: float | None = None,
+    **audit_options,
+) -> Verifier:
+    """A :data:`Verifier` over :func:`audit`, for the ``lines`` that will be rendered.
+
+    ``audit_options`` are ``audit``'s own (``readings``, ``expected``, ``detectors``,
+    ``language``...), applied to one line at a time, so an ``expected`` function sees
+    the risk with its real line number. The ``detectors`` run once on all the lines, so
+    they read a sentence that spans two lines in context; the risks they propose for a
+    line outside the text are dropped. ``emitter``, ``words_of``, ``scorer`` and
+    ``margin`` are the defaults for ``audit``'s.
+    """
+    lines = list(lines)
+    if any("\n" in line for line in lines):
+        raise ValueError("each line must be a single line (no newline inside)")
+    proposals = _proposals_by_line(lines, audit_options)
+
+    def verify(text: str, audio: str, line: int) -> list["Finding"]:
+        found = audit(
+            text,
+            audio,
+            **_line_audit_options(
+                {**audit_options, "detectors": [lambda _text: proposals.get(line, [])]},
+                line,
+                emitter=emitter,
+                words_of=words_of,
+                scorer=scorer,
+                margin=margin,
+            ),
+        )
+        return [replace(f, risk=replace(f.risk, line=line)) for f in found]  # audit saw line 1
+
+    return verify
+
+
+def checks_verifier(
+    checks: Mapping[int, Sequence[Check]],
+    *,
+    emitter: Emitter | None = None,
+    words_of: Callable[[str], Iterable[Mapping]] = _transcribed_words,
+    scorer: Scorer | str = DFLT_SCORING,
+    margin: float | None = None,
+) -> Verifier:
+    """A :data:`Verifier` for legacy ``checks`` (:func:`checks_by_line`): words by spelling.
+
+    A checked word ASR never found is a finding without a verdict.
+    """
+    from voxy.speechtext import Risk
+
+    scorer = _resolve_scorer(scorer, emitter)
+
+    def verify(text: str, audio: str, line: int) -> list["Finding"]:
+        line_checks = list(checks.get(line, ()))
+        if not line_checks:
+            return []
+        verdicts = verify_words(
+            audio, line_checks, words=words_of(audio), scorer=scorer, margin=margin
+        )
+        found = []
+        for word, _, expected in line_checks:
+            risk = Risk(line, word, "check", expected=expected)
+            mine = [v for v in verdicts if v.word == word]
+            found += [Finding(risk, v, expected) for v in mine] or [
+                Finding(risk, None, expected)
+            ]
+        return found
+
+    return verify
+
+
 def render_verified(
     lines: Iterable[str],
-    checks: Mapping[int, Sequence[Check]] | None = None,
     *,
-    audit_options: Mapping | None = None,
     render: Callable[[str, int, int], "str | os.PathLike"],
+    verify: Verifier | None = None,
+    checks: Mapping[int, Sequence[Check]] | None = None,
     emitter: Emitter | None = None,
     words_of: Callable[[str], Iterable[Mapping]] = _transcribed_words,
     max_attempts: int = DFLT_MAX_ATTEMPTS,
@@ -904,39 +987,34 @@ def render_verified(
 ) -> list[LineTakes]:
     """Render each line, and re-render the ones whose flagged words came out wrong.
 
-    A line with checks is verified (:func:`verify_words`) after each render and
-    rendered again while a word is decidedly misread (:func:`failing`), up to
-    ``max_attempts`` renders; a line without checks is rendered once, and a blank
-    line not at all (line numbers still count it, as ``flag_risks`` does).
+    After each render, ``verify(text, audio, line)`` says what the audio did with each
+    flagged word (:class:`Finding`); the line is rendered again while a word is
+    decidedly misread (``f.ok is False``), up to ``max_attempts`` renders. A blank line
+    is not rendered (line numbers still count it, as ``flag_risks`` does).
     :attr:`LineTakes.chosen` is the take to keep; :attr:`LineTakes.verified` also
     requires each expected reading to be confirmed (a word ASR did not find, or the
     recogniser could not decide, leaves the line unverified rather than retried).
 
-    ``checks`` match words by spelling. With ``audit_options`` instead, each take of
-    each line goes through :func:`audit`, which tells the occurrences of a word apart
-    ("l'Est" from "est", the n-th "est" on the line from the others) and flags the
-    line's heteronyms itself. The options are ``audit``'s own (``readings``,
-    ``expected``, ``detectors``, ``language``...), applied to the one line, so an
-    ``expected`` function sees the risk with its real line number; ``emitter``,
-    ``words_of``, ``scorer`` and ``margin`` here are the defaults for ``audit``'s.
-    The ``detectors`` run once on all the lines, so they read a sentence that spans two
-    lines in context; the risks they propose for a line outside the text are dropped.
-    Give ``checks`` or ``audit_options``, not both.
-
     Args:
         lines: The lines to speak, in order (line numbers start at 1).
-        checks: By line number, the words to check (:func:`checks_by_line`).
         render: ``(text, line, attempt) -> audio path``; each call should give a
             new take (a new seed, or a service's own variation).
             :func:`speech_renderer` adapts a :class:`voxy.base.SpeechModel`.
+        verify: A :data:`Verifier`. Default :func:`audit_verifier` ``(lines)``, which
+            flags the line's heteronyms itself and tells the occurrences of a word
+            apart ("l'Est" from "est"); build it yourself to pass ``audit``'s options
+            (``readings``, ``expected``, ``detectors``...).
+        checks: Legacy, instead of ``verify``: by line number, the words to check by
+            spelling (:func:`checks_by_line`); :func:`checks_verifier` adapts them.
         emitter: The phoneme recogniser for a ``scorer`` given by name; default
             :func:`phoneme_emitter`.
         words_of: ``audio -> timed words``; the default transcribes with
             ``voxy.refprep.transcribe``.
         max_attempts: Renders of one line at most.
-        scorer, margin: As in :func:`verify_words` (default: phrase scoring, its
-            neighbours written out by the real espeak worker, so offline tests
-            inject ``phrase_scorer(emitter=..., phonemize=fake)`` or use ``"crop"``).
+        scorer, margin: As in :func:`audit` (default: phrase scoring, its neighbours
+            written out by the real espeak worker, so offline tests inject
+            ``phrase_scorer(emitter=..., phonemize=fake)`` or use ``"crop"``). They
+            default the default verifier and ``checks``; a ``verify`` has its own.
 
     >>> heard = {"est": "ɛ"}  # a fake recogniser: what each word sounds like
     >>> def emitter(audio, start, end):
@@ -950,70 +1028,36 @@ def render_verified(
     ...                        {"start": 0.1, "end": 0.3, "text": "Est"}]
     >>> phonemize = lambda texts, language: ["l" for _ in texts]  # a fake espeak
     >>> scorer = phrase_scorer(emitter=emitter, phonemize=phonemize)
-    >>> checks = {1: [("Est", {"verb": "ɛ", "noun": "ɛst"}, "noun")]}
-    >>> [result] = render_verified(["L'Est"], checks, render=render, words_of=words,
-    ...                            scorer=scorer)
+    >>> verify = audit_verifier(["L'Est"], words_of=words, scorer=scorer,
+    ...                         readings={"est": {"verb": "ɛ", "noun": "ɛst"}},
+    ...                         expected={"l'est": "noun"})
+    >>> [result] = render_verified(["L'Est"], render=render, verify=verify)
     >>> [t.audio for t in result.takes], result.chosen.attempt, result.verified
     (['take-1-0.wav', 'take-1-1.wav'], 1, True)
     """
     if max_attempts < 1:
         raise ValueError(f"max_attempts must be at least 1, got {max_attempts}")
-    if checks is not None and audit_options is not None:
-        raise ValueError("give checks or audit_options, not both")
-    if audit_options is None:
-        scorer = _resolve_scorer(scorer, emitter)
+    if verify is not None and checks is not None:
+        raise ValueError("give verify or checks, not both")
     lines = list(lines)
-    if any("\n" in line for line in lines):
-        raise ValueError("each line must be a single line (no newline inside)")
-    proposals = _proposals_by_line(lines, audit_options)
+    options = dict(emitter=emitter, words_of=words_of, scorer=scorer, margin=margin)
+    if checks is not None:
+        verify = checks_verifier(checks, **options)
+    elif verify is None:
+        verify = audit_verifier(lines, **options)
     results = []
     for number, text in enumerate(lines, 1):
-        line_checks = list((checks or {}).get(number, ()))
         if not text.strip():
             results.append(LineTakes(number, text))
             continue
         takes: list[Take] = []
-        for attempt in range(
-            max_attempts if line_checks or audit_options is not None else 1
-        ):
+        for attempt in range(max_attempts):
             audio = str(render(text, number, attempt))
-            verdicts, findings = (), ()
-            if audit_options is not None:
-                findings = tuple(
-                    replace(f, risk=replace(f.risk, line=number))  # audit saw line 1
-                    for f in audit(
-                        text,
-                        audio,
-                        **_line_audit_options(
-                            {
-                                **audit_options,
-                                "detectors": [
-                                    lambda _text, n=number: proposals.get(n, [])
-                                ],
-                            },
-                            number,
-                            emitter=emitter,
-                            words_of=words_of,
-                            scorer=scorer,
-                            margin=margin,
-                        ),
-                    )
-                )
-                verdicts = tuple(f.verdict for f in findings if f.verdict)
-            elif line_checks:
-                verdicts = tuple(
-                    verify_words(
-                        audio,
-                        line_checks,
-                        words=words_of(audio),
-                        scorer=scorer,
-                        margin=margin,
-                    )
-                )
-            takes.append(Take(attempt, audio, verdicts, findings))
-            if not failing(verdicts):
+            take = Take(attempt, audio, tuple(verify(text, audio, number)))
+            takes.append(take)
+            if not take.failing:
                 break
-        results.append(LineTakes(number, text, tuple(takes), tuple(line_checks)))
+        results.append(LineTakes(number, text, tuple(takes)))
     return results
 
 
