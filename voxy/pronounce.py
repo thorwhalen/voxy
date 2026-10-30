@@ -933,7 +933,9 @@ def audit_verifier(
                 margin=margin,
             ),
         )
-        return [replace(f, risk=replace(f.risk, line=line)) for f in found]  # audit saw line 1
+        return [
+            replace(f, risk=replace(f.risk, line=line)) for f in found
+        ]  # audit saw line 1
 
     return verify
 
