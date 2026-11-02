@@ -1,0 +1,136 @@
+"""Tests for voxy.separate, with the Demucs worker faked."""
+
+from pathlib import Path
+
+import pytest
+
+from voxy import separate as sep
+from voxy.worker import WorkerError
+from voxy.workers import demucs_adapter
+
+
+def fake_run(calls):
+    def run(audio, out_dir, **options):
+        calls.append((Path(audio).read_bytes(), options))
+        stem = options.get("stem", "vocals")
+        paths = {}
+        for name in (stem, "rest"):
+            paths[name] = Path(out_dir) / f"{name}.wav"
+            paths[name].write_bytes(name.encode())
+        return paths
+
+    return run
+
+
+def test_wav_bytes_in_two_stems_out():
+    calls = []
+    stems = sep.separate(b"RIFF-input", run=fake_run(calls), shifts=2)
+    assert stems == {"vocals": b"vocals", "rest": b"rest"}
+    assert calls == [
+        (b"RIFF-input", {"stem": "vocals", "sample_rate": None, "shifts": 2})
+    ]
+
+
+def test_the_sample_rate_reaches_the_run():
+    calls = []
+    sep.separate(b"RIFF", sample_rate=16_000, run=fake_run(calls))
+    assert calls[0][1]["sample_rate"] == 16_000
+
+
+def test_a_path_and_another_stem(tmp_path):
+    song = tmp_path / "song.wav"
+    song.write_bytes(b"RIFF-song")
+    calls = []
+    stems = sep.separate(song, stem="drums", run=fake_run(calls))
+    assert set(stems) == {"drums", "rest"} and calls[0][0] == b"RIFF-song"
+
+
+def test_the_default_run_uses_the_pooled_worker_with_absolute_paths(
+    tmp_path, monkeypatch
+):
+    requests = []
+
+    class FakeWorker:
+        def call(self, op, **request):
+            requests.append((op, request))
+            out = Path(request["out_dir"])
+            for name in ("vocals", "rest"):
+                (out / f"{name}.wav").write_bytes(name.encode())
+            return {"paths": {n: str(out / f"{n}.wav") for n in ("vocals", "rest")}}
+
+    made = fake_pool(monkeypatch, FakeWorker())
+    sep.close_separation()
+    try:
+        stems = sep.separate(b"RIFF", run=sep.worker_run(model="htdemucs"))
+    finally:
+        sep.close_separation()
+    assert stems["vocals"] == b"vocals"
+    ((op, request),) = requests
+    assert op == "separate" and Path(request["audio"]).is_absolute()
+    assert made == [{"model": "htdemucs", "threads": None, "rootdir": None}]
+
+
+def test_a_missing_stem_in_the_run_result_is_an_error():
+    def run(audio, out_dir, **options):
+        return {}
+
+    with pytest.raises(KeyError):
+        sep.separate(b"RIFF", run=run)
+
+
+def fake_pool(monkeypatch, worker):
+    made = []
+    monkeypatch.setattr(
+        sep._DEMUCS_POOL,
+        "_make",
+        lambda spec, adapter, **key: made.append(key) or worker,
+    )
+    return made
+
+
+def test_a_stem_a_known_model_lacks_fails_before_the_worker_starts(monkeypatch):
+    made = fake_pool(monkeypatch, None)
+    with pytest.raises(ValueError, match="'guitar' is not a stem of htdemucs_ft"):
+        sep.separate(b"RIFF", stem="guitar")
+    assert made == []
+
+
+def test_a_stem_error_from_the_worker_reads_as_its_message(monkeypatch):
+    message = "ValueError: 'flute' is not a stem of my_model: ['vocals', 'other']"
+
+    class FailingWorker:
+        def call(self, op, **request):
+            raise WorkerError(f"{message}\nTraceback (most recent call last): ...")
+
+    fake_pool(monkeypatch, FailingWorker())
+    sep.close_separation()
+    try:
+        with pytest.raises(WorkerError, match=r"'flute' is not a stem of my_model"):
+            sep.separate(b"RIFF", stem="flute", run=sep.worker_run(model="my_model"))
+    finally:
+        sep.close_separation()
+
+
+class FakeBag:
+    def __init__(self, weights):
+        self.weights = weights
+        self.models = [f"model{i}" for i in range(len(weights))]
+
+
+@pytest.mark.parametrize(
+    "weights, index, expected",
+    [
+        ([[1, 0], [0, 1]], 1, "model1"),  # htdemucs_ft: one fine-tuned model per stem
+        ([[1, 1]], 0, "model0"),  # a bag of one
+        ([[1, 1], [1, 1]], 0, "bag"),  # an ensemble: every model counts
+    ],
+)
+def test_only_the_sub_model_that_makes_the_stem_runs(weights, index, expected):
+    bag = FakeBag(weights)
+    chosen = demucs_adapter.stem_model(bag, index)
+    assert (chosen is bag and expected == "bag") or chosen == expected
+
+
+def test_a_plain_model_runs_as_is():
+    model = object()
+    assert demucs_adapter.stem_model(model, 0) is model
