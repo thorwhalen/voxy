@@ -211,7 +211,7 @@ voxy.list_voices("kokoro")
 
 ```python
 fixed = voxy.replace_words("narration.wav", "Anna Jones", "Anna Smith", voice="ada")
-fixed.passed, fixed.checks      # True, [{'check': 'heard', 'passed': True, ...}]
+fixed.passed, fixed.checks  # True, [{'check': 'heard', 'passed': True, ...}]
 fixed.save("narration-fixed.wav")
 ```
 
