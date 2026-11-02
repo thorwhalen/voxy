@@ -412,3 +412,22 @@ def test_the_replacement_is_a_speech():
 
 def test_it_is_on_the_package():
     assert voxy.replace_words is splice.replace_words
+
+
+def test_voice_check_fails_rather_than_raises_on_a_silent_remainder():
+    def silent_rest(path, *, spans, window, **kwargs):
+        raise ValueError("No speech windows to find a voice in")
+
+    check = splice.voice_check(embed=silent_rest)
+    fixed = replace_words(
+        SPEECH,
+        "Smyth",
+        "Smith",
+        words=WORDS,
+        sample_rate=SR,
+        render=fake_render([]),
+        verify=check,
+    )
+    assert (
+        fixed.checks[0]["passed"] is False and "No speech" in fixed.checks[0]["reason"]
+    )

@@ -380,10 +380,13 @@ def voice_check(
             reason = "no audio outside the new phrase to compare it with"
             return {"check": "voice", "passed": False, "reason": reason}
         with _temp_wav(samples, sample_rate) as path:
-            new, old = (
-                speakers.voice_print(path, spans=spans, embed=embed, window=size)
-                for spans in ([(start, end)], rest)
-            )
+            try:
+                new, old = (
+                    speakers.voice_print(path, spans=spans, embed=embed, window=size)
+                    for spans in ([(start, end)], rest)
+                )
+            except ValueError as e:  # no speech windows (silence around the phrase)
+                return {"check": "voice", "passed": False, "reason": str(e)}
         similarity = round(float(new @ old), 3)
         return {
             "check": "voice",
