@@ -1,0 +1,108 @@
+"""Tests for voxy.wavutil's one WAV decoder and the encoder's input layouts (#71)."""
+
+import io
+import struct
+import wave
+
+import numpy as np
+import pytest
+
+from voxy.base import tensor_to_wav_bytes
+from voxy.wavutil import pcm_to_float, read_wav, write_wav
+
+
+def wav(
+    frames: bytes,
+    *,
+    rate=8000,
+    channels=1,
+    width=2,
+    tag=1,
+    data_size=None,
+    extensible=False,
+):
+    """A WAV payload built by hand (so headers the wave module won't write can be tested)."""
+    block = channels * width
+    if extensible:
+        fmt = struct.pack(
+            "<HHIIHH", 0xFFFE, channels, rate, rate * block, block, 8 * width
+        )
+        fmt += (
+            struct.pack("<HHI", 22, 8 * width, 0)
+            + struct.pack("<H", tag)
+            + b"\x00" * 14
+        )
+    else:
+        fmt = struct.pack(
+            "<HHIIHH", tag, channels, rate, rate * block, block, 8 * width
+        )
+    size = len(frames) if data_size is None else data_size
+    body = (
+        b"WAVE"
+        + b"fmt "
+        + struct.pack("<I", len(fmt))
+        + fmt
+        + b"data"
+        + struct.pack("<I", size)
+        + frames
+    )
+    return b"RIFF" + struct.pack("<I", len(body)) + body
+
+
+def test_round_trip_through_the_one_encoder_and_decoder():
+    x = np.array([0.0, 0.5, -0.5, 1.0, -1.0], dtype=np.float32)
+    samples, sr = read_wav(write_wav(x, 16000))
+    assert sr == 16000 and np.allclose(samples, x, atol=1 / 32767)
+
+
+def test_a_streamed_wav_with_a_placeholder_size_decodes():
+    frames = np.array([0, 16384, -16384], "<i2").tobytes()
+    for placeholder in (0, 0xFFFFFFFF):
+        samples, _ = read_wav(wav(frames, data_size=placeholder))
+        assert np.allclose(samples, [0, 0.5, -0.5], atol=1e-4)
+
+
+def test_unsigned_8_bit_32_bit_float_and_extensible_headers():
+    assert read_wav(wav(bytes([0, 128, 255]), width=1))[0].tolist() == [
+        -1.0,
+        0.0,
+        0.9921875,
+    ]
+    floats = np.array([0.25, -0.75], "<f4").tobytes()
+    assert read_wav(wav(floats, width=4, tag=3))[0].tolist() == [0.25, -0.75]
+    pcm = np.array([32767, 0], "<i2").tobytes()
+    assert read_wav(wav(pcm, extensible=True))[0].tolist() == [1.0, 0.0]
+
+
+def test_channels_are_averaged():
+    frames = np.array([32767, 0, 0, 32767], "<i2").tobytes()  # two stereo frames
+    assert np.allclose(read_wav(wav(frames, channels=2))[0], [0.5, 0.5])
+
+
+def test_it_reads_what_the_wave_module_writes_and_refuses_what_it_cannot():
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as w:
+        w.setnchannels(1), w.setsampwidth(2), w.setframerate(22050)
+        w.writeframes(np.array([100, -100], "<i2").tobytes())
+    assert read_wav(buffer.getvalue())[1] == 22050
+    with pytest.raises(ValueError, match="Not a WAV"):
+        read_wav(b"ID3\x04" + b"\x00" * 40)
+    with pytest.raises(ValueError, match="Unsupported WAV format"):
+        read_wav(wav(b"\x00" * 8, width=4, tag=6))  # A-law
+
+
+def test_pcm_decoding_drops_a_trailing_partial_sample():
+    assert pcm_to_float(b"\x00\x00\xff").tolist() == [0.0]
+
+
+def test_the_encoder_scales_unsigned_8_bit_around_128():
+    silent = tensor_to_wav_bytes(np.full(4, 128, dtype=np.uint8), 8000)
+    assert not read_wav(silent)[0].any()
+
+
+def test_the_encoder_accepts_samples_by_channels():
+    left_right = np.stack([np.full(100, 0.5), np.zeros(100)], axis=1)  # (100, 2)
+    samples, _ = read_wav(tensor_to_wav_bytes(left_right, 8000))
+    assert len(samples) == 100 and np.allclose(samples, 0.25, atol=1e-4)
+    channels_first = left_right.T  # (2, 100)
+    assert read_wav(tensor_to_wav_bytes(channels_first, 8000))[0].shape == (100,)
