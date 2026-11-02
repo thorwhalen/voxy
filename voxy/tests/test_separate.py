@@ -144,9 +144,12 @@ def test_speech_separator_fits_mixings_separator_seam():
 
     seen = []
 
+    options_seen = []
+
     def run(audio, out_dir, *, stem, sample_rate, **options):
         samples, sr = read_wav_channels(audio)
         seen.append((samples.shape, sr, sample_rate))
+        options_seen.append(options)
         stereo = np.repeat(samples[:, :1], 2, axis=1)[:-3]  # the model: stereo, a few frames short
         paths = {}
         for name, gain in ((stem, 0.8), ("rest", 0.2)):
@@ -163,3 +166,6 @@ def test_speech_separator_fits_mixings_separator_seam():
     assert speech.shape == (50, 2)
     with pytest.raises(ValueError, match="mono or stereo"):
         separator(np.zeros((10, 6)), 44100)
+    assert all(o == {"clip_mode": None, "subtype": "FLOAT"} for o in options_seen)
+    with pytest.raises(ValueError, match="finite"):
+        separator(np.full((10, 1), np.nan), 44100)

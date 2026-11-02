@@ -39,6 +39,8 @@ DFLT_SEPARATION_MODEL = "htdemucs_ft"
 #: The stem kept as "the voice"; Demucs also has drums, bass and other.
 DFLT_STEM = "vocals"
 REST_STEM = "rest"
+#: What ``speech_separator`` asks the worker to write: float, so no level is lost.
+FLOAT_SUBTYPE = "FLOAT"
 _FOUR_SOURCES = ("drums", "bass", "other", "vocals")
 #: The stems of the pretrained models whose sources are known before loading them.
 MODEL_SOURCES = {
@@ -161,8 +163,11 @@ def speech_separator(
     (``mixing.audio.separation.separate_speech(audio, separator=speech_separator())``),
     so mixing can run Demucs out of process, in voxy's environment.
 
-    Mono or stereo in; the stems come back at the input's rate, channels and length.
-    Keyword arguments are ``separate``'s.
+    Mono or stereo in; the stems come back at the input's rate, channels and length,
+    at the input's level (no clip rescaling, float WAV in between: ``speech + music``
+    is the input). Keyword arguments are ``separate``'s. For mixing's ``remove_talk``,
+    give it htdemucs's context: ``SeparationStrategy(..., context_s=3.0)`` around this
+    callable (a bare callable gets mixing's 1 s default).
 
     >>> def fake(audio, out_dir, *, stem, sample_rate, **options):
     ...     samples, sr = read_wav_channels(audio)
@@ -180,6 +185,8 @@ def speech_separator(
         samples = np.asarray(samples, dtype=np.float32)
         frames_by_channels = samples if samples.ndim == 2 else samples[:, None]
         frames, channels = frames_by_channels.shape
+        if not np.isfinite(frames_by_channels).all():
+            raise ValueError("speech_separator needs finite samples (no NaN or inf)")
         if channels not in (1, 2):
             raise ValueError(
                 f"speech_separator takes mono or stereo, not {channels} channels"
@@ -189,7 +196,7 @@ def speech_separator(
             stem=stem,
             run=run,
             sample_rate=sample_rate,
-            **options,
+            **{"clip_mode": None, "subtype": FLOAT_SUBTYPE, **options},
         )
         return tuple(
             _shaped(read_wav_channels(stems[name])[0], frames, channels)
