@@ -427,6 +427,56 @@ def test_unique_slugs_names_an_unsluggable_stem_source_not_its_folder():
     ]
 
 
+def test_running_prepare_reference_again_replaces_its_sources_and_keeps_the_rest(tmp_path):
+    """#68: a re-run leaves no orphans and never overwrites another source's clips."""
+    rng = np.random.default_rng(3)
+
+    def source(folder, gain):
+        (tmp_path / folder).mkdir(exist_ok=True)
+        path = tmp_path / folder / "vocals.wav"
+        path.write_bytes(write_wav(gain * rng.standard_normal(SR * 4).astype(np.float32), SR))
+        return path
+
+    def run(*sources):
+        return refprep.prepare_reference(
+            list(sources),
+            samples=samples,
+            conditioner=lambda src, dst, **kw: dst.write_bytes(open(src, "rb").read()),
+            transcriber=lambda path, language=None: [
+                {"start": 0, "end": 4, "text": "", "words": [_word(0.2, 3.8, "Hello.")]}
+            ],
+            min_seconds=2,
+            log=lambda *a: None,
+        )
+
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    a, b, c = source("song-a", 0.1), source("song-b", 0.4), source("song-c", 0.6)
+    run(a, b)
+    first = sorted(k for k in samples if k.replace("\\", "/").startswith("clips/"))
+    assert [k.replace("\\", "/") for k in first] == [
+        "clips/song-a-vocals-0001.wav",
+        "clips/song-b-vocals-0001.wav",
+    ]
+
+    manifest = run(a)  # song-a again, alone: its slug is now plain "vocals"
+    keys = {k.replace("\\", "/") for k in samples}
+    assert "clips/song-a-vocals-0001.wav" not in keys  # no orphan
+    assert "conditioned/song-a-vocals.wav" not in keys
+    assert {"clips/vocals-0001.wav", "clips/song-b-vocals-0001.wav"} <= keys
+    assert sorted(Path(e["source"]).parent.name for e in manifest) == ["song-a", "song-b"]
+
+    manifest = run(c)  # a new source whose plain slug "vocals" is taken by song-a's
+    by_source = {Path(e["source"]).parent.name: e["key"] for e in manifest}
+    assert by_source == {
+        "song-a": "clips/vocals-0001.wav",
+        "song-b": "clips/song-b-vocals-0001.wav",
+        "song-c": "clips/vocals-2-0001.wav",
+    }
+    rms = np.sqrt(np.mean(read_wav(samples["clips/vocals-0001.wav"])[0] ** 2))
+    assert rms < 0.2  # still song-a's bytes, not overwritten by song-c's
+    assert refprep.load_manifest(samples) == manifest
+
+
 def test_plan_clips_respects_max_length():
     words = [_word(i, i + 0.9, f"w{i}") for i in range(30)]
     clips = refprep.plan_clips(

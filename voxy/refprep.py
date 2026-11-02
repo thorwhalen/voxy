@@ -479,7 +479,9 @@ def _numbered(slugs: list[str]) -> list[str]:
     return out
 
 
-def unique_slugs(sources: Iterable[str | os.PathLike]) -> list[str]:
+def unique_slugs(
+    sources: Iterable[str | os.PathLike], *, reserved: Iterable[str] = ()
+) -> list[str]:
     """One distinct slug per source: the file's stem, plus parent folders only within a
     group of sources sharing a stem (stem tracks: every one is ``vocals.wav``), numbered
     where folders cannot tell them apart. Slugs never climb past what separates a group,
@@ -491,6 +493,11 @@ def unique_slugs(sources: Iterable[str | os.PathLike]) -> list[str]:
     ['talk', 'talk-2']
     >>> unique_slugs(["/s/a.wav", "/s/a.wav", "/s/a-2.wav"])
     ['a', 'a-3', 'a-2']
+
+    ``reserved`` slugs (already used in the store) are never given out:
+
+    >>> unique_slugs(["/t/vocals.wav"], reserved=["vocals"])
+    ['vocals-2']
     """
     paths = [Path(s) for s in sources]
     stems = [_slug(p) for p in paths]
@@ -504,8 +511,36 @@ def unique_slugs(sources: Iterable[str | os.PathLike]) -> list[str]:
                 slugs[i] = slug
     # Plain stems claim their slug before deepened ones, so a unique stem keeps its key.
     order = sorted(range(len(slugs)), key=lambda i: slugs[i] != stems[i])
-    final = dict(zip(order, _numbered([slugs[i] for i in order])))
+    reserved = sorted(set(reserved))  # they claim their slugs before any source
+    numbered = _numbered(reserved + [slugs[i] for i in order])[len(reserved) :]
+    final = dict(zip(order, numbered))
     return [final[i] for i in range(len(slugs))]
+
+
+def _clip_slug(key: str) -> str:
+    """The source slug of a clip key (``clips/<slug>-0001.wav``).
+
+    >>> _clip_slug("clips/song-a-vocals-0012.wav")
+    'song-a-vocals'
+    """
+    return key[len(CLIPS_PREFIX) :].rsplit("-", 1)[0]
+
+
+def _conditioned_key(slug: str) -> str:
+    return f"{CONDITIONED_PREFIX}{slug}.wav"
+
+
+def _earlier_entries(samples: Mapping, sources: Iterable) -> tuple[list, list]:
+    """``(kept, redone)``: the store's manifest entries from sources not in this call,
+    and those from sources this call processes again."""
+    if MANIFEST_KEY not in samples:
+        return [], []
+    again = {str(s) for s in sources}
+    entries = load_manifest(samples)
+    return (
+        [e for e in entries if e["source"] not in again],
+        [e for e in entries if e["source"] in again],
+    )
 
 
 def prepare_reference(
@@ -542,6 +577,10 @@ def prepare_reference(
     Returns:
         The manifest: one dict per clip (``key``, ``path`` if on disk, ``text``,
         ``source``, ``start``, ``end``, and the ``score_clip`` measures), best first.
+
+    Run again into the same store, it replaces what an earlier run made from the
+    sources it processes again (their old clips and conditioned files are removed),
+    and keeps the clips of other sources in the manifest, never reusing their keys.
     """
     if samples is None:
         if voice is None:
@@ -555,14 +594,17 @@ def prepare_reference(
         conditioner = with_deepfilternet(conditioner, rootdir=rootdir)
     filters = conditioning_filters(denoise=denoise, loudness_lufs=loudness_lufs)
     sources = list(sources)
-    manifest = []
+    kept, redone = _earlier_entries(samples, sources)
+    kept_slugs = {_clip_slug(e["key"]) for e in kept}
+    manifest, written = [], set()
     with tempfile.TemporaryDirectory() as tmp:
-        for src, slug in zip(sources, unique_slugs(sources)):
+        for src, slug in zip(sources, unique_slugs(sources, reserved=kept_slugs)):
             wav_path = Path(tmp) / f"{slug}.wav"
             log(f"voxy.refprep: conditioning {src}")
             conditioner(src, wav_path, sample_rate=sample_rate, filters=filters)
             audio, sr = read_wav(wav_path)
-            samples[f"{CONDITIONED_PREFIX}{slug}.wav"] = wav_path.read_bytes()
+            samples[_conditioned_key(slug)] = wav_path.read_bytes()
+            written.add(_conditioned_key(slug))
             log(f"voxy.refprep: transcribing {slug} ({len(audio) / sr:.0f} s)")
             segments = transcriber(wav_path, language=language)
             if speaker is not None:
@@ -578,6 +620,7 @@ def prepare_reference(
                 piece = audio[int(clip["start"] * sr) : int(clip["end"] * sr)]
                 key = f"{CLIPS_PREFIX}{slug}-{i:04d}.wav"
                 samples[key] = write_wav(piece, sr)
+                written.add(key)
                 entry = {
                     "key": key,
                     "text": clip["text"],
@@ -595,13 +638,26 @@ def prepare_reference(
                     ),
                 }
                 manifest.append(entry)
+    stale = {
+        k
+        for e in redone
+        for k in (e["key"], _conditioned_key(_clip_slug(e["key"])))
+        if k not in written
+    }
+    for key in stale:  # what an earlier run made from a source made again now
+        samples.pop(key, None)
+    new = len(manifest)
+    manifest += kept
     manifest.sort(key=lambda e: -e["score"])
     root = getattr(samples, "rootdir", None)
     if root:
         for entry in manifest:
             entry["path"] = os.path.join(root, entry["key"])
     samples[MANIFEST_KEY] = "\n".join(json.dumps(e) for e in manifest).encode()
-    log(f"voxy.refprep: {len(manifest)} clips saved")
+    log(
+        f"voxy.refprep: {new} clips saved, {len(kept)} kept from other sources, "
+        f"{len(stale)} stale files removed"
+    )
     return manifest
 
 
