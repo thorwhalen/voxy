@@ -930,7 +930,7 @@ def test_orphans_are_only_unclaimed_keys_of_our_own_form(tmp_path):
         log=lambda *a: None,
     )
     assert refprep.load_manifest(samples) == []
-    with pytest.raises(ValueError, match="missing or empty"):  # see the refusal test
+    with pytest.raises(ValueError, match="missing, empty"):  # see the refusal test
         refprep.orphans(samples)
     kept = {
         "clips/x-0003.wav": b"named by an entry",
@@ -971,9 +971,9 @@ def test_orphans_refuses_without_a_manifest_and_deletes_nothing(tmp_path, manife
         samples[refprep.MANIFEST_KEY] = manifest
     before = _snapshot(samples)
     for call in (refprep.orphans, refprep.forget_orphans):
-        with pytest.raises(ValueError, match="missing or empty"):
+        with pytest.raises(ValueError, match="missing, empty"):
             call(samples)
-    with pytest.raises(ValueError, match="missing or empty"):
+    with pytest.raises(ValueError, match="missing, empty"):
         refprep.forget_orphans(samples, dry_run=False, stale_after=0)
     assert _snapshot(samples) == before
     del samples["clips/talk-0001.wav"], samples["clips/talk-0002.wav"]
@@ -1548,3 +1548,12 @@ def test_latest_runs_knows_a_legacy_absolute_source_by_its_real_path(tmp_path):
         },
     ]
     assert [e["key"] for e in refprep.latest_runs(manifest)] == ["clips/a-2-0001.wav"]
+
+
+def test_a_manifest_that_claims_no_clip_does_not_make_every_clip_an_orphan(tmp_path):
+    samples = samples_store("ada", rootdir=tmp_path)
+    samples["clips/vocals-0001.wav"] = b"RIFF"
+    samples["manifest.jsonl"] = b'{"key": "tape.wav"}\n'  # entries, but none naming a clip
+    with pytest.raises(ValueError, match="claims no clip"):
+        refprep.forget_orphans(samples, dry_run=False)
+    assert "clips/vocals-0001.wav" in samples

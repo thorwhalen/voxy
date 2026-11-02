@@ -93,6 +93,8 @@ PENDING_STALE_S = 6 * 3600
 UNICODE_FORM = "NFC"
 #: Suffix of the temporary file an atomic write goes through (its name starts with ``.``).
 ATOMIC_TMP_SUFFIX = ".tmp"
+#: File mode of a file written atomically (``mkstemp`` would leave it 0600).
+ATOMIC_FILE_MODE = 0o644
 
 #: ffmpeg filters for each ``denoise`` strategy (None: no denoising).
 DENOISE_FILTERS = {
@@ -915,6 +917,8 @@ def prepare_reference(
     manifest, new = earlier, 0
     with tempfile.TemporaryDirectory() as tmp:
         for src, slug in zip(sources, slugs):
+            # a fresh start time per source: a long batch never outlives its marker
+            _write_atomically(samples, _pending_key(run), _pending_marker(run, slugs))
             source_entries = []
             source_path = source_identity(src)
             wav_path = Path(tmp) / f"{slug}.wav"
@@ -959,7 +963,7 @@ def prepare_reference(
                 source_entries.append(entry)
             manifest = _add_to_manifest(samples, source_entries)
             new += len(source_entries)
-    del samples[_pending_key(run)]  # a crashed run keeps it, until it is stale
+    samples.pop(_pending_key(run), None)  # a crashed run keeps it, until it is stale
     log(
         f"voxy.refprep: {new} clips saved (run {run}), {len(manifest) - new} earlier kept"
     )
@@ -999,6 +1003,9 @@ def _write_atomically(samples: MutableMapping, key: str, data: bytes) -> None:
             f.write(data)
             f.flush()
             os.fsync(f.fileno())
+        os.chmod(
+            tmp, ATOMIC_FILE_MODE
+        )  # mkstemp makes it 0600; keep the store's usual mode
         os.replace(tmp, path)
     except BaseException:
         if os.path.exists(tmp):
@@ -1140,9 +1147,9 @@ def _orphans_and_stale_markers(
     claimed = {None} | {s for e in entries for s in _entry_slugs(e)}
     claimed |= {s for k, m in markers.items() if k not in stale for s in m["slugs"]}
     keys = sorted(k for k in samples if _key_slug(k) not in claimed)
-    if keys and not entries:
+    if keys and not any(_entry_slugs(e) for e in entries):
         raise ValueError(
-            f"voxy.refprep: {MANIFEST_KEY} is missing or empty, yet the store holds "
+            f"voxy.refprep: {MANIFEST_KEY} is missing, empty or claims no clip, yet the store holds "
             f"{len(keys)} unclaimed clip or conditioned keys ({keys[0]}, ...): refusing "
             f"to call them orphans, as a lost manifest would make every clip one. "
             f"Restore the manifest, or delete the keys by hand if you mean to."
