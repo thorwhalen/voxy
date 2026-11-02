@@ -134,3 +134,32 @@ def test_only_the_sub_model_that_makes_the_stem_runs(weights, index, expected):
 def test_a_plain_model_runs_as_is():
     model = object()
     assert demucs_adapter.stem_model(model, 0) is model
+
+
+def test_speech_separator_fits_mixings_separator_seam():
+    """#99: (samples (n, ch), sr) -> (speech, music) at the input's shape, mono or stereo."""
+    import numpy as np
+
+    from voxy.wavutil import read_wav_channels, write_wav_channels
+
+    seen = []
+
+    def run(audio, out_dir, *, stem, sample_rate, **options):
+        samples, sr = read_wav_channels(audio)
+        seen.append((samples.shape, sr, sample_rate))
+        stereo = np.repeat(samples[:, :1], 2, axis=1)[:-3]  # the model: stereo, a few frames short
+        paths = {}
+        for name, gain in ((stem, 0.8), ("rest", 0.2)):
+            paths[name] = Path(out_dir) / f"{name}.wav"
+            paths[name].write_bytes(write_wav_channels(stereo * gain, sr))
+        return paths
+
+    separator = sep.speech_separator(run=run)
+    mono = np.full((100, 1), 0.5)
+    speech, music = separator(mono, 16000)
+    assert speech.shape == music.shape == (100, 1) and seen[-1] == ((100, 1), 16000, 16000)
+    assert abs(speech[0, 0] - 0.4) < 1e-6 and speech[-1, 0] == 0  # padded back to length
+    speech, music = separator(np.full((50, 2), 0.5), 44100)
+    assert speech.shape == (50, 2)
+    with pytest.raises(ValueError, match="mono or stereo"):
+        separator(np.zeros((10, 6)), 44100)

@@ -102,8 +102,8 @@ def _wav_chunks(data: bytes):
         pos = body + size + size % 2
 
 
-def read_wav(source: str | os.PathLike | bytes) -> tuple[np.ndarray, int]:
-    """``(samples, sample_rate)`` of a WAV (path or bytes), channels averaged.
+def read_wav_channels(source: str | os.PathLike | bytes) -> tuple[np.ndarray, int]:
+    """``(samples (frames, channels), sample_rate)`` of a WAV (path or bytes).
 
     Integer PCM (8, 16, 24, 32 bit) and 32-bit float, plain or extensible headers,
     and streamed files whose header carries a placeholder size (the audio then ends
@@ -144,11 +144,16 @@ def read_wav(source: str | os.PathLike | bytes) -> tuple[np.ndarray, int]:
                 samples = pcm_to_float(body, width)
             else:
                 raise ValueError(f"Unsupported WAV format: tag {tag}, {8 * width} bit")
-            if channels > 1:
-                samples = samples[: len(samples) - len(samples) % channels]
-                samples = samples.reshape(-1, channels).mean(axis=1)
-            return samples, rate
+            samples = samples[: len(samples) - len(samples) % channels]
+            return samples.reshape(-1, channels), rate
     raise ValueError("WAV payload has no data chunk")
+
+
+def read_wav(source: str | os.PathLike | bytes) -> tuple[np.ndarray, int]:
+    """``(samples, sample_rate)`` of a WAV (path or bytes), channels averaged; reads
+    what :func:`read_wav_channels` reads."""
+    samples, rate = read_wav_channels(source)
+    return samples.mean(axis=1) if samples.shape[1] > 1 else samples[:, 0], rate
 
 
 def write_wav(samples, sample_rate: int) -> bytes:
@@ -163,6 +168,35 @@ def write_wav(samples, sample_rate: int) -> bytes:
         w.setframerate(int(sample_rate))
         w.writeframes(pcm.tobytes())
     return buffer.getvalue()
+
+
+def write_wav_channels(samples, sample_rate: int) -> bytes:
+    """32-bit float WAV bytes of ``samples`` ``(frames, channels)`` (or 1-D: mono),
+    lossless, for handing audio to another process.
+
+    >>> import numpy as np
+    >>> x = np.array([[0.25, -0.5], [1.5, 0.0]], dtype=np.float32)
+    >>> back, sr = read_wav_channels(write_wav_channels(x, 8000))
+    >>> sr, back.tolist()
+    (8000, [[0.25, -0.5], [1.5, 0.0]])
+    """
+    samples = np.asarray(samples, dtype="<f4")
+    if samples.ndim == 1:
+        samples = samples[:, None]
+    frames, channels = samples.shape
+    data = samples.tobytes()
+    block = channels * 4
+    fmt = (
+        WAVE_FORMAT_FLOAT.to_bytes(2, "little")
+        + channels.to_bytes(2, "little")
+        + int(sample_rate).to_bytes(4, "little")
+        + (int(sample_rate) * block).to_bytes(4, "little")
+        + block.to_bytes(2, "little")
+        + (32).to_bytes(2, "little")
+    )
+    body = b"WAVE" + b"fmt " + len(fmt).to_bytes(4, "little") + fmt
+    body += b"data" + len(data).to_bytes(4, "little") + data
+    return b"RIFF" + len(body).to_bytes(4, "little") + body
 
 
 def frame_db(samples: np.ndarray, sample_rate: int, *, frame_ms: int = FRAME_MS):
