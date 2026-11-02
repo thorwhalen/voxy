@@ -351,7 +351,7 @@ class LocalSpeechModel(SpeechModel):
         gap_ms: Pause between chunks of a paragraph.
         paragraph_gap_ms: Pause between paragraphs.
         trim: Trim each chunk's leading and trailing silence before joining.
-        threads: Torch threads of the worker (default ``$VOXY_NUM_THREADS`` or 8).
+        threads: Threads of the worker's model (default ``$VOXY_NUM_THREADS`` or 8).
         rootdir: Data root for environments and weights (default ``$VOXY_DATA_DIR``).
         auto_setup: Build the environment on first use (else raise if missing).
         env_vars: Extra environment variables for the worker.

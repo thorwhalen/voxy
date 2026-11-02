@@ -174,8 +174,9 @@ class KokoroSpeechModel(LocalSpeechModel):
 
     Args:
         voice: Default stock voice (else ``$VOXY_KOKORO_VOICE``, else 'af_heart').
-        voices: The voices the model accepts (default ``KOKORO_VOICES``; pass a
-            newer voices file's names with ``init={'voices_file': ...}``).
+        voices: The voices the model accepts (default ``KOKORO_VOICES``). For a
+            newer voices file, also pass ``init={'voices_file': ..., 'revision': ...}``;
+            names must start with a known language letter (``KOKORO_LANGUAGES``).
         generate: The model call (default: the worker, see ``LocalSpeechModel``).
         device: Only 'cpu' (kokoro-onnx runs on onnxruntime's CPU provider).
         **kwargs: The other ``LocalSpeechModel`` options (threads, rootdir, ...).
