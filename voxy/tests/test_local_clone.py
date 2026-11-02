@@ -1,6 +1,7 @@
 """Local cloning backends, reference prep and diagnosis pages, with no model loaded."""
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -427,54 +428,150 @@ def test_unique_slugs_names_an_unsluggable_stem_source_not_its_folder():
     ]
 
 
-def test_running_prepare_reference_again_replaces_its_sources_and_keeps_the_rest(tmp_path):
-    """#68: a re-run leaves no orphans and never overwrites another source's clips."""
-    rng = np.random.default_rng(3)
+def _stem(folder, root, rng, gain=0.2):
+    """A ``<root>/<folder>/vocals.wav`` of noise at ``gain`` (a Demucs-style stem)."""
+    (root / folder).mkdir(exist_ok=True)
+    path = root / folder / "vocals.wav"
+    path.write_bytes(
+        write_wav(gain * rng.standard_normal(SR * 4).astype(np.float32), SR)
+    )
+    return path
 
-    def source(folder, gain):
-        (tmp_path / folder).mkdir(exist_ok=True)
-        path = tmp_path / folder / "vocals.wav"
-        path.write_bytes(write_wav(gain * rng.standard_normal(SR * 4).astype(np.float32), SR))
-        return path
+
+def _rerun(samples, *, n_clips=1):
+    """A ``prepare_reference`` into ``samples`` with fakes cutting ``n_clips`` per source."""
+
+    def transcriber(path, language=None):
+        words = [_word(i * 2 + 0.2, i * 2 + 1.8, "Hello.") for i in range(n_clips)]
+        return [{"start": 0, "end": 4, "text": "", "words": words}]
 
     def run(*sources):
         return refprep.prepare_reference(
             list(sources),
             samples=samples,
             conditioner=lambda src, dst, **kw: dst.write_bytes(open(src, "rb").read()),
-            transcriber=lambda path, language=None: [
-                {"start": 0, "end": 4, "text": "", "words": [_word(0.2, 3.8, "Hello.")]}
-            ],
-            min_seconds=2,
+            transcriber=transcriber,
+            min_seconds=1,
             log=lambda *a: None,
         )
 
+    return run
+
+
+def _keys(samples, prefix=""):
+    return {
+        k.replace("\\", "/") for k in samples if k.replace("\\", "/").startswith(prefix)
+    }
+
+
+def test_running_prepare_reference_again_keeps_slugs_and_the_other_sources(tmp_path):
+    """#68: a source processed again keeps its keys; others are untouched, never reused."""
+    rng = np.random.default_rng(3)
+    a, b = _stem("song-a", tmp_path, rng, 0.1), _stem("song-b", tmp_path, rng, 0.4)
+    c, d = _stem("song-c", tmp_path, rng, 0.6), _stem("song-d", tmp_path, rng, 0.6)
     samples = samples_store("ada", rootdir=tmp_path / "data")
-    a, b, c = source("song-a", 0.1), source("song-b", 0.4), source("song-c", 0.6)
+    run = _rerun(samples)
     run(a, b)
-    first = sorted(k for k in samples if k.replace("\\", "/").startswith("clips/"))
-    assert [k.replace("\\", "/") for k in first] == [
+    assert _keys(samples, "clips/") == {
         "clips/song-a-vocals-0001.wav",
         "clips/song-b-vocals-0001.wav",
+    }
+
+    manifest = run(a)  # song-a again, alone: it keeps its slug, so its keys stay valid
+    assert _keys(samples, "clips/") == {
+        "clips/song-a-vocals-0001.wav",
+        "clips/song-b-vocals-0001.wav",
+    }
+    assert "conditioned/song-a-vocals.wav" in samples
+    assert {e["slug"] for e in manifest} == {"song-a-vocals", "song-b-vocals"}
+    assert sorted(Path(e["source"]).parent.name for e in manifest) == [
+        "song-a",
+        "song-b",
     ]
 
-    manifest = run(a)  # song-a again, alone: its slug is now plain "vocals"
-    keys = {k.replace("\\", "/") for k in samples}
-    assert "clips/song-a-vocals-0001.wav" not in keys  # no orphan
-    assert "conditioned/song-a-vocals.wav" not in keys
-    assert {"clips/vocals-0001.wav", "clips/song-b-vocals-0001.wav"} <= keys
-    assert sorted(Path(e["source"]).parent.name for e in manifest) == ["song-a", "song-b"]
-
-    manifest = run(c)  # a new source whose plain slug "vocals" is taken by song-a's
+    run(c)  # new to the store: plain "vocals" is free
+    manifest = run(d)  # new too, and "vocals" is now taken by song-c
     by_source = {Path(e["source"]).parent.name: e["key"] for e in manifest}
     assert by_source == {
-        "song-a": "clips/vocals-0001.wav",
+        "song-a": "clips/song-a-vocals-0001.wav",
         "song-b": "clips/song-b-vocals-0001.wav",
-        "song-c": "clips/vocals-2-0001.wav",
+        "song-c": "clips/vocals-0001.wav",
+        "song-d": "clips/vocals-2-0001.wav",
     }
-    rms = np.sqrt(np.mean(read_wav(samples["clips/vocals-0001.wav"])[0] ** 2))
-    assert rms < 0.2  # still song-a's bytes, not overwritten by song-c's
+    rms = np.sqrt(np.mean(read_wav(samples["clips/song-a-vocals-0001.wav"])[0] ** 2))
+    assert rms < 0.2  # still song-a's bytes
     assert refprep.load_manifest(samples) == manifest
+
+
+def test_prepare_reference_again_removes_only_a_sources_surplus_clips(tmp_path):
+    rng = np.random.default_rng(4)
+    a, b = _stem("song-a", tmp_path, rng), _stem("song-b", tmp_path, rng)
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    _rerun(samples, n_clips=2)(a, b)
+    manifest = _rerun(samples, n_clips=1)(a)
+    assert _keys(samples, "clips/") == {
+        "clips/song-a-vocals-0001.wav",
+        "clips/song-b-vocals-0001.wav",
+        "clips/song-b-vocals-0002.wav",
+    }
+    assert sorted(e["key"] for e in manifest) == sorted(_keys(samples, "clips/"))
+
+
+def test_prepare_reference_never_deletes_a_key_a_hand_written_entry_names(tmp_path):
+    rng = np.random.default_rng(5)
+    a = _stem("song-a", tmp_path, rng)
+    samples = {"tape1.wav": b"mine", "clips/other-0001.wav": b"theirs"}
+    hand_written = [
+        {
+            "key": "tape1.wav",
+            "source": str(a),
+            "score": 0.5,
+        },  # names a top-level sample
+        {"key": "clips/other-0001.wav", "source": str(a), "slug": "../x", "score": 0.4},
+        {"key": "notes.wav", "score": 0.1},  # no source at all
+    ]
+    samples[refprep.MANIFEST_KEY] = "\n".join(map(json.dumps, hand_written)).encode()
+    manifest = _rerun(samples)(a)
+    assert samples["tape1.wav"] == b"mine"
+    assert samples["clips/other-0001.wav"] == b"theirs"
+    assert {e["key"] for e in manifest} == {"clips/vocals-0001.wav", "notes.wav"}
+
+
+def test_prepare_reference_tells_sources_apart_by_real_path(tmp_path, monkeypatch):
+    rng = np.random.default_rng(6)
+    a = _stem("song-a", tmp_path, rng)
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    monkeypatch.chdir(tmp_path)
+    _rerun(samples, n_clips=2)(Path("song-a/vocals.wav"))
+    manifest = _rerun(samples)(a, Path("song-a") / ".." / "song-a" / "vocals.wav")
+    assert [e["key"] for e in manifest] == ["clips/vocals-0001.wav"]  # one source, once
+    assert manifest[0]["source_path"] == os.path.realpath(a)
+    assert _keys(samples, "clips/") == {"clips/vocals-0001.wav"}
+
+
+def test_prepare_reference_saves_the_manifest_before_deleting(tmp_path):
+    class Logged(dict):
+        def __init__(self):
+            super().__init__()
+            self.log = []
+
+        def __setitem__(self, k, v):
+            self.log.append(("set", k))
+            super().__setitem__(k, v)
+
+        def pop(self, k, *default):
+            self.log.append(("pop", k))
+            return super().pop(k, *default)
+
+    a = _stem("song-a", tmp_path, np.random.default_rng(7))
+    samples = Logged()
+    _rerun(samples, n_clips=2)(a)
+    samples.log.clear()
+    _rerun(samples, n_clips=1)(a)
+    assert samples.log[-2:] == [
+        ("set", refprep.MANIFEST_KEY),
+        ("pop", "clips/vocals-0002.wav"),
+    ]
 
 
 def test_plan_clips_respects_max_length():

@@ -57,6 +57,11 @@ SPEAKER_SCORE_RANGE = (0.3, 0.7)
 MANIFEST_KEY = "manifest.jsonl"
 CLIPS_PREFIX = "clips/"
 CONDITIONED_PREFIX = "conditioned/"
+#: The slugs this module gives sources (see ``_slug``), and the clip keys made from them.
+SLUG_PATTERN = re.compile(r"[a-z0-9-]+")
+CLIP_KEY_PATTERN = re.compile(
+    rf"{re.escape(CLIPS_PREFIX)}(?P<slug>{SLUG_PATTERN.pattern})-\d{{4,}}\.wav"
+)
 
 #: ffmpeg filters for each ``denoise`` strategy (None: no denoising).
 DENOISE_FILTERS = {
@@ -517,34 +522,120 @@ def unique_slugs(
     return [final[i] for i in range(len(slugs))]
 
 
-def _clip_slug(key: str) -> str:
-    """The source slug of a clip key (``clips/<slug>-0001.wav``).
+def _clip_slug(key: str) -> str | None:
+    """The source slug in a clip key this module writes (``clips/<slug>-0001.wav``),
+    or None for any other key. Only the fallback for manifests written before entries
+    recorded their ``slug``.
 
     >>> _clip_slug("clips/song-a-vocals-0012.wav")
     'song-a-vocals'
+    >>> _clip_slug("tape1.wav") is None
+    True
     """
-    return key[len(CLIPS_PREFIX) :].rsplit("-", 1)[0]
+    match = CLIP_KEY_PATTERN.fullmatch(key)
+    return match and match["slug"]
 
 
 def _conditioned_key(slug: str) -> str:
     return f"{CONDITIONED_PREFIX}{slug}.wav"
 
 
-def _earlier_entries(samples: Mapping, sources: Iterable) -> tuple[list, list]:
-    """``(kept, redone)``: the store's manifest entries from sources not in this call,
-    and those from sources this call processes again.
+def _entry_slug(entry: Mapping) -> str | None:
+    """The slug of the source a manifest entry came from (None: not one this module made)."""
+    slug = entry.get("slug")
+    if slug is None:
+        return _clip_slug(entry.get("key", ""))
+    return slug if SLUG_PATTERN.fullmatch(slug) else None
+
+
+def _own_keys(entry: Mapping) -> set[str]:
+    """The keys a manifest entry says this module wrote: its clip key, if it has the
+    clip-key form for the entry's slug, and that slug's conditioned file. Never a key a
+    hand-written entry names otherwise (``{"key": "tape1.wav"}`` owns nothing).
+
+    >>> sorted(_own_keys({"key": "clips/talk-0003.wav", "slug": "talk"}))
+    ['clips/talk-0003.wav', 'conditioned/talk.wav']
+    >>> _own_keys({"key": "tape1.wav", "source": "/s/tape1.wav"})
+    set()
+    """
+    slug = _entry_slug(entry)
+    if slug is None:
+        return set()
+    key = entry.get("key", "")
+    return {_conditioned_key(slug)} | ({key} if _clip_slug(key) == slug else set())
+
+
+def _source_id(source: str | os.PathLike) -> str:
+    """What tells sources apart: the real path, so a relative and an absolute path (or a
+    symlink) to one file are one source."""
+    return os.path.realpath(source)
+
+
+def _entry_source_id(entry: Mapping) -> str | None:
+    """The ``_source_id`` of an entry's source.
+
+    Entries keep ``source`` as the caller gave it (readable in the manifest) and add
+    ``source_path``, its real path. Entries written before ``source_path`` existed are
+    resolved only when ``source`` is absolute: a relative one depended on that run's
+    working directory, so it is left unresolved and matches no source (its files are
+    kept, never deleted).
+    """
+    if "source_path" in entry:
+        return entry["source_path"]
+    source = entry.get("source")
+    return _source_id(source) if source and os.path.isabs(source) else source
+
+
+def _distinct_sources(sources: Iterable[str | os.PathLike]) -> list:
+    """``sources`` with later repeats of one file (by ``_source_id``) dropped."""
+    first = {}
+    for src in sources:
+        first.setdefault(_source_id(src), src)
+    return list(first.values())
+
+
+def _assign_slugs(sources: list, earlier: Iterable[Mapping]) -> list[str]:
+    """A slug per source: the one its ``earlier`` manifest entries recorded, so the clip
+    keys that saved profiles and scripts point at stay valid when it is processed again,
+    else a fresh one that no earlier entry uses.
+
+    >>> earlier = [{"key": "clips/song-a-vocals-0001.wav", "source": "/s/song-a/vocals.wav"}]
+    >>> _assign_slugs(["/s/song-a/vocals.wav", "/s/song-c/vocals.wav"], earlier)
+    ['song-a-vocals', 'vocals']
+    """
+    earlier = list(earlier)
+    previous = {}
+    for entry in earlier:
+        if (slug := _entry_slug(entry)) is not None:
+            previous.setdefault(_entry_source_id(entry), slug)
+    ids = [_source_id(src) for src in sources]
+    new = [src for src, i in zip(sources, ids) if i not in previous]
+    used = {_entry_slug(e) for e in earlier} - {None}
+    fresh = iter(unique_slugs(new, reserved=used))
+    return [previous[i] if i in previous else next(fresh) for i in ids]
+
+
+def _split_earlier(entries: Iterable[Mapping], sources: list) -> tuple[list, list]:
+    """``(kept, redone)``: earlier manifest entries from sources not in ``sources``, and
+    those from sources processed again.
 
     A source that gave no clips has no entry, so a later run cannot find (or remove)
     its conditioned file.
     """
-    if MANIFEST_KEY not in samples:
-        return [], []
-    again = {str(s) for s in sources}
-    entries = load_manifest(samples)
+    again = {_source_id(src) for src in sources}
+    entries = list(entries)
     return (
-        [e for e in entries if e["source"] not in again],
-        [e for e in entries if e["source"] in again],
+        [e for e in entries if _entry_source_id(e) not in again],
+        [e for e in entries if _entry_source_id(e) in again],
     )
+
+
+def _stale_keys(redone: Iterable[Mapping], kept: Iterable[Mapping], written) -> set:
+    """Keys to delete after a run: what earlier entries of the sources processed again
+    own (``_own_keys``) that this run did not rewrite, minus anything a kept entry names
+    or owns."""
+    keep = {k for e in kept for k in {e.get("key"), *_own_keys(e)}}
+    return {k for e in redone for k in _own_keys(e)} - set(written) - keep
 
 
 def prepare_reference(
@@ -580,11 +671,15 @@ def prepare_reference(
 
     Returns:
         The manifest: one dict per clip (``key``, ``path`` if on disk, ``text``,
-        ``source``, ``start``, ``end``, and the ``score_clip`` measures), best first.
+        ``source`` as given, ``source_path`` (its real path), ``slug``, ``start``,
+        ``end``, and the ``score_clip`` measures), best first.
 
-    Run again into the same store, it replaces what an earlier run made from the
-    sources it processes again (their old clips and conditioned files are removed),
-    and keeps the clips of other sources in the manifest, never reusing their keys.
+    Run again into the same store, a source processed again keeps its slug, so its
+    clips are rewritten under the same keys (saved reference profiles and script specs
+    pointing at them keep working); its surplus old clips are removed, and nothing else
+    is: only keys of the form this module writes for that source's slug. Sources new to
+    the store get slugs no earlier source uses, and the clips of sources not in this
+    call stay in the manifest. A file given twice (by real path) is processed once.
     """
     if samples is None:
         if voice is None:
@@ -597,12 +692,12 @@ def prepare_reference(
     if denoise == DEEPFILTERNET:
         conditioner = with_deepfilternet(conditioner, rootdir=rootdir)
     filters = conditioning_filters(denoise=denoise, loudness_lufs=loudness_lufs)
-    sources = list(sources)
-    kept, redone = _earlier_entries(samples, sources)
-    kept_slugs = {_clip_slug(e["key"]) for e in kept}
+    sources = _distinct_sources(sources)
+    earlier = load_manifest(samples) if MANIFEST_KEY in samples else []
+    kept, redone = _split_earlier(earlier, sources)
     manifest, written = [], set()
     with tempfile.TemporaryDirectory() as tmp:
-        for src, slug in zip(sources, unique_slugs(sources, reserved=kept_slugs)):
+        for src, slug in zip(sources, _assign_slugs(sources, earlier)):
             wav_path = Path(tmp) / f"{slug}.wav"
             log(f"voxy.refprep: conditioning {src}")
             conditioner(src, wav_path, sample_rate=sample_rate, filters=filters)
@@ -627,8 +722,10 @@ def prepare_reference(
                 written.add(key)
                 entry = {
                     "key": key,
+                    "slug": slug,
                     "text": clip["text"],
                     "source": str(src),
+                    "source_path": _source_id(src),
                     "start": clip["start"],
                     "end": clip["end"],
                     "sample_rate": sr,
@@ -642,14 +739,6 @@ def prepare_reference(
                     ),
                 }
                 manifest.append(entry)
-    stale = {
-        k
-        for e in redone
-        for k in (e["key"], _conditioned_key(_clip_slug(e["key"])))
-        if k not in written
-    }
-    for key in stale:  # what an earlier run made from a source made again now
-        samples.pop(key, None)
     new = len(manifest)
     manifest += kept
     manifest.sort(key=lambda e: -e["score"])
@@ -658,6 +747,11 @@ def prepare_reference(
         for entry in manifest:
             entry["path"] = os.path.join(root, entry["key"])
     samples[MANIFEST_KEY] = "\n".join(json.dumps(e) for e in manifest).encode()
+    # Only once the new manifest is saved: an interruption leaves files, never a
+    # manifest naming deleted ones.
+    stale = _stale_keys(redone, kept, written)
+    for key in stale:
+        samples.pop(key, None)
     log(
         f"voxy.refprep: {new} clips saved, {len(kept)} kept from other sources, "
         f"{len(stale)} stale files removed"
