@@ -25,7 +25,6 @@ from __future__ import annotations
 import io
 import json
 import os
-import wave
 from dataclasses import dataclass
 from collections.abc import Callable, Iterable, Mapping
 from functools import cached_property
@@ -33,6 +32,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Union
 
 import numpy as np
 
+from voxy.wavutil import pcm_to_float, read_wav
 from voxy.base import (
     DFLT_ASSUMED_SAMPLE_RATE,
     Speech,
@@ -104,53 +104,6 @@ def default_elevenlabs_client_factory(api_key: str):
 
 
 _wav_bytes = tensor_to_wav_bytes  # one WAV encoder, in voxy.base
-
-
-def _pcm16_to_array(pcm: bytes) -> np.ndarray:
-    """Decode little-endian 16-bit mono PCM into float samples in [-1, 1].
-
-    >>> _pcm16_to_array(b"\\x00\\x00\\xff\\x7f").tolist()
-    [0.0, 0.999969482421875]
-    >>> _pcm16_to_array(b"\\x00\\x00\\xff").tolist()
-    [0.0]
-    """
-    pcm = pcm[: len(pcm) - len(pcm) % 2]  # a truncated stream can end mid-sample
-    return np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
-
-
-def _wav_to_array(data: bytes) -> tuple[np.ndarray, int]:
-    """Decode 16-bit mono WAV bytes to ``(samples, sample_rate)``.
-
-    Reads the samples from the ``data`` chunk directly, so a streamed WAV whose
-    header carries a placeholder size still decodes.
-
-    >>> audio, sr = _wav_to_array(_wav_bytes(np.zeros(10), 16000))
-    >>> tuple(audio.shape), sr
-    ((10,), 16000)
-    """
-    if data[:4] != b"RIFF" or data[8:12] != b"WAVE":
-        raise ValueError("Not a WAV payload")
-    pos, fmt = 12, None
-    while pos + 8 <= len(data):
-        chunk_id, size = (
-            data[pos : pos + 4],
-            int.from_bytes(data[pos + 4 : pos + 8], "little"),
-        )
-        body = pos + 8
-        if chunk_id == b"fmt ":
-            channels = int.from_bytes(data[body + 2 : body + 4], "little")
-            rate = int.from_bytes(data[body + 4 : body + 8], "little")
-            width = int.from_bytes(data[body + 14 : body + 16], "little")
-            fmt = (channels, rate, width)
-        elif chunk_id == b"data":
-            if fmt is None or fmt[0] != 1 or fmt[2] != 16:
-                raise ValueError(
-                    f"Expected 16-bit mono WAV, got (channels, rate, bits)={fmt}"
-                )
-            end = body + size if 0 < size <= len(data) - body else len(data)
-            return _pcm16_to_array(data[body:end]), fmt[1]
-        pos = body + size + (size % 2)
-    raise ValueError("WAV payload has no data chunk")
 
 
 def _output_format_parts(output_format: str) -> tuple[str, int]:
@@ -578,7 +531,7 @@ class ElevenLabsSpeechModel(SpeechModel):
             text, voice, output_format=output_format, **kwargs
         )
         if codec == "pcm":  # raw samples aren't a playable file: wrap them as WAV
-            payload, codec = _wav_bytes(_pcm16_to_array(payload), rate), "wav"
+            payload, codec = _wav_bytes(pcm_to_float(payload), rate), "wav"
         return Speech(
             payload,
             format=codec,
@@ -620,7 +573,7 @@ class ElevenLabsSpeechModel(SpeechModel):
         )
         payload = chunks if isinstance(chunks, bytes) else b"".join(chunks)
         if codec == "pcm":
-            payload, codec = _wav_bytes(_pcm16_to_array(payload), rate), "wav"
+            payload, codec = _wav_bytes(pcm_to_float(payload), rate), "wav"
         return Speech(
             payload,
             format=codec,
@@ -697,9 +650,9 @@ class ElevenLabsSpeechModel(SpeechModel):
             text, voice_profile, output_format=output_format, **kwargs
         )
         if codec == "pcm":
-            audio = _pcm16_to_array(payload)
+            audio = pcm_to_float(payload)
         else:
-            audio, rate = _wav_to_array(payload)
+            audio, rate = read_wav(payload)
         if output_path:
             _write_bytes(output_path, _wav_bytes(audio, rate))
         return optional_import("torch").from_numpy(audio).to(self.device)

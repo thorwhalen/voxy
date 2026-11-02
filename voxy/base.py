@@ -462,21 +462,27 @@ class VoiceInfo:
 
 
 def tensor_to_wav_bytes(audio: torch.Tensor | np.ndarray, sample_rate: int) -> bytes:
-    """Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.
+    """Encode audio ([samples], [channels, samples] or [samples, channels]) as mono
+    16-bit WAV.
 
     ``audio`` is a numpy array or a torch tensor (torch is not needed for arrays).
-    Integer audio is taken as PCM and scaled to [-1, 1] first; channels are
-    averaged, and ``voxy.wavutil.write_wav`` does the encoding.
+    Integer audio is taken as PCM and scaled to [-1, 1] first (8-bit PCM is
+    unsigned). A 2-D input is ``[channels, samples]`` unless it has more rows than
+    columns, which only ``[samples, channels]`` (soundfile's layout) can have (a
+    square input is read channels-first); channels are averaged, and
+    ``voxy.wavutil.write_wav`` does the encoding.
 
     >>> data = tensor_to_wav_bytes(np.zeros(160), 16000)
     >>> data[:4], len(data)
     (b'RIFF', 364)
     >>> tensor_to_wav_bytes(np.array([[0, 32767]], dtype=np.int16), 8000)[-2:]
     b'\\xff\\x7f'
+    >>> tensor_to_wav_bytes(np.full((5, 2), 128, dtype=np.uint8), 8000)[-4:]  # silence
+    b'\\x00\\x00\\x00\\x00'
     >>> tensor_to_wav_bytes(np.zeros((1, 2, 3)), 8000)
     Traceback (most recent call last):
       ...
-    ValueError: Audio must be [samples] or [channels, samples], not 3-D
+    ValueError: Audio must be 1-D or 2-D (channels and samples), not 3-D
     """
 
     def as_array(audio) -> np.ndarray:
@@ -492,12 +498,15 @@ def tensor_to_wav_bytes(audio: torch.Tensor | np.ndarray, sample_rate: int) -> b
     audio = as_array(audio)
     if audio.ndim > 2:
         raise ValueError(
-            f"Audio must be [samples] or [channels, samples], not {audio.ndim}-D"
+            f"Audio must be 1-D or 2-D (channels and samples), not {audio.ndim}-D"
         )
-    if not np.issubdtype(audio.dtype, np.floating):
+    if audio.dtype == np.uint8:  # unsigned PCM: silence is 128
+        audio = (audio.astype(np.float64) - 128) / 128
+    elif not np.issubdtype(audio.dtype, np.floating):
         audio = audio.astype(np.float64) / np.iinfo(audio.dtype).max
     if audio.ndim == 2:
-        audio = audio.mean(axis=0)
+        channels_axis = 1 if audio.shape[0] > audio.shape[1] else 0
+        audio = audio.mean(axis=channels_axis)
     return write_wav(audio, sample_rate)
 
 
