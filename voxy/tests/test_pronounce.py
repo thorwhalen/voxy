@@ -821,3 +821,28 @@ def test_a_failed_alignment_warns_and_leaves_the_word_unchecked():
                       words_of=lambda audio: [{"start": 0.0, "end": 0.2, "text": "lait"}],
                       align_missing=too_long)
     assert found[0].verdict is None
+
+
+
+def test_a_worker_error_from_the_aligner_also_warns_rather_than_crashes():
+    from voxy.worker import WorkerError
+
+    def worker_refuses(audio, words):
+        raise WorkerError("ValueError: 39 s of audio is over max_seconds=30.0")
+
+    with pytest.warns(UserWarning, match="could not align"):
+        found = audit("est", "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                      scoring="spot", emitter=lambda *a: None,
+                      words_of=lambda audio: [{"start": 0.0, "end": 0.2, "text": "lait"}],
+                      align_missing=worker_refuses)
+    assert found[0].verdict is None
+
+
+def test_an_untimed_neighbour_is_left_out_of_the_context():
+    heard = lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB)
+    spans = [{"start": None, "end": None}, {"start": 0.3, "end": 0.6}]  # "il" untimed, then "est"
+    found = audit("il est", "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                  scoring="spot", emitter=heard,
+                  words_of=lambda audio: [{"start": 0.0, "end": 0.2, "text": "lait"}],
+                  align_missing=lambda audio, words: spans)
+    assert found[0].located == "text" and found[0].verdict.start == 0.3

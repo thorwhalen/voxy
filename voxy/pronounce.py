@@ -965,7 +965,7 @@ def checks_verifier(
         for word, _, expected in line_checks:
             risk = Risk(line, word, "check", expected=expected)
             mine = [v for v in verdicts if v.word == word]
-            found += [Finding(risk, v, expected) for v in mine] or [
+            found += [Finding(risk, v, expected, located="asr") for v in mine] or [
                 Finding(risk, None, expected)
             ]
         return found
@@ -1527,21 +1527,17 @@ def _text_located(text, audio, align_missing, *, elisions) -> Callable:
             return None
         if "words" not in cache:
             tokens = [word for _, word, _ in _text_words(text, elisions=elisions)]
-            try:
+            try:  # the worker re-raises the aligner's errors as WorkerError (Runtime)
                 spans = align_missing(str(audio), tokens)
-            except ValueError as e:  # e.g. audio over the aligner's limit
-                warnings.warn(
-                    f"align_missing could not align the text: {e}", stacklevel=4
-                )
-                spans = None
-            cache["words"] = (
-                None
-                if spans is None
-                else [
+                cache["words"] = [
                     {"text": t, "start": s.get("start"), "end": s.get("end")}
                     for t, s in zip(tokens, spans, strict=True)
                 ]
-            )
+            except (ValueError, RuntimeError) as e:  # e.g. audio over its limit
+                warnings.warn(
+                    f"align_missing could not align the text: {e}", stacklevel=3
+                )
+                cache["words"] = None
         return cache["words"]
 
     return located
@@ -1609,7 +1605,10 @@ def audit(
             else (a misread can change the word: "de l'est" heard "de lait"), the
             text's own words are aligned in the audio and the word is scored where
             the text puts it (``Finding.located == "text"``). Default None: such a
-            word is reported, not checked.
+            word is reported, not checked. The aligner takes one pass over the whole
+            ``audio`` (``force_align``: up to 30 s), so it serves per-line audits
+            (``audit_verifier``/``render_verified`` pass it through); a longer
+            recording warns and leaves such words unchecked.
 
     Returns the findings in text order; ``[f for f in findings if f.ok is False]`` are
     the words decidedly misread (re-render those), ``f.ok is None`` ones were not
@@ -1660,9 +1659,10 @@ def audit(
         key = risk.word.casefold()
         located, context_words, i = "asr", words, heard_at.get(place)
         if i is None and place is not None and (aligned := text_located()) is not None:
-            located, context_words, i = "text", aligned, place
-            if aligned[i]["start"] is None:
-                i = None
+            if aligned[place]["start"] is not None:  # timed words only, as context
+                timed = [j for j, w in enumerate(aligned) if w["start"] is not None]
+                located, context_words = "text", [aligned[j] for j in timed]
+                i = timed.index(place)
         if i is None:
             findings.append(Finding(risk, expected=want))
             continue
