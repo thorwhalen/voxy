@@ -169,7 +169,9 @@ folded into a <code class="docutils literal notranslate"><span class="pre">score
 the voice’s samples store (<code class="docutils literal notranslate"><span class="pre">voxy.stores.samples_store</span></code>), so any backend (a
 reference clip) and fine-tuning (<code class="docutils literal notranslate"><span class="pre">voxy.finetune</span></code>, the whole set) read the same data.
 It only ever adds to the store, keeping every run; <code class="docutils literal notranslate"><span class="pre">latest_runs</span></code> gives each source’s
-latest run, and <code class="docutils literal notranslate"><span class="pre">forget</span></code> is the one function that deletes clips.</p>
+latest run. <code class="docutils literal notranslate"><span class="pre">forget</span></code> (a source’s clips) and <code class="docutils literal notranslate"><span class="pre">forget_orphans</span></code> (keys no manifest entry
+claims, listed by <code class="docutils literal notranslate"><span class="pre">orphans</span></code>) are the only functions that delete clips; edit the
+manifest by hand and the clips of the entries you removed become orphans.</p>
 <p class="rubric">Module Attributes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -184,6 +186,18 @@ latest run, and <code class="docutils literal notranslate"><span class="pre">for
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.LEGACY_RUN" title="voxy.refprep.LEGACY_RUN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LEGACY_RUN</span></code></a></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">forget(...,</span> <span class="pre">run=LEGACY_RUN)</span></code> selects entries written before runs were recorded (no <code class="docutils literal notranslate"><span class="pre">run</span></code> field), matching even a relative <code class="docutils literal notranslate"><span class="pre">source</span></code> exactly as it was typed.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.PENDING_PREFIX" title="voxy.refprep.PENDING_PREFIX"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PENDING_PREFIX</span></code></a></p></td>
+<td><p>A running <code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> keeps a marker at <code class="docutils literal notranslate"><span class="pre">pending/&lt;run&gt;.json</span></code> (its run id, UTC start time and the slugs it reserved) until it finishes, so <code class="docutils literal notranslate"><span class="pre">orphans</span></code> does not take its keys, not yet in the manifest, for orphans.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.UNICODE_FORM" title="voxy.refprep.UNICODE_FORM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">UNICODE_FORM</span></code></a></p></td>
+<td><p>Names are compared in this Unicode normal form (APFS stores either; users type NFC).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.ATOMIC_TMP_SUFFIX" title="voxy.refprep.ATOMIC_TMP_SUFFIX"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ATOMIC_TMP_SUFFIX</span></code></a></p></td>
+<td><p>Suffix of the temporary file an atomic write goes through (its name starts with <code class="docutils literal notranslate"><span class="pre">.</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.ATOMIC_FILE_MODE" title="voxy.refprep.ATOMIC_FILE_MODE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ATOMIC_FILE_MODE</span></code></a></p></td>
+<td><p>File mode of a file written atomically (<code class="docutils literal notranslate"><span class="pre">mkstemp</span></code> would leave it 0600).</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.DENOISE_FILTERS" title="voxy.refprep.DENOISE_FILTERS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DENOISE_FILTERS</span></code></a></p></td>
 <td><p>no denoising).</p></td>
@@ -214,11 +228,17 @@ latest run, and <code class="docutils literal notranslate"><span class="pre">for
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.forget" title="voxy.refprep.forget"><code class="xref py py-obj docutils literal notranslate"><span class="pre">forget</span></code></a>(samples, source, *[, run, dry_run, log])</p></td>
 <td><p>Remove <code class="docutils literal notranslate"><span class="pre">source</span></code>'s clips (only those of one <code class="docutils literal notranslate"><span class="pre">run</span></code>, if given) from a samples store: its manifest entries, their clip keys and the source's conditioned key.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.latest_runs" title="voxy.refprep.latest_runs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">latest_runs</span></code></a>(manifest)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.forget_orphans" title="voxy.refprep.forget_orphans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">forget_orphans</span></code></a>(samples, *[, dry_run, ...])</p></td>
+<td><p>Delete the <code class="docutils literal notranslate"><span class="pre">orphans</span></code> of a samples store, and the stale pending markers (those older than <code class="docutils literal notranslate"><span class="pre">stale_after</span></code> seconds); return their keys.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.latest_runs" title="voxy.refprep.latest_runs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">latest_runs</span></code></a>(manifest)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">manifest</span></code> with, per source, only the entries of its most recent run.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.load_manifest" title="voxy.refprep.load_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_manifest</span></code></a>(samples)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.load_manifest" title="voxy.refprep.load_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_manifest</span></code></a>(samples)</p></td>
 <td><p>The manifest saved by <code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> in a samples store.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.orphans" title="voxy.refprep.orphans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">orphans</span></code></a>(samples, *[, stale_after])</p></td>
+<td><p>The keys of this module's own form (<code class="docutils literal notranslate"><span class="pre">clips/&lt;slug&gt;-NNNN.wav</span></code>, <code class="docutils literal notranslate"><span class="pre">conditioned/&lt;slug&gt;.wav</span></code>) whose slug no manifest entry and no live pending marker uses, sorted.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.partial_transcribe" title="voxy.refprep.partial_transcribe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">partial_transcribe</span></code></a>([rootdir])</p></td>
 <td><p>The default transcriber, bound to a data root.</p></td>
@@ -232,23 +252,36 @@ latest run, and <code class="docutils literal notranslate"><span class="pre">for
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.score_clip" title="voxy.refprep.score_clip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">score_clip</span></code></a>(samples, sample_rate, *[, words, ...])</p></td>
 <td><p>Quality measures of a clip, and their combination <code class="docutils literal notranslate"><span class="pre">score</span></code> in [0, 1].</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.summarize" title="voxy.refprep.summarize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">summarize</span></code></a>(manifest)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.source_identity" title="voxy.refprep.source_identity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">source_identity</span></code></a>(source)</p></td>
+<td><p>What tells sources apart: the real path (so a relative and an absolute path, or a symlink, to one file are one source), spelled as the filesystem stores it when the file exists (so <code class="docutils literal notranslate"><span class="pre">Talk.wav</span></code> and <code class="docutils literal notranslate"><span class="pre">talk.wav</span></code> typed for one file on a case-insensitive filesystem are one source), then in Unicode normal form <code class="docutils literal notranslate"><span class="pre">UNICODE_FORM</span></code> (so an NFC and an NFD spelling of <code class="docutils literal notranslate"><span class="pre">Café.wav</span></code> are one source), then <code class="docutils literal notranslate"><span class="pre">os.path.normcase</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.summarize" title="voxy.refprep.summarize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">summarize</span></code></a>(manifest)</p></td>
 <td><p>Totals for a manifest: clips, minutes, minutes above score thresholds.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.transcribe" title="voxy.refprep.transcribe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transcribe</span></code></a>(audio, *[, language, model, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.transcribe" title="voxy.refprep.transcribe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transcribe</span></code></a>(audio, *[, language, model, ...])</p></td>
 <td><p>Timed segments <code class="docutils literal notranslate"><span class="pre">[{start,</span> <span class="pre">end,</span> <span class="pre">text,</span> <span class="pre">confidence,</span> <span class="pre">words:</span> <span class="pre">[...]},</span> <span class="pre">...]</span></code> of <code class="docutils literal notranslate"><span class="pre">audio</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.transcribe_text" title="voxy.refprep.transcribe_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transcribe_text</span></code></a>(audio, **kwargs)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.transcribe_text" title="voxy.refprep.transcribe_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transcribe_text</span></code></a>(audio, **kwargs)</p></td>
 <td><p>The transcript of <code class="docutils literal notranslate"><span class="pre">audio</span></code> as one string.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.unique_slugs" title="voxy.refprep.unique_slugs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unique_slugs</span></code></a>(sources, *[, reserved])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.unique_slugs" title="voxy.refprep.unique_slugs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unique_slugs</span></code></a>(sources, *[, reserved])</p></td>
 <td><p>One distinct slug per source: the file's stem, plus parent folders only within a group of sources sharing a stem (stem tracks: every one is <code class="docutils literal notranslate"><span class="pre">vocals.wav</span></code>), numbered where folders cannot tell them apart.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.with_deepfilternet" title="voxy.refprep.with_deepfilternet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">with_deepfilternet</span></code></a>([conditioner, denoiser, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.with_deepfilternet" title="voxy.refprep.with_deepfilternet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">with_deepfilternet</span></code></a>([conditioner, denoiser, ...])</p></td>
 <td><p>A <code class="docutils literal notranslate"><span class="pre">conditioner</span></code> that denoises with DeepFilterNet between two ffmpeg passes.</p></td>
 </tr>
 </tbody>
 </table>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.refprep.ATOMIC_FILE_MODE">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">ATOMIC_FILE_MODE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">420</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.ATOMIC_FILE_MODE" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.ATOMIC_FILE_MODE'">¶</a></dt>
+<dd><p>File mode of a file written atomically (<code class="docutils literal notranslate"><span class="pre">mkstemp</span></code> would leave it 0600).</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.refprep.ATOMIC_TMP_SUFFIX">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">ATOMIC_TMP_SUFFIX</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'.tmp'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.ATOMIC_TMP_SUFFIX" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.ATOMIC_TMP_SUFFIX'">¶</a></dt>
+<dd><p>Suffix of the temporary file an atomic write goes through (its name starts with <code class="docutils literal notranslate"><span class="pre">.</span></code>).</p>
+</dd></dl>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.refprep.DENOISE_FILTERS">
 <span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">DENOISE_FILTERS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'afftdn':</span> <span class="pre">['afftdn=nr=12:nf=-50:tn=1'],</span> <span class="pre">'anlmdn':</span> <span class="pre">['anlmdn=s=0.0005'],</span> <span class="pre">'deepfilternet':</span> <span class="pre">[],</span> <span class="pre">None:</span> <span class="pre">[]}</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.DENOISE_FILTERS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.DENOISE_FILTERS'">¶</a></dt>
@@ -273,6 +306,14 @@ Older voxy rewrote the whole manifest on every call, so such entries all come fr
 one call, in one folder: a relative string among them names one file.</p>
 </dd></dl>
 <dl class="py data">
+<dt class="sig sig-object py" id="voxy.refprep.PENDING_PREFIX">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">PENDING_PREFIX</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'pending/'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.PENDING_PREFIX" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.PENDING_PREFIX'">¶</a></dt>
+<dd><p>A running <code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> keeps a marker at <code class="docutils literal notranslate"><span class="pre">pending/&lt;run&gt;.json</span></code> (its run id,
+UTC start time and the slugs it reserved) until it finishes, so <code class="docutils literal notranslate"><span class="pre">orphans</span></code> does not
+take its keys, not yet in the manifest, for orphans. A crashed run leaves its marker;
+one older than <code class="docutils literal notranslate"><span class="pre">PENDING_STALE_S</span></code> seconds is stale and claims nothing.</p>
+</dd></dl>
+<dl class="py data">
 <dt class="sig sig-object py" id="voxy.refprep.RUN_ID_TIME_FORMAT">
 <span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">RUN_ID_TIME_FORMAT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'%Y%m%dT%H%M%S.%fZ'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.RUN_ID_TIME_FORMAT" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.RUN_ID_TIME_FORMAT'">¶</a></dt>
 <dd><p>its UTC start time to the microsecond, plus
@@ -292,6 +333,11 @@ random hex characters, so ids sort by time and two runs never share one.</p>
 <dt class="sig sig-object py" id="voxy.refprep.SPEAKER_SCORE_RANGE">
 <span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">SPEAKER_SCORE_RANGE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">(0.3,</span> <span class="pre">0.7)</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.SPEAKER_SCORE_RANGE" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.SPEAKER_SCORE_RANGE'">¶</a></dt>
 <dd><p>Speaker similarity mapped to the score’s <code class="docutils literal notranslate"><span class="pre">speaker</span></code> part (0 at the low end, 1 at the high).</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.refprep.UNICODE_FORM">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">UNICODE_FORM</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'NFC'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.UNICODE_FORM" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.UNICODE_FORM'">¶</a></dt>
+<dd><p>Names are compared in this Unicode normal form (APFS stores either; users type NFC).</p>
 </dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.refprep.best_references">
@@ -368,11 +414,12 @@ no resident worker.</p>
 store: its manifest entries, their clip keys and the source’s conditioned key.
 Returns the deleted keys (with <code class="docutils literal notranslate"><span class="pre">dry_run=True</span></code>: the keys it would delete, changing
 nothing).</p>
-<p>The only function in voxy that deletes voice samples (<code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> never
-does), so it is careful about what it deletes:</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">forget_orphans</span></code>, one of the only two functions in voxy that delete voice
+samples (<code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> never does), so it is careful about what it deletes:</p>
 <ul class="simple">
-<li><p>entries match <code class="docutils literal notranslate"><span class="pre">source</span></code> by real path: their <code class="docutils literal notranslate"><span class="pre">source_path</span></code>, or, for entries an
-older voxy wrote without one, their <code class="docutils literal notranslate"><span class="pre">source</span></code> only if it is absolute. A relative
+<li><p>entries match <code class="docutils literal notranslate"><span class="pre">source</span></code> by <code class="docutils literal notranslate"><span class="pre">source_identity</span></code> (real path, in the case the
+filesystem stores it): of their <code class="docutils literal notranslate"><span class="pre">source_path</span></code>, or, for entries an older voxy
+wrote without one, of their <code class="docutils literal notranslate"><span class="pre">source</span></code> only if it is absolute. A relative
 <code class="docutils literal notranslate"><span class="pre">source</span></code> names whatever file had that name where that run started, so such
 entries never match; they are logged, and <code class="docutils literal notranslate"><span class="pre">run=LEGACY_RUN</span></code> removes them
 deliberately (matching <code class="docutils literal notranslate"><span class="pre">source</span></code> exactly as recorded, as in
@@ -409,16 +456,48 @@ interruption leaves unlisted files, never a manifest naming deleted ones.</p></l
 </dl>
 </dd></dl>
 <dl class="py function">
+<dt class="sig sig-object py" id="voxy.refprep.forget_orphans">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">forget_orphans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stale_after</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">21600</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/refprep.html#forget_orphans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.forget_orphans" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.forget_orphans'">¶</a></dt>
+<dd><p>Delete the <code class="docutils literal notranslate"><span class="pre">orphans</span></code> of a samples store, and the stale pending markers (those
+older than <code class="docutils literal notranslate"><span class="pre">stale_after</span></code> seconds); return their keys. A dry run by default: it
+returns what it would delete and changes nothing, so look first, then pass
+<code class="docutils literal notranslate"><span class="pre">dry_run=False</span></code>.</p>
+<p><strong>Removing entries from the manifest by hand makes their clips orphans</strong>, which
+<code class="docutils literal notranslate"><span class="pre">forget_orphans</span></code> then deletes, even if a saved voice profile’s <code class="docutils literal notranslate"><span class="pre">ref_audio</span></code> still
+points at one. To drop a source’s clips, use <code class="docutils literal notranslate"><span class="pre">forget</span></code> (it lists, with
+<code class="docutils literal notranslate"><span class="pre">dry_run=True</span></code>, exactly what it removes), never a hand edit of the manifest.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">forget</span></code>, one of the only two functions in voxy that delete voice samples.
+It refuses (raises, deleting nothing) where <code class="docutils literal notranslate"><span class="pre">orphans</span></code> does: a missing or empty
+manifest beside unclaimed clip or conditioned keys, a manifest or pending marker it
+cannot read. Keys a running <code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> reserved (its live marker) are
+kept, but a run that is still going after <code class="docutils literal notranslate"><span class="pre">stale_after</span></code> seconds loses that claim.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">store</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"conditioned/z.wav"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"clips/a-0001.wav"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"tape1.wav"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">""</span><span class="p">}</span>
+</span><span id="line-2"><span class="gp">&gt;&gt;&gt; </span><span class="n">store</span><span class="p">[</span><span class="n">MANIFEST_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="n">_dump_manifest</span><span class="p">([{</span><span class="s2">"key"</span><span class="p">:</span> <span class="s2">"clips/a-0001.wav"</span><span class="p">}])</span>
+</span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="n">forget_orphans</span><span class="p">(</span><span class="n">store</span><span class="p">),</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
+</span><span id="line-4"><span class="go">(['conditioned/z.wav'], ['clips/a-0001.wav', 'conditioned/z.wav', 'manifest.jsonl', 'tape1.wav'])</span>
+</span><span id="line-5"><span class="gp">&gt;&gt;&gt; </span><span class="n">forget_orphans</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
+</span><span id="line-6"><span class="go">(['conditioned/z.wav'], ['clips/a-0001.wav', 'manifest.jsonl', 'tape1.wav'])</span>
+</span></code></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="voxy.refprep.latest_runs">
 <span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">latest_runs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/refprep.html#latest_runs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.latest_runs" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.latest_runs'">¶</a></dt>
 <dd><p><code class="docutils literal notranslate"><span class="pre">manifest</span></code> with, per source, only the entries of its most recent run.</p>
 <p><code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> keeps every run, so a source processed twice is in the
 manifest twice (the same audio, cut again); consumers that want one copy of each
 recording (training sets, reference picks, summaries) read this. Sources are told
-apart by real path (<code class="docutils literal notranslate"><span class="pre">source_path</span></code>, or an absolute <code class="docutils literal notranslate"><span class="pre">source</span></code>); entries with no
-<code class="docutils literal notranslate"><span class="pre">run</span></code> count as one run older than any recorded one; entries whose source cannot
-be known (none, or a relative path from an older voxy) are all kept. Order is kept.
-A source whose newest run gave no clips keeps its older run’s entries.</p>
+apart by <code class="docutils literal notranslate"><span class="pre">source_identity</span></code> (of <code class="docutils literal notranslate"><span class="pre">source_path</span></code>, or an absolute <code class="docutils literal notranslate"><span class="pre">source</span></code>), so one
+file recorded in two spellings on a case-insensitive filesystem is one source;
+entries with no <code class="docutils literal notranslate"><span class="pre">run</span></code> count as one run older than any recorded one; entries whose
+source cannot be known (none, or a relative path from an older voxy) are all kept.
+Order is kept. A source whose newest run gave no clips keeps its older run’s
+entries.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">m</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"key"</span><span class="p">:</span> <span class="s2">"a1"</span><span class="p">,</span> <span class="s2">"source_path"</span><span class="p">:</span> <span class="s2">"/a"</span><span class="p">,</span> <span class="s2">"run"</span><span class="p">:</span> <span class="s2">"20260101T000000.000000Z-x"</span><span class="p">},</span>
 </span><span id="line-2"><span class="gp">... </span>     <span class="p">{</span><span class="s2">"key"</span><span class="p">:</span> <span class="s2">"a2"</span><span class="p">,</span> <span class="s2">"source_path"</span><span class="p">:</span> <span class="s2">"/a"</span><span class="p">,</span> <span class="s2">"run"</span><span class="p">:</span> <span class="s2">"20261101T000000.000000Z-y"</span><span class="p">},</span>
 </span><span id="line-3"><span class="gp">... </span>     <span class="p">{</span><span class="s2">"key"</span><span class="p">:</span> <span class="s2">"a0"</span><span class="p">,</span> <span class="s2">"source_path"</span><span class="p">:</span> <span class="s2">"/a"</span><span class="p">},</span>
@@ -441,6 +520,45 @@ A source whose newest run gave no clips keeps its older run’s entries.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.refprep.orphans">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">orphans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">stale_after</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">21600</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/refprep.html#orphans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.orphans" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.orphans'">¶</a></dt>
+<dd><p>The keys of this module’s own form (<code class="docutils literal notranslate"><span class="pre">clips/&lt;slug&gt;-NNNN.wav</span></code>,
+<code class="docutils literal notranslate"><span class="pre">conditioned/&lt;slug&gt;.wav</span></code>) whose slug no manifest entry and no live pending marker
+uses, sorted.</p>
+<p><strong>Removing entries from the manifest by hand makes their clips orphans</strong>, which
+<code class="docutils literal notranslate"><span class="pre">forget_orphans</span></code> then deletes, even if a saved voice profile’s <code class="docutils literal notranslate"><span class="pre">ref_audio</span></code> still
+points at one. To drop a source’s clips, use <code class="docutils literal notranslate"><span class="pre">forget</span></code> (it lists, with
+<code class="docutils literal notranslate"><span class="pre">dry_run=True</span></code>, exactly what it removes), never a hand edit of the manifest.</p>
+<p>Where they come from: a run that failed part-way (the failing source’s conditioned
+file and any clips it had cut), a source that gave no clips (its conditioned file),
+a manifest edited by hand. <code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> never reuses their slugs and
+<code class="docutils literal notranslate"><span class="pre">forget</span></code> never deletes them, since no entry names them. A key an entry names is
+never an orphan (its slug is that entry’s), nor is any other key (a top-level
+sample, the manifest). A running <code class="docutils literal notranslate"><span class="pre">prepare_reference</span></code> claims its slugs with a
+pending marker (<code class="docutils literal notranslate"><span class="pre">PENDING_PREFIX</span></code>), so its keys not in the manifest yet are not
+orphans; a marker older than <code class="docutils literal notranslate"><span class="pre">stale_after</span></code> seconds (a crashed run’s) claims
+nothing.</p>
+<p>It raises, rather than guess, when the manifest has a line that is not an object,
+when a pending marker cannot be read, and when the manifest is missing or empty
+while keys of this module’s form are unclaimed (a lost or truncated manifest would
+otherwise make every clip an orphan).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">store</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"clips/a-0001.wav"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"clips/x-0001.wav"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"conditioned/a.wav"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">""</span><span class="p">,</span>
+</span><span id="line-2"><span class="gp">... </span>         <span class="s2">"conditioned/z.wav"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"tape1.wav"</span><span class="p">:</span> <span class="sa">b</span><span class="s2">""</span><span class="p">}</span>
+</span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="n">store</span><span class="p">[</span><span class="n">MANIFEST_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="n">_dump_manifest</span><span class="p">([{</span><span class="s2">"key"</span><span class="p">:</span> <span class="s2">"clips/a-0001.wav"</span><span class="p">,</span> <span class="s2">"slug"</span><span class="p">:</span> <span class="s2">"a"</span><span class="p">}])</span>
+</span><span id="line-4"><span class="gp">&gt;&gt;&gt; </span><span class="n">orphans</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
+</span><span id="line-5"><span class="go">['clips/x-0001.wav', 'conditioned/z.wav']</span>
+</span><span id="line-6"><span class="gp">&gt;&gt;&gt; </span><span class="n">store</span><span class="p">[</span><span class="s2">"pending/r.json"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_pending_marker</span><span class="p">(</span><span class="s2">"r"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"x"</span><span class="p">])</span>  <span class="c1"># a run is cutting x</span>
+</span><span id="line-7"><span class="gp">&gt;&gt;&gt; </span><span class="n">orphans</span><span class="p">(</span><span class="n">store</span><span class="p">),</span> <span class="n">orphans</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">stale_after</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="line-8"><span class="go">(['conditioned/z.wav'], ['clips/x-0001.wav', 'conditioned/z.wav'])</span>
+</span></code></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -503,9 +621,9 @@ and the next clip starts after it.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>one dict per clip (<code class="docutils literal notranslate"><span class="pre">key</span></code>, <code class="docutils literal notranslate"><span class="pre">path</span></code> if on disk, <code class="docutils literal notranslate"><span class="pre">text</span></code>,
-<code class="docutils literal notranslate"><span class="pre">source</span></code> as given, <code class="docutils literal notranslate"><span class="pre">source_path</span></code> (its real path), <code class="docutils literal notranslate"><span class="pre">slug</span></code>, <code class="docutils literal notranslate"><span class="pre">run</span></code> (one id
-per call), <code class="docutils literal notranslate"><span class="pre">start</span></code>, <code class="docutils literal notranslate"><span class="pre">end</span></code>, and the <code class="docutils literal notranslate"><span class="pre">score_clip</span></code> measures), best first,
-earlier runs’ entries included.</p>
+<code class="docutils literal notranslate"><span class="pre">source</span></code> as given, <code class="docutils literal notranslate"><span class="pre">source_path</span></code> (its <code class="docutils literal notranslate"><span class="pre">source_identity</span></code>), <code class="docutils literal notranslate"><span class="pre">slug</span></code>,
+<code class="docutils literal notranslate"><span class="pre">run</span></code> (one id per call), <code class="docutils literal notranslate"><span class="pre">start</span></code>, <code class="docutils literal notranslate"><span class="pre">end</span></code>, and the <code class="docutils literal notranslate"><span class="pre">score_clip</span></code>
+measures), best first, earlier runs’ entries included.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>]</span></p>
@@ -516,11 +634,18 @@ earlier runs’ entries included.</p>
 that no manifest entry and no clip or conditioned key in the store already uses, so
 every earlier clip keeps its key and its bytes, and saved reference profiles
 (<code class="docutils literal notranslate"><span class="pre">ref_audio</span></code> + <code class="docutils literal notranslate"><span class="pre">ref_text</span></code>) stay valid. The manifest keeps every earlier entry and
-adds the new ones (re-read just before writing, so a <code class="docutils literal notranslate"><span class="pre">forget</span></code> or another run that
-finished meanwhile is not undone). Re-processing a source therefore adds clips beside
-its earlier ones; consumers read <code class="docutils literal notranslate"><span class="pre">latest_runs(manifest)</span></code> to see one run per source,
-and <code class="docutils literal notranslate"><span class="pre">forget(samples,</span> <span class="pre">source,</span> <span class="pre">run=...)</span></code> removes the others explicitly. A file given
-twice in one call (by real path) is processed once.</p>
+gets each source’s new ones as soon as that source is done (re-read just before
+each write, so a <code class="docutils literal notranslate"><span class="pre">forget</span></code> or another run that finished meanwhile is not undone):
+a run that fails part-way leaves its finished sources recorded, and only the
+failing source’s keys (its conditioned file, any clips already cut) in no manifest,
+which <code class="docutils literal notranslate"><span class="pre">orphans</span></code> lists and <code class="docutils literal notranslate"><span class="pre">forget_orphans</span></code> removes. Re-processing a source
+therefore adds clips beside its earlier ones; consumers read
+<code class="docutils literal notranslate"><span class="pre">latest_runs(manifest)</span></code> to see one run per source, and
+<code class="docutils literal notranslate"><span class="pre">forget(samples,</span> <span class="pre">source,</span> <span class="pre">run=...)</span></code> removes the others explicitly. A file given
+twice in one call (by <code class="docutils literal notranslate"><span class="pre">source_identity</span></code>) is processed once. While it runs, a
+pending marker (<code class="docutils literal notranslate"><span class="pre">pending/&lt;run&gt;.json</span></code>: run id, start time, reserved slugs) keeps
+<code class="docutils literal notranslate"><span class="pre">forget_orphans</span></code> off its keys; it is removed when the run finishes, and a crashed
+run’s marker stays (showing the crash) until it is stale (<code class="docutils literal notranslate"><span class="pre">PENDING_STALE_S</span></code>).</p>
 </dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.refprep.score_clip">
@@ -545,6 +670,29 @@ annotated by <code class="docutils literal notranslate"><span class="pre">voxy.s
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.refprep.source_identity">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">source_identity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/refprep.html#source_identity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.source_identity" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.source_identity'">¶</a></dt>
+<dd><p>What tells sources apart: the real path (so a relative and an absolute path, or
+a symlink, to one file are one source), spelled as the filesystem stores it when
+the file exists (so <code class="docutils literal notranslate"><span class="pre">Talk.wav</span></code> and <code class="docutils literal notranslate"><span class="pre">talk.wav</span></code> typed for one file on a
+case-insensitive filesystem are one source), then in Unicode normal form
+<code class="docutils literal notranslate"><span class="pre">UNICODE_FORM</span></code> (so an NFC and an NFD spelling of <code class="docutils literal notranslate"><span class="pre">Café.wav</span></code> are one source), then
+<code class="docutils literal notranslate"><span class="pre">os.path.normcase</span></code>. A file that does not exist (any more) falls back to its real
+path as typed.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">source_identity</span><span class="p">(</span><span class="s2">"/no/such/Dir/a.wav"</span><span class="p">)</span> <span class="o">==</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normcase</span><span class="p">(</span>
+</span><span id="line-2"><span class="gp">... </span>    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="s2">"/no/such/Dir/a.wav"</span><span class="p">))</span>
+</span><span id="line-3"><span class="go">True</span>
+</span><span id="line-4"><span class="gp">&gt;&gt;&gt; </span><span class="n">source_identity</span><span class="p">(</span><span class="s2">"/no/Cafe</span><span class="se">\u0301</span><span class="s2">.wav"</span><span class="p">)</span> <span class="o">==</span> <span class="n">source_identity</span><span class="p">(</span><span class="s2">"/no/Caf</span><span class="se">\u00e9</span><span class="s2">.wav"</span><span class="p">)</span>
+</span><span id="line-5"><span class="go">True</span>
+</span></code></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -625,24 +773,31 @@ it; pass 2 applies the usual <code class="docutils literal notranslate"><span cl
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
+<li><a :data-current="activeSection === '#voxy.refprep.ATOMIC_FILE_MODE'" class="reference internal" href="#voxy.refprep.ATOMIC_FILE_MODE"><code class="docutils literal notranslate"><span class="pre">ATOMIC_FILE_MODE</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.ATOMIC_TMP_SUFFIX'" class="reference internal" href="#voxy.refprep.ATOMIC_TMP_SUFFIX"><code class="docutils literal notranslate"><span class="pre">ATOMIC_TMP_SUFFIX</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.DENOISE_FILTERS'" class="reference internal" href="#voxy.refprep.DENOISE_FILTERS"><code class="docutils literal notranslate"><span class="pre">DENOISE_FILTERS</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.DF_SAMPLE_RATE'" class="reference internal" href="#voxy.refprep.DF_SAMPLE_RATE"><code class="docutils literal notranslate"><span class="pre">DF_SAMPLE_RATE</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.LEGACY_RUN'" class="reference internal" href="#voxy.refprep.LEGACY_RUN"><code class="docutils literal notranslate"><span class="pre">LEGACY_RUN</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.PENDING_PREFIX'" class="reference internal" href="#voxy.refprep.PENDING_PREFIX"><code class="docutils literal notranslate"><span class="pre">PENDING_PREFIX</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.RUN_ID_TIME_FORMAT'" class="reference internal" href="#voxy.refprep.RUN_ID_TIME_FORMAT"><code class="docutils literal notranslate"><span class="pre">RUN_ID_TIME_FORMAT</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.SLUG_PATTERN'" class="reference internal" href="#voxy.refprep.SLUG_PATTERN"><code class="docutils literal notranslate"><span class="pre">SLUG_PATTERN</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.SPEAKER_SCORE_RANGE'" class="reference internal" href="#voxy.refprep.SPEAKER_SCORE_RANGE"><code class="docutils literal notranslate"><span class="pre">SPEAKER_SCORE_RANGE</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.UNICODE_FORM'" class="reference internal" href="#voxy.refprep.UNICODE_FORM"><code class="docutils literal notranslate"><span class="pre">UNICODE_FORM</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.best_references'" class="reference internal" href="#voxy.refprep.best_references"><code class="docutils literal notranslate"><span class="pre">best_references()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.close_asr'" class="reference internal" href="#voxy.refprep.close_asr"><code class="docutils literal notranslate"><span class="pre">close_asr()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.condition'" class="reference internal" href="#voxy.refprep.condition"><code class="docutils literal notranslate"><span class="pre">condition()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.conditioning_filters'" class="reference internal" href="#voxy.refprep.conditioning_filters"><code class="docutils literal notranslate"><span class="pre">conditioning_filters()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.deepfilternet_denoise'" class="reference internal" href="#voxy.refprep.deepfilternet_denoise"><code class="docutils literal notranslate"><span class="pre">deepfilternet_denoise()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.forget'" class="reference internal" href="#voxy.refprep.forget"><code class="docutils literal notranslate"><span class="pre">forget()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.forget_orphans'" class="reference internal" href="#voxy.refprep.forget_orphans"><code class="docutils literal notranslate"><span class="pre">forget_orphans()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.latest_runs'" class="reference internal" href="#voxy.refprep.latest_runs"><code class="docutils literal notranslate"><span class="pre">latest_runs()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.load_manifest'" class="reference internal" href="#voxy.refprep.load_manifest"><code class="docutils literal notranslate"><span class="pre">load_manifest()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.orphans'" class="reference internal" href="#voxy.refprep.orphans"><code class="docutils literal notranslate"><span class="pre">orphans()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.partial_transcribe'" class="reference internal" href="#voxy.refprep.partial_transcribe"><code class="docutils literal notranslate"><span class="pre">partial_transcribe()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.plan_clips'" class="reference internal" href="#voxy.refprep.plan_clips"><code class="docutils literal notranslate"><span class="pre">plan_clips()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.prepare_reference'" class="reference internal" href="#voxy.refprep.prepare_reference"><code class="docutils literal notranslate"><span class="pre">prepare_reference()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.score_clip'" class="reference internal" href="#voxy.refprep.score_clip"><code class="docutils literal notranslate"><span class="pre">score_clip()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.source_identity'" class="reference internal" href="#voxy.refprep.source_identity"><code class="docutils literal notranslate"><span class="pre">source_identity()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.summarize'" class="reference internal" href="#voxy.refprep.summarize"><code class="docutils literal notranslate"><span class="pre">summarize()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.transcribe'" class="reference internal" href="#voxy.refprep.transcribe"><code class="docutils literal notranslate"><span class="pre">transcribe()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.transcribe_text'" class="reference internal" href="#voxy.refprep.transcribe_text"><code class="docutils literal notranslate"><span class="pre">transcribe_text()</span></code></a></li>
@@ -661,7 +816,7 @@ it; pass 2 applies the usual <code class="docutils literal notranslate"><span cl
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=1c03bfdc"></script>
+<script src="../_static/documentation_options.js?v=b87b3bc5"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
