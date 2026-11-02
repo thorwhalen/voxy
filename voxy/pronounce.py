@@ -1516,29 +1516,48 @@ def _vet_caller_expected(text: str, options: Mapping) -> None:
         _expected_readings(risks, expected=expected, proposed={}, table=table)
 
 
-def _text_located(text, audio, align_missing, *, elisions) -> Callable:
-    """A function giving the text's words as timed words (``{"text", "start", "end"}``,
-    in ``_text_words`` order) by forced alignment, computed once on first call; None
-    when ``align_missing`` is None or the alignment fails (too long, no fit)."""
+def _gap_located(text, audio, align_missing, *, asr_words, heard_at, elisions):
+    """A function ``(place) -> (timed words, index) | None`` for a text word ASR did not
+    place: the text between the nearest words ASR did place on either side (those
+    included, as context) is force-aligned in the audio between them, once per gap.
+    None when ``align_missing`` is None, the alignment fails (e.g. a gap longer than
+    the aligner takes), or it leaves the word untimed."""
+    tokens = [word for _, word, _ in _text_words(text, elisions=elisions)]
+    placed = sorted(k for k, v in heard_at.items() if v is not None and k is not None)
     cache: dict = {}
 
-    def located():
+    def gap(place):
+        before = max((k for k in placed if k < place), default=None)
+        after = min((k for k in placed if k > place), default=None)
+        lo = 0 if before is None else before
+        hi = len(tokens) - 1 if after is None else after
+        start = None if before is None else asr_words[heard_at[before]]["start"]
+        end = None if after is None else asr_words[heard_at[after]]["end"]
+        return lo, hi, start, end
+
+    def located(place):
         if align_missing is None:
             return None
-        if "words" not in cache:
-            tokens = [word for _, word, _ in _text_words(text, elisions=elisions)]
+        lo, hi, start, end = gap(place)
+        if (lo, hi) not in cache:
+            stretch = tokens[lo : hi + 1]
             try:  # the worker re-raises the aligner's errors as WorkerError (Runtime)
-                spans = align_missing(str(audio), tokens)
-                cache["words"] = [
+                spans = align_missing(str(audio), stretch, start=start, end=end)
+                cache[lo, hi] = [
                     {"text": t, "start": s.get("start"), "end": s.get("end")}
-                    for t, s in zip(tokens, spans, strict=True)
+                    for t, s in zip(stretch, spans, strict=True)
                 ]
-            except (ValueError, RuntimeError) as e:  # e.g. audio over its limit
+            except (ValueError, RuntimeError) as e:  # e.g. a gap over its limit
                 warnings.warn(
-                    f"align_missing could not align the text: {e}", stacklevel=3
+                    f"align_missing could not align {' '.join(stretch)[:60]!r}: {e}",
+                    stacklevel=3,
                 )
-                cache["words"] = None
-        return cache["words"]
+                cache[lo, hi] = None
+        aligned = cache[lo, hi]
+        if aligned is None or aligned[place - lo]["start"] is None:
+            return None
+        timed = [k for k, w in enumerate(aligned) if w["start"] is not None]
+        return [aligned[k] for k in timed], timed.index(place - lo)
 
     return located
 
@@ -1600,15 +1619,15 @@ def audit(
         context: Words kept on each side of the flagged one.
         margin: See :attr:`Verdict.decided`; default ``scorer.margin``.
         scorer: A ready :class:`Scorer`; wins over ``scoring`` and its options.
-        align_missing: ``(audio_path, words) -> [{"start", "end", ...}, ...]``, e.g.
-            ``voxy.align.force_align``: when ASR heard a flagged word as something
-            else (a misread can change the word: "de l'est" heard "de lait"), the
-            text's own words are aligned in the audio and the word is scored where
-            the text puts it (``Finding.located == "text"``). Default None: such a
-            word is reported, not checked. The aligner takes one pass over the whole
-            ``audio`` (``force_align``: up to 30 s), so it serves per-line audits
-            (``audit_verifier``/``render_verified`` pass it through); a longer
-            recording warns and leaves such words unchecked.
+        align_missing: ``(audio_path, words, *, start, end) -> [{"start", "end",
+            ...}, ...]``, e.g. ``voxy.align.force_align``: when ASR heard a flagged
+            word as something else (a misread can change the word: "de l'est" heard
+            "de lait"), the text between the nearest words ASR did place (those
+            included) is aligned in the audio between them, and the word is scored
+            where the text puts it (``Finding.located == "text"``). So it works on
+            long recordings as long as such a gap fits the aligner (``force_align``:
+            30 s); a gap that does not warns and leaves the word unchecked. Default
+            None: such a word is reported, not checked.
 
     Returns the findings in text order; ``[f for f in findings if f.ok is False]`` are
     the words decidedly misread (re-render those), ``f.ok is None`` ones were not
@@ -1653,16 +1672,20 @@ def audit(
     heard_at = align_words(text, words, elisions=elisions)
 
     places = _risk_places(text, risks, elisions=elisions)
-    text_located = _text_located(text, audio, align_missing, elisions=elisions)
+    gap_located = _gap_located(
+        text,
+        audio,
+        align_missing,
+        asr_words=words,
+        heard_at=heard_at,
+        elisions=elisions,
+    )
     findings = []
     for risk, place, want in zip(risks, places, wants):
         key = risk.word.casefold()
         located, context_words, i = "asr", words, heard_at.get(place)
-        if i is None and place is not None and (aligned := text_located()) is not None:
-            if aligned[place]["start"] is not None:  # timed words only, as context
-                timed = [j for j, w in enumerate(aligned) if w["start"] is not None]
-                located, context_words = "text", [aligned[j] for j in timed]
-                i = timed.index(place)
+        if i is None and place is not None and (found := gap_located(place)):
+            located, (context_words, i) = "text", found
         if i is None:
             findings.append(Finding(risk, expected=want))
             continue

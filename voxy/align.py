@@ -16,10 +16,10 @@ setup align``). Its weights are non-commercial (see ``workers/align_adapter.py``
 Align short stretches (a line, a word and its neighbours, under about 30 s): one pass
 over a long recording drifts, sung audio most.
 
-``run`` is the seam: ``(audio_path, words) -> [span or None, ...]``.
+``run`` is the seam: ``(audio_path, words, *, start, end) -> [span or None, ...]``.
 
->>> fake = lambda audio, words: [{"start": i, "end": i + 0.5, "score": 0.9, "chars": []}
-...                              for i, _ in enumerate(words)]
+>>> fake = lambda audio, words, **crop: [{"start": i, "end": i + 0.5, "score": 0.9, "chars": []}
+...                                      for i, _ in enumerate(words)]
 >>> [s["word"] for s in force_align(b"RIFF....", "Bonjour  le monde", run=fake)]
 ['Bonjour', 'le', 'monde']
 """
@@ -60,11 +60,15 @@ def worker_run(
 ) -> Run:
     """The default ``run``: the aligner adapter in its own environment."""
 
-    def run(audio: str, words: Sequence[str]):
+    def run(audio: str, words: Sequence[str], *, start=None, end=None):
         worker = _ALIGN_POOL.get(model, threads, rootdir)
         # the worker runs in its own working directory: an absolute path
         reply = worker.call(
-            "align", audio=str(Path(audio).resolve()), words=list(words)
+            "align",
+            audio=str(Path(audio).resolve()),
+            words=list(words),
+            start=start,
+            end=end,
         )
         return reply["words"]
 
@@ -75,6 +79,8 @@ def force_align(
     audio: str | os.PathLike | bytes,
     text: str | Sequence[str],
     *,
+    start: float | None = None,
+    end: float | None = None,
     run: Run | None = None,
 ) -> list[dict]:
     """Each word of ``text``, in order, with its ``start``, ``end`` (s), ``score`` (mean
@@ -83,7 +89,10 @@ def force_align(
     Args:
         audio: A WAV (or any format soundfile reads) path, or WAV bytes.
         text: The words spoken, as a string (split on whitespace) or a list.
-        run: ``(audio_path, words) -> [span or None, ...]``; default ``worker_run()``.
+        start, end: The stretch of ``audio`` (s) the words are in (default: all of
+            it); times stay on the recording's clock.
+        run: ``(audio_path, words, *, start, end) -> [span or None, ...]``; default
+            ``worker_run()``.
 
     A word with no letter the aligner knows (a number, a symbol) is placed as one
     "any sound" token. Low scores (under about 0.5) mean the text is not what is said
@@ -97,7 +106,7 @@ def force_align(
             path = Path(tmp) / "audio.wav"
             path.write_bytes(audio)
             audio = path
-        spans = run(str(audio), words)
+        spans = run(str(audio), words, start=start, end=end)
     if len(spans) != len(words):
         raise ValueError(
             f"the aligner returned {len(spans)} spans for {len(words)} words"
