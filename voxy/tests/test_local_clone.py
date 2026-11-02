@@ -1249,3 +1249,15 @@ def test_a_builtin_registration_never_replaces_one_already_there():
         assert local_backends()["demo-tts"] is mine
     finally:
         local_backends().pop("demo-tts", None)
+
+
+
+def test_latest_runs_knows_a_legacy_absolute_source_by_its_real_path(tmp_path):
+    import os
+
+    a = os.path.realpath(tmp_path / "a.wav")
+    manifest = [
+        {"key": "clips/a-0001.wav", "source": a},  # older voxy: absolute, no run
+        {"key": "clips/a-2-0001.wav", "source": a, "source_path": a, "run": "20261102T000000.000000Z-abcdef"},
+    ]
+    assert [e["key"] for e in refprep.latest_runs(manifest)] == ["clips/a-2-0001.wav"]

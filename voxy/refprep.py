@@ -76,6 +76,8 @@ RUN_ID_TIME_FORMAT = "%Y%m%dT%H%M%S.%fZ"
 RUN_ID_SUFFIX_LEN = 6
 #: ``forget(..., run=LEGACY_RUN)`` selects entries written before runs were recorded
 #: (no ``run`` field), matching even a relative ``source`` exactly as it was typed.
+#: Older voxy rewrote the whole manifest on every call, so such entries all come from
+#: one call, in one folder: a relative string among them names one file.
 LEGACY_RUN = "legacy"
 
 #: ffmpeg filters for each ``denoise`` strategy (None: no denoising).
@@ -676,6 +678,7 @@ def latest_runs(manifest: Iterable[Mapping]) -> list[Mapping]:
     apart by real path (``source_path``, or an absolute ``source``); entries with no
     ``run`` count as one run older than any recorded one; entries whose source cannot
     be known (none, or a relative path from an older voxy) are all kept. Order is kept.
+    A source whose newest run gave no clips keeps its older run's entries.
 
     >>> m = [{"key": "a1", "source_path": "/a", "run": "20260101T000000.000000Z-x"},
     ...      {"key": "a2", "source_path": "/a", "run": "20261101T000000.000000Z-y"},
@@ -863,6 +866,8 @@ def forget(
       ``conditioned/<slug>.wav``), with a slug taken from a matched entry's clip key, are
       deleted, never a top-level sample;
     - a key a remaining entry names, or whose slug a remaining entry uses, is kept;
+    - one writer at a time: two processes changing one store at once can lose a
+      manifest update (the store has no lock);
     - the manifest is read just before it is written, and written first, so an
       interruption leaves unlisted files, never a manifest naming deleted ones.
 
