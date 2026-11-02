@@ -372,6 +372,14 @@ Returns the findings in text order; `[f for f in findings if f.ok is False]` are
 the words decidedly misread (re-render those), `f.ok is None` ones were not
 decided or not found.
 
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – Before any ASR or scoring, when `expected` names a word or a
+      reading the readings table does not have (a mapping is checked whole, so
+      a key typo is caught too). A detector’s proposal naming no reading of its
+      word is dropped instead, with a warning: that word is reported, not checked.
+* **Return type:**
+  [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*Finding*](#voxy.pronounce.Finding)]
+
 ### voxy.pronounce.audit_verifier(lines, \*, emitter=None, words_of=<function \_transcribed_words>, scorer='phrase', margin=None, \*\*audit_options)
 
 A [`Verifier`](#voxy.pronounce.Verifier) over [`audit()`](#voxy.pronounce.audit), for the `lines` that will be rendered.
@@ -383,6 +391,11 @@ they read a sentence that spans two lines in context; the risks they propose for
 line outside the text are dropped. `emitter`, `words_of`, `scorer` and
 `margin` are the defaults for `audit`’s.
 
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – Here, before anything is rendered, when `expected` names a word
+      or a reading the readings table does not have (with the real line number
+      for an `expected` function), or when a line holds a newline. A detector’s
+      proposal naming no reading is dropped with a warning, as in `audit`.
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Finding`](#voxy.pronounce.Finding)]]
 
@@ -643,6 +656,10 @@ recogniser could not decide, leaves the line unverified rather than retried).
     written out by the real espeak worker, so offline tests inject
     `phrase_scorer(emitter=..., phonemize=fake)` or use `"crop"`). They
     default the default verifier and `checks`; a `verify` has its own.
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – For a bad `max_attempts`, both `verify` and `checks`, or (from
+      [`audit_verifier()`](#voxy.pronounce.audit_verifier), when it is built) an expected reading the readings
+      table does not have: all before the first render.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`LineTakes`](#voxy.pronounce.LineTakes)]
 

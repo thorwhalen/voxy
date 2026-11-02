@@ -1,4 +1,4 @@
-> built 2026-11-02 09:32 UTC from eff0fca (main) · voxy 0.0.46. Details: build_info.json
+> built 2026-11-02 09:38 UTC from c529582 (main) · voxy 0.0.47. Details: build_info.json
 
 # index.html.md
 
@@ -287,7 +287,7 @@ misread = [f for f in findings if f.ok is False]  # re-render these
 
 voxy ships a short hand-made French table (`heteronym_readings("fr")`). For more, derive one from your copy of [Lexique](http://www.lexique.org) (voxy ships no Lexique data): `voxy.lexique.lexique_heteronyms("Lexique383.tsv", min_frequency=1)` returns the spellings Lexique gives more than one pronunciation, in the same `{word: {reading: IPA}}` shape, readings named by part of speech (or by lemma when two share one) and pronunciations that differ only by Lexique’s open/closed vowels or schwa folded into `name~variant`. Merge it under the hand-made table, `{**derived, **heteronym_readings("fr")}`: Lexique keeps one pronunciation per spelling, part of speech and lemma, and no liaison or variant readings, so *tous*, *os*, *six*, *dix*, *christ*, *lacs* and *fait* are not in it.
 
-`audit` finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from `expected` (a mapping, or a function of each risk) or from a detector such as `voxy.speechtext.pos_detector()`. A heteronym elided onto a clitic that can precede its noun reading (French *l’Est*, *vent d’est*) is flagged and checked too; name it in the mapping by its clitic (`{"est": "verb", "l'est": "noun"}`), since `"est"` alone does not cover it. While rendering, `render_verified` scores the same way and re-renders a line whose word came out wrong; its one `verify=` seam, `(text, audio, line) -> findings`, defaults to `audit` on the line, occurrence by occurrence, elided forms included; pass `verify=audit_verifier(lines, readings=..., expected=..., detectors=...)` for `audit`’s own options. The older `checks=` (`checks_by_line`, `verify_words`) is a legacy adapter that matches words by spelling. `audit` takes `scoring=` (`"phrase"`, `"spot"` or `"crop"`), and all three take a `scorer=` (a name or a scorer from `phrase_scorer`/`spot_scorer`/`crop_scorer`, each carrying the margin it is calibrated for); cropping the word at its ASR times credits a neighbour’s /s/ or /t/ to the longer reading, so keep the default.
+`audit` finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from `expected` (a mapping, or a function of each risk) or from a detector such as `voxy.speechtext.pos_detector()`. A heteronym elided onto a clitic that can precede its noun reading (French *l’Est*, *vent d’est*) is flagged and checked too; name it in the mapping by its clitic (`{"est": "verb", "l'est": "noun"}`), since `"est"` alone does not cover it. A mapping is checked whole up front: a key that is not a word of the readings table (a typo), or a reading that word does not have, raises a `ValueError` before any ASR, and `audit_verifier` raises it when built, before the first render; a detector’s proposal naming no reading is dropped with a warning. While rendering, `render_verified` scores the same way and re-renders a line whose word came out wrong; its one `verify=` seam, `(text, audio, line) -> findings`, defaults to `audit` on the line, occurrence by occurrence, elided forms included; pass `verify=audit_verifier(lines, readings=..., expected=..., detectors=...)` for `audit`’s own options. The older `checks=` (`checks_by_line`, `verify_words`) is a legacy adapter that matches words by spelling. `audit` takes `scoring=` (`"phrase"`, `"spot"` or `"crop"`), and all three take a `scorer=` (a name or a scorer from `phrase_scorer`/`spot_scorer`/`crop_scorer`, each carrying the margin it is calibrated for); cropping the word at its ASR times credits a neighbour’s /s/ or /t/ to the longer reading, so keep the default.
 
 ### The voice library: clone once, reuse by name
 
@@ -2855,6 +2855,14 @@ Returns the findings in text order; `[f for f in findings if f.ok is False]` are
 the words decidedly misread (re-render those), `f.ok is None` ones were not
 decided or not found.
 
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – Before any ASR or scoring, when `expected` names a word or a
+      reading the readings table does not have (a mapping is checked whole, so
+      a key typo is caught too). A detector’s proposal naming no reading of its
+      word is dropped instead, with a warning: that word is reported, not checked.
+* **Return type:**
+  [*list*](https://docs.python.org/3/builtins/stdtypes.html#list)[[*Finding*](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Finding)]
+
 ### voxy.pronounce.audit_verifier(lines, \*, emitter=None, words_of=<function \_transcribed_words>, scorer='phrase', margin=None, \*\*audit_options)
 
 A [`Verifier`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Verifier) over [`audit()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.audit), for the `lines` that will be rendered.
@@ -2866,6 +2874,11 @@ they read a sentence that spans two lines in context; the risks they propose for
 line outside the text are dropped. `emitter`, `words_of`, `scorer` and
 `margin` are the defaults for `audit`’s.
 
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – Here, before anything is rendered, when `expected` names a word
+      or a reading the readings table does not have (with the real line number
+      for an `expected` function), or when a line holds a newline. A detector’s
+      proposal naming no reading is dropped with a warning, as in `audit`.
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Finding`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Finding)]]
 
@@ -3126,6 +3139,10 @@ recogniser could not decide, leaves the line unverified rather than retried).
     written out by the real espeak worker, so offline tests inject
     `phrase_scorer(emitter=..., phonemize=fake)` or use `"crop"`). They
     default the default verifier and `checks`; a `verify` has its own.
+* **Raises:**
+  [**ValueError**](https://docs.python.org/3/builtins/exceptions.html#ValueError) – For a bad `max_attempts`, both `verify` and `checks`, or (from
+      [`audit_verifier()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.audit_verifier), when it is built) an expected reading the readings
+      table does not have: all before the first render.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`LineTakes`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.LineTakes)]
 
@@ -5383,18 +5400,16 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 09:32 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/eff0fcab748d43f0e4c8b54fd5045057bd7d3088"><code>eff0fca</code></a> on branch <code>main</code>, for **voxy 0.0.46** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 09:38 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/c529582e00d3662029d896f83a2ea1af6f19d160"><code>c529582</code></a> on branch <code>main</code>, for **voxy 0.0.47** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.46) is behind the latest release on PyPI (0.0.47): `pip install voxy` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/eff0fcab748d43f0e4c8b54fd5045057bd7d3088"><code>eff0fcab748d43f0e4c8b54fd5045057bd7d3088</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/c529582e00d3662029d896f83a2ea1af6f19d160"><code>c529582e00d3662029d896f83a2ea1af6f19d160</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -5405,9 +5420,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41421101032">41421101032</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41422035565">41422035565</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>eff0fcab748d43f0e4c8b54fd5045057bd7d3088</code> (in the history of the built commit) |
+| Event commit | <code>c529582e00d3662029d896f83a2ea1af6f19d160</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5432,13 +5447,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.47/">0.0.47</a>, newer than the documented version (0.0.46).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.47/">0.0.47</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout eff0fcab748d43f0e4c8b54fd5045057bd7d3088
+git checkout c529582e00d3662029d896f83a2ea1af6f19d160
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
