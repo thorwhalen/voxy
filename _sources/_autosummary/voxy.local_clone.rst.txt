@@ -4,11 +4,21 @@ voxy.local\_clone
 .. automodule:: voxy.local_clone
 
    
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      LocalCloneBackend
+      BUILTIN_BACKEND_MODULES
+      register_local_clone_backend
+   
    .. rubric:: Functions
 
    .. autosummary::
    
+      local_backends
       reference_profile
+      register_local_backend
       register_local_clone_backend
    
    .. rubric:: Classes
@@ -18,6 +28,7 @@ voxy.local\_clone
       ChatterboxSpeechModel
       DesignPreview
       F5TTSSpeechModel
+      LocalBackend
       LocalCloneBackend
       LocalCloneSpeechModel
       LocalSpeechModel

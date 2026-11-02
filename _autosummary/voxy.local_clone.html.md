@@ -42,11 +42,20 @@ Seams (keyword arguments of every model):
 ('wav', 8000, 'f5tts')
 ```
 
+### Module Attributes
+
+| [`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend)                                | The old name of `LocalBackend`; kept for compatibility, remove after the next release.   |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| [`BUILTIN_BACKEND_MODULES`](#voxy.local_clone.BUILTIN_BACKEND_MODULES)                          | Modules that register a built-in local backend when imported.                            |
+| [`register_local_clone_backend`](#voxy.local_clone.register_local_clone_backend)(backend, \*[, ...]) | The old name of `register_local_backend`; remove after the next release.                 |
+
 ### Functions
 
-| [`reference_profile`](#voxy.local_clone.reference_profile)(ref_audio, ref_text, \*[, ...])   | A voice for local backends: a reference clip (or clips) and what it says.   |
-|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| [`register_local_clone_backend`](#voxy.local_clone.register_local_clone_backend)(backend)               | Add (or replace) a local cloning backend description.                       |
+| [`local_backends`](#voxy.local_clone.local_backends)()                                  | Every local backend (cloners and stock-voice models), by name.                                                                                        |
+|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`reference_profile`](#voxy.local_clone.reference_profile)(ref_audio, ref_text, \*[, ...]) | A voice for local backends: a reference clip (or clips) and what it says.                                                                             |
+| [`register_local_backend`](#voxy.local_clone.register_local_backend)(backend, \*[, replace])    | Add a local backend description (`replace=False`: keep one already there, as built-in modules do, so a user's own registration under that name wins). |
+| [`register_local_clone_backend`](#voxy.local_clone.register_local_clone_backend)(backend, \*[, ...])  | The old name of `register_local_backend`; remove after the next release.                                                                              |
 
 ### Classes
 
@@ -54,13 +63,18 @@ Seams (keyword arguments of every model):
 |----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
 | [`DesignPreview`](#voxy.local_clone.DesignPreview)(seed, audio, text, ...)             | One candidate voice from `design_voice_previews`: listen, then pick.                      |
 | [`F5TTSSpeechModel`](#voxy.local_clone.F5TTSSpeechModel)([backend, generate, ...])        | F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed...).     |
-| [`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend)(name, env[, init, params, ...]) | What voxy knows about one local model (a cloner, or one with stock voices).               |
+| [`LocalBackend`](#voxy.local_clone.LocalBackend)(name, env[, init, params, ...])      | What voxy knows about one local model (a cloner, or one with stock voices).               |
+| [`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend)                                 | The old name of `LocalBackend`; kept for compatibility, remove after the next release.    |
 | [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)([backend, generate, ...])   | A local voice-cloning model: its voices are reference clips (`clone_voice`).              |
 | [`LocalSpeechModel`](#voxy.local_clone.LocalSpeechModel)([backend, generate, ...])        | A model running on this machine, in its own environment, as a voxy backend.               |
 | [`Qwen3TTSSpeechModel`](#voxy.local_clone.Qwen3TTSSpeechModel)(\*args[, design])             | Qwen3-TTS: stable cloning (`init`: model_id 1.7B or 0.6B) and local voice design.         |
 | [`VoxCPMSpeechModel`](#voxy.local_clone.VoxCPMSpeechModel)([backend, generate, ...])       | VoxCPM2: high-similarity cloning (`params`: cfg_value, inference_timesteps, prompt_mode). |
 | [`WorkerGenerate`](#voxy.local_clone.WorkerGenerate)(backend, \*[, init, threads, ...]) | The default `generate`: the backend's adapter in its own environment.                     |
 | [`XTTSSpeechModel`](#voxy.local_clone.XTTSSpeechModel)(\*args[, accept_licence])         | XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).               |
+
+### voxy.local_clone.BUILTIN_BACKEND_MODULES *= ('voxy.kokoro_model',)*
+
+Modules that register a built-in local backend when imported.
 
 ### *class* voxy.local_clone.ChatterboxSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
@@ -87,7 +101,7 @@ Bases: [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)
 
 F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed…).
 
-### *class* voxy.local_clone.LocalCloneBackend(name, env, init=dict(), params=dict(), max_chars=300, licence='', notes='')
+### *class* voxy.local_clone.LocalBackend(name, env, init=dict(), params=dict(), max_chars=300, licence='', notes='', clones=True)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -103,6 +117,12 @@ What voxy knows about one local model (a cloner, or one with stock voices).
   * **max_chars** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Chunk size for long text.
   * **licence** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Code and weights licences (flag non-commercial ones).
   * **notes** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – One line on strengths and caveats.
+  * **clones** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – True for a model whose voices are reference clips; False for one
+    with stock voices (kokoro).
+
+### voxy.local_clone.LocalCloneBackend
+
+The old name of `LocalBackend`; kept for compatibility, remove after the next release.
 
 ### *class* voxy.local_clone.LocalCloneSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
@@ -129,7 +149,7 @@ Speaks text of any length: chunks it, calls `generate` per chunk, trims and
 joins the pieces. Subclasses say what a voice is with `_voice_request`.
 
 * **Parameters:**
-  * **backend** ([`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalCloneBackend`, or the name of a registered cloner
+  * **backend** ([`LocalBackend`](#voxy.local_clone.LocalBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalBackend`, or the name of a registered local backend
     (subclasses fix it).
   * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (see the module docstring); default: worker.
   * **chunker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> [[chunk, ...], ...]`; default `split_text`.
@@ -235,6 +255,13 @@ As `LocalCloneSpeechModel.synthesize`, once the licence is accepted.
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)
 
+### voxy.local_clone.local_backends()
+
+Every local backend (cloners and stock-voice models), by name.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`LocalBackend`](#voxy.local_clone.LocalBackend)]
+
 ### voxy.local_clone.reference_profile(ref_audio, ref_text, , backend='f5tts', sample_rate=24000, \*\*metadata)
 
 A voice for local backends: a reference clip (or clips) and what it says.
@@ -247,9 +274,17 @@ A voice for local backends: a reference clip (or clips) and what it says.
 * **Return type:**
   [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
 
-### voxy.local_clone.register_local_clone_backend(backend)
+### voxy.local_clone.register_local_backend(backend, , replace=True)
 
-Add (or replace) a local cloning backend description.
+Add a local backend description (`replace=False`: keep one already there,
+as built-in modules do, so a user’s own registration under that name wins).
 
 * **Return type:**
-  [`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend)
+  [`LocalBackend`](#voxy.local_clone.LocalBackend)
+
+### voxy.local_clone.register_local_clone_backend(backend, , replace=True)
+
+The old name of `register_local_backend`; remove after the next release.
+
+* **Return type:**
+  [`LocalBackend`](#voxy.local_clone.LocalBackend)

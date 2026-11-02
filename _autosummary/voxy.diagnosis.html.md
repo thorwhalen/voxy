@@ -125,7 +125,9 @@ Variants from grid rows: list values are swept (cartesian product), scalars fixe
 
 A row: `{"backend": ..., "params": {...}, "init": {...}, "label": ...}`.
 `init` values may be lists too (e.g. `{"variant": ["original", "turbo"]}`).
-Every variant is rendered once per reference name.
+Every variant is rendered once per reference name, except a stock-voice backend’s
+(kokoro): its rows are not crossed with references; sweep its voices with
+`params={"voice": [...]}`.
 
 ```pycon
 >>> vs = expand_grid([{"backend": "f5tts", "params": {"nfe_step": [16, 32], "speed": 1}}])

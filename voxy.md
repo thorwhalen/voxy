@@ -1,4 +1,4 @@
-> built 2026-11-02 09:55 UTC from 5bc30e6 (main) · voxy 0.0.49. Details: build_info.json
+> built 2026-11-02 09:57 UTC from 28ccbe0 (main) · voxy 0.0.50. Details: build_info.json
 
 # index.html.md
 
@@ -237,7 +237,7 @@ model.synthesize(chapter_text, voice, cfg_value=2.0).save("chapter1.wav")
 model.close()  # free the model's memory
 ```
 
-Long text is split into paragraphs and sentence-packed chunks, each spoken separately and joined with controlled pauses (`gap_ms=`, `paragraph_gap_ms=`). Model parameters are keyword arguments of `synthesize` (see `voxy.local_clone.LOCAL_CLONE_BACKENDS[name].params`); model options (a variant, a fine-tuned checkpoint) are keyword arguments of `create_speech_model`. Threads are capped at `$VOXY_NUM_THREADS` (default 8). Licences differ: F5-TTS and XTTS-v2 weights are non-commercial (XTTS needs `accept_licence=True`); VoxCPM2, Qwen3-TTS and Chatterbox are Apache-2.0/MIT.
+Long text is split into paragraphs and sentence-packed chunks, each spoken separately and joined with controlled pauses (`gap_ms=`, `paragraph_gap_ms=`). Model parameters are keyword arguments of `synthesize` (see `voxy.local_clone.local_backends()[name].params`); model options (a variant, a fine-tuned checkpoint) are keyword arguments of `create_speech_model`. Threads are capped at `$VOXY_NUM_THREADS` (default 8). Licences differ: F5-TTS and XTTS-v2 weights are non-commercial (XTTS needs `accept_licence=True`); VoxCPM2, Qwen3-TTS and Chatterbox are Apache-2.0/MIT.
 
 Languages: VoxCPM2 (30 languages), Qwen3-TTS (10, pass `language="French"` etc.), XTTS-v2 (17, `language="fr"`) and Chatterbox with `variant="multilingual"` (23, `language="fr"`) speak beyond English; Chatterbox’s `original` and `turbo` variants and the F5-TTS base model are English (F5 also Chinese).
 
@@ -1045,7 +1045,9 @@ Variants from grid rows: list values are swept (cartesian product), scalars fixe
 
 A row: `{"backend": ..., "params": {...}, "init": {...}, "label": ...}`.
 `init` values may be lists too (e.g. `{"variant": ["original", "turbo"]}`).
-Every variant is rendered once per reference name.
+Every variant is rendered once per reference name, except a stock-voice backend’s
+(kokoro): its rows are not crossed with references; sweep its voices with
+`params={"voice": [...]}`.
 
 ```pycon
 >>> vs = expand_grid([{"backend": "f5tts", "params": {"nfe_step": [16, 32], "speed": 1}}])
@@ -2306,11 +2308,20 @@ Seams (keyword arguments of every model):
 ('wav', 8000, 'f5tts')
 ```
 
+### Module Attributes
+
+| [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)                                | The old name of `LocalBackend`; kept for compatibility, remove after the next release.   |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| [`BUILTIN_BACKEND_MODULES`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.BUILTIN_BACKEND_MODULES)                          | Modules that register a built-in local backend when imported.                            |
+| [`register_local_clone_backend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.register_local_clone_backend)(backend, \*[, ...]) | The old name of `register_local_backend`; remove after the next release.                 |
+
 ### Functions
 
-| [`reference_profile`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.reference_profile)(ref_audio, ref_text, \*[, ...])   | A voice for local backends: a reference clip (or clips) and what it says.   |
-|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| [`register_local_clone_backend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.register_local_clone_backend)(backend)               | Add (or replace) a local cloning backend description.                       |
+| [`local_backends`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.local_backends)()                                  | Every local backend (cloners and stock-voice models), by name.                                                                                        |
+|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`reference_profile`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.reference_profile)(ref_audio, ref_text, \*[, ...]) | A voice for local backends: a reference clip (or clips) and what it says.                                                                             |
+| [`register_local_backend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.register_local_backend)(backend, \*[, replace])    | Add a local backend description (`replace=False`: keep one already there, as built-in modules do, so a user's own registration under that name wins). |
+| [`register_local_clone_backend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.register_local_clone_backend)(backend, \*[, ...])  | The old name of `register_local_backend`; remove after the next release.                                                                              |
 
 ### Classes
 
@@ -2318,13 +2329,18 @@ Seams (keyword arguments of every model):
 |----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
 | [`DesignPreview`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.DesignPreview)(seed, audio, text, ...)             | One candidate voice from `design_voice_previews`: listen, then pick.                      |
 | [`F5TTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.F5TTSSpeechModel)([backend, generate, ...])        | F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed...).     |
-| [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)(name, env[, init, params, ...]) | What voxy knows about one local model (a cloner, or one with stock voices).               |
+| [`LocalBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalBackend)(name, env[, init, params, ...])      | What voxy knows about one local model (a cloner, or one with stock voices).               |
+| [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)                                 | The old name of `LocalBackend`; kept for compatibility, remove after the next release.    |
 | [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)([backend, generate, ...])   | A local voice-cloning model: its voices are reference clips (`clone_voice`).              |
 | [`LocalSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalSpeechModel)([backend, generate, ...])        | A model running on this machine, in its own environment, as a voxy backend.               |
 | [`Qwen3TTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.Qwen3TTSSpeechModel)(\*args[, design])             | Qwen3-TTS: stable cloning (`init`: model_id 1.7B or 0.6B) and local voice design.         |
 | [`VoxCPMSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.VoxCPMSpeechModel)([backend, generate, ...])       | VoxCPM2: high-similarity cloning (`params`: cfg_value, inference_timesteps, prompt_mode). |
 | [`WorkerGenerate`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.WorkerGenerate)(backend, \*[, init, threads, ...]) | The default `generate`: the backend's adapter in its own environment.                     |
 | [`XTTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.XTTSSpeechModel)(\*args[, accept_licence])         | XTTS-v2 through coqui-tts (weights under the non-commercial Coqui licence).               |
+
+### voxy.local_clone.BUILTIN_BACKEND_MODULES *= ('voxy.kokoro_model',)*
+
+Modules that register a built-in local backend when imported.
 
 ### *class* voxy.local_clone.ChatterboxSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
@@ -2351,7 +2367,7 @@ Bases: [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.loca
 
 F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed…).
 
-### *class* voxy.local_clone.LocalCloneBackend(name, env, init=dict(), params=dict(), max_chars=300, licence='', notes='')
+### *class* voxy.local_clone.LocalBackend(name, env, init=dict(), params=dict(), max_chars=300, licence='', notes='', clones=True)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -2367,6 +2383,12 @@ What voxy knows about one local model (a cloner, or one with stock voices).
   * **max_chars** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Chunk size for long text.
   * **licence** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Code and weights licences (flag non-commercial ones).
   * **notes** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – One line on strengths and caveats.
+  * **clones** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – True for a model whose voices are reference clips; False for one
+    with stock voices (kokoro).
+
+### voxy.local_clone.LocalCloneBackend
+
+The old name of `LocalBackend`; kept for compatibility, remove after the next release.
 
 ### *class* voxy.local_clone.LocalCloneSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
@@ -2393,7 +2415,7 @@ Speaks text of any length: chunks it, calls `generate` per chunk, trims and
 joins the pieces. Subclasses say what a voice is with `_voice_request`.
 
 * **Parameters:**
-  * **backend** ([`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalCloneBackend`, or the name of a registered cloner
+  * **backend** ([`LocalBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalBackend`, or the name of a registered local backend
     (subclasses fix it).
   * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (see the module docstring); default: worker.
   * **chunker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> [[chunk, ...], ...]`; default `split_text`.
@@ -2499,6 +2521,13 @@ As `LocalCloneSpeechModel.synthesize`, once the licence is accepted.
 * **Return type:**
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
+### voxy.local_clone.local_backends()
+
+Every local backend (cloners and stock-voice models), by name.
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`LocalBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalBackend)]
+
 ### voxy.local_clone.reference_profile(ref_audio, ref_text, , backend='f5tts', sample_rate=24000, \*\*metadata)
 
 A voice for local backends: a reference clip (or clips) and what it says.
@@ -2511,12 +2540,20 @@ A voice for local backends: a reference clip (or clips) and what it says.
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
 
-### voxy.local_clone.register_local_clone_backend(backend)
+### voxy.local_clone.register_local_backend(backend, , replace=True)
 
-Add (or replace) a local cloning backend description.
+Add a local backend description (`replace=False`: keep one already there,
+as built-in modules do, so a user’s own registration under that name wins).
 
 * **Return type:**
-  [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)
+  [`LocalBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalBackend)
+
+### voxy.local_clone.register_local_clone_backend(backend, , replace=True)
+
+The old name of `register_local_backend`; remove after the next release.
+
+* **Return type:**
+  [`LocalBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalBackend)
 
 
 # _autosummary/voxy.pronounce.html.md
@@ -5471,16 +5508,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 09:55 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/5bc30e6e72575a9a7617e9d4aa2e10283c0493f5"><code>5bc30e6</code></a> on branch <code>main</code>, for **voxy 0.0.49** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 09:57 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/28ccbe077d22d3528e9799648aff6c322b5f5155"><code>28ccbe0</code></a> on branch <code>main</code>, for **voxy 0.0.50** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.50) is ahead of the latest release on PyPI (0.0.49): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/5bc30e6e72575a9a7617e9d4aa2e10283c0493f5"><code>5bc30e6e72575a9a7617e9d4aa2e10283c0493f5</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/28ccbe077d22d3528e9799648aff6c322b5f5155"><code>28ccbe077d22d3528e9799648aff6c322b5f5155</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -5491,9 +5530,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41424196414">41424196414</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41424528094">41424528094</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>5bc30e6e72575a9a7617e9d4aa2e10283c0493f5</code> (in the history of the built commit) |
+| Event commit | <code>320ab600726e686246999d1bca93091a96980604</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5518,13 +5557,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.49/">0.0.49</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.49/">0.0.49</a>, older than the documented version (0.0.50).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 5bc30e6e72575a9a7617e9d4aa2e10283c0493f5
+git checkout 28ccbe077d22d3528e9799648aff6c322b5f5155
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

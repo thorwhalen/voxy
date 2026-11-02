@@ -221,7 +221,7 @@
 </span><span id="line-32">
 </span><span id="line-33"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Speech</span><span class="p">,</span> <span class="n">VoiceInfo</span>
 </span><span id="line-34"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvSpec</span>
-</span><span id="line-35"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalCloneBackend</span><span class="p">,</span> <span class="n">LocalSpeechModel</span>
+</span><span id="line-35"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalBackend</span><span class="p">,</span> <span class="n">LocalSpeechModel</span><span class="p">,</span> <span class="n">register_local_backend</span>
 </span><span id="line-36">
 </span><span id="line-37"><span class="n">KOKORO_MODEL_TYPE</span> <span class="o">=</span> <span class="s2">"kokoro"</span>
 </span><span id="line-38"><span class="n">KOKORO_VOICE_ENVVAR</span> <span class="o">=</span> <span class="s2">"VOXY_KOKORO_VOICE"</span>
@@ -307,119 +307,123 @@
 </span><span id="line-118"><span class="c1">#: A voice name's second letter -&gt; the voice's gender.</span>
 </span><span id="line-119"><span class="n">KOKORO_GENDERS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"f"</span><span class="p">:</span> <span class="s2">"female"</span><span class="p">,</span> <span class="s2">"m"</span><span class="p">:</span> <span class="s2">"male"</span><span class="p">}</span>
 </span><span id="line-120">
-</span><span id="line-121"><span class="n">KOKORO</span> <span class="o">=</span> <span class="n">LocalCloneBackend</span><span class="p">(</span>
-</span><span id="line-122">    <span class="n">KOKORO_MODEL_TYPE</span><span class="p">,</span>
-</span><span id="line-123">    <span class="n">EnvSpec</span><span class="p">(</span>
-</span><span id="line-124">        <span class="n">KOKORO_MODEL_TYPE</span><span class="p">,</span>
-</span><span id="line-125">        <span class="p">(</span><span class="s2">"kokoro-onnx==0.6.1"</span><span class="p">,</span> <span class="s2">"soundfile"</span><span class="p">,</span> <span class="s2">"huggingface_hub"</span><span class="p">),</span>
-</span><span id="line-126">        <span class="n">torch_backend</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="line-127">    <span class="p">),</span>
-</span><span id="line-128">    <span class="n">init</span><span class="o">=</span><span class="p">{</span>
-</span><span id="line-129">        <span class="s2">"repo_id"</span><span class="p">:</span> <span class="n">KOKORO_HF_REPO</span><span class="p">,</span>
-</span><span id="line-130">        <span class="s2">"revision"</span><span class="p">:</span> <span class="n">KOKORO_HF_REVISION</span><span class="p">,</span>
-</span><span id="line-131">        <span class="s2">"model_file"</span><span class="p">:</span> <span class="n">KOKORO_MODEL_FILE</span><span class="p">,</span>
-</span><span id="line-132">        <span class="s2">"voices_file"</span><span class="p">:</span> <span class="n">KOKORO_VOICES_FILE</span><span class="p">,</span>
-</span><span id="line-133">    <span class="p">},</span>
-</span><span id="line-134">    <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"speed"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">},</span>
-</span><span id="line-135">    <span class="n">max_chars</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
-</span><span id="line-136">    <span class="n">licence</span><span class="o">=</span><span class="s2">"code MIT (kokoro-onnx); weights Apache-2.0"</span><span class="p">,</span>
-</span><span id="line-137">    <span class="n">notes</span><span class="o">=</span><span class="s2">"Stock voices only (no cloning); CPU, faster than realtime; no torch."</span><span class="p">,</span>
-</span><span id="line-138"><span class="p">)</span>
-</span><span id="line-139">
-</span><span id="line-140">
-</span><span id="line-141"><span class="k">def</span><span class="w"> </span><span class="nf">_not_a_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="ne">ValueError</span><span class="p">:</span>
-</span><span id="line-142">    <span class="k">return</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Not a kokoro voice: </span><span class="si">{</span><span class="n">voice</span><span class="si">!r}</span><span class="s2"> (see voxy.list_voices('kokoro'))"</span><span class="p">)</span>
+</span><span id="line-121"><span class="n">KOKORO</span> <span class="o">=</span> <span class="n">register_local_backend</span><span class="p">(</span>
+</span><span id="line-122">    <span class="n">LocalBackend</span><span class="p">(</span>
+</span><span id="line-123">        <span class="n">KOKORO_MODEL_TYPE</span><span class="p">,</span>
+</span><span id="line-124">        <span class="n">EnvSpec</span><span class="p">(</span>
+</span><span id="line-125">            <span class="n">KOKORO_MODEL_TYPE</span><span class="p">,</span>
+</span><span id="line-126">            <span class="p">(</span><span class="s2">"kokoro-onnx==0.6.1"</span><span class="p">,</span> <span class="s2">"soundfile"</span><span class="p">,</span> <span class="s2">"huggingface_hub"</span><span class="p">),</span>
+</span><span id="line-127">            <span class="n">torch_backend</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-128">        <span class="p">),</span>
+</span><span id="line-129">        <span class="n">init</span><span class="o">=</span><span class="p">{</span>
+</span><span id="line-130">            <span class="s2">"repo_id"</span><span class="p">:</span> <span class="n">KOKORO_HF_REPO</span><span class="p">,</span>
+</span><span id="line-131">            <span class="s2">"revision"</span><span class="p">:</span> <span class="n">KOKORO_HF_REVISION</span><span class="p">,</span>
+</span><span id="line-132">            <span class="s2">"model_file"</span><span class="p">:</span> <span class="n">KOKORO_MODEL_FILE</span><span class="p">,</span>
+</span><span id="line-133">            <span class="s2">"voices_file"</span><span class="p">:</span> <span class="n">KOKORO_VOICES_FILE</span><span class="p">,</span>
+</span><span id="line-134">        <span class="p">},</span>
+</span><span id="line-135">        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"speed"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">},</span>
+</span><span id="line-136">        <span class="n">max_chars</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+</span><span id="line-137">        <span class="n">licence</span><span class="o">=</span><span class="s2">"code MIT (kokoro-onnx); weights Apache-2.0"</span><span class="p">,</span>
+</span><span id="line-138">        <span class="n">notes</span><span class="o">=</span><span class="s2">"Stock voices only (no cloning); CPU, faster than realtime; no torch."</span><span class="p">,</span>
+</span><span id="line-139">        <span class="n">clones</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="line-140">    <span class="p">),</span>
+</span><span id="line-141">    <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="line-142"><span class="p">)</span>
 </span><span id="line-143">
 </span><span id="line-144">
+</span><span id="line-145"><span class="k">def</span><span class="w"> </span><span class="nf">_not_a_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="ne">ValueError</span><span class="p">:</span>
+</span><span id="line-146">    <span class="k">return</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Not a kokoro voice: </span><span class="si">{</span><span class="n">voice</span><span class="si">!r}</span><span class="s2"> (see voxy.list_voices('kokoro'))"</span><span class="p">)</span>
+</span><span id="line-147">
+</span><span id="line-148">
 <div class="viewcode-block" id="parse_voice">
 <a class="viewcode-back" href="../../_autosummary/voxy.kokoro_model.html#voxy.kokoro_model.parse_voice">[docs]</a>
-</span><span id="line-145"><span class="k">def</span><span class="w"> </span><span class="nf">parse_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-146"><span class="w">    </span><span class="sd">"""``(language, gender)`` of a stock voice, from its name's first two letters.</span>
-</span><span id="line-147">
-</span><span id="line-148"><span class="sd">    &gt;&gt;&gt; parse_voice("bf_emma")</span>
-</span><span id="line-149"><span class="sd">    ('en-gb', 'female')</span>
-</span><span id="line-150"><span class="sd">    """</span>
-</span><span id="line-151">    <span class="k">try</span><span class="p">:</span>
-</span><span id="line-152">        <span class="k">return</span> <span class="n">KOKORO_LANGUAGES</span><span class="p">[</span><span class="n">voice</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">KOKORO_GENDERS</span><span class="p">[</span><span class="n">voice</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
-</span><span id="line-153">    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
-</span><span id="line-154">        <span class="k">raise</span> <span class="n">_not_a_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+</span><span id="line-149"><span class="k">def</span><span class="w"> </span><span class="nf">parse_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-150"><span class="w">    </span><span class="sd">"""``(language, gender)`` of a stock voice, from its name's first two letters.</span>
+</span><span id="line-151">
+</span><span id="line-152"><span class="sd">    &gt;&gt;&gt; parse_voice("bf_emma")</span>
+</span><span id="line-153"><span class="sd">    ('en-gb', 'female')</span>
+</span><span id="line-154"><span class="sd">    """</span>
+</span><span id="line-155">    <span class="k">try</span><span class="p">:</span>
+</span><span id="line-156">        <span class="k">return</span> <span class="n">KOKORO_LANGUAGES</span><span class="p">[</span><span class="n">voice</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">KOKORO_GENDERS</span><span class="p">[</span><span class="n">voice</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+</span><span id="line-157">    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+</span><span id="line-158">        <span class="k">raise</span> <span class="n">_not_a_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
 
-</span><span id="line-155">
-</span><span id="line-156">
+</span><span id="line-159">
+</span><span id="line-160">
 <div class="viewcode-block" id="voice_info">
 <a class="viewcode-back" href="../../_autosummary/voxy.kokoro_model.html#voxy.kokoro_model.voice_info">[docs]</a>
-</span><span id="line-157"><span class="k">def</span><span class="w"> </span><span class="nf">voice_info</span><span class="p">(</span><span class="n">voice</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceInfo</span><span class="p">:</span>
-</span><span id="line-158"><span class="w">    </span><span class="sd">"""What a stock voice's name says about it.</span>
-</span><span id="line-159">
-</span><span id="line-160"><span class="sd">    &gt;&gt;&gt; voice_info("am_michael").labels</span>
-</span><span id="line-161"><span class="sd">    {'language': 'en-us', 'gender': 'male'}</span>
-</span><span id="line-162"><span class="sd">    """</span>
-</span><span id="line-163">    <span class="n">language</span><span class="p">,</span> <span class="n">gender</span> <span class="o">=</span> <span class="n">parse_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
-</span><span id="line-164">    <span class="k">return</span> <span class="n">VoiceInfo</span><span class="p">(</span>
-</span><span id="line-165">        <span class="n">voice_id</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span>
-</span><span id="line-166">        <span class="n">name</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span>
-</span><span id="line-167">        <span class="n">backend</span><span class="o">=</span><span class="n">KOKORO_MODEL_TYPE</span><span class="p">,</span>
-</span><span id="line-168">        <span class="n">labels</span><span class="o">=</span><span class="p">{</span><span class="s2">"language"</span><span class="p">:</span> <span class="n">language</span><span class="p">,</span> <span class="s2">"gender"</span><span class="p">:</span> <span class="n">gender</span><span class="p">},</span>
-</span><span id="line-169">    <span class="p">)</span></div>
+</span><span id="line-161"><span class="k">def</span><span class="w"> </span><span class="nf">voice_info</span><span class="p">(</span><span class="n">voice</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceInfo</span><span class="p">:</span>
+</span><span id="line-162"><span class="w">    </span><span class="sd">"""What a stock voice's name says about it.</span>
+</span><span id="line-163">
+</span><span id="line-164"><span class="sd">    &gt;&gt;&gt; voice_info("am_michael").labels</span>
+</span><span id="line-165"><span class="sd">    {'language': 'en-us', 'gender': 'male'}</span>
+</span><span id="line-166"><span class="sd">    """</span>
+</span><span id="line-167">    <span class="n">language</span><span class="p">,</span> <span class="n">gender</span> <span class="o">=</span> <span class="n">parse_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
+</span><span id="line-168">    <span class="k">return</span> <span class="n">VoiceInfo</span><span class="p">(</span>
+</span><span id="line-169">        <span class="n">voice_id</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span>
+</span><span id="line-170">        <span class="n">name</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span>
+</span><span id="line-171">        <span class="n">backend</span><span class="o">=</span><span class="n">KOKORO_MODEL_TYPE</span><span class="p">,</span>
+</span><span id="line-172">        <span class="n">labels</span><span class="o">=</span><span class="p">{</span><span class="s2">"language"</span><span class="p">:</span> <span class="n">language</span><span class="p">,</span> <span class="s2">"gender"</span><span class="p">:</span> <span class="n">gender</span><span class="p">},</span>
+</span><span id="line-173">    <span class="p">)</span></div>
 
-</span><span id="line-170">
-</span><span id="line-171">
+</span><span id="line-174">
+</span><span id="line-175">
 <div class="viewcode-block" id="KokoroSpeechModel">
 <a class="viewcode-back" href="../../_autosummary/voxy.kokoro_model.html#voxy.kokoro_model.KokoroSpeechModel">[docs]</a>
-</span><span id="line-172"><span class="k">class</span><span class="w"> </span><span class="nc">KokoroSpeechModel</span><span class="p">(</span><span class="n">LocalSpeechModel</span><span class="p">):</span>
-</span><span id="line-173"><span class="w">    </span><span class="sd">"""Kokoro-82M as a voxy backend (``params``: speed; lang, else the voice's).</span>
-</span><span id="line-174">
-</span><span id="line-175"><span class="sd">    Args:</span>
-</span><span id="line-176"><span class="sd">        voice: Default stock voice (else ``$VOXY_KOKORO_VOICE``, else 'af_heart').</span>
-</span><span id="line-177"><span class="sd">        voices: The voices the model accepts (default ``KOKORO_VOICES``). For a</span>
-</span><span id="line-178"><span class="sd">            newer voices file, also pass ``init={'voices_file': ..., 'revision': ...}``;</span>
-</span><span id="line-179"><span class="sd">            names must start with a known language letter (``KOKORO_LANGUAGES``).</span>
-</span><span id="line-180"><span class="sd">        generate: The model call (default: the worker, see ``LocalSpeechModel``).</span>
-</span><span id="line-181"><span class="sd">        device: Only 'cpu' (kokoro-onnx runs on onnxruntime's CPU provider).</span>
-</span><span id="line-182"><span class="sd">        **kwargs: The other ``LocalSpeechModel`` options (threads, rootdir, ...).</span>
-</span><span id="line-183"><span class="sd">    """</span>
-</span><span id="line-184">
-</span><span id="line-185">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="line-186">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-187">        <span class="o">*</span><span class="p">,</span>
-</span><span id="line-188">        <span class="n">voice</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-189">        <span class="n">voices</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">KOKORO_VOICES</span><span class="p">,</span>
-</span><span id="line-190">        <span class="n">generate</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-191">        <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">KOKORO_DEVICE</span><span class="p">,</span>
-</span><span id="line-192">        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-</span><span id="line-193">    <span class="p">):</span>
-</span><span id="line-194">        <span class="k">if</span> <span class="n">device</span> <span class="o">!=</span> <span class="n">KOKORO_DEVICE</span><span class="p">:</span>
-</span><span id="line-195">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"kokoro runs on </span><span class="si">{</span><span class="n">KOKORO_DEVICE</span><span class="si">!r}</span><span class="s2"> only, not </span><span class="si">{</span><span class="n">device</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-196">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">KOKORO</span><span class="p">,</span> <span class="n">generate</span><span class="o">=</span><span class="n">generate</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="line-197">        <span class="bp">self</span><span class="o">.</span><span class="n">voices</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">voices</span><span class="p">)</span>
-</span><span id="line-198">        <span class="bp">self</span><span class="o">.</span><span class="n">dflt_voice</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-199">            <span class="n">voice</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">KOKORO_VOICE_ENVVAR</span><span class="p">)</span> <span class="ow">or</span> <span class="n">DFLT_KOKORO_VOICE</span>
-</span><span id="line-200">        <span class="p">)</span>
-</span><span id="line-201">
-</span><span id="line-202">    <span class="k">def</span><span class="w"> </span><span class="nf">_stock_voice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-203"><span class="w">        </span><span class="sd">"""The voice's name, checked against ``self.voices``."""</span>
-</span><span id="line-204">        <span class="n">voice</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="s2">"segment"</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">dflt_voice</span>
-</span><span id="line-205">        <span class="k">if</span> <span class="n">voice</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">voices</span><span class="p">:</span>
-</span><span id="line-206">            <span class="k">raise</span> <span class="n">_not_a_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
-</span><span id="line-207">        <span class="k">return</span> <span class="n">voice</span>
-</span><span id="line-208">
-</span><span id="line-209">    <span class="k">def</span><span class="w"> </span><span class="nf">_voice_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-210">        <span class="k">return</span> <span class="p">{</span><span class="s2">"voice"</span><span class="p">:</span> <span class="n">voice</span><span class="p">},</span> <span class="n">voice</span>
-</span><span id="line-211">
+</span><span id="line-176"><span class="k">class</span><span class="w"> </span><span class="nc">KokoroSpeechModel</span><span class="p">(</span><span class="n">LocalSpeechModel</span><span class="p">):</span>
+</span><span id="line-177"><span class="w">    </span><span class="sd">"""Kokoro-82M as a voxy backend (``params``: speed; lang, else the voice's).</span>
+</span><span id="line-178">
+</span><span id="line-179"><span class="sd">    Args:</span>
+</span><span id="line-180"><span class="sd">        voice: Default stock voice (else ``$VOXY_KOKORO_VOICE``, else 'af_heart').</span>
+</span><span id="line-181"><span class="sd">        voices: The voices the model accepts (default ``KOKORO_VOICES``). For a</span>
+</span><span id="line-182"><span class="sd">            newer voices file, also pass ``init={'voices_file': ..., 'revision': ...}``;</span>
+</span><span id="line-183"><span class="sd">            names must start with a known language letter (``KOKORO_LANGUAGES``).</span>
+</span><span id="line-184"><span class="sd">        generate: The model call (default: the worker, see ``LocalSpeechModel``).</span>
+</span><span id="line-185"><span class="sd">        device: Only 'cpu' (kokoro-onnx runs on onnxruntime's CPU provider).</span>
+</span><span id="line-186"><span class="sd">        **kwargs: The other ``LocalSpeechModel`` options (threads, rootdir, ...).</span>
+</span><span id="line-187"><span class="sd">    """</span>
+</span><span id="line-188">
+</span><span id="line-189">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="line-190">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-191">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-192">        <span class="n">voice</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-193">        <span class="n">voices</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">KOKORO_VOICES</span><span class="p">,</span>
+</span><span id="line-194">        <span class="n">generate</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-195">        <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">KOKORO_DEVICE</span><span class="p">,</span>
+</span><span id="line-196">        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span><span id="line-197">    <span class="p">):</span>
+</span><span id="line-198">        <span class="k">if</span> <span class="n">device</span> <span class="o">!=</span> <span class="n">KOKORO_DEVICE</span><span class="p">:</span>
+</span><span id="line-199">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"kokoro runs on </span><span class="si">{</span><span class="n">KOKORO_DEVICE</span><span class="si">!r}</span><span class="s2"> only, not </span><span class="si">{</span><span class="n">device</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-200">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">KOKORO</span><span class="p">,</span> <span class="n">generate</span><span class="o">=</span><span class="n">generate</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="line-201">        <span class="bp">self</span><span class="o">.</span><span class="n">voices</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">voices</span><span class="p">)</span>
+</span><span id="line-202">        <span class="bp">self</span><span class="o">.</span><span class="n">dflt_voice</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-203">            <span class="n">voice</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">KOKORO_VOICE_ENVVAR</span><span class="p">)</span> <span class="ow">or</span> <span class="n">DFLT_KOKORO_VOICE</span>
+</span><span id="line-204">        <span class="p">)</span>
+</span><span id="line-205">
+</span><span id="line-206">    <span class="k">def</span><span class="w"> </span><span class="nf">_stock_voice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-207"><span class="w">        </span><span class="sd">"""The voice's name, checked against ``self.voices``."""</span>
+</span><span id="line-208">        <span class="n">voice</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="s2">"segment"</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">dflt_voice</span>
+</span><span id="line-209">        <span class="k">if</span> <span class="n">voice</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">voices</span><span class="p">:</span>
+</span><span id="line-210">            <span class="k">raise</span> <span class="n">_not_a_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
+</span><span id="line-211">        <span class="k">return</span> <span class="n">voice</span>
+</span><span id="line-212">
+</span><span id="line-213">    <span class="k">def</span><span class="w"> </span><span class="nf">_voice_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-214">        <span class="k">return</span> <span class="p">{</span><span class="s2">"voice"</span><span class="p">:</span> <span class="n">voice</span><span class="p">},</span> <span class="n">voice</span>
+</span><span id="line-215">
 <div class="viewcode-block" id="KokoroSpeechModel.synthesize">
 <a class="viewcode-back" href="../../_autosummary/voxy.kokoro_model.html#voxy.kokoro_model.KokoroSpeechModel.synthesize">[docs]</a>
-</span><span id="line-212">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-213"><span class="w">        </span><span class="sd">"""Speak ``text`` in a stock ``voice``, in ``lang`` (default: the voice's)."""</span>
-</span><span id="line-214">        <span class="n">voice</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stock_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
-</span><span id="line-215">        <span class="n">lang</span> <span class="o">=</span> <span class="n">lang</span> <span class="ow">or</span> <span class="n">parse_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-216">        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="n">lang</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span></div>
+</span><span id="line-216">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-217"><span class="w">        </span><span class="sd">"""Speak ``text`` in a stock ``voice``, in ``lang`` (default: the voice's)."""</span>
+</span><span id="line-218">        <span class="n">voice</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stock_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
+</span><span id="line-219">        <span class="n">lang</span> <span class="o">=</span> <span class="n">lang</span> <span class="ow">or</span> <span class="n">parse_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-220">        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="n">lang</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span></div>
 
-</span><span id="line-217">
+</span><span id="line-221">
 <div class="viewcode-block" id="KokoroSpeechModel.list_voices">
 <a class="viewcode-back" href="../../_autosummary/voxy.kokoro_model.html#voxy.kokoro_model.KokoroSpeechModel.list_voices">[docs]</a>
-</span><span id="line-218">    <span class="k">def</span><span class="w"> </span><span class="nf">list_voices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">VoiceInfo</span><span class="p">]:</span>
-</span><span id="line-219"><span class="w">        </span><span class="sd">"""The stock voices (no model needed)."""</span>
-</span><span id="line-220">        <span class="k">return</span> <span class="p">[</span><span class="n">voice_info</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">voices</span><span class="p">]</span></div>
+</span><span id="line-222">    <span class="k">def</span><span class="w"> </span><span class="nf">list_voices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">VoiceInfo</span><span class="p">]:</span>
+</span><span id="line-223"><span class="w">        </span><span class="sd">"""The stock voices (no model needed)."""</span>
+</span><span id="line-224">        <span class="k">return</span> <span class="p">[</span><span class="n">voice_info</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">voices</span><span class="p">]</span></div>
 </div>
 
 </span></code></pre></div>
@@ -435,7 +439,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=0356c229"></script>
+    <script src="../../_static/documentation_options.js?v=e072a57b"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
