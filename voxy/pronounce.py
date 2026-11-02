@@ -1516,29 +1516,60 @@ def _vet_caller_expected(text: str, options: Mapping) -> None:
         _expected_readings(risks, expected=expected, proposed={}, table=table)
 
 
-def _text_located(text, audio, align_missing, *, elisions) -> Callable:
-    """A function giving the text's words as timed words (``{"text", "start", "end"}``,
-    in ``_text_words`` order) by forced alignment, computed once on first call; None
-    when ``align_missing`` is None or the alignment fails (too long, no fit)."""
+#: Words ASR placed, on each side of a missing one, that bound its aligned stretch.
+GAP_ANCHORS = 2
+#: Audio added on each side of that stretch (s).
+GAP_MARGIN_S = 0.15
+
+
+def _gap_located(text, audio, align_missing, *, asr_words, heard_at, elisions):
+    """A function ``(place) -> (timed words, index) | None`` for a text word ASR did not
+    place: the text between the nearest words ASR did place on either side (those
+    included, as context) is force-aligned in the audio between them, once per gap.
+    None when ``align_missing`` is None, the alignment fails (e.g. a gap longer than
+    the aligner takes), or it leaves the word untimed."""
+    tokens = [word for _, word, _ in _text_words(text, elisions=elisions)]
+    placed = sorted(k for k, v in heard_at.items() if v is not None and k is not None)
     cache: dict = {}
 
-    def located():
+    def gap(place):
+        # two placed words each side (a clitic placed by ASR has no length, and a
+        # tight stretch makes the aligner squeeze), plus a margin of audio
+        before = [k for k in placed if k < place][-GAP_ANCHORS:]
+        after = [k for k in placed if k > place][:GAP_ANCHORS]
+        lo = before[0] if before else 0
+        hi = after[-1] if after else len(tokens) - 1
+        start = (
+            max(0.0, asr_words[heard_at[lo]]["start"] - GAP_MARGIN_S)
+            if before
+            else None
+        )
+        end = asr_words[heard_at[hi]]["end"] + GAP_MARGIN_S if after else None
+        return lo, hi, start, end
+
+    def located(place):
         if align_missing is None:
             return None
-        if "words" not in cache:
-            tokens = [word for _, word, _ in _text_words(text, elisions=elisions)]
+        lo, hi, start, end = gap(place)
+        if (lo, hi) not in cache:
+            stretch = tokens[lo : hi + 1]
             try:  # the worker re-raises the aligner's errors as WorkerError (Runtime)
-                spans = align_missing(str(audio), tokens)
-                cache["words"] = [
+                spans = align_missing(str(audio), stretch, start=start, end=end)
+                cache[lo, hi] = [
                     {"text": t, "start": s.get("start"), "end": s.get("end")}
-                    for t, s in zip(tokens, spans, strict=True)
+                    for t, s in zip(stretch, spans, strict=True)
                 ]
-            except (ValueError, RuntimeError) as e:  # e.g. audio over its limit
+            except (ValueError, RuntimeError) as e:  # e.g. a gap over its limit
                 warnings.warn(
-                    f"align_missing could not align the text: {e}", stacklevel=3
+                    f"align_missing could not align {' '.join(stretch)[:60]!r}: {e}",
+                    stacklevel=3,
                 )
-                cache["words"] = None
-        return cache["words"]
+                cache[lo, hi] = None
+        aligned = cache[lo, hi]
+        if aligned is None or aligned[place - lo]["start"] is None:
+            return None
+        timed = [k for k, w in enumerate(aligned) if w["start"] is not None]
+        return [aligned[k] for k in timed], timed.index(place - lo)
 
     return located
 
@@ -1562,7 +1593,7 @@ def audit(
     padding: float = DFLT_CROP_PADDING,
     margin: float | None = None,
     scorer: Scorer | None = None,
-    align_missing: Callable[[str, Sequence[str]], Sequence[Mapping]] | None = None,
+    align_missing: Callable[..., Sequence[Mapping]] | None = None,
 ) -> list[Finding]:
     """Which reading did each heteronym of ``text`` get in the finished ``audio``?
 
@@ -1600,15 +1631,15 @@ def audit(
         context: Words kept on each side of the flagged one.
         margin: See :attr:`Verdict.decided`; default ``scorer.margin``.
         scorer: A ready :class:`Scorer`; wins over ``scoring`` and its options.
-        align_missing: ``(audio_path, words) -> [{"start", "end", ...}, ...]``, e.g.
-            ``voxy.align.force_align``: when ASR heard a flagged word as something
-            else (a misread can change the word: "de l'est" heard "de lait"), the
-            text's own words are aligned in the audio and the word is scored where
-            the text puts it (``Finding.located == "text"``). Default None: such a
-            word is reported, not checked. The aligner takes one pass over the whole
-            ``audio`` (``force_align``: up to 30 s), so it serves per-line audits
-            (``audit_verifier``/``render_verified`` pass it through); a longer
-            recording warns and leaves such words unchecked.
+        align_missing: ``(audio_path, words, *, start, end) -> [{"start", "end",
+            ...}, ...]``, e.g. ``voxy.align.force_align``: when ASR heard a flagged
+            word as something else (a misread can change the word: "de l'est" heard
+            "de lait"), the text between the nearest words ASR did place (those
+            included) is aligned in the audio between them, and the word is scored
+            where the text puts it (``Finding.located == "text"``). So it works on
+            long recordings as long as such a gap fits the aligner (``force_align``:
+            30 s); a gap that does not warns and leaves the word unchecked. Default
+            None: such a word is reported, not checked.
 
     Returns the findings in text order; ``[f for f in findings if f.ok is False]`` are
     the words decidedly misread (re-render those), ``f.ok is None`` ones were not
@@ -1653,16 +1684,20 @@ def audit(
     heard_at = align_words(text, words, elisions=elisions)
 
     places = _risk_places(text, risks, elisions=elisions)
-    text_located = _text_located(text, audio, align_missing, elisions=elisions)
+    gap_located = _gap_located(
+        text,
+        audio,
+        align_missing,
+        asr_words=words,
+        heard_at=heard_at,
+        elisions=elisions,
+    )
     findings = []
     for risk, place, want in zip(risks, places, wants):
         key = risk.word.casefold()
         located, context_words, i = "asr", words, heard_at.get(place)
-        if i is None and place is not None and (aligned := text_located()) is not None:
-            if aligned[place]["start"] is not None:  # timed words only, as context
-                timed = [j for j, w in enumerate(aligned) if w["start"] is not None]
-                located, context_words = "text", [aligned[j] for j in timed]
-                i = timed.index(place)
+        if i is None and place is not None and (found := gap_located(place)):
+            located, (context_words, i) = "text", found
         if i is None:
             findings.append(Finding(risk, expected=want))
             continue

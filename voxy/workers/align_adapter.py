@@ -12,6 +12,8 @@ import unicodedata
 LIGATURES = {"œ": "oe", "æ": "ae", "ß": "ss", "ø": "o", "ł": "l", "’": "'", "ʼ": "'"}
 #: The aligner's token for a word it has no letters for (a number, a symbol).
 STAR = "*"
+#: The shortest stretch the aligner's convolutions take.
+MIN_CROP_SECONDS = 0.1
 
 
 def load(*, model="MMS_FA", device="cpu"):
@@ -37,10 +39,11 @@ def _letters(word, index):
     return letters or STAR
 
 
-def align(state, *, audio, words, max_seconds=30.0):
+def align(state, *, audio, words, start=None, end=None, max_seconds=30.0):
     """``{"words": [{"start", "end", "score", "chars": [...]}, ...]}`` for ``words``
-    (in order) in ``audio``; a word with no letter (a number) is placed as the star
-    token. Audio longer than ``max_seconds`` is refused (memory grows fast: 150 s
+    (in order) in ``audio``, or in its ``start``-``end`` stretch (s; times stay on the
+    recording's clock); a word with no letter (a number) is placed as the star
+    token. A stretch longer than ``max_seconds`` is refused (memory grows fast: 150 s
     took about 6 GB): align it in stretches."""
     import soundfile
     import torch
@@ -48,12 +51,17 @@ def align(state, *, audio, words, max_seconds=30.0):
 
     bundle, index = state["bundle"], state["index"]
     samples, rate = soundfile.read(audio, dtype="float32", always_2d=True)
-    wav = torch.from_numpy(samples.mean(axis=1).copy())[None]
-    if len(samples) / rate > max_seconds:
+    mono = samples.mean(axis=1)
+    total = len(mono) / rate
+    lo, hi = max(0.0, start or 0.0), min(total, total if end is None else end)
+    if hi - lo < MIN_CROP_SECONDS:
+        raise ValueError(f"stretch {lo:.2f}-{hi:.2f} s of {total:.2f} s is too short")
+    if hi - lo > max_seconds:
         raise ValueError(
-            f"{len(samples) / rate:.0f} s of audio is over max_seconds={max_seconds}: "
+            f"{hi - lo:.0f} s of audio is over max_seconds={max_seconds}: "
             "align it in stretches (a line, a word and its neighbours)"
         )
+    wav = torch.from_numpy(mono[int(lo * rate) : int(hi * rate)].copy())[None]
     wav = F.resample(wav, rate, bundle.sample_rate)
     letters = [_letters(w, index) for w in words]
     tokens = [index[c] for ls in letters for c in ls]
@@ -79,8 +87,8 @@ def align(state, *, audio, words, max_seconds=30.0):
         chars = [
             {
                 "char": c,
-                "start": round(s.start * seconds, 4),
-                "end": round(s.end * seconds, 4),
+                "start": round(lo + s.start * seconds, 4),
+                "end": round(lo + s.end * seconds, 4),
                 "score": round(float(s.score), 4),
             }
             for c, s in zip(word_letters, spans[k : k + len(word_letters)])
@@ -95,10 +103,6 @@ def align(state, *, audio, words, max_seconds=30.0):
             }
         )
     return {"words": out}
-
-
-#: The shortest crop the aligner's convolutions take.
-MIN_CROP_SECONDS = 0.1
 
 
 def score(state, *, audio, texts, start=None, end=None, max_seconds=30.0):

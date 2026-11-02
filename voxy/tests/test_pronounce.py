@@ -787,7 +787,7 @@ def test_a_word_asr_heard_as_another_is_scored_where_the_aligned_text_puts_it():
     asr = [{"start": 0.0, "end": 0.2, "text": "lait"}]  # ASR heard another word
     aligned = []
 
-    def align_missing(audio, words):
+    def align_missing(audio, words, **crop):
         aligned.append(list(words))
         return [{"start": 0.0, "end": 0.3}]
 
@@ -807,12 +807,12 @@ def test_words_asr_placed_keep_their_asr_timing_and_say_so():
     found = audit("est", "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
                   scoring="spot", emitter=heard,
                   words_of=lambda audio: [{"start": 0.0, "end": 0.2, "text": "est"}],
-                  align_missing=lambda audio, words: calls.append(words) or [])
+                  align_missing=lambda audio, words, **crop: calls.append(words) or [])
     assert found[0].located == "asr" and calls == []  # never aligned: nothing missing
 
 
 def test_a_failed_alignment_warns_and_leaves_the_word_unchecked():
-    def too_long(audio, words):
+    def too_long(audio, words, **crop):
         raise ValueError("31 s of audio is over max_seconds=30.0")
 
     with pytest.warns(UserWarning, match="could not align"):
@@ -827,7 +827,7 @@ def test_a_failed_alignment_warns_and_leaves_the_word_unchecked():
 def test_a_worker_error_from_the_aligner_also_warns_rather_than_crashes():
     from voxy.worker import WorkerError
 
-    def worker_refuses(audio, words):
+    def worker_refuses(audio, words, **crop):
         raise WorkerError("ValueError: 39 s of audio is over max_seconds=30.0")
 
     with pytest.warns(UserWarning, match="could not align"):
@@ -844,5 +844,24 @@ def test_an_untimed_neighbour_is_left_out_of_the_context():
     found = audit("il est", "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
                   scoring="spot", emitter=heard,
                   words_of=lambda audio: [{"start": 0.0, "end": 0.2, "text": "lait"}],
-                  align_missing=lambda audio, words: spans)
+                  align_missing=lambda audio, words, **crop: spans)
     assert found[0].located == "text" and found[0].verdict.start == 0.3
+
+
+def test_align_missing_aligns_only_the_gap_between_the_words_asr_placed():
+    """#112: the stretch between the nearest placed words, not the whole recording."""
+    heard = lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB)
+    asr = [{"start": float(i), "end": i + 0.5, "text": w}
+           for i, w in enumerate(["un", "deux", "lait", "trois", "quatre"])]
+    calls = []
+
+    def align_missing(audio, words, *, start=None, end=None):
+        calls.append((list(words), start, end))
+        return [{"start": start + k * 0.5, "end": start + k * 0.5 + 0.4} for k, _ in enumerate(words)]
+
+    found = audit("un deux est trois quatre", "take.wav", readings={"est": READINGS},
+                  expected={"est": "verb"}, scoring="spot", emitter=heard,
+                  words_of=lambda audio: asr, align_missing=align_missing)
+    # two placed words each side, plus a margin: "un deux est trois quatre", 0.0-4.65 s
+    assert calls == [(["un", "deux", "est", "trois", "quatre"], 0.0, 4.65)]
+    assert found[0].located == "text" and found[0].verdict.start == 1.0

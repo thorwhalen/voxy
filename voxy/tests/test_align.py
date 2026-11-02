@@ -10,7 +10,7 @@ from voxy import align
 def test_words_come_back_in_order_with_their_spans_and_none_for_unalignable():
     seen = []
 
-    def run(audio, words):
+    def run(audio, words, **crop):
         seen.append((Path(audio).read_bytes(), list(words)))
         return [None if w == "42" else {"start": i, "end": i + 0.4, "score": 0.8, "chars": [{"char": "x"}]}
                 for i, w in enumerate(words)]
@@ -24,13 +24,13 @@ def test_words_come_back_in_order_with_their_spans_and_none_for_unalignable():
 def test_a_list_of_words_and_a_path(tmp_path):
     wav = tmp_path / "line.wav"
     wav.write_bytes(b"RIFF")
-    spans = align.force_align(wav, ["l'est"], run=lambda audio, words: [{"start": 0.1, "end": 0.3, "score": 1, "chars": []}])
+    spans = align.force_align(wav, ["l'est"], run=lambda audio, words, **crop: [{"start": 0.1, "end": 0.3, "score": 1, "chars": []}])
     assert spans[0]["word"] == "l'est"
 
 
 def test_a_short_answer_from_the_aligner_is_an_error():
     with pytest.raises(ValueError, match="2 words"):
-        align.force_align(b"RIFF", "deux mots", run=lambda audio, words: [])
+        align.force_align(b"RIFF", "deux mots", run=lambda audio, words, **crop: [])
 
 
 def test_the_default_run_uses_the_pooled_worker(monkeypatch):
