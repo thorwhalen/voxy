@@ -1,4 +1,4 @@
-> built 2026-11-02 09:38 UTC from c529582 (main) · voxy 0.0.47. Details: build_info.json
+> built 2026-11-02 09:44 UTC from 327776f (main) · voxy 0.0.48. Details: build_info.json
 
 # index.html.md
 
@@ -2260,10 +2260,9 @@ Seams (keyword arguments of every model):
 
 ### Functions
 
-| [`reference_profile`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.reference_profile)(ref_audio, ref_text, \*[, ...])   | A voice for local backends: a reference clip (or clips) and what it says.         |
-|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`register_local_clone_backend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.register_local_clone_backend)(backend)               | Add (or replace) a local cloning backend description.                             |
-| [`voxy_cache_dir`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.voxy_cache_dir)(\*parts)                             | Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`. |
+| [`reference_profile`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.reference_profile)(ref_audio, ref_text, \*[, ...])   | A voice for local backends: a reference clip (or clips) and what it says.   |
+|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [`register_local_clone_backend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.register_local_clone_backend)(backend)               | Add (or replace) a local cloning backend description.                       |
 
 ### Classes
 
@@ -2471,13 +2470,6 @@ Add (or replace) a local cloning backend description.
 * **Return type:**
   [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)
 
-### voxy.local_clone.voxy_cache_dir(\*parts)
-
-Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`.
-
-* **Return type:**
-  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
-
 
 # _autosummary/voxy.pronounce.html.md
 
@@ -2550,6 +2542,7 @@ without torch.
 | [`checks_by_line`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.checks_by_line)(risks, \*, readings[, expected])    | [`checks_from_risks()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.checks_from_risks), grouped by the line each risk is on.                                                                                                                           |
 | [`checks_from_risks`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.checks_from_risks)(risks, \*, readings[, expected]) | `verify_words` checks for the flagged words that have known IPA readings.                                                                                                                                                            |
 | [`checks_verifier`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.checks_verifier)(checks, \*[, emitter, ...])        | A [`Verifier`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Verifier) for legacy `checks` ([`checks_by_line()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.checks_by_line)): words by spelling.                                                              |
+| [`close_phonemes`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.close_phonemes)()                                   | Stop the recogniser workers (free their memory).                                                                                                                                                                                     |
 | [`crop_scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.crop_scorer)(\*, emitter[, padding, margin])        | The word alone, cut at its ASR times (`padding` each side), scored by [`score_readings()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.score_readings); ASR word times are often too loose for this.                                                |
 | [`ctc_log_likelihood`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.ctc_log_likelihood)(log_probs, target, \*[, blank]) | `log P(target | log_probs)` under CTC (the forward algorithm, in log space).                                                                                                                                                         |
 | [`espeak_phonemizer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.espeak_phonemizer)(\*[, model, threads, rootdir])   | The default [`Phonemizer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Phonemizer): espeak-ng (bundled by `espeakng-loader`), run in the recogniser's env, so its IPA is the recogniser's own alphabet.                                         |
@@ -2928,6 +2921,13 @@ A checked word ASR never found is a finding without a verdict.
 
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Finding`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Finding)]]
+
+### voxy.pronounce.close_phonemes()
+
+Stop the recogniser workers (free their memory).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### voxy.pronounce.crop_scorer(, emitter, padding=0.08, margin=0.5)
 
@@ -4716,14 +4716,15 @@ means passing a different `MutableMapping`. Folders are created on first write.
 
 ### Functions
 
-| [`audio_store`](_autosummary/voxy.stores.html.md#voxy.stores.audio_store)(kind, voice, \*[, rootdir])   | Audio files of one voice and kind, `filename -> bytes`.                       |
-|--------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`check_voice_name`](_autosummary/voxy.stores.html.md#voxy.stores.check_voice_name)(name)                    | Return `name` if it can name a voice (one path segment), else raise.          |
-| [`kind_dir`](_autosummary/voxy.stores.html.md#voxy.stores.kind_dir)(kind, \*parts[, rootdir])        | The folder for one kind of data, optionally a subfolder (not created here).   |
-| [`samples_store`](_autosummary/voxy.stores.html.md#voxy.stores.samples_store)(voice, \*[, rootdir])       | The prepared samples a clone of `voice` is made from.                         |
-| [`sources_store`](_autosummary/voxy.stores.html.md#voxy.stores.sources_store)(voice, \*[, rootdir])       | The raw source media `voice`'s samples were cut from.                         |
-| [`voices_store`](_autosummary/voxy.stores.html.md#voxy.stores.voices_store)(\*[, rootdir])               | Voice records, `name -> dict`, as `voices/{name}.json` (other files ignored). |
-| [`voxy_data_dir`](_autosummary/voxy.stores.html.md#voxy.stores.voxy_data_dir)()                           | The data root: `$VOXY_DATA_DIR` if set, else the platform's app-data folder.  |
+| [`audio_store`](_autosummary/voxy.stores.html.md#voxy.stores.audio_store)(kind, voice, \*[, rootdir])   | Audio files of one voice and kind, `filename -> bytes`.                           |
+|--------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`check_voice_name`](_autosummary/voxy.stores.html.md#voxy.stores.check_voice_name)(name)                    | Return `name` if it can name a voice (one path segment), else raise.              |
+| [`kind_dir`](_autosummary/voxy.stores.html.md#voxy.stores.kind_dir)(kind, \*parts[, rootdir])        | The folder for one kind of data, optionally a subfolder (not created here).       |
+| [`samples_store`](_autosummary/voxy.stores.html.md#voxy.stores.samples_store)(voice, \*[, rootdir])       | The prepared samples a clone of `voice` is made from.                             |
+| [`sources_store`](_autosummary/voxy.stores.html.md#voxy.stores.sources_store)(voice, \*[, rootdir])       | The raw source media `voice`'s samples were cut from.                             |
+| [`voices_store`](_autosummary/voxy.stores.html.md#voxy.stores.voices_store)(\*[, rootdir])               | Voice records, `name -> dict`, as `voices/{name}.json` (other files ignored).     |
+| [`voxy_cache_dir`](_autosummary/voxy.stores.html.md#voxy.stores.voxy_cache_dir)(\*parts)                   | Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`. |
+| [`voxy_data_dir`](_autosummary/voxy.stores.html.md#voxy.stores.voxy_data_dir)()                           | The data root: `$VOXY_DATA_DIR` if set, else the platform's app-data folder.      |
 
 ### voxy.stores.audio_store(kind, voice, , rootdir=None)
 
@@ -4782,6 +4783,18 @@ Voice records, `name -> dict`, as `voices/{name}.json` (other files ignored).
 
 * **Return type:**
   [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
+
+### voxy.stores.voxy_cache_dir(\*parts)
+
+Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`.
+
+```pycon
+>>> voxy_cache_dir("logs", "asr.log").name
+'asr.log'
+```
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 ### voxy.stores.voxy_data_dir()
 
@@ -5075,8 +5088,8 @@ library can’t fill a pipe and hang the call.
 
 ### Functions
 
-| [`env_worker`](_autosummary/voxy.worker.html.md#voxy.worker.env_worker)(spec, adapter, \*, model[, ...])   | A worker for adapter `adapter` in `spec`'s environment (built if missing), its model `model`, its log `logs/<adapter>.log` under voxy's cache.   |
-|------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`env_worker`](_autosummary/voxy.worker.html.md#voxy.worker.env_worker)(spec, adapter, \*[, model, init, ...])   | A worker for adapter `adapter` in `spec`'s environment, its log `logs/<adapter>.log` under voxy's cache: the one place an environment and an adapter become a worker.   |
+|------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 
 ### Classes
 
@@ -5159,11 +5172,21 @@ The worker for this model, threads and data root (made on first use).
 * **Return type:**
   [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)
 
-### voxy.worker.env_worker(spec, adapter, , model, threads=None, rootdir=None)
+### voxy.worker.env_worker(spec, adapter, , model=None, init=None, threads=None, rootdir=None, env_vars=None, auto_setup=True)
 
-A worker for adapter `adapter` in `spec`’s environment (built if missing),
-its model `model`, its log `logs/<adapter>.log` under voxy’s cache.
+A worker for adapter `adapter` in `spec`’s environment, its log
+`logs/<adapter>.log` under voxy’s cache: the one place an environment and an
+adapter become a worker.
 
+* **Parameters:**
+  * **spec** ([`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)) – The environment (built here if missing, unless `auto_setup` is False).
+  * **adapter** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The adapter’s name (`workers/<adapter>_adapter.py`).
+  * **model** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Shorthand for `init={"model": model}`.
+  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments of the adapter’s `load`.
+  * **threads** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As `voxy.envs.worker_environ`.
+  * **rootdir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As `voxy.envs.worker_environ`.
+  * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra environment variables of the worker.
+  * **auto_setup** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Build a missing environment (else raise, naming the setup command).
 * **Return type:**
   [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)
 
@@ -5400,7 +5423,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 09:38 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/c529582e00d3662029d896f83a2ea1af6f19d160"><code>c529582</code></a> on branch <code>main</code>, for **voxy 0.0.47** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 09:44 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/327776f983ead0a464c721a5e7a175b136caca83"><code>327776f</code></a> on branch <code>main</code>, for **voxy 0.0.48** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -5409,7 +5432,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/c529582e00d3662029d896f83a2ea1af6f19d160"><code>c529582e00d3662029d896f83a2ea1af6f19d160</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/327776f983ead0a464c721a5e7a175b136caca83"><code>327776f983ead0a464c721a5e7a175b136caca83</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -5420,9 +5443,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41422035565">41422035565</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41422804392">41422804392</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>c529582e00d3662029d896f83a2ea1af6f19d160</code> (in the history of the built commit) |
+| Event commit | <code>327776f983ead0a464c721a5e7a175b136caca83</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5447,13 +5470,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.47/">0.0.47</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.48/">0.0.48</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout c529582e00d3662029d896f83a2ea1af6f19d160
+git checkout 327776f983ead0a464c721a5e7a175b136caca83
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

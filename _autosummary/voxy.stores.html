@@ -185,7 +185,10 @@ means passing a different <code class="docutils literal notranslate"><span class
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.stores.voices_store" title="voxy.stores.voices_store"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voices_store</span></code></a>(*[, rootdir])</p></td>
 <td><p>Voice records, <code class="docutils literal notranslate"><span class="pre">name</span> <span class="pre">-&gt;</span> <span class="pre">dict</span></code>, as <code class="docutils literal notranslate"><span class="pre">voices/{name}.json</span></code> (other files ignored).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.stores.voxy_data_dir" title="voxy.stores.voxy_data_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voxy_data_dir</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.stores.voxy_cache_dir" title="voxy.stores.voxy_cache_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voxy_cache_dir</span></code></a>(*parts)</p></td>
+<td><p>Intermediates (worker scratch audio, logs): <code class="docutils literal notranslate"><span class="pre">$VOXY_CACHE_DIR</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.cache/voxy</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.stores.voxy_data_dir" title="voxy.stores.voxy_data_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voxy_data_dir</span></code></a>()</p></td>
 <td><p>The data root: <code class="docutils literal notranslate"><span class="pre">$VOXY_DATA_DIR</span></code> if set, else the platform's app-data folder.</p></td>
 </tr>
 </tbody>
@@ -265,6 +268,20 @@ means passing a different <code class="docutils literal notranslate"><span class
 </dl>
 </dd></dl>
 <dl class="py function">
+<dt class="sig sig-object py" id="voxy.stores.voxy_cache_dir">
+<span class="sig-prename descclassname"><span class="pre">voxy.stores.</span></span><span class="sig-name descname"><span class="pre">voxy_cache_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">parts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/stores.html#voxy_cache_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.stores.voxy_cache_dir" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.stores.voxy_cache_dir'">¶</a></dt>
+<dd><p>Intermediates (worker scratch audio, logs): <code class="docutils literal notranslate"><span class="pre">$VOXY_CACHE_DIR</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.cache/voxy</span></code>.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"logs"</span><span class="p">,</span> <span class="s2">"asr.log"</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+</span><span id="line-2"><span class="go">'asr.log'</span>
+</span></code></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="voxy.stores.voxy_data_dir">
 <span class="sig-prename descclassname"><span class="pre">voxy.stores.</span></span><span class="sig-name descname"><span class="pre">voxy_data_dir</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/stores.html#voxy_data_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.stores.voxy_data_dir" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.stores.voxy_data_dir'">¶</a></dt>
 <dd><p>The data root: <code class="docutils literal notranslate"><span class="pre">$VOXY_DATA_DIR</span></code> if set, else the platform’s app-data folder.</p>
@@ -284,6 +301,7 @@ means passing a different <code class="docutils literal notranslate"><span class
 <li><a :data-current="activeSection === '#voxy.stores.samples_store'" class="reference internal" href="#voxy.stores.samples_store"><code class="docutils literal notranslate"><span class="pre">samples_store()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.stores.sources_store'" class="reference internal" href="#voxy.stores.sources_store"><code class="docutils literal notranslate"><span class="pre">sources_store()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.stores.voices_store'" class="reference internal" href="#voxy.stores.voices_store"><code class="docutils literal notranslate"><span class="pre">voices_store()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.stores.voxy_cache_dir'" class="reference internal" href="#voxy.stores.voxy_cache_dir"><code class="docutils literal notranslate"><span class="pre">voxy_cache_dir()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.stores.voxy_data_dir'" class="reference internal" href="#voxy.stores.voxy_data_dir"><code class="docutils literal notranslate"><span class="pre">voxy_data_dir()</span></code></a></li>
 </ul>
 </div>
@@ -298,7 +316,7 @@ means passing a different <code class="docutils literal notranslate"><span class
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=4f34e5f2"></script>
+<script src="../_static/documentation_options.js?v=a72e4630"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

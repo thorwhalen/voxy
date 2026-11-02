@@ -10,7 +10,6 @@ voxy.local\_clone
    
       reference_profile
       register_local_clone_backend
-      voxy_cache_dir
    
    .. rubric:: Classes
 

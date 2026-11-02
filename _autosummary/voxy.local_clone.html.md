@@ -44,10 +44,9 @@ Seams (keyword arguments of every model):
 
 ### Functions
 
-| [`reference_profile`](#voxy.local_clone.reference_profile)(ref_audio, ref_text, \*[, ...])   | A voice for local backends: a reference clip (or clips) and what it says.         |
-|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`register_local_clone_backend`](#voxy.local_clone.register_local_clone_backend)(backend)               | Add (or replace) a local cloning backend description.                             |
-| [`voxy_cache_dir`](#voxy.local_clone.voxy_cache_dir)(\*parts)                             | Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`. |
+| [`reference_profile`](#voxy.local_clone.reference_profile)(ref_audio, ref_text, \*[, ...])   | A voice for local backends: a reference clip (or clips) and what it says.   |
+|------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [`register_local_clone_backend`](#voxy.local_clone.register_local_clone_backend)(backend)               | Add (or replace) a local cloning backend description.                       |
 
 ### Classes
 
@@ -254,10 +253,3 @@ Add (or replace) a local cloning backend description.
 
 * **Return type:**
   [`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend)
-
-### voxy.local_clone.voxy_cache_dir(\*parts)
-
-Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`.
-
-* **Return type:**
-  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

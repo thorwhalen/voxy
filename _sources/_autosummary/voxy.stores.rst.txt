@@ -14,5 +14,6 @@ voxy.stores
       samples_store
       sources_store
       voices_store
+      voxy_cache_dir
       voxy_data_dir
    

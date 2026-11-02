@@ -28,14 +28,15 @@ means passing a different `MutableMapping`. Folders are created on first write.
 
 ### Functions
 
-| [`audio_store`](#voxy.stores.audio_store)(kind, voice, \*[, rootdir])   | Audio files of one voice and kind, `filename -> bytes`.                       |
-|--------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`check_voice_name`](#voxy.stores.check_voice_name)(name)                    | Return `name` if it can name a voice (one path segment), else raise.          |
-| [`kind_dir`](#voxy.stores.kind_dir)(kind, \*parts[, rootdir])        | The folder for one kind of data, optionally a subfolder (not created here).   |
-| [`samples_store`](#voxy.stores.samples_store)(voice, \*[, rootdir])       | The prepared samples a clone of `voice` is made from.                         |
-| [`sources_store`](#voxy.stores.sources_store)(voice, \*[, rootdir])       | The raw source media `voice`'s samples were cut from.                         |
-| [`voices_store`](#voxy.stores.voices_store)(\*[, rootdir])               | Voice records, `name -> dict`, as `voices/{name}.json` (other files ignored). |
-| [`voxy_data_dir`](#voxy.stores.voxy_data_dir)()                           | The data root: `$VOXY_DATA_DIR` if set, else the platform's app-data folder.  |
+| [`audio_store`](#voxy.stores.audio_store)(kind, voice, \*[, rootdir])   | Audio files of one voice and kind, `filename -> bytes`.                           |
+|--------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`check_voice_name`](#voxy.stores.check_voice_name)(name)                    | Return `name` if it can name a voice (one path segment), else raise.              |
+| [`kind_dir`](#voxy.stores.kind_dir)(kind, \*parts[, rootdir])        | The folder for one kind of data, optionally a subfolder (not created here).       |
+| [`samples_store`](#voxy.stores.samples_store)(voice, \*[, rootdir])       | The prepared samples a clone of `voice` is made from.                             |
+| [`sources_store`](#voxy.stores.sources_store)(voice, \*[, rootdir])       | The raw source media `voice`'s samples were cut from.                             |
+| [`voices_store`](#voxy.stores.voices_store)(\*[, rootdir])               | Voice records, `name -> dict`, as `voices/{name}.json` (other files ignored).     |
+| [`voxy_cache_dir`](#voxy.stores.voxy_cache_dir)(\*parts)                   | Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`. |
+| [`voxy_data_dir`](#voxy.stores.voxy_data_dir)()                           | The data root: `$VOXY_DATA_DIR` if set, else the platform's app-data folder.      |
 
 ### voxy.stores.audio_store(kind, voice, , rootdir=None)
 
@@ -94,6 +95,18 @@ Voice records, `name -> dict`, as `voices/{name}.json` (other files ignored).
 
 * **Return type:**
   [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
+
+### voxy.stores.voxy_cache_dir(\*parts)
+
+Intermediates (worker scratch audio, logs): `$VOXY_CACHE_DIR` or `~/.cache/voxy`.
+
+```pycon
+>>> voxy_cache_dir("logs", "asr.log").name
+'asr.log'
+```
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
 ### voxy.stores.voxy_data_dir()
 

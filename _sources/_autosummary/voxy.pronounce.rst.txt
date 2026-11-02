@@ -41,6 +41,7 @@ voxy.pronounce
       checks_by_line
       checks_from_risks
       checks_verifier
+      close_phonemes
       crop_scorer
       ctc_log_likelihood
       espeak_phonemizer

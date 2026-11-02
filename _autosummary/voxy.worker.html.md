@@ -18,8 +18,8 @@ library can’t fill a pipe and hang the call.
 
 ### Functions
 
-| [`env_worker`](#voxy.worker.env_worker)(spec, adapter, \*, model[, ...])   | A worker for adapter `adapter` in `spec`'s environment (built if missing), its model `model`, its log `logs/<adapter>.log` under voxy's cache.   |
-|------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`env_worker`](#voxy.worker.env_worker)(spec, adapter, \*[, model, init, ...])   | A worker for adapter `adapter` in `spec`'s environment, its log `logs/<adapter>.log` under voxy's cache: the one place an environment and an adapter become a worker.   |
+|------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 
 ### Classes
 
@@ -102,10 +102,20 @@ The worker for this model, threads and data root (made on first use).
 * **Return type:**
   [`Worker`](#voxy.worker.Worker)
 
-### voxy.worker.env_worker(spec, adapter, , model, threads=None, rootdir=None)
+### voxy.worker.env_worker(spec, adapter, , model=None, init=None, threads=None, rootdir=None, env_vars=None, auto_setup=True)
 
-A worker for adapter `adapter` in `spec`’s environment (built if missing),
-its model `model`, its log `logs/<adapter>.log` under voxy’s cache.
+A worker for adapter `adapter` in `spec`’s environment, its log
+`logs/<adapter>.log` under voxy’s cache: the one place an environment and an
+adapter become a worker.
 
+* **Parameters:**
+  * **spec** ([`EnvSpec`](voxy.envs.html.md#voxy.envs.EnvSpec)) – The environment (built here if missing, unless `auto_setup` is False).
+  * **adapter** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The adapter’s name (`workers/<adapter>_adapter.py`).
+  * **model** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Shorthand for `init={"model": model}`.
+  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments of the adapter’s `load`.
+  * **threads** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As `voxy.envs.worker_environ`.
+  * **rootdir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As `voxy.envs.worker_environ`.
+  * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra environment variables of the worker.
+  * **auto_setup** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Build a missing environment (else raise, naming the setup command).
 * **Return type:**
   [`Worker`](#voxy.worker.Worker)

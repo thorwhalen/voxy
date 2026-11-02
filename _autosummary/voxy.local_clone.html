@@ -186,9 +186,6 @@ own environment (built on first use under <code class="docutils literal notransl
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.local_clone.register_local_clone_backend" title="voxy.local_clone.register_local_clone_backend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_local_clone_backend</span></code></a>(backend)</p></td>
 <td><p>Add (or replace) a local cloning backend description.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.local_clone.voxy_cache_dir" title="voxy.local_clone.voxy_cache_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voxy_cache_dir</span></code></a>(*parts)</p></td>
-<td><p>Intermediates (worker scratch audio, logs): <code class="docutils literal notranslate"><span class="pre">$VOXY_CACHE_DIR</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.cache/voxy</span></code>.</p></td>
-</tr>
 </tbody>
 </table>
 <p class="rubric">Classes</p>
@@ -470,16 +467,6 @@ keeps it (and the weights) alive until <code class="docutils literal notranslate
 </dd>
 </dl>
 </dd></dl>
-<dl class="py function">
-<dt class="sig sig-object py" id="voxy.local_clone.voxy_cache_dir">
-<span class="sig-prename descclassname"><span class="pre">voxy.local_clone.</span></span><span class="sig-name descname"><span class="pre">voxy_cache_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">parts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/local_clone.html#voxy_cache_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.local_clone.voxy_cache_dir" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.local_clone.voxy_cache_dir'">¶</a></dt>
-<dd><p>Intermediates (worker scratch audio, logs): <code class="docutils literal notranslate"><span class="pre">$VOXY_CACHE_DIR</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.cache/voxy</span></code>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
-</dd>
-</dl>
-</dd></dl>
 </section>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
@@ -517,7 +504,6 @@ keeps it (and the weights) alive until <code class="docutils literal notranslate
 </li>
 <li><a :data-current="activeSection === '#voxy.local_clone.reference_profile'" class="reference internal" href="#voxy.local_clone.reference_profile"><code class="docutils literal notranslate"><span class="pre">reference_profile()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.local_clone.register_local_clone_backend'" class="reference internal" href="#voxy.local_clone.register_local_clone_backend"><code class="docutils literal notranslate"><span class="pre">register_local_clone_backend()</span></code></a></li>
-<li><a :data-current="activeSection === '#voxy.local_clone.voxy_cache_dir'" class="reference internal" href="#voxy.local_clone.voxy_cache_dir"><code class="docutils literal notranslate"><span class="pre">voxy_cache_dir()</span></code></a></li>
 </ul>
 </div>
 </aside>
@@ -531,7 +517,7 @@ keeps it (and the weights) alive until <code class="docutils literal notranslate
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=4f34e5f2"></script>
+<script src="../_static/documentation_options.js?v=a72e4630"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

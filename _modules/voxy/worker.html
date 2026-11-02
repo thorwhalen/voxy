@@ -365,83 +365,108 @@
 </span><span id="line-162">    <span class="n">spec</span><span class="p">:</span> <span class="s2">"EnvSpec"</span><span class="p">,</span>
 </span><span id="line-163">    <span class="n">adapter</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="line-164">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-165">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-166">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-167">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-168"><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"Worker"</span><span class="p">:</span>
-</span><span id="line-169"><span class="w">    </span><span class="sd">"""A worker for adapter ``adapter`` in ``spec``'s environment (built if missing),</span>
-</span><span id="line-170"><span class="sd">    its model ``model``, its log ``logs/&lt;adapter&gt;.log`` under voxy's cache."""</span>
-</span><span id="line-171">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">ensure_env</span><span class="p">,</span> <span class="n">worker_environ</span>
-</span><span id="line-172">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
-</span><span id="line-173">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.workers</span><span class="w"> </span><span class="kn">import</span> <span class="n">adapter_path</span>
-</span><span id="line-174">
-</span><span id="line-175">    <span class="k">return</span> <span class="n">Worker</span><span class="p">(</span>
-</span><span id="line-176">        <span class="n">ensure_env</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span>
-</span><span id="line-177">        <span class="n">adapter_path</span><span class="p">(</span><span class="n">adapter</span><span class="p">),</span>
-</span><span id="line-178">        <span class="n">init</span><span class="o">=</span><span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="n">model</span><span class="p">},</span>
-</span><span id="line-179">        <span class="n">env</span><span class="o">=</span><span class="n">worker_environ</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span>
-</span><span id="line-180">        <span class="n">log_path</span><span class="o">=</span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"logs"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">adapter</span><span class="si">}</span><span class="s2">.log"</span><span class="p">),</span>
-</span><span id="line-181">    <span class="p">)</span></div>
+</span><span id="line-165">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-166">    <span class="n">init</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-167">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-168">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-169">    <span class="n">env_vars</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-170">    <span class="n">auto_setup</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="line-171"><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"Worker"</span><span class="p">:</span>
+</span><span id="line-172"><span class="w">    </span><span class="sd">"""A worker for adapter ``adapter`` in ``spec``'s environment, its log</span>
+</span><span id="line-173"><span class="sd">    ``logs/&lt;adapter&gt;.log`` under voxy's cache: the one place an environment and an</span>
+</span><span id="line-174"><span class="sd">    adapter become a worker.</span>
+</span><span id="line-175">
+</span><span id="line-176"><span class="sd">    Args:</span>
+</span><span id="line-177"><span class="sd">        spec: The environment (built here if missing, unless ``auto_setup`` is False).</span>
+</span><span id="line-178"><span class="sd">        adapter: The adapter's name (``workers/&lt;adapter&gt;_adapter.py``).</span>
+</span><span id="line-179"><span class="sd">        model: Shorthand for ``init={"model": model}``.</span>
+</span><span id="line-180"><span class="sd">        init: Keyword arguments of the adapter's ``load``.</span>
+</span><span id="line-181"><span class="sd">        threads, rootdir: As ``voxy.envs.worker_environ``.</span>
+</span><span id="line-182"><span class="sd">        env_vars: Extra environment variables of the worker.</span>
+</span><span id="line-183"><span class="sd">        auto_setup: Build a missing environment (else raise, naming the setup command).</span>
+</span><span id="line-184"><span class="sd">    """</span>
+</span><span id="line-185">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">ensure_env</span><span class="p">,</span> <span class="n">env_python</span><span class="p">,</span> <span class="n">is_env_ready</span><span class="p">,</span> <span class="n">worker_environ</span>
+</span><span id="line-186">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.stores</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
+</span><span id="line-187">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.workers</span><span class="w"> </span><span class="kn">import</span> <span class="n">adapter_path</span>
+</span><span id="line-188">
+</span><span id="line-189">    <span class="k">if</span> <span class="n">auto_setup</span><span class="p">:</span>
+</span><span id="line-190">        <span class="n">python</span> <span class="o">=</span> <span class="n">ensure_env</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-191">    <span class="k">elif</span> <span class="n">is_env_ready</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">):</span>
+</span><span id="line-192">        <span class="n">python</span> <span class="o">=</span> <span class="n">env_python</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-193">    <span class="k">else</span><span class="p">:</span>
+</span><span id="line-194">        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+</span><span id="line-195">            <span class="sa">f</span><span class="s2">"The </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> environment isn't built: python -m voxy setup </span><span class="si">{</span><span class="n">adapter</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-196">        <span class="p">)</span>
+</span><span id="line-197">    <span class="k">return</span> <span class="n">Worker</span><span class="p">(</span>
+</span><span id="line-198">        <span class="n">python</span><span class="p">,</span>
+</span><span id="line-199">        <span class="n">adapter_path</span><span class="p">(</span><span class="n">adapter</span><span class="p">),</span>
+</span><span id="line-200">        <span class="n">init</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="p">({</span><span class="s2">"model"</span><span class="p">:</span> <span class="n">model</span><span class="p">}</span> <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{}),</span> <span class="o">**</span><span class="p">(</span><span class="n">init</span> <span class="ow">or</span> <span class="p">{})},</span>
+</span><span id="line-201">        <span class="n">env</span><span class="o">=</span><span class="p">{</span>
+</span><span id="line-202">            <span class="o">**</span><span class="n">worker_environ</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span>
+</span><span id="line-203">            <span class="o">**</span><span class="p">(</span><span class="n">env_vars</span> <span class="ow">or</span> <span class="p">{}),</span>
+</span><span id="line-204">        <span class="p">},</span>
+</span><span id="line-205">        <span class="n">log_path</span><span class="o">=</span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"logs"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">adapter</span><span class="si">}</span><span class="s2">.log"</span><span class="p">),</span>
+</span><span id="line-206">    <span class="p">)</span></div>
 
-</span><span id="line-182">
-</span><span id="line-183">
+</span><span id="line-207">
+</span><span id="line-208">
 <div class="viewcode-block" id="WorkerPool">
 <a class="viewcode-back" href="../../_autosummary/voxy.worker.html#voxy.worker.WorkerPool">[docs]</a>
-</span><span id="line-184"><span class="k">class</span><span class="w"> </span><span class="nc">WorkerPool</span><span class="p">:</span>
-</span><span id="line-185"><span class="w">    </span><span class="sd">"""Shared workers of one adapter, one per ``(model, threads, rootdir)``, each made</span>
-</span><span id="line-186"><span class="sd">    once even when threads ask for it at the same time (so its environment is never</span>
-</span><span id="line-187"><span class="sd">    built twice at once).</span>
-</span><span id="line-188">
-</span><span id="line-189"><span class="sd">    Args:</span>
-</span><span id="line-190"><span class="sd">        spec: The environment the adapter runs in (an ``voxy.envs.EnvSpec``).</span>
-</span><span id="line-191"><span class="sd">        adapter: The adapter's name (``workers/&lt;adapter&gt;_adapter.py``).</span>
-</span><span id="line-192"><span class="sd">        make: ``(spec, adapter, *, model, threads, rootdir) -&gt; Worker``; default</span>
-</span><span id="line-193"><span class="sd">            ``env_worker``.</span>
-</span><span id="line-194"><span class="sd">    """</span>
-</span><span id="line-195">
-</span><span id="line-196">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="s2">"EnvSpec"</span><span class="p">,</span> <span class="n">adapter</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">make</span><span class="o">=</span><span class="n">env_worker</span><span class="p">):</span>
-</span><span id="line-197">        <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make</span> <span class="o">=</span> <span class="n">spec</span><span class="p">,</span> <span class="n">adapter</span><span class="p">,</span> <span class="n">make</span>
-</span><span id="line-198">        <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">Worker</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-199">        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
-</span><span id="line-200">
+</span><span id="line-209"><span class="k">class</span><span class="w"> </span><span class="nc">WorkerPool</span><span class="p">:</span>
+</span><span id="line-210"><span class="w">    </span><span class="sd">"""Shared workers of one adapter, one per ``(model, threads, rootdir)``, each made</span>
+</span><span id="line-211"><span class="sd">    once even when threads ask for it at the same time (so its environment is never</span>
+</span><span id="line-212"><span class="sd">    built twice at once).</span>
+</span><span id="line-213">
+</span><span id="line-214"><span class="sd">    Args:</span>
+</span><span id="line-215"><span class="sd">        spec: The environment the adapter runs in (an ``voxy.envs.EnvSpec``).</span>
+</span><span id="line-216"><span class="sd">        adapter: The adapter's name (``workers/&lt;adapter&gt;_adapter.py``).</span>
+</span><span id="line-217"><span class="sd">        make: ``(spec, adapter, *, model, threads, rootdir) -&gt; Worker``; default</span>
+</span><span id="line-218"><span class="sd">            ``env_worker``.</span>
+</span><span id="line-219"><span class="sd">    """</span>
+</span><span id="line-220">
+</span><span id="line-221">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="s2">"EnvSpec"</span><span class="p">,</span> <span class="n">adapter</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">make</span><span class="o">=</span><span class="n">env_worker</span><span class="p">):</span>
+</span><span id="line-222">        <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make</span> <span class="o">=</span> <span class="n">spec</span><span class="p">,</span> <span class="n">adapter</span><span class="p">,</span> <span class="n">make</span>
+</span><span id="line-223">        <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">Worker</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-224">        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+</span><span id="line-225">
 <div class="viewcode-block" id="WorkerPool.get">
 <a class="viewcode-back" href="../../_autosummary/voxy.worker.html#voxy.worker.WorkerPool.get">[docs]</a>
-</span><span id="line-201">    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span>
-</span><span id="line-202">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-203">        <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-204">        <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-205">        <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-206">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"Worker"</span><span class="p">:</span>
-</span><span id="line-207"><span class="w">        </span><span class="sd">"""The worker for this model, threads and data root (made on first use)."""</span>
-</span><span id="line-208">        <span class="n">rootdir</span> <span class="o">=</span> <span class="n">rootdir</span> <span class="ow">or</span> <span class="kc">None</span>  <span class="c1"># "" is the default data root, like None</span>
-</span><span id="line-209">        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rootdir</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">rootdir</span><span class="p">))</span>
-</span><span id="line-210">        <span class="k">if</span> <span class="p">(</span><span class="n">worker</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-211">            <span class="k">return</span> <span class="n">worker</span>
-</span><span id="line-212">        <span class="c1"># One lock for the whole pool, not one per key: every key builds into the</span>
-</span><span id="line-213">        <span class="c1"># same environment folder, and two uv installs there at once would clash.</span>
-</span><span id="line-214">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-</span><span id="line-215">            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">:</span>
-</span><span id="line-216">                <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make</span><span class="p">(</span>
-</span><span id="line-217">                    <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span>
-</span><span id="line-218">                    <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">,</span>
-</span><span id="line-219">                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-</span><span id="line-220">                    <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span>
-</span><span id="line-221">                    <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">,</span>
-</span><span id="line-222">                <span class="p">)</span>
-</span><span id="line-223">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+</span><span id="line-226">    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span>
+</span><span id="line-227">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-228">        <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-229">        <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-230">        <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-231">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"Worker"</span><span class="p">:</span>
+</span><span id="line-232"><span class="w">        </span><span class="sd">"""The worker for this model, threads and data root (made on first use)."""</span>
+</span><span id="line-233">        <span class="n">rootdir</span> <span class="o">=</span> <span class="n">rootdir</span> <span class="ow">or</span> <span class="kc">None</span>  <span class="c1"># "" is the default data root, like None</span>
+</span><span id="line-234">        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">rootdir</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">rootdir</span><span class="p">))</span>
+</span><span id="line-235">        <span class="k">if</span> <span class="p">(</span><span class="n">worker</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-236">            <span class="k">return</span> <span class="n">worker</span>
+</span><span id="line-237">        <span class="c1"># One lock for the whole pool, not one per key: every key builds into the</span>
+</span><span id="line-238">        <span class="c1"># same environment folder, and two uv installs there at once would clash.</span>
+</span><span id="line-239">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+</span><span id="line-240">            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">:</span>
+</span><span id="line-241">                <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make</span><span class="p">(</span>
+</span><span id="line-242">                    <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span>
+</span><span id="line-243">                    <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">,</span>
+</span><span id="line-244">                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+</span><span id="line-245">                    <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span>
+</span><span id="line-246">                    <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">,</span>
+</span><span id="line-247">                <span class="p">)</span>
+</span><span id="line-248">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
 
-</span><span id="line-224">
+</span><span id="line-249">
 <div class="viewcode-block" id="WorkerPool.close">
 <a class="viewcode-back" href="../../_autosummary/voxy.worker.html#voxy.worker.WorkerPool.close">[docs]</a>
-</span><span id="line-225">    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-226"><span class="w">        </span><span class="sd">"""Stop every worker (free their memory); the next ``get`` starts afresh."""</span>
-</span><span id="line-227">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-</span><span id="line-228">            <span class="n">workers</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="p">{}</span>
-</span><span id="line-229">        <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">workers</span><span class="p">:</span>
-</span><span id="line-230">            <span class="k">try</span><span class="p">:</span>
-</span><span id="line-231">                <span class="n">worker</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="line-232">            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - one stuck worker must not keep the rest</span>
-</span><span id="line-233">                <span class="k">pass</span></div>
+</span><span id="line-250">    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-251"><span class="w">        </span><span class="sd">"""Stop every worker (free their memory); the next ``get`` starts afresh."""</span>
+</span><span id="line-252">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+</span><span id="line-253">            <span class="n">workers</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="p">{}</span>
+</span><span id="line-254">        <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">workers</span><span class="p">:</span>
+</span><span id="line-255">            <span class="k">try</span><span class="p">:</span>
+</span><span id="line-256">                <span class="n">worker</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-257">            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - one stuck worker must not keep the rest</span>
+</span><span id="line-258">                <span class="k">pass</span></div>
 </div>
 
 </span></code></pre></div>
@@ -457,7 +482,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=4f34e5f2"></script>
+    <script src="../../_static/documentation_options.js?v=a72e4630"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

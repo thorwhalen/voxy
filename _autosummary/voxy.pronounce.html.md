@@ -67,6 +67,7 @@ without torch.
 | [`checks_by_line`](#voxy.pronounce.checks_by_line)(risks, \*, readings[, expected])    | [`checks_from_risks()`](#voxy.pronounce.checks_from_risks), grouped by the line each risk is on.                                                                                                                           |
 | [`checks_from_risks`](#voxy.pronounce.checks_from_risks)(risks, \*, readings[, expected]) | `verify_words` checks for the flagged words that have known IPA readings.                                                                                                                                                            |
 | [`checks_verifier`](#voxy.pronounce.checks_verifier)(checks, \*[, emitter, ...])        | A [`Verifier`](#voxy.pronounce.Verifier) for legacy `checks` ([`checks_by_line()`](#voxy.pronounce.checks_by_line)): words by spelling.                                                              |
+| [`close_phonemes`](#voxy.pronounce.close_phonemes)()                                   | Stop the recogniser workers (free their memory).                                                                                                                                                                                     |
 | [`crop_scorer`](#voxy.pronounce.crop_scorer)(\*, emitter[, padding, margin])        | The word alone, cut at its ASR times (`padding` each side), scored by [`score_readings()`](#voxy.pronounce.score_readings); ASR word times are often too loose for this.                                                |
 | [`ctc_log_likelihood`](#voxy.pronounce.ctc_log_likelihood)(log_probs, target, \*[, blank]) | `log P(target | log_probs)` under CTC (the forward algorithm, in log space).                                                                                                                                                         |
 | [`espeak_phonemizer`](#voxy.pronounce.espeak_phonemizer)(\*[, model, threads, rootdir])   | The default [`Phonemizer`](#voxy.pronounce.Phonemizer): espeak-ng (bundled by `espeakng-loader`), run in the recogniser's env, so its IPA is the recogniser's own alphabet.                                         |
@@ -445,6 +446,13 @@ A checked word ASR never found is a finding without a verdict.
 
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Finding`](#voxy.pronounce.Finding)]]
+
+### voxy.pronounce.close_phonemes()
+
+Stop the recogniser workers (free their memory).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### voxy.pronounce.crop_scorer(, emitter, padding=0.08, margin=0.5)
 
