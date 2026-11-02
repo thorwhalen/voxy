@@ -244,6 +244,10 @@ def test_unique_slugs_deepens_only_names_that_collide():
 
 def test_unique_slugs_names_an_unsluggable_stem_source_not_its_folder():
     assert refprep.unique_slugs(["/s/日本.wav", "/s/x.wav"]) == ["source", "x"]
+    assert refprep.unique_slugs(["/s/日本.wav", "/t/日本.wav"]) == [
+        "s-source",
+        "t-source",
+    ]
 
 
 def test_plan_clips_respects_max_length():
