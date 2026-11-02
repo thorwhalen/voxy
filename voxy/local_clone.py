@@ -49,7 +49,9 @@ import numpy as np
 
 from voxy.base import Speech, SpeechModel, VoiceProfile, _resolve_text_input
 from voxy.envs import EnvSpec
-from voxy.stores import VOXY_CACHE_DIR_ENVVAR, voxy_cache_dir  # noqa: F401 - re-exported
+# VOXY_CACHE_DIR_ENVVAR is re-exported for compatibility (it moved to voxy.stores);
+# remove it after the next release.
+from voxy.stores import VOXY_CACHE_DIR_ENVVAR, voxy_cache_dir  # noqa: F401
 from voxy.textsplit import split_text
 from voxy.wavutil import read_wav, silence, trim_silence, write_wav
 from voxy.worker import Worker, env_worker

@@ -276,9 +276,13 @@ def test_env_worker_is_the_one_factory_for_local_workers(tmp_path, monkeypatch):
     assert w.env["COQUI_TOS_AGREED"] == "1" and "OMP_NUM_THREADS" in w.env
     assert w.log_path == tmp_path / "cache" / "logs" / "asr.log"
 
-    generate = WorkerGenerate(LOCAL_CLONE_BACKENDS["xtts"], env_vars={"COQUI_TOS_AGREED": "1"})
+    generate = WorkerGenerate(LOCAL_CLONE_BACKENDS["f5tts"], env_vars={"COQUI_TOS_AGREED": "1"})
     made = generate._make_worker()
-    assert made.env["COQUI_TOS_AGREED"] == "1" and made.adapter.endswith("xtts_adapter.py")
+    assert made.env["COQUI_TOS_AGREED"] == "1" and made.adapter.endswith("f5tts_adapter.py")
+    assert made.init == {"model": "F5TTS_v1_Base"}  # the backend's init, unchanged
+    monkeypatch.undo()  # the real ensure_env again: the env is missing under tmp_path
+    with pytest.raises(RuntimeError, match="setup f5tts"):
+        WorkerGenerate(LOCAL_CLONE_BACKENDS["f5tts"], rootdir=tmp_path, auto_setup=False)._make_worker()
 
 
 def test_ensure_env_builds_once_then_reuses(tmp_path):
