@@ -131,6 +131,43 @@ def test_worker_that_fails_to_load_raises_and_stops(tmp_path):
     assert not worker.running
 
 
+def test_close_from_another_thread_waits_for_the_call_in_flight(tmp_path):
+    """close() takes the call lock, so it cannot pull a pipe from under a call (#80)."""
+    import threading
+
+    adapter = tmp_path / "e_adapter.py"
+    adapter.write_text("def load(**kw): return kw\n")
+    worker = Worker(sys.executable, adapter, log_path=tmp_path / "w.log")
+    in_call, release = threading.Event(), threading.Event()
+
+    def call_in_flight():  # holds the lock as call() does
+        with worker._lock:
+            in_call.set()
+            release.wait(5)
+
+    caller = threading.Thread(target=call_in_flight)
+    caller.start()
+    in_call.wait(5)
+    closer = threading.Thread(target=worker.close)
+    closer.start()
+    closer.join(0.2)
+    assert closer.is_alive()  # waiting for the call
+    release.set()
+    closer.join(5)
+    caller.join(5)
+    assert not closer.is_alive()
+
+
+def test_a_closed_pipe_is_reported_as_the_worker_exiting(tmp_path):
+    adapter = tmp_path / "f_adapter.py"
+    adapter.write_text("def load(**kw): return kw\ndef ping(state): return {}\n")
+    worker = Worker(sys.executable, adapter, log_path=tmp_path / "w.log")
+    worker.call("ping")
+    worker._process.stdin.close()  # as a close() racing the write would leave it
+    with pytest.raises(WorkerError, match="exited"):
+        worker._request({"op": "ping"})
+
+
 def test_ensure_env_builds_once_then_reuses(tmp_path):
     spec = EnvSpec("demo", ("numpy",))
     commands = []
