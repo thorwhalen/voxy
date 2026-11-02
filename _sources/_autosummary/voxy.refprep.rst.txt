@@ -9,6 +9,9 @@ voxy.refprep
    .. autosummary::
    
       SPEAKER_SCORE_RANGE
+      SLUG_PATTERN
+      RUN_ID_TIME_FORMAT
+      LEGACY_RUN
       DENOISE_FILTERS
       DF_SAMPLE_RATE
    
@@ -21,6 +24,8 @@ voxy.refprep
       condition
       conditioning_filters
       deepfilternet_denoise
+      forget
+      latest_runs
       load_manifest
       partial_transcribe
       plan_clips

@@ -1,4 +1,4 @@
-> built 2026-11-02 10:07 UTC from f356ff4 (main) · voxy 0.0.51. Details: build_info.json
+> built 2026-11-02 10:19 UTC from 5ad4487 (main) · voxy 0.0.52. Details: build_info.json
 
 # index.html.md
 
@@ -255,7 +255,7 @@ python -m voxy prep ada interview.m4a --speaker dominant   # drop the interviewe
 python -m voxy diagnose spec.json --out renders/first-listen --publish
 ```
 
-**Reference preparation** (`voxy.refprep.prepare_reference`): converts any recording to mono WAV, denoises (`denoise=` `afftdn`, `anlmdn`, or `deepfilternet`, which lowers real room noise far more but builds its own torch environment on first use) and normalises loudness (ffmpeg), transcribes locally with Whisper (scribed’s faster-whisper backend) with word timings, cuts clips of 3-12 s at sentence boundaries, and scores each clip (signal-to-noise, clipping, level, ASR confidence, speaking rate). With `speaker=voxy.speakers.speaker_filter()` (`--speaker`) it keeps one voice: ECAPA speaker embeddings (SpeechBrain, in its own environment) decide each transcribed turn as a whole against the target’s voice print (the recording’s dominant voice by default, or `speakers.voice_print(clean_recordings)`), and interviewer questions, interjections such as “Yes.” and untranscribed “uh-huh”s never end up inside a clip. Clips and `manifest.jsonl` go to the voice’s samples store; `best_references(manifest)` picks reference clips and `voxy.finetune.export_dataset` writes training sets (LJSpeech or F5-TTS layout).
+**Reference preparation** (`voxy.refprep.prepare_reference`): converts any recording to mono WAV, denoises (`denoise=` `afftdn`, `anlmdn`, or `deepfilternet`, which lowers real room noise far more but builds its own torch environment on first use) and normalises loudness (ffmpeg), transcribes locally with Whisper (scribed’s faster-whisper backend) with word timings, cuts clips of 3-12 s at sentence boundaries, and scores each clip (signal-to-noise, clipping, level, ASR confidence, speaking rate). With `speaker=voxy.speakers.speaker_filter()` (`--speaker`) it keeps one voice: ECAPA speaker embeddings (SpeechBrain, in its own environment) decide each transcribed turn as a whole against the target’s voice print (the recording’s dominant voice by default, or `speakers.voice_print(clean_recordings)`), and interviewer questions, interjections such as “Yes.” and untranscribed “uh-huh”s never end up inside a clip. Clips and `manifest.jsonl` go to the voice’s samples store, which a run only ever adds to: running again (more recordings, or the same file re-cut) writes under fresh keys and keeps every earlier clip, its bytes and its manifest entry, so saved reference profiles stay valid; `refprep.forget(samples, source, run=None, dry_run=False)` is the one function that removes a source’s clips (`dry_run=True` lists what it would delete). `best_references(manifest)` picks reference clips and `voxy.finetune.export_dataset` writes training sets (LJSpeech or F5-TTS layout), both from each source’s latest run (`refprep.latest_runs`; `latest_only=False` for every run).
 
 **Diagnosis pages** (`voxy.diagnosis`): render one text through a grid of models and parameters, then build one page with a player per variant, its parameters, generation time and real-time factor. Each variant has a stable ID (e.g. `VX-7KQ2`) derived from its configuration, not the text, so listeners can say “use VX-7KQ2” across pages and chapters; each listener can rate and annotate variants and copy their notes. A spec:
 
@@ -1731,9 +1731,9 @@ Commands to run each recipe on a rented GPU are in `finetune_commands`.
 | [`export_dataset`](_autosummary/voxy.finetune.html.md#voxy.finetune.export_dataset)(manifest, samples, out_dir, \*)     | Write the training set to `out_dir` and return a summary.                        |
 |-----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
 | [`finetune_commands`](_autosummary/voxy.finetune.html.md#voxy.finetune.finetune_commands)(backend, dataset_dir, \*[, ...]) | Shell commands to fine-tune `backend` on an exported dataset (run on a GPU box). |
-| [`select_clips`](_autosummary/voxy.finetune.html.md#voxy.finetune.select_clips)(manifest, \*[, min_score, ...])       | Clips good enough to train on (score and length within bounds).                  |
+| [`select_clips`](_autosummary/voxy.finetune.html.md#voxy.finetune.select_clips)(manifest, \*[, min_score, ...])       | Clips good enough to train on (score and length within bounds, some text).       |
 
-### voxy.finetune.export_dataset(manifest, samples, out_dir, , format='ljspeech', min_score=0.5, min_seconds=1.5, max_seconds=15.0, eval_fraction=0.05)
+### voxy.finetune.export_dataset(manifest, samples, out_dir, , format='ljspeech', min_score=0.5, min_seconds=1.5, max_seconds=15.0, eval_fraction=0.05, latest_only=True)
 
 Write the training set to `out_dir` and return a summary.
 
@@ -1741,6 +1741,7 @@ Write the training set to `out_dir` and return a summary.
   * **manifest** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]) – From `prepare_reference` (or `refprep.load_manifest`).
   * **samples** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)) – The store the clips are in (`key -> wav bytes`).
   * **format** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – One of `FORMATS`.
+  * **latest_only** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Train on each source’s latest run only (see `select_clips`).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
@@ -1756,9 +1757,19 @@ True
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### voxy.finetune.select_clips(manifest, , min_score=0.5, min_seconds=1.5, max_seconds=15.0)
+### voxy.finetune.select_clips(manifest, , min_score=0.5, min_seconds=1.5, max_seconds=15.0, latest_only=True)
 
-Clips good enough to train on (score and length within bounds).
+Clips good enough to train on (score and length within bounds, some text).
+
+Entries without a numeric `score` or `duration`, a string `key` or `text`
+(hand-added, or from an older voxy) are skipped. With `latest_only` (the default)
+it picks from `refprep.latest_runs(manifest)`, so a source processed twice is
+trained on once.
+
+```pycon
+>>> select_clips([{"key": "tape1.wav", "text": "x"}, {"score": 0.9}])
+[]
+```
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
@@ -3472,13 +3483,18 @@ The steps, each a function you can call alone or replace:
 `prepare_reference` runs them all and saves the clips plus `manifest.jsonl` in
 the voice’s samples store (`voxy.stores.samples_store`), so any backend (a
 reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same data.
+It only ever adds to the store, keeping every run; `latest_runs` gives each source’s
+latest run, and `forget` is the one function that deletes clips.
 
 ### Module Attributes
 
-| [`SPEAKER_SCORE_RANGE`](_autosummary/voxy.refprep.html.md#voxy.refprep.SPEAKER_SCORE_RANGE)   | Speaker similarity mapped to the score's `speaker` part (0 at the low end, 1 at the high).   |
-|------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
-| [`DENOISE_FILTERS`](_autosummary/voxy.refprep.html.md#voxy.refprep.DENOISE_FILTERS)       | no denoising).                                                                               |
-| [`DF_SAMPLE_RATE`](_autosummary/voxy.refprep.html.md#voxy.refprep.DF_SAMPLE_RATE)        | DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.     |
+| [`SPEAKER_SCORE_RANGE`](_autosummary/voxy.refprep.html.md#voxy.refprep.SPEAKER_SCORE_RANGE)   | Speaker similarity mapped to the score's `speaker` part (0 at the low end, 1 at the high).                                                                   |
+|------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`SLUG_PATTERN`](_autosummary/voxy.refprep.html.md#voxy.refprep.SLUG_PATTERN)          | The slugs this module gives sources (see `_slug`), and the clip keys made from them.                                                                         |
+| [`RUN_ID_TIME_FORMAT`](_autosummary/voxy.refprep.html.md#voxy.refprep.RUN_ID_TIME_FORMAT)    | its UTC start time to the microsecond, plus random hex characters, so ids sort by time and two runs never share one.                                         |
+| [`LEGACY_RUN`](_autosummary/voxy.refprep.html.md#voxy.refprep.LEGACY_RUN)            | `forget(..., run=LEGACY_RUN)` selects entries written before runs were recorded (no `run` field), matching even a relative `source` exactly as it was typed. |
+| [`DENOISE_FILTERS`](_autosummary/voxy.refprep.html.md#voxy.refprep.DENOISE_FILTERS)       | no denoising).                                                                                                                                               |
+| [`DF_SAMPLE_RATE`](_autosummary/voxy.refprep.html.md#voxy.refprep.DF_SAMPLE_RATE)        | DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.                                                                     |
 
 ### Functions
 
@@ -3488,6 +3504,8 @@ reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same d
 | [`condition`](_autosummary/voxy.refprep.html.md#voxy.refprep.condition)(src, dst, \*[, sample_rate, start, ...]) | Convert `src` (any format ffmpeg reads) to clean mono 16-bit WAV at `dst`.                                                                                                                                |
 | [`conditioning_filters`](_autosummary/voxy.refprep.html.md#voxy.refprep.conditioning_filters)(\*[, denoise, ...])           | The ffmpeg audio filter chain for `condition`.                                                                                                                                                            |
 | [`deepfilternet_denoise`](_autosummary/voxy.refprep.html.md#voxy.refprep.deepfilternet_denoise)(src, dst, \*[, ...])         | Denoise the 48 kHz WAV `src` into `dst` with DeepFilterNet 3.                                                                                                                                             |
+| [`forget`](_autosummary/voxy.refprep.html.md#voxy.refprep.forget)(samples, source, \*[, run, dry_run, log])   | Remove `source`'s clips (only those of one `run`, if given) from a samples store: its manifest entries, their clip keys and the source's conditioned key.                                                 |
+| [`latest_runs`](_autosummary/voxy.refprep.html.md#voxy.refprep.latest_runs)(manifest)                              | `manifest` with, per source, only the entries of its most recent run.                                                                                                                                     |
 | [`load_manifest`](_autosummary/voxy.refprep.html.md#voxy.refprep.load_manifest)(samples)                             | The manifest saved by `prepare_reference` in a samples store.                                                                                                                                             |
 | [`partial_transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.partial_transcribe)([rootdir])                      | The default transcriber, bound to a data root.                                                                                                                                                            |
 | [`plan_clips`](_autosummary/voxy.refprep.html.md#voxy.refprep.plan_clips)(segments, \*[, min_seconds, ...])       | Clips `[{start, end, text, words}]` cut between words, ending sentences where possible.                                                                                                                   |
@@ -3496,7 +3514,7 @@ reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same d
 | [`summarize`](_autosummary/voxy.refprep.html.md#voxy.refprep.summarize)(manifest)                                | Totals for a manifest: clips, minutes, minutes above score thresholds.                                                                                                                                    |
 | [`transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe)(audio, \*[, language, model, ...])      | Timed segments `[{start, end, text, confidence, words: [...]}, ...]` of `audio`.                                                                                                                          |
 | [`transcribe_text`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe_text)(audio, \*\*kwargs)                 | The transcript of `audio` as one string.                                                                                                                                                                  |
-| [`unique_slugs`](_autosummary/voxy.refprep.html.md#voxy.refprep.unique_slugs)(sources)                              | One distinct slug per source: the file's stem, plus parent folders only within a group of sources sharing a stem (stem tracks: every one is `vocals.wav`), numbered where folders cannot tell them apart. |
+| [`unique_slugs`](_autosummary/voxy.refprep.html.md#voxy.refprep.unique_slugs)(sources, \*[, reserved])              | One distinct slug per source: the file's stem, plus parent folders only within a group of sources sharing a stem (stem tracks: every one is `vocals.wav`), numbered where folders cannot tell them apart. |
 | [`with_deepfilternet`](_autosummary/voxy.refprep.html.md#voxy.refprep.with_deepfilternet)([conditioner, denoiser, ...])   | A `conditioner` that denoises with DeepFilterNet between two ffmpeg passes.                                                                                                                               |
 
 ### voxy.refprep.DENOISE_FILTERS *= {'afftdn': ['afftdn=nr=12:nf=-50:tn=1'], 'anlmdn': ['anlmdn=s=0.0005'], 'deepfilternet': [], None: []}*
@@ -3510,13 +3528,38 @@ no denoising).
 
 DeepFilterNet works at 48 kHz; it needs an old torch/torchaudio pair, hence its own env.
 
+### voxy.refprep.LEGACY_RUN *= 'legacy'*
+
+`forget(..., run=LEGACY_RUN)` selects entries written before runs were recorded
+(no `run` field), matching even a relative `source` exactly as it was typed.
+Older voxy rewrote the whole manifest on every call, so such entries all come from
+one call, in one folder: a relative string among them names one file.
+
+### voxy.refprep.RUN_ID_TIME_FORMAT *= '%Y%m%dT%H%M%S.%fZ'*
+
+its UTC start time to the microsecond, plus
+random hex characters, so ids sort by time and two runs never share one.
+
+* **Type:**
+  A run id (`run` in each manifest entry)
+
+### voxy.refprep.SLUG_PATTERN *= re.compile('[a-z0-9-]+')*
+
+The slugs this module gives sources (see `_slug`), and the clip keys made from them.
+
 ### voxy.refprep.SPEAKER_SCORE_RANGE *= (0.3, 0.7)*
 
 Speaker similarity mapped to the score’s `speaker` part (0 at the low end, 1 at the high).
 
-### voxy.refprep.best_references(manifest, , n=3, min_seconds=5.0, max_seconds=12.0, min_score=0.0)
+### voxy.refprep.best_references(manifest, , n=3, min_seconds=5.0, max_seconds=12.0, min_score=0.0, latest_only=True)
 
 The `n` best clips for zero-shot reference (length in range, best score first).
+
+With `latest_only` (the default) it picks from `latest_runs(manifest)`: an older
+run of a source is the same audio cut again, so its clips would come back as
+near-duplicates of the newer ones, and the newer run is the one made with the
+current settings. A reference saved from an older run stays valid either way (its
+key and bytes are kept); pass `latest_only=False` to choose among every run.
 
 ```pycon
 >>> m = [{"duration": 8, "score": 0.7}, {"duration": 2, "score": 0.9},
@@ -3564,6 +3607,76 @@ no resident worker.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.refprep.forget(samples, source, \*, run=None, dry_run=False, log=<built-in function print>)
+
+Remove `source`’s clips (only those of one `run`, if given) from a samples
+store: its manifest entries, their clip keys and the source’s conditioned key.
+Returns the deleted keys (with `dry_run=True`: the keys it would delete, changing
+nothing).
+
+The only function in voxy that deletes voice samples (`prepare_reference` never
+does), so it is careful about what it deletes:
+
+- entries match `source` by real path: their `source_path`, or, for entries an
+  older voxy wrote without one, their `source` only if it is absolute. A relative
+  `source` names whatever file had that name where that run started, so such
+  entries never match; they are logged, and `run=LEGACY_RUN` removes them
+  deliberately (matching `source` exactly as recorded, as in
+  `forget(samples, "vocals.wav", run=LEGACY_RUN)`);
+- only keys of the form this module writes (`clips/<slug>-NNNN.wav`,
+  `conditioned/<slug>.wav`), with a slug taken from a matched entry’s clip key, are
+  deleted, never a top-level sample;
+- a key a remaining entry names, or whose slug a remaining entry uses, is kept;
+- one writer at a time: two processes changing one store at once can lose a
+  manifest update (the store has no lock);
+- the manifest is read just before it is written, and written first, so an
+  interruption leaves unlisted files, never a manifest naming deleted ones.
+
+```pycon
+>>> store = {"clips/a-0001.wav": b"A", "conditioned/a.wav": b"C",
+...          "clips/b-0001.wav": b"B", "tape1.wav": b"T"}
+>>> store[MANIFEST_KEY] = _dump_manifest([
+...     {"key": "clips/a-0001.wav", "slug": "a", "source": "/s/a.wav"},
+...     {"key": "clips/b-0001.wav", "slug": "b", "source": "/s/b.wav"},
+...     {"key": "tape1.wav", "source": "/s/a.wav"}])
+>>> forget(store, "/s/a.wav", dry_run=True)
+['clips/a-0001.wav', 'conditioned/a.wav']
+>>> len(load_manifest(store)), len(store)
+(3, 5)
+>>> forget(store, "/s/a.wav")
+['clips/a-0001.wav', 'conditioned/a.wav']
+>>> [e["key"] for e in load_manifest(store)], sorted(store)
+(['clips/b-0001.wav'], ['clips/b-0001.wav', 'manifest.jsonl', 'tape1.wav'])
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### voxy.refprep.latest_runs(manifest)
+
+`manifest` with, per source, only the entries of its most recent run.
+
+`prepare_reference` keeps every run, so a source processed twice is in the
+manifest twice (the same audio, cut again); consumers that want one copy of each
+recording (training sets, reference picks, summaries) read this. Sources are told
+apart by real path (`source_path`, or an absolute `source`); entries with no
+`run` count as one run older than any recorded one; entries whose source cannot
+be known (none, or a relative path from an older voxy) are all kept. Order is kept.
+A source whose newest run gave no clips keeps its older run’s entries.
+
+```pycon
+>>> m = [{"key": "a1", "source_path": "/a", "run": "20260101T000000.000000Z-x"},
+...      {"key": "a2", "source_path": "/a", "run": "20261101T000000.000000Z-y"},
+...      {"key": "a0", "source_path": "/a"},
+...      {"key": "b1", "source_path": "/b"},
+...      {"key": "t", "source": "tape.wav"}]
+>>> [e["key"] for e in latest_runs(m)]
+['a2', 'b1', 't']
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]
 
 ### voxy.refprep.load_manifest(samples)
 
@@ -3623,9 +3736,22 @@ Condition, transcribe, cut and score `sources`; save clips and manifest; return 
     (`voxy.speakers.speaker_filter`); None keeps every voice.
 * **Returns:**
   one dict per clip (`key`, `path` if on disk, `text`,
-  `source`, `start`, `end`, and the `score_clip` measures), best first.
+  `source` as given, `source_path` (its real path), `slug`, `run` (one id
+  per call), `start`, `end`, and the `score_clip` measures), best first,
+  earlier runs’ entries included.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+It never deletes or overwrites anything in the store. Run again into the same store
+(another recording, or the same file again), it gives this run’s sources fresh slugs
+that no manifest entry and no clip or conditioned key in the store already uses, so
+every earlier clip keeps its key and its bytes, and saved reference profiles
+(`ref_audio` + `ref_text`) stay valid. The manifest keeps every earlier entry and
+adds the new ones (re-read just before writing, so a `forget` or another run that
+finished meanwhile is not undone). Re-processing a source therefore adds clips beside
+its earlier ones; consumers read `latest_runs(manifest)` to see one run per source,
+and `forget(samples, source, run=...)` removes the others explicitly. A file given
+twice in one call (by real path) is processed once.
 
 ### voxy.refprep.score_clip(samples, sample_rate, , words=(), text='', min_seconds=3.0, max_seconds=12.0)
 
@@ -3676,7 +3802,7 @@ The transcript of `audio` as one string.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### voxy.refprep.unique_slugs(sources)
+### voxy.refprep.unique_slugs(sources, , reserved=())
 
 One distinct slug per source: the file’s stem, plus parent folders only within a
 group of sources sharing a stem (stem tracks: every one is `vocals.wav`), numbered
@@ -3690,6 +3816,13 @@ and a source whose stem is unique keeps it.
 ['talk', 'talk-2']
 >>> unique_slugs(["/s/a.wav", "/s/a.wav", "/s/a-2.wav"])
 ['a', 'a-3', 'a-2']
+```
+
+`reserved` slugs (already used in the store) are never given out:
+
+```pycon
+>>> unique_slugs(["/t/vocals.wav"], reserved=["vocals"])
+['vocals-2']
 ```
 
 * **Return type:**
@@ -5508,7 +5641,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 10:07 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/f356ff4509ff2f4fe072458c262426e70eec2ddc"><code>f356ff4</code></a> on branch <code>main</code>, for **voxy 0.0.51** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 10:19 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/5ad4487dd1f067236f86a79bddfbb56d450032c5"><code>5ad4487</code></a> on branch <code>main</code>, for **voxy 0.0.52** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -5517,7 +5650,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/f356ff4509ff2f4fe072458c262426e70eec2ddc"><code>f356ff4509ff2f4fe072458c262426e70eec2ddc</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/5ad4487dd1f067236f86a79bddfbb56d450032c5"><code>5ad4487dd1f067236f86a79bddfbb56d450032c5</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -5528,9 +5661,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41425796740">41425796740</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41427461629">41427461629</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>f356ff4509ff2f4fe072458c262426e70eec2ddc</code> (in the history of the built commit) |
+| Event commit | <code>5ad4487dd1f067236f86a79bddfbb56d450032c5</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5555,13 +5688,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.51/">0.0.51</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.52/">0.0.52</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout f356ff4509ff2f4fe072458c262426e70eec2ddc
+git checkout 5ad4487dd1f067236f86a79bddfbb56d450032c5
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

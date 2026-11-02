@@ -27,9 +27,9 @@ Commands to run each recipe on a rented GPU are in `finetune_commands`.
 | [`export_dataset`](#voxy.finetune.export_dataset)(manifest, samples, out_dir, \*)     | Write the training set to `out_dir` and return a summary.                        |
 |-----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
 | [`finetune_commands`](#voxy.finetune.finetune_commands)(backend, dataset_dir, \*[, ...]) | Shell commands to fine-tune `backend` on an exported dataset (run on a GPU box). |
-| [`select_clips`](#voxy.finetune.select_clips)(manifest, \*[, min_score, ...])       | Clips good enough to train on (score and length within bounds).                  |
+| [`select_clips`](#voxy.finetune.select_clips)(manifest, \*[, min_score, ...])       | Clips good enough to train on (score and length within bounds, some text).       |
 
-### voxy.finetune.export_dataset(manifest, samples, out_dir, , format='ljspeech', min_score=0.5, min_seconds=1.5, max_seconds=15.0, eval_fraction=0.05)
+### voxy.finetune.export_dataset(manifest, samples, out_dir, , format='ljspeech', min_score=0.5, min_seconds=1.5, max_seconds=15.0, eval_fraction=0.05, latest_only=True)
 
 Write the training set to `out_dir` and return a summary.
 
@@ -37,6 +37,7 @@ Write the training set to `out_dir` and return a summary.
   * **manifest** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]) – From `prepare_reference` (or `refprep.load_manifest`).
   * **samples** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)) – The store the clips are in (`key -> wav bytes`).
   * **format** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – One of `FORMATS`.
+  * **latest_only** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Train on each source’s latest run only (see `select_clips`).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
@@ -52,9 +53,19 @@ True
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### voxy.finetune.select_clips(manifest, , min_score=0.5, min_seconds=1.5, max_seconds=15.0)
+### voxy.finetune.select_clips(manifest, , min_score=0.5, min_seconds=1.5, max_seconds=15.0, latest_only=True)
 
-Clips good enough to train on (score and length within bounds).
+Clips good enough to train on (score and length within bounds, some text).
+
+Entries without a numeric `score` or `duration`, a string `key` or `text`
+(hand-added, or from an older voxy) are skipped. With `latest_only` (the default)
+it picks from `refprep.latest_runs(manifest)`, so a source processed twice is
+trained on once.
+
+```pycon
+>>> select_clips([{"key": "tape1.wav", "text": "x"}, {"score": 0.9}])
+[]
+```
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
