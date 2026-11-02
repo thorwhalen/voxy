@@ -27,6 +27,7 @@ from voxy.library import (
     clone_from_samples,
     design_from_description,
 )
+from voxy.splice import replace_words
 from voxy.facade import (
     text_to_speech,
     speech_to_speech,

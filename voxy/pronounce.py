@@ -383,8 +383,8 @@ def word_indices(words: Sequence[Mapping], word: str) -> list[int]:
     >>> word_indices([{"text": " est…"}], "est")
     [0]
     """
-    target = _normal_word(word)
-    return [i for i, w in enumerate(words) if _normal_word(w["text"]) == target]
+    target = normal_word(word)
+    return [i for i, w in enumerate(words) if normal_word(w["text"]) == target]
 
 
 def verify_words(
@@ -1187,7 +1187,12 @@ def heteronym_readings(language: str = DFLT_LANGUAGE) -> dict[str, dict[str, str
     return {w: dict(r) for w, r in table.items() if not w.startswith("_")}
 
 
-def _normal_word(word: str) -> str:
+def normal_word(word: str) -> str:
+    """``word`` as compared with ASR words: stripped, edge punctuation off, casefolded.
+
+    >>> normal_word(" Smith’s,")
+    "smith's"
+    """
     return word.strip().strip(EDGE_PUNCTUATION).replace("’", "'").casefold()
 
 
@@ -1264,8 +1269,8 @@ def align_words(
     """
     from difflib import SequenceMatcher
 
-    said = [_normal_word(w) for _, w, _ in _text_words(text, elisions=elisions)]
-    heard = [_normal_word(w["text"]) for w in words]
+    said = [normal_word(w) for _, w, _ in _text_words(text, elisions=elisions)]
+    heard = [normal_word(w["text"]) for w in words]
     matcher = SequenceMatcher(None, said, heard, autojunk=False)
     return {
         block.a + k: block.b + k
