@@ -282,12 +282,36 @@ Tagger = Callable[[str], Iterable[tuple[int, str, str]]]
 #: The spaCy model :func:`spacy_tagger` loads by default (French).
 DFLT_SPACY_MODEL = "fr_core_news_sm"
 
+#: French reading names by universal POS tag, the one place they are spelled: the names
+#: of voxy's French table (``voxy.pronounce.heteronym_readings``), of
+#: :data:`FRENCH_POS_HETERONYMS` and of the readings ``voxy.lexique`` derives.
+FRENCH_READING_NAMES: Mapping[str, str] = {
+    "NOUN": "noun",
+    "PROPN": "noun",
+    "VERB": "verb",
+    "AUX": "verb",
+    "ADJ": "adjective",
+    "ADV": "adverb",
+    "PRON": "pronoun",
+    "DET": "det",
+    "NUM": "numeral",
+    "ADP": "preposition",
+    "CCONJ": "conjunction",
+    "SCONJ": "conjunction",
+    "INTJ": "interjection",
+}
+
+
+def _reading_names(*tags: str) -> dict[str, str]:
+    """``{UPOS: reading name}`` for ``tags``, from :data:`FRENCH_READING_NAMES`."""
+    return {tag: FRENCH_READING_NAMES[tag] for tag in tags}
+
+
 #: French heteronyms whose part of speech picks the reading: ``{word: {UPOS: reading}}``.
-#: The reading names are those of voxy's French table (``voxy.pronounce.heteronym_readings``).
 #: Not here: *fils* and *plus*, whose readings share a part of speech (meaning decides).
-_VERB = {"AUX": "verb", "VERB": "verb"}
-_NOUN = {"NOUN": "noun", "PROPN": "noun"}
-_ADJECTIVE = {"ADJ": "adjective"}
+_VERB = _reading_names("AUX", "VERB")
+_NOUN = _reading_names("NOUN", "PROPN")
+_ADJECTIVE = _reading_names("ADJ")
 #: 3rd-plural verbs whose *-ent* is silent, against a noun or adjective in /ɑ̃/.
 _ENT_NOUNS = (
     "parent",
@@ -327,14 +351,14 @@ _TIONS = (
     "exceptions",
 )
 FRENCH_POS_HETERONYMS: Mapping[str, Mapping[str, str]] = {
-    "est": {**_VERB, **_NOUN, "ADJ": "noun"},
+    "est": {**_VERB, **_NOUN, "ADJ": FRENCH_READING_NAMES["NOUN"]},
     "sens": {**_NOUN, **_VERB},
     "as": {**_VERB, **_NOUN},
     "lis": {**_NOUN, **_VERB},
     "couvent": {**_NOUN, **_VERB},
     "fier": {**_ADJECTIVE, **_VERB},
     "vis": {**_VERB, **_NOUN},
-    "tous": {"DET": "det", "PRON": "pronoun"},
+    "tous": _reading_names("DET", "PRON"),
     **{w: {**_NOUN, **_VERB} for w in _ENT_NOUNS + _TIONS},
     **{w: {**_ADJECTIVE, **_VERB} for w in _ENT_ADJECTIVES},
 }

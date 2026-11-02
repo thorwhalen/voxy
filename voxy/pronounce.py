@@ -1138,7 +1138,8 @@ def load_readings(path: str | os.PathLike) -> dict[str, dict[str, str]]:
 
     A ``.json`` file holds that mapping; any other file is tab-separated
     ``word<TAB>reading name<TAB>IPA``, one reading per line (``#`` lines and blank
-    lines skipped), e.g. a list derived from Lexique, which voxy does not ship.
+    lines skipped), e.g. a list derived from Lexique (``voxy.lexique.lexique_heteronyms``
+    builds one from your copy; voxy ships no Lexique data).
     """
     import json
 
@@ -1169,7 +1170,8 @@ def heteronym_readings(language: str = DFLT_LANGUAGE) -> dict[str, dict[str, str
     """voxy's own heteronym table for ``language``: ``{word: {reading name: IPA}}``.
 
     A short, hand-made list (French: *est*, *fils*, *plus*, *tous*, the *-ent* verbs...);
-    merge a fuller one (e.g. derived from Lexique) read with :func:`load_readings`.
+    merge a fuller one: ``{**voxy.lexique.lexique_heteronyms(path), **heteronym_readings()}``
+    (Lexique-derived, the hand-made readings winning), or one read with :func:`load_readings`.
 
     >>> heteronym_readings("fr")["est"]["noun"]
     'ɛst'
