@@ -1050,10 +1050,8 @@ def test_forget_orphans_during_a_run_spares_that_run_until_its_marker_is_stale(
     assert refprep.forget_orphans(samples, dry_run=False) == []  # still live
     (slug,) = json.loads(samples[marker])["slugs"]
     crashed = [f"conditioned/{slug}.wav", marker]
-    # keys come back as the store lists them (backslashes on Windows)
-    posix = lambda keys: [k.replace("\\", "/") for k in keys]
-    assert posix(refprep.forget_orphans(samples, stale_after=0)) == crashed
-    assert posix(refprep.forget_orphans(samples, dry_run=False, stale_after=0)) == crashed
+    assert refprep.forget_orphans(samples, stale_after=0) == crashed  # '/' keys, any OS
+    assert refprep.forget_orphans(samples, dry_run=False, stale_after=0) == crashed
     assert _keys(samples, refprep.PENDING_PREFIX) == set()
     assert all(e["key"] in samples for e in refprep.load_manifest(samples))
 
