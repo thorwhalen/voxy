@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-02T08:43:07Z",
+  "built_at": "2026-11-02T08:57:48Z",
   "package": {
     "name": "voxy",
-    "version": "0.0.39",
+    "version": "0.0.40",
     "display_name": "voxy",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "30d39ef69aef36a58cfc7a8e0b6899562634adf4",
-    "short_commit": "30d39ef",
+    "commit": "583f4f58828c8768a156037f2f290567643df4c5",
+    "short_commit": "583f4f5",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/thorwhalen/voxy",
-    "commit_url": "https://github.com/thorwhalen/voxy/commit/30d39ef69aef36a58cfc7a8e0b6899562634adf4",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/583f4f58828c8768a156037f2f290567643df4c5",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "thorwhalen/voxy",
-    "sha": "30d39ef69aef36a58cfc7a8e0b6899562634adf4",
+    "sha": "583f4f58828c8768a156037f2f290567643df4c5",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41414790731",
-    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41414790731",
+    "run_id": "41416542812",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41416542812",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -60,14 +60,16 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.39",
-    "relation": "same",
+    "latest": "0.0.41",
+    "relation": "behind",
     "error": null
   },
-  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 30d39ef69aef36a58cfc7a8e0b6899562634adf4\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 583f4f58828c8768a156037f2f290567643df4c5\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": true,
-    "notes": []
+    "aligned": false,
+    "notes": [
+      "The documented version (0.0.40) is behind the latest release on PyPI (0.0.41): `pip install voxy` gives newer code than these docs describe."
+    ]
   }
 }
