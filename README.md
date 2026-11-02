@@ -198,7 +198,7 @@ Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `
 
 ### A local stock voice (no service, no clip, no torch)
 
-`kokoro` speaks in one of 54 stock voices (`af_heart`, `am_michael`, `bf_emma`, ...) with Kokoro-82M (Apache-2.0) through kokoro-onnx, faster than realtime on a CPU. It runs in its own small environment; `python -m voxy setup kokoro` builds it and fetches the model files (about 340 MB), or the first call does. A voice's first letter is its language (`a` American, `b` British, `f` French, `e` Spanish, `i` Italian, `p` Portuguese, `h` Hindi, `j` Japanese, `z` Chinese). It is meant for Linux hosts without a cloud key; on macOS the espeak-ng that kokoro-onnx bundles currently fails to find its data (thorwhalen/voxy#61), and `say` is the local voice there.
+`kokoro` speaks in one of 54 stock voices (`af_heart`, `am_michael`, `bf_emma`, ...) with Kokoro-82M (Apache-2.0) through kokoro-onnx, faster than realtime on a CPU. It runs in its own small environment, which `python -m voxy setup kokoro` builds (or the first call does); the model files (about 354 MB) are fetched from the Hugging Face hub on first use into `$VOXY_DATA_DIR/models/hf`, like every other local backend's weights. Listing its voices needs neither. A voice's first letter is its language (`a` American, `b` British, `f` French, `e` Spanish, `i` Italian, `p` Portuguese, `h` Hindi, `j` Japanese, `z` Chinese). It is meant for Linux hosts without a cloud key; on macOS the espeak-ng that kokoro-onnx bundles currently fails to find its data (thorwhalen/voxy#61), and `say` is the local voice there.
 
 ```python
 voxy.text_to_speech("Hello.", "bf_emma", backend="kokoro", speed=1.1).save("hi.wav")

@@ -23,7 +23,8 @@ voices (``voxy.kokoro_model``) subclasses ``LocalSpeechModel`` directly.
 Seams (keyword arguments of every model):
 
 - ``generate(text, **voice_request, **params) -> (samples, sample_rate)``: the
-  model call (``voice_request`` is ``ref_audio``/``ref_text`` for a cloner). Default: a ``voxy.worker.Worker`` running the backend's adapter in its
+  model call (``voice_request`` is ``ref_audio``/``ref_text`` for a cloner, ``voice``
+  for kokoro). Default: a ``voxy.worker.Worker`` running the backend's adapter in its
   own environment (built on first use under ``$VOXY_DATA_DIR/envs``). Tests inject a fake.
 - ``chunker(text) -> [[chunk, ...], ...]``: default ``split_text`` at the backend's
   ``max_chars``.
@@ -308,20 +309,16 @@ class WorkerGenerate:
 
     def _run(self, op: str, **request):
         """One worker operation that writes a WAV: ``(samples, sample_rate)``."""
+        if self._worker is None:
+            self._worker = self._make_worker()
         scratch = voxy_cache_dir("tmp")
         scratch.mkdir(parents=True, exist_ok=True)
         out_path = scratch / f"{self.backend.name}-{uuid.uuid4().hex}.wav"
         try:
-            self.call(op, out_path=str(out_path), **request)
+            self._worker.call(op, out_path=str(out_path), **request)
             return read_wav(out_path)
         finally:
             out_path.unlink(missing_ok=True)
-
-    def call(self, op: str, **request) -> dict:
-        """Any adapter operation, returning its JSON reply (e.g. listing voices)."""
-        if self._worker is None:
-            self._worker = self._make_worker()
-        return self._worker.call(op, **request)
 
     def __call__(self, text: str, **request):
         """The adapter's ``synthesize``: ``(samples, sample_rate)``."""
@@ -409,12 +406,15 @@ class LocalSpeechModel(SpeechModel):
     def synthesize(self, text, voice=None, **params) -> Speech:
         """Speak ``text`` (any length) in ``voice``.
 
-        ``params`` go to the model (see ``self.backend.params`` for the knobs).
+        ``params`` go to the model (see ``self.backend.params`` for the knobs); they
+        can't override the voice's own keywords (e.g. a cloner's ``ref_audio``).
         """
         text = _resolve_text_input(text)
         if self.text_prep is not None:
             text = self.text_prep(text)
         request, label = self._voice_request(voice)
+        if clash := sorted(request.keys() & params.keys()):
+            raise TypeError(f"{clash} come from the voice, not from params")
         request = {**request, **params}
         pieces, sample_rate = [], None
         for paragraph in self.chunker(text):
