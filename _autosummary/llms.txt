@@ -23,6 +23,7 @@
 - [voxy.refprep](voxy.refprep.html.md): Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
 - [voxy.say_model](voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
 - [voxy.script](voxy.script.html.md): Render a cast script: text segments, each read by its own voice, one audio file per section.
+- [voxy.separate](voxy.separate.html.md): Split a recording into the voice and the rest (music, noise) before using the voice.
 - [voxy.speakers](voxy.speakers.html.md): Keep one speaker: find their voice in a recording and mark everyone else’s words.
 - [voxy.speechtext](voxy.speechtext.html.md): Display text vs speech text, and spotting words a model may misread.
 - [voxy.splice](voxy.splice.html.md): Correct words in a recording, in the speaker’s voice: find, render, splice, check.
@@ -34,6 +35,7 @@
 - [voxy.workers](voxy.workers.html.md): Backend adapters run by &#96;voxy.worker&#96; inside each backend’s own environment.
 - [voxy.workers.asr_adapter](voxy.workers.asr_adapter.html.md): Speech recognition with timed words (scribed’s faster-whisper backend), for reference prep.
 - [voxy.workers.chatterbox_adapter](voxy.workers.chatterbox_adapter.html.md): Chatterbox (Resemble AI): ‘original’ (emotion exaggeration, CFG), ‘turbo’ (faster), or
+- [voxy.workers.demucs_adapter](voxy.workers.demucs_adapter.html.md): Demucs (Meta, MIT): split a recording into a voice stem and the rest (music, noise).
 - [voxy.workers.f5tts_adapter](voxy.workers.f5tts_adapter.html.md): F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).
 - [voxy.workers.kokoro_adapter](voxy.workers.kokoro_adapter.html.md): Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.
 - [voxy.workers.phonemes_adapter](voxy.workers.phonemes_adapter.html.md): Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonem...

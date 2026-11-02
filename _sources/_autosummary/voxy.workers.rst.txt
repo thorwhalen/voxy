@@ -18,6 +18,7 @@ voxy.workers
 
    asr_adapter
    chatterbox_adapter
+   demucs_adapter
    f5tts_adapter
    kokoro_adapter
    phonemes_adapter

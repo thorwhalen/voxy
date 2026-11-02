@@ -27,6 +27,7 @@
    refprep
    say_model
    script
+   separate
    speakers
    speechtext
    splice

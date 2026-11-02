@@ -207,6 +207,10 @@ voxy.text_to_speech("Hello.", "bf_emma", backend="kokoro", speed=1.1).save("hi.w
 voxy.list_voices("kokoro")
 ```
 
+### Separating the voice from music
+
+`voxy.separate.separate("song.mp3")` returns `{"vocals": wav_bytes, "rest": wav_bytes}`: Demucs (`htdemucs_ft` by default, MIT) in its own environment, built on first use (or `python -m voxy setup demucs`), weights under `$VOXY_DATA_DIR/models/demucs`. Use it before cloning, transcribing or editing a voice recorded over music. `rest` is the input minus the voice, so the two add back up to it. Both are 16-bit stereo WAV at 44.1 kHz whatever the input (`sample_rate=` to change the rate); loud input is scaled down, both stems by the same factor, rather than clipped. The whole file is held in memory, and it takes about 24 s per minute of audio on CPU.
+
 ### Correcting words in a recording
 
 `voxy.replace_words` replaces a spoken phrase with a new one in the speaker’s voice: it finds the phrase in the recording’s ASR words, renders the new phrase (TTS in `voice=` by default, or any `render=`), cuts at the quietest moment near each end, matches the loudness of the speech it replaces (pauses excluded), crossfades, and checks that the new words are heard there and the old ones are gone. Pass `voice=` (the speaker’s voice) or `render=`.

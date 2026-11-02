@@ -1,0 +1,20 @@
+voxy.workers.demucs\_adapter
+============================
+
+.. automodule:: voxy.workers.demucs_adapter
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      CLIP_MODE
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      load
+      separate
+      stem_model
+   

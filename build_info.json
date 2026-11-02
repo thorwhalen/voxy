@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-02T10:19:12Z",
+  "built_at": "2026-11-02T10:28:53Z",
   "package": {
     "name": "voxy",
-    "version": "0.0.52",
+    "version": "0.0.53",
     "display_name": "voxy",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "5ad4487dd1f067236f86a79bddfbb56d450032c5",
-    "short_commit": "5ad4487",
+    "commit": "f8c3395271be93d2067991f70520749fcf5393ae",
+    "short_commit": "f8c3395",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/thorwhalen/voxy",
-    "commit_url": "https://github.com/thorwhalen/voxy/commit/5ad4487dd1f067236f86a79bddfbb56d450032c5",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/f8c3395271be93d2067991f70520749fcf5393ae",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "thorwhalen/voxy",
-    "sha": "5ad4487dd1f067236f86a79bddfbb56d450032c5",
+    "sha": "f8c3395271be93d2067991f70520749fcf5393ae",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41427461629",
-    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41427461629",
+    "run_id": "41428800676",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41428800676",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -55,16 +55,16 @@
     "docs_dir": "docsrc"
   },
   "site": {
-    "modules_documented": 37,
-    "objects_documented": 367
+    "modules_documented": 39,
+    "objects_documented": 377
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.52",
+    "latest": "0.0.53",
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 5ad4487dd1f067236f86a79bddfbb56d450032c5\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout f8c3395271be93d2067991f70520749fcf5393ae\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

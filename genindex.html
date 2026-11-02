@@ -131,6 +131,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.script.html">voxy.script</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.separate.html">voxy.separate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.speakers.html">voxy.speakers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.speechtext.html">voxy.speechtext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.splice.html">voxy.splice</a></li>
@@ -268,6 +269,8 @@
 </li>
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.Check">Check (in module voxy.pronounce)</a>
 </li>
+      <li><a href="_autosummary/voxy.separate.html#voxy.separate.check_stem">check_stem() (in module voxy.separate)</a>
+</li>
       <li><a href="_autosummary/voxy.stores.html#voxy.stores.check_voice_name">check_voice_name() (in module voxy.stores)</a>
 </li>
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.checks_by_line">checks_by_line() (in module voxy.pronounce)</a>
@@ -284,12 +287,14 @@
 </li>
       <li><a href="_autosummary/voxy.elevenlabs_model.html#voxy.elevenlabs_model.ElevenLabsSpeechModel.client">client (voxy.elevenlabs_model.ElevenLabsSpeechModel property)</a>
 </li>
-      <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.Risk.clitic">clitic (voxy.speechtext.Risk attribute)</a>
+      <li><a href="_autosummary/voxy.workers.demucs_adapter.html#voxy.workers.demucs_adapter.CLIP_MODE">CLIP_MODE (in module voxy.workers.demucs_adapter)</a>
 </li>
-      <li><a href="_autosummary/voxy.library.html#voxy.library.clone_from_samples">clone_from_samples() (in module voxy.library)</a>
+      <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.Risk.clitic">clitic (voxy.speechtext.Risk attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
+      <li><a href="_autosummary/voxy.library.html#voxy.library.clone_from_samples">clone_from_samples() (in module voxy.library)</a>
+</li>
       <li><a href="_autosummary/voxy.base.html#voxy.base.CSMSpeechModel.clone_voice">clone_voice() (voxy.base.CSMSpeechModel method)</a>
 
       <ul style="list-style-type:none">
@@ -313,6 +318,8 @@
       <li><a href="_autosummary/voxy.refprep.html#voxy.refprep.close_asr">close_asr() (in module voxy.refprep)</a>
 </li>
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.close_phonemes">close_phonemes() (in module voxy.pronounce)</a>
+</li>
+      <li><a href="_autosummary/voxy.separate.html#voxy.separate.close_separation">close_separation() (in module voxy.separate)</a>
 </li>
       <li><a href="_autosummary/voxy.speakers.html#voxy.speakers.close_speaker">close_speaker() (in module voxy.speakers)</a>
 </li>
@@ -393,10 +400,10 @@
 </li>
       <li><a href="_autosummary/voxy.speakers.html#voxy.speakers.DFLT_FOREIGN_PAD_SECONDS">DFLT_FOREIGN_PAD_SECONDS (in module voxy.speakers)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.DFLT_LANGUAGE">DFLT_LANGUAGE (in module voxy.pronounce)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li><a href="_autosummary/voxy.splice.html#voxy.splice.DFLT_LOUD_MARGIN_DB">DFLT_LOUD_MARGIN_DB (in module voxy.splice)</a>
 </li>
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.DFLT_MARGIN">DFLT_MARGIN (in module voxy.pronounce)</a>
@@ -430,6 +437,8 @@
       <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.DFLT_SPACY_MODEL">DFLT_SPACY_MODEL (in module voxy.speechtext)</a>
 </li>
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.DFLT_SPOT_MARGIN">DFLT_SPOT_MARGIN (in module voxy.pronounce)</a>
+</li>
+      <li><a href="_autosummary/voxy.separate.html#voxy.separate.DFLT_STEM">DFLT_STEM (in module voxy.separate)</a>
 </li>
       <li><a href="_autosummary/voxy.facade.html#voxy.facade.dflt_tts_backend">dflt_tts_backend() (in module voxy.facade)</a>
 </li>
@@ -701,6 +710,8 @@
 </li>
       <li><a href="_autosummary/voxy.script.html#voxy.script.missing_takes">missing_takes() (in module voxy.script)</a>
 </li>
+      <li><a href="_autosummary/voxy.separate.html#voxy.separate.MODEL_SOURCES">MODEL_SOURCES (in module voxy.separate)</a>
+</li>
       <li><a href="_autosummary/voxy.envs.html#voxy.envs.models_dir">models_dir() (in module voxy.envs)</a>
 </li>
       <li>
@@ -743,6 +754,8 @@
 </li>
         <li><a href="_autosummary/voxy.script.html#module-voxy.script">voxy.script</a>
 </li>
+        <li><a href="_autosummary/voxy.separate.html#module-voxy.separate">voxy.separate</a>
+</li>
         <li><a href="_autosummary/voxy.speakers.html#module-voxy.speakers">voxy.speakers</a>
 </li>
         <li><a href="_autosummary/voxy.speechtext.html#module-voxy.speechtext">voxy.speechtext</a>
@@ -764,6 +777,8 @@
         <li><a href="_autosummary/voxy.workers.asr_adapter.html#module-voxy.workers.asr_adapter">voxy.workers.asr_adapter</a>
 </li>
         <li><a href="_autosummary/voxy.workers.chatterbox_adapter.html#module-voxy.workers.chatterbox_adapter">voxy.workers.chatterbox_adapter</a>
+</li>
+        <li><a href="_autosummary/voxy.workers.demucs_adapter.html#module-voxy.workers.demucs_adapter">voxy.workers.demucs_adapter</a>
 </li>
         <li><a href="_autosummary/voxy.workers.f5tts_adapter.html#module-voxy.workers.f5tts_adapter">voxy.workers.f5tts_adapter</a>
 </li>
@@ -1002,6 +1017,14 @@
 </li>
       <li><a href="_autosummary/voxy.speechtext.html#voxy.speechtext.SENTENCE_END">SENTENCE_END (in module voxy.speechtext)</a>
 </li>
+      <li><a href="_autosummary/voxy.separate.html#voxy.separate.separate">separate() (in module voxy.separate)</a>
+
+      <ul style="list-style-type:none">
+        <li><a href="_autosummary/voxy.workers.demucs_adapter.html#voxy.workers.demucs_adapter.separate">(in module voxy.workers.demucs_adapter)</a>
+</li>
+      </ul></li>
+      <li><a href="_autosummary/voxy.separate.html#voxy.separate.SEPARATION_ENV">SEPARATION_ENV (in module voxy.separate)</a>
+</li>
       <li><a href="_autosummary/voxy.wavutil.html#voxy.wavutil.silence">silence() (in module voxy.wavutil)</a>
 </li>
       <li><a href="_autosummary/voxy.speakers.html#voxy.speakers.Windows.similarity">similarity() (voxy.speakers.Windows method)</a>
@@ -1020,10 +1043,10 @@
 </li>
       <li><a href="_autosummary/voxy.base.html#voxy.base.Speech">Speech (class in voxy.base)</a>
 </li>
-      <li><a href="_autosummary/voxy.splice.html#voxy.splice.speech_level">speech_level() (in module voxy.splice)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
+      <li><a href="_autosummary/voxy.splice.html#voxy.splice.speech_level">speech_level() (in module voxy.splice)</a>
+</li>
       <li><a href="_autosummary/voxy.base.html#voxy.base.speech_model_factories">speech_model_factories (in module voxy.base)</a>
 </li>
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.speech_renderer">speech_renderer() (in module voxy.pronounce)</a>
@@ -1055,6 +1078,8 @@
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.spot_scorer">spot_scorer() (in module voxy.pronounce)</a>
 </li>
       <li><a href="_autosummary/voxy.script.html#voxy.script.status">status() (in module voxy.script)</a>
+</li>
+      <li><a href="_autosummary/voxy.workers.demucs_adapter.html#voxy.workers.demucs_adapter.stem_model">stem_model() (in module voxy.workers.demucs_adapter)</a>
 </li>
       <li><a href="_autosummary/voxy.refprep.html#voxy.refprep.summarize">summarize() (in module voxy.refprep)</a>
 </li>
@@ -1277,8 +1302,6 @@
         <li><a href="_autosummary/voxy.local_clone.html#module-voxy.local_clone">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li>
     voxy.pronounce
 
@@ -1286,6 +1309,8 @@
         <li><a href="_autosummary/voxy.pronounce.html#module-voxy.pronounce">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li>
     voxy.refprep
 
@@ -1305,6 +1330,13 @@
 
       <ul style="list-style-type:none">
         <li><a href="_autosummary/voxy.script.html#module-voxy.script">module</a>
+</li>
+      </ul></li>
+      <li>
+    voxy.separate
+
+      <ul style="list-style-type:none">
+        <li><a href="_autosummary/voxy.separate.html#module-voxy.separate">module</a>
 </li>
       </ul></li>
       <li>
@@ -1382,6 +1414,13 @@
 
       <ul style="list-style-type:none">
         <li><a href="_autosummary/voxy.workers.chatterbox_adapter.html#module-voxy.workers.chatterbox_adapter">module</a>
+</li>
+      </ul></li>
+      <li>
+    voxy.workers.demucs_adapter
+
+      <ul style="list-style-type:none">
+        <li><a href="_autosummary/voxy.workers.demucs_adapter.html#module-voxy.workers.demucs_adapter">module</a>
 </li>
       </ul></li>
       <li>
@@ -1463,13 +1502,15 @@
 </li>
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.word_indices">word_indices() (in module voxy.pronounce)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li><a href="_autosummary/voxy.pronounce.html#voxy.pronounce.word_spans">word_spans() (in module voxy.pronounce)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul style="margin-left:0;list-style-type:none">
       <li><a href="_autosummary/voxy.worker.html#voxy.worker.Worker">Worker (class in voxy.worker)</a>
 </li>
       <li><a href="_autosummary/voxy.envs.html#voxy.envs.worker_environ">worker_environ() (in module voxy.envs)</a>
+</li>
+      <li><a href="_autosummary/voxy.separate.html#voxy.separate.worker_run">worker_run() (in module voxy.separate)</a>
 </li>
       <li><a href="_autosummary/voxy.worker.html#voxy.worker.WorkerError">WorkerError</a>
 </li>
@@ -1510,7 +1551,7 @@
 </footer>
     </div>
     
-    <script src="_static/documentation_options.js?v=73f2ab08"></script>
+    <script src="_static/documentation_options.js?v=d78a2f11"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>

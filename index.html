@@ -100,6 +100,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.say_model.html">voxy.say_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.script.html">voxy.script</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.separate.html">voxy.separate</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.speakers.html">voxy.speakers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.speechtext.html">voxy.speechtext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.splice.html">voxy.splice</a></li>
@@ -327,6 +328,10 @@ to install the CSM model and its dependencies.</p>
 </span></code></pre></div>
 </div>
 </section>
+<section id="separating-the-voice-from-music">
+<h3>Separating the voice from music<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#separating-the-voice-from-music" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#separating-the-voice-from-music'">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">voxy.separate.separate("song.mp3")</span></code> returns <code class="docutils literal notranslate"><span class="pre">{"vocals":</span> <span class="pre">wav_bytes,</span> <span class="pre">"rest":</span> <span class="pre">wav_bytes}</span></code>: Demucs (<code class="docutils literal notranslate"><span class="pre">htdemucs_ft</span></code> by default, MIT) in its own environment, built on first use (or <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">voxy</span> <span class="pre">setup</span> <span class="pre">demucs</span></code>), weights under <code class="docutils literal notranslate"><span class="pre">$VOXY_DATA_DIR/models/demucs</span></code>. Use it before cloning, transcribing or editing a voice recorded over music. <code class="docutils literal notranslate"><span class="pre">rest</span></code> is the input minus the voice, so the two add back up to it. Both are 16-bit stereo WAV at 44.1 kHz whatever the input (<code class="docutils literal notranslate"><span class="pre">sample_rate=</span></code> to change the rate); loud input is scaled down, both stems by the same factor, rather than clipped. The whole file is held in memory, and it takes about 24 s per minute of audio on CPU.</p>
+</section>
 <section id="correcting-words-in-a-recording">
 <h3>Correcting words in a recording<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#correcting-words-in-a-recording" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#correcting-words-in-a-recording'">¶</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">voxy.replace_words</span></code> replaces a spoken phrase with a new one in the speaker’s voice: it finds the phrase in the recording’s ASR words, renders the new phrase (TTS in <code class="docutils literal notranslate"><span class="pre">voice=</span></code> by default, or any <code class="docutils literal notranslate"><span class="pre">render=</span></code>), cuts at the quietest moment near each end, matches the loudness of the speech it replaces (pauses excluded), crossfades, and checks that the new words are heard there and the old ones are gone. Pass <code class="docutils literal notranslate"><span class="pre">voice=</span></code> (the speaker’s voice) or <code class="docutils literal notranslate"><span class="pre">render=</span></code>.</p>
@@ -471,7 +476,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-02 10:19 UTC from <a href="https://github.com/thorwhalen/voxy/commit/5ad4487dd1f067236f86a79bddfbb56d450032c5">5ad4487</a> (main) · voxy 0.0.52 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-02 10:28 UTC from <a href="https://github.com/thorwhalen/voxy/commit/f8c3395271be93d2067991f70520749fcf5393ae">f8c3395</a> (main) · voxy 0.0.53 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -492,6 +497,7 @@ to install the CSM model and its dependencies.</p>
 <li><a :data-current="activeSection === '#flexible-input-formats'" class="reference internal" href="#flexible-input-formats">Flexible Input Formats</a></li>
 <li><a :data-current="activeSection === '#elevenlabs-backend'" class="reference internal" href="#elevenlabs-backend">ElevenLabs backend</a></li>
 <li><a :data-current="activeSection === '#a-local-stock-voice-no-service-no-clip-no-torch'" class="reference internal" href="#a-local-stock-voice-no-service-no-clip-no-torch">A local stock voice (no service, no clip, no torch)</a></li>
+<li><a :data-current="activeSection === '#separating-the-voice-from-music'" class="reference internal" href="#separating-the-voice-from-music">Separating the voice from music</a></li>
 <li><a :data-current="activeSection === '#correcting-words-in-a-recording'" class="reference internal" href="#correcting-words-in-a-recording">Correcting words in a recording</a></li>
 <li><a :data-current="activeSection === '#local-voice-cloning-no-service-cpu-works'" class="reference internal" href="#local-voice-cloning-no-service-cpu-works">Local voice cloning (no service, CPU works)</a></li>
 <li><a :data-current="activeSection === '#heteronyms-what-to-send-and-checking-what-was-said'" class="reference internal" href="#heteronyms-what-to-send-and-checking-what-was-said">Heteronyms: what to send, and checking what was said</a></li>
@@ -518,7 +524,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=73f2ab08"></script>
+<script src="_static/documentation_options.js?v=d78a2f11"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

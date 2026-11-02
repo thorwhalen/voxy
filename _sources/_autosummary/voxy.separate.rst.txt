@@ -1,0 +1,23 @@
+voxy.separate
+=============
+
+.. automodule:: voxy.separate
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DFLT_STEM
+      MODEL_SOURCES
+      SEPARATION_ENV
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      check_stem
+      close_separation
+      separate
+      worker_run
+   

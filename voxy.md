@@ -1,4 +1,4 @@
-> built 2026-11-02 10:19 UTC from 5ad4487 (main) · voxy 0.0.52. Details: build_info.json
+> built 2026-11-02 10:28 UTC from f8c3395 (main) · voxy 0.0.53. Details: build_info.json
 
 # index.html.md
 
@@ -210,6 +210,10 @@ Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `
 voxy.text_to_speech("Hello.", "bf_emma", backend="kokoro", speed=1.1).save("hi.wav")
 voxy.list_voices("kokoro")
 ```
+
+### Separating the voice from music
+
+`voxy.separate.separate("song.mp3")` returns `{"vocals": wav_bytes, "rest": wav_bytes}`: Demucs (`htdemucs_ft` by default, MIT) in its own environment, built on first use (or `python -m voxy setup demucs`), weights under `$VOXY_DATA_DIR/models/demucs`. Use it before cloning, transcribing or editing a voice recorded over music. `rest` is the input minus the voice, so the two add back up to it. Both are 16-bit stereo WAV at 44.1 kHz whatever the input (`sample_rate=` to change the rate); loud input is scaled down, both stems by the same factor, rather than clipped. The whole file is held in memory, and it takes about 24 s per minute of audio on CPU.
 
 ### Correcting words in a recording
 
@@ -1807,6 +1811,7 @@ True
 | [`refprep`](_autosummary/voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.    |
 | [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                |
 | [`script`](_autosummary/voxy.script.html.md#module-voxy.script)                       | Render a cast script: text segments, each read by its own voice, one audio file per section.  |
+| [`separate`](_autosummary/voxy.separate.html.md#module-voxy.separate)                   | Split a recording into the voice and the rest (music, noise) before using the voice.          |
 | [`speakers`](_autosummary/voxy.speakers.html.md#module-voxy.speakers)                   | Keep one speaker: find their voice in a recording and mark everyone else's words.             |
 | [`speechtext`](_autosummary/voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                          |
 | [`splice`](_autosummary/voxy.splice.html.md#module-voxy.splice)                       | Correct words in a recording, in the speaker's voice: find, render, splice, check.            |
@@ -4063,6 +4068,128 @@ Progress from `index.json`: counts per status, total `seconds`, `segments_by_voi
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 
+# _autosummary/voxy.separate.html.md
+
+# voxy.separate
+
+Split a recording into the voice and the rest (music, noise) before using the voice.
+
+A song or a noisy interview has to lose its backing before its voice can be cloned,
+transcribed or edited. `separate` runs Demucs (MIT; `htdemucs_ft` by default, the
+fine-tuned hybrid transformer) in its own environment, built on first use under the
+data root like the other local models, and returns the two stems as WAV bytes:
+the voice, and `rest`, the input minus the voice (so the two add back up to it).
+
+```pycon
+>>> from voxy.separate import separate
+>>> stems = separate("song.mp3")
+>>> open("vocals.wav", "wb").write(stems["vocals"])
+```
+
+`run` is the seam (`(audio_path, out_dir, *, stem, sample_rate, \*\*options) ->
+{stem: path}`); tests and other separators plug in there.
+
+```pycon
+>>> import tempfile, pathlib
+>>> def fake(audio, out_dir, **options):
+...     paths = {n: pathlib.Path(out_dir) / f"{n}.wav" for n in ("vocals", "rest")}
+...     for p in paths.values():
+...         p.write_bytes(b"RIFF")
+...     return paths
+>>> sorted(separate(b"RIFF....", run=fake))
+['rest', 'vocals']
+```
+
+### Module Attributes
+
+| [`DFLT_STEM`](_autosummary/voxy.separate.html.md#voxy.separate.DFLT_STEM)      | The stem kept as "the voice"; Demucs also has drums, bass and other.            |
+|-----------------------------------------------------------------|---------------------------------------------------------------------------------|
+| [`MODEL_SOURCES`](_autosummary/voxy.separate.html.md#voxy.separate.MODEL_SOURCES)  | The stems of the pretrained models whose sources are known before loading them. |
+| [`SEPARATION_ENV`](_autosummary/voxy.separate.html.md#voxy.separate.SEPARATION_ENV) | torch is bounded to the releases Demucs 4.0.1 was checked with.                 |
+
+### Functions
+
+| [`check_stem`](_autosummary/voxy.separate.html.md#voxy.separate.check_stem)(stem, model)                       | Raise `ValueError` if `model` is known (`MODEL_SOURCES`) and lacks `stem`.   |
+|------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| [`close_separation`](_autosummary/voxy.separate.html.md#voxy.separate.close_separation)()                            | Stop the Demucs workers (free their memory).                                 |
+| [`separate`](_autosummary/voxy.separate.html.md#voxy.separate.separate)(audio, \*[, stem, sample_rate, run]) | `{stem: wav, "rest": wav}`: `audio` split into `stem` and everything else.   |
+| [`worker_run`](_autosummary/voxy.separate.html.md#voxy.separate.worker_run)(\*[, model, threads, rootdir])     | The default `run`: the Demucs adapter in its own environment.                |
+
+### voxy.separate.DFLT_STEM *= 'vocals'*
+
+The stem kept as “the voice”; Demucs also has drums, bass and other.
+
+### voxy.separate.MODEL_SOURCES *= {'htdemucs': ('drums', 'bass', 'other', 'vocals'), 'htdemucs_6s': ('drums', 'bass', 'other', 'vocals', 'guitar', 'piano'), 'htdemucs_ft': ('drums', 'bass', 'other', 'vocals')}*
+
+The stems of the pretrained models whose sources are known before loading them.
+
+### voxy.separate.SEPARATION_ENV *= EnvSpec(name='demucs', requirements=('demucs==4.0.1', 'torch>=2.11,<2.16', 'soundfile', 'numpy'), python='3.11', torch_backend='cpu', env_vars={'TORCH_HOME': '{models}'})*
+
+torch is bounded to the releases Demucs 4.0.1 was checked with. torchaudio comes in
+as a Demucs dependency, unpinned: Demucs imports it but never calls it here.
+
+### voxy.separate.check_stem(stem, model)
+
+Raise `ValueError` if `model` is known (`MODEL_SOURCES`) and lacks `stem`.
+
+```pycon
+>>> check_stem("vocals", "htdemucs_ft")
+>>> check_stem("guitar", "htdemucs_ft")
+Traceback (most recent call last):
+  ...
+ValueError: 'guitar' is not a stem of htdemucs_ft: ['drums', 'bass', 'other', 'vocals']
+```
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.separate.close_separation()
+
+Stop the Demucs workers (free their memory).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.separate.separate(audio, , stem='vocals', sample_rate=None, run=None, \*\*options)
+
+`{stem: wav, "rest": wav}`: `audio` split into `stem` and everything else.
+
+`rest` is the input minus the voice, so `stem + rest` rebuilds the input (as
+the model hears it: resampled and with its channels). Both are 16-bit PCM WAV
+with the model’s channels (Demucs: stereo; a mono input is duplicated, the first
+two channels of a wider one are kept) at the model’s rate (Demucs: 44.1 kHz)
+unless `sample_rate` says otherwise, whatever the input. If either stem would
+clip, both are divided by one common factor (Demucs’s `prevent_clip`), so they
+still add up to the input times that factor.
+
+The whole file is decoded and held in memory, and Demucs takes about 24 s per
+minute of audio on CPU for one model (`htdemucs_ft` runs only the sub-model
+fine-tuned for `stem`); split hours-long recordings first.
+
+* **Parameters:**
+  * **audio** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)) – A path to any format soundfile reads (WAV, FLAC, OGG, MP3 with a
+    recent libsndfile), or WAV bytes.
+  * **stem** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The stem to keep apart (`"vocals"`; Demucs also has drums, bass,
+    other).
+  * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The rate of the returned WAVs (default: the model’s).
+  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, out_dir, *, stem, sample_rate, \*\*options) ->
+    {stem: path}`; default `worker_run()` (Demucs `htdemucs_ft` on CPU).
+  * **\*\*options** – Passed to `run` (Demucs: `shifts`, `overlap`).
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)]
+
+### voxy.separate.worker_run(, model='htdemucs_ft', threads=None, rootdir=None)
+
+The default `run`: the Demucs adapter in its own environment.
+
+A stem the model lacks fails before the worker starts for the models in
+`MODEL_SOURCES`, and inside the worker (a `WorkerError` carrying the same
+message) for the others.
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
+
+
 # _autosummary/voxy.speakers.html.md
 
 # voxy.speakers
@@ -5436,6 +5563,57 @@ Chatterbox (Resemble AI): ‘original’ (emotion exaggeration, CFG), ‘turbo�
 | `synthesize`(state, \*, text, ref_audio, ...[, ...]) |    |
 
 
+# _autosummary/voxy.workers.demucs_adapter.html.md
+
+# voxy.workers.demucs_adapter
+
+Demucs (Meta, MIT): split a recording into a voice stem and the rest (music, noise).
+
+Audio is read and written with soundfile; channels are matched and the rate converted
+with Demucs’s own `convert_audio` (`julius.resample_frac`), so torchaudio’s I/O
+backends play no part. `TORCH_HOME` (set by voxy) keeps the weights under voxy’s
+models folder.
+
+`rest` is the input minus the voice, so the two stems add back up to the input; a
+model’s other stems never enter it. When the model is a bag in which one sub-model
+alone makes the wanted stem (`htdemucs_ft`: one fine-tuned model per stem), only that
+sub-model runs.
+
+### Module Attributes
+
+| [`CLIP_MODE`](_autosummary/voxy.workers.demucs_adapter.html.md#voxy.workers.demucs_adapter.CLIP_MODE)   | divide every stem by one common factor.   |
+|--------------------------------------------------------------|-------------------------------------------|
+
+### Functions
+
+| `load`(\*[, model, device])                                                                       |                                                                               |
+|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`separate`](_autosummary/voxy.workers.demucs_adapter.html.md#voxy.workers.demucs_adapter.separate)(state, \*, audio, out_dir[, stem, ...]) | Write `<stem>.wav` and `rest.wav` (the input minus the voice) into `out_dir`. |
+| [`stem_model`](_autosummary/voxy.workers.demucs_adapter.html.md#voxy.workers.demucs_adapter.stem_model)(model, index)                         | The one sub-model of a bag that alone makes source `index`, else `model`.     |
+
+### voxy.workers.demucs_adapter.CLIP_MODE *= 'rescale'*
+
+divide every stem by one common factor.
+
+* **Type:**
+  Demucs’s guard against clipping
+
+### voxy.workers.demucs_adapter.separate(state, , audio, out_dir, stem='vocals', sample_rate=None, shifts=1, overlap=0.25)
+
+Write `<stem>.wav` and `rest.wav` (the input minus the voice) into `out_dir`.
+
+Both are 16-bit PCM WAV with the model’s channels, at `sample_rate` (default: the
+model’s rate). If either stem would clip, both are scaled by one common factor, so
+`voice + rest` is the input times that factor.
+
+### voxy.workers.demucs_adapter.stem_model(model, index)
+
+The one sub-model of a bag that alone makes source `index`, else `model`.
+
+A bag weighs each sub-model’s estimate of each source; when a single sub-model
+has a non-zero weight for a source, the bag’s estimate of it is that sub-model’s.
+
+
 # _autosummary/voxy.workers.f5tts_adapter.html.md
 
 # voxy.workers.f5tts_adapter
@@ -5482,6 +5660,7 @@ The adapter file for `name` (e.g. ‘f5tts’ -> `f5tts_adapter.py`).
 | [`asr_adapter`](_autosummary/voxy.workers.asr_adapter.html.md#module-voxy.workers.asr_adapter)               | Speech recognition with timed words (scribed's faster-whisper backend), for reference prep.                                                       |
 |------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
 | [`chatterbox_adapter`](_autosummary/voxy.workers.chatterbox_adapter.html.md#module-voxy.workers.chatterbox_adapter) | Chatterbox (Resemble AI): 'original' (emotion exaggeration, CFG), 'turbo' (faster), or 'multilingual' (23 languages; pass `language`, e.g. 'fr'). |
+| [`demucs_adapter`](_autosummary/voxy.workers.demucs_adapter.html.md#module-voxy.workers.demucs_adapter)         | Demucs (Meta, MIT): split a recording into a voice stem and the rest (music, noise).                                                              |
 | [`f5tts_adapter`](_autosummary/voxy.workers.f5tts_adapter.html.md#module-voxy.workers.f5tts_adapter)           | F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).                                                                     |
 | [`kokoro_adapter`](_autosummary/voxy.workers.kokoro_adapter.html.md#module-voxy.workers.kokoro_adapter)         | Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.                                                                 |
 | [`phonemes_adapter`](_autosummary/voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.                                      |
@@ -5641,7 +5820,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 10:19 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/5ad4487dd1f067236f86a79bddfbb56d450032c5"><code>5ad4487</code></a> on branch <code>main</code>, for **voxy 0.0.52** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 10:28 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/f8c3395271be93d2067991f70520749fcf5393ae"><code>f8c3395</code></a> on branch <code>main</code>, for **voxy 0.0.53** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -5650,7 +5829,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/5ad4487dd1f067236f86a79bddfbb56d450032c5"><code>5ad4487dd1f067236f86a79bddfbb56d450032c5</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/f8c3395271be93d2067991f70520749fcf5393ae"><code>f8c3395271be93d2067991f70520749fcf5393ae</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -5661,9 +5840,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41427461629">41427461629</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41428800676">41428800676</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>5ad4487dd1f067236f86a79bddfbb56d450032c5</code> (in the history of the built commit) |
+| Event commit | <code>f8c3395271be93d2067991f70520749fcf5393ae</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5688,13 +5867,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.52/">0.0.52</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.53/">0.0.53</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 5ad4487dd1f067236f86a79bddfbb56d450032c5
+git checkout f8c3395271be93d2067991f70520749fcf5393ae
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
