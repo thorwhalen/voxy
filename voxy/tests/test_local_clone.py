@@ -11,7 +11,7 @@ import pytest
 import voxy
 from voxy import diagnosis, refprep
 from voxy.envs import EnvSpec, ensure_env, is_env_ready
-from voxy.library import load_voice, save_voice
+from voxy.library import _is_sample_key, load_voice, save_voice
 from voxy.local_clone import (
     LOCAL_CLONE_BACKENDS,
     LocalCloneSpeechModel,
@@ -904,13 +904,16 @@ def test_a_crash_mid_run_keeps_finished_sources_and_orphans_only_the_failing_one
         "clips/song-a-vocals-0001.wav",
         "clips/song-a-vocals-0002.wav",
     ]
-    assert refprep.orphans(samples) == partial
+    (marker,) = _keys(samples, refprep.PENDING_PREFIX)  # the crash stays visible
+    assert refprep.orphans(samples) == []  # its marker claims song-b until it is stale
+    assert refprep.orphans(samples, stale_after=0) == partial
 
     before, manifest_bytes = _snapshot(samples), samples[refprep.MANIFEST_KEY]
-    assert refprep.forget_orphans(samples) == partial  # a dry run by default
+    stale = [*partial, marker]
+    assert refprep.forget_orphans(samples, stale_after=0) == stale  # a dry run
     assert _snapshot(samples) == before
-    assert refprep.forget_orphans(samples, dry_run=False) == partial
-    assert set(before) - set(_snapshot(samples)) == set(partial)  # those, nothing else
+    assert refprep.forget_orphans(samples, dry_run=False, stale_after=0) == stale
+    assert set(before) - set(_snapshot(samples)) == set(stale)  # those, nothing else
     assert samples[refprep.MANIFEST_KEY] == manifest_bytes
     assert samples["tape1.wav"] == b"mine"
     assert refprep.orphans(samples) == []
@@ -926,7 +929,9 @@ def test_orphans_are_only_unclaimed_keys_of_our_own_form(tmp_path):
         transcriber=lambda path, language=None: [],
         log=lambda *a: None,
     )
-    assert refprep.orphans(samples) == ["conditioned/vocals.wav"]
+    assert refprep.load_manifest(samples) == []
+    with pytest.raises(ValueError, match="missing or empty"):  # see the refusal test
+        refprep.orphans(samples)
     kept = {
         "clips/x-0003.wav": b"named by an entry",
         "conditioned/x.wav": b"its slug is an entry key's",
@@ -953,6 +958,124 @@ def test_orphans_refuses_a_manifest_it_cannot_read():
     with pytest.raises(ValueError, match="not JSON objects"):
         refprep.forget_orphans(samples, dry_run=False)
     assert "conditioned/a.wav" in samples
+
+
+@pytest.mark.parametrize("manifest", [None, b""], ids=["missing", "zero-byte"])
+def test_orphans_refuses_without_a_manifest_and_deletes_nothing(tmp_path, manifest):
+    """A lost or truncated manifest must not make every clip an orphan."""
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    for key in ["clips/talk-0001.wav", "clips/talk-0002.wav", "conditioned/talk.wav"]:
+        samples[key] = b"a clip a saved profile may point at"
+    samples["tape1.wav"] = b"mine"
+    if manifest is not None:
+        samples[refprep.MANIFEST_KEY] = manifest
+    before = _snapshot(samples)
+    for call in (refprep.orphans, refprep.forget_orphans):
+        with pytest.raises(ValueError, match="missing or empty"):
+            call(samples)
+    with pytest.raises(ValueError, match="missing or empty"):
+        refprep.forget_orphans(samples, dry_run=False, stale_after=0)
+    assert _snapshot(samples) == before
+    del samples["clips/talk-0001.wav"], samples["clips/talk-0002.wav"]
+    del samples["conditioned/talk.wav"]
+    assert refprep.orphans(samples) == []  # nothing of ours: nothing to refuse
+
+
+def _replace_failing_for(name, monkeypatch):
+    """Make ``os.replace`` (as refprep calls it) fail when moving onto ``name``: a crash
+    between writing the temporary file and moving it into place."""
+    real = os.replace
+
+    def replace(src, dst):
+        if os.path.basename(dst) == name:
+            raise OSError(f"killed while replacing {name}")
+        real(src, dst)
+
+    monkeypatch.setattr(refprep.os, "replace", replace)
+
+
+def test_manifest_writes_are_atomic_on_a_local_store(tmp_path, monkeypatch):
+    rng = np.random.default_rng(33)
+    a, b = _stem("song-a", tmp_path, rng), _stem("song-b", tmp_path, rng)
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    _rerun(samples, n_clips=2)(a)
+    folder = Path(samples.rootdir)
+    assert not [p for p in folder.iterdir() if p.name.startswith(".")]  # no temp left
+    manifest_bytes = samples[refprep.MANIFEST_KEY]
+
+    _replace_failing_for(refprep.MANIFEST_KEY, monkeypatch)
+    with pytest.raises(OSError, match="killed"):  # prepare_reference's per-source write
+        _rerun(samples)(b)
+    with pytest.raises(OSError, match="killed"):  # forget's write
+        refprep.forget(samples, a)
+    assert samples[refprep.MANIFEST_KEY] == manifest_bytes  # whole, never truncated
+    assert not [p for p in folder.iterdir() if p.name.startswith(".")]
+    assert len(refprep.load_manifest(samples)) == 2
+    assert all(e["key"] in samples for e in refprep.load_manifest(samples))
+
+
+def test_forget_orphans_during_a_run_spares_that_run_until_its_marker_is_stale(
+    tmp_path,
+):
+    """A ``prepare_reference`` in flight has keys its manifest does not name yet."""
+    rng = np.random.default_rng(34)
+    a, b = _stem("song-a", tmp_path, rng), _stem("song-b", tmp_path, rng)
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    samples["tape1.wav"] = b"mine"
+    _rerun(samples)(a)
+    c = _stem("song-c", tmp_path, rng)
+    calls, seen = [], []
+
+    def meanwhile():  # forget_orphans from another process, mid-run
+        calls.append(1)
+        if len(calls) == 2:  # b is done; c's conditioned file is written, not listed
+            seen.append(_keys(samples, refprep.PENDING_PREFIX))
+            seen.append(refprep.forget_orphans(samples, dry_run=False))
+
+    manifest = _prep_with_hook(samples, meanwhile, b, c)
+    (markers, deleted) = seen
+    assert len(markers) == 1 and deleted == []
+    assert all(e["key"] in samples for e in manifest)
+    assert "conditioned/song-c-vocals.wav" in samples
+    assert _keys(samples, refprep.PENDING_PREFIX) == set()  # removed when it finished
+    sample_keys = [k for k in samples if _is_sample_key(k)]
+    assert sample_keys == ["tape1.wav"]  # what clone_from_samples would upload
+
+    def crash():
+        raise RuntimeError("asr worker died")
+
+    with pytest.raises(RuntimeError):
+        _prep_with_hook(samples, crash, _stem("song-d", tmp_path, rng))
+    (marker,) = _keys(samples, refprep.PENDING_PREFIX)
+    assert refprep.forget_orphans(samples, dry_run=False) == []  # still live
+    (slug,) = json.loads(samples[marker])["slugs"]
+    crashed = [f"conditioned/{slug}.wav", marker]
+    assert refprep.forget_orphans(samples, stale_after=0) == crashed
+    assert refprep.forget_orphans(samples, dry_run=False, stale_after=0) == crashed
+    assert _keys(samples, refprep.PENDING_PREFIX) == set()
+    assert all(e["key"] in samples for e in refprep.load_manifest(samples))
+
+
+def test_an_unreadable_pending_marker_refuses_rather_than_guess():
+    samples = {
+        "conditioned/a.wav": b"A",
+        refprep.MANIFEST_KEY: b'{"key": "clips/b-0001.wav"}',
+        "pending/r.json": b'{"run": "r", "slugs": ["a"]}',  # no start time
+    }
+    with pytest.raises(ValueError, match="pending marker"):
+        refprep.forget_orphans(samples, dry_run=False, stale_after=0)
+    assert "conditioned/a.wav" in samples
+
+
+def test_nfc_and_nfd_spellings_of_one_file_are_one_source(tmp_path):
+    import unicodedata
+
+    nfd = unicodedata.normalize("NFD", "Café.wav")
+    nfc = unicodedata.normalize("NFC", "Café.wav")
+    (tmp_path / nfd).touch()
+    assert refprep.source_identity(tmp_path / nfc) == refprep.source_identity(
+        tmp_path / nfd
+    )
 
 
 def _is_case_insensitive(folder: Path) -> bool:
