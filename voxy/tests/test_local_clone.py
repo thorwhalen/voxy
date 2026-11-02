@@ -607,7 +607,7 @@ def test_prepare_reference_tells_sources_apart_by_real_path(tmp_path, monkeypatc
     _rerun(samples, n_clips=2)(Path("song-a/vocals.wav"))
     manifest = _rerun(samples)(a, Path("song-a") / ".." / "song-a" / "vocals.wav")
     assert len([e for e in manifest if e["slug"] == "vocals-2"]) == 1  # once
-    assert {e["source_path"] for e in manifest} == {os.path.realpath(a)}
+    assert {e["source_path"] for e in manifest} == {refprep.source_identity(a)}
     assert len(refprep.forget(samples, a)) == 5  # both runs: 3 clips, 2 conditioned
     assert _keys(samples, "clips/") == _keys(samples, "conditioned/") == set()
     assert refprep.load_manifest(samples) == []
@@ -777,7 +777,9 @@ def test_prepare_reference_rereads_the_manifest_before_writing_it(tmp_path):
 
     manifest = _prep_with_hook(samples, meanwhile, b)
     assert len(once[0]) == 3  # a's 2 clips + conditioned
-    assert {e["source_path"] for e in manifest} == {os.path.realpath(p) for p in (b, c)}
+    assert {e["source_path"] for e in manifest} == {
+        refprep.source_identity(p) for p in (b, c)
+    }
     assert all(e["key"] in samples for e in refprep.load_manifest(samples))
 
 
@@ -798,7 +800,9 @@ def test_consumers_read_each_sources_latest_run(tmp_path):
     manifest = _rerun(samples, n_clips=3)(a)  # a again
     assert len(manifest) == 9
     latest = refprep.latest_runs(manifest)
-    a_runs = {e["run"] for e in latest if e["source_path"] == os.path.realpath(a)}
+    a_runs = {
+        e["run"] for e in latest if e["source_path"] == refprep.source_identity(a)
+    }
     assert len(latest) == 6 and a_runs == {max(e["run"] for e in manifest)}
 
     out = tmp_path / "ft"
@@ -834,6 +838,162 @@ def test_finetune_skips_entries_without_score_or_duration(tmp_path):
     assert report["clips"] == 1
     refs = refprep.best_references(manifest, n=10, min_seconds=1)
     assert all(isinstance(r.get("score"), float | int) for r in refs)  # no crash
+
+
+class _StoreFailingOn(dict):
+    """A samples store whose write of one key fails (a full disk, mid-run)."""
+
+    def __init__(self, failing_key, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.failing_key = failing_key
+
+    def __setitem__(self, key, value):
+        if key == self.failing_key:
+            raise OSError(f"no space left writing {key}")
+        super().__setitem__(key, value)
+
+
+def _two_clip_transcriber(*, fail_on_call=None):
+    """Two clips per source; raises on call number ``fail_on_call`` (an ASR crash)."""
+    calls = []
+
+    def transcriber(path, language=None):
+        calls.append(path)
+        if len(calls) == fail_on_call:
+            raise RuntimeError("asr worker died")
+        words = [_word(0.2, 1.8, "Hello."), _word(2.2, 3.8, "There.")]
+        return [{"start": 0, "end": 6, "text": "", "words": words}]
+
+    return transcriber
+
+
+@pytest.mark.parametrize(
+    "crash, partial",
+    [
+        # the transcriber dies on the second source: only its conditioned file is written
+        ("transcriber", ["conditioned/song-b-vocals.wav"]),
+        # the store fails on the second source's second clip: one clip is already written
+        (
+            "store",
+            ["clips/song-b-vocals-0001.wav", "conditioned/song-b-vocals.wav"],
+        ),
+    ],
+)
+def test_a_crash_mid_run_keeps_finished_sources_and_orphans_only_the_failing_one(
+    tmp_path, crash, partial
+):
+    """#92: the manifest is written per source; #98: ``orphans`` finds the rest."""
+    rng = np.random.default_rng(30)
+    a, b = _stem("song-a", tmp_path, rng), _stem("song-b", tmp_path, rng)
+    failing = "clips/song-b-vocals-0002.wav" if crash == "store" else None
+    samples = _StoreFailingOn(failing, {"tape1.wav": b"mine"})
+    with pytest.raises((RuntimeError, OSError)):
+        refprep.prepare_reference(
+            [a, b],
+            samples=samples,
+            conditioner=lambda src, dst, **kw: dst.write_bytes(open(src, "rb").read()),
+            transcriber=_two_clip_transcriber(
+                fail_on_call=2 if crash == "transcriber" else None
+            ),
+            min_seconds=1,
+            log=lambda *a: None,
+        )
+    manifest = refprep.load_manifest(samples)
+    assert {e["source_path"] for e in manifest} == {refprep.source_identity(a)}
+    assert sorted(e["key"] for e in manifest) == [
+        "clips/song-a-vocals-0001.wav",
+        "clips/song-a-vocals-0002.wav",
+    ]
+    assert refprep.orphans(samples) == partial
+
+    before, manifest_bytes = _snapshot(samples), samples[refprep.MANIFEST_KEY]
+    assert refprep.forget_orphans(samples) == partial  # a dry run by default
+    assert _snapshot(samples) == before
+    assert refprep.forget_orphans(samples, dry_run=False) == partial
+    assert set(before) - set(_snapshot(samples)) == set(partial)  # those, nothing else
+    assert samples[refprep.MANIFEST_KEY] == manifest_bytes
+    assert samples["tape1.wav"] == b"mine"
+    assert refprep.orphans(samples) == []
+
+
+def test_orphans_are_only_unclaimed_keys_of_our_own_form(tmp_path):
+    a = _stem("song-a", tmp_path, np.random.default_rng(31))
+    samples = {}
+    refprep.prepare_reference(  # a zero-clip source: its conditioned file only
+        [a],
+        samples=samples,
+        conditioner=lambda src, dst, **kw: dst.write_bytes(open(src, "rb").read()),
+        transcriber=lambda path, language=None: [],
+        log=lambda *a: None,
+    )
+    assert refprep.orphans(samples) == ["conditioned/vocals.wav"]
+    kept = {
+        "clips/x-0003.wav": b"named by an entry",
+        "conditioned/x.wav": b"its slug is an entry key's",
+        "conditioned/y.wav": b"its slug is an entry's slug field",
+        "tape1.wav": b"a top-level sample",
+        "clips/notes.txt": b"not a clip key",
+        "clips/Bad-0001.wav": b"not a slug we write",
+        "other/z-0001.wav": b"not our prefix",
+    }
+    lost = {"clips/lost-0002.wav": b"crashed run", "conditioned/lost.wav": b"crashed"}
+    for key, data in {**kept, **lost}.items():
+        samples[key] = data
+    hand = {"key": "clips/x-0003.wav", "slug": "y", "source": "/s/x.wav"}
+    _set_manifest(samples, [hand])
+    expected = sorted([*lost, "conditioned/vocals.wav"])
+    assert refprep.orphans(samples) == expected
+    assert refprep.forget_orphans(samples, dry_run=False) == expected
+    assert {k: samples[k] for k in kept} == kept
+    assert refprep.load_manifest(samples) == [hand]
+
+
+def test_orphans_refuses_a_manifest_it_cannot_read():
+    samples = {"conditioned/a.wav": b"A", refprep.MANIFEST_KEY: b"[1, 2]"}
+    with pytest.raises(ValueError, match="not JSON objects"):
+        refprep.forget_orphans(samples, dry_run=False)
+    assert "conditioned/a.wav" in samples
+
+
+def _is_case_insensitive(folder: Path) -> bool:
+    probe = folder / "CaseProbe"
+    probe.touch()
+    try:
+        return (folder / "caseprobe").exists()
+    finally:
+        probe.unlink()
+
+
+def test_one_file_typed_in_two_cases_is_one_source(tmp_path):
+    """#98: on a case-insensitive filesystem, ``Talk.wav`` and ``talk.wav`` are one file."""
+    if not _is_case_insensitive(tmp_path):
+        pytest.skip("tmp_path is on a case-sensitive filesystem")
+    (tmp_path / "Tapes").mkdir()
+    talk = tmp_path / "Tapes" / "Talk.wav"
+    noise = 0.2 * np.random.default_rng(32).standard_normal(SR * 6)
+    talk.write_bytes(write_wav(noise.astype(np.float32), SR))
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    samples["clips/old-0001.wav"] = b"an older voxy's clip"
+    older = {  # recorded by an older voxy, in the case it was typed then
+        "key": "clips/old-0001.wav",
+        "source_path": os.path.realpath(tmp_path / "tapes" / "talk.wav"),
+        "run": "20200101T000000.000000Z-aaaaaa",
+    }
+    _set_manifest(samples, [older])
+    _rerun(samples)(talk)
+    manifest = _rerun(samples)(tmp_path / "TAPES" / "talk.wav", talk)  # once, not twice
+    assert len(manifest) == 3
+    new = [e for e in manifest if e["key"] != older["key"]]
+    assert {e["source_path"] for e in new} == {refprep.source_identity(talk)}
+    assert refprep.source_identity(tmp_path / "tapes" / "TALK.WAV") == (
+        os.path.normcase(os.path.realpath(talk))
+    )
+    latest = refprep.latest_runs(manifest)
+    assert [e["run"] for e in latest] == [max(e["run"] for e in manifest)]
+    deleted = refprep.forget(samples, tmp_path / "tapes" / "TALK.WAV")
+    assert len(deleted) == 5  # the old clip, two runs' clip and conditioned file
+    assert refprep.load_manifest(samples) == []
+    assert _keys(samples, "clips/") == _keys(samples, "conditioned/") == set()
 
 
 def test_plan_clips_respects_max_length():
@@ -1251,13 +1411,17 @@ def test_a_builtin_registration_never_replaces_one_already_there():
         local_backends().pop("demo-tts", None)
 
 
-
 def test_latest_runs_knows_a_legacy_absolute_source_by_its_real_path(tmp_path):
     import os
 
     a = os.path.realpath(tmp_path / "a.wav")
     manifest = [
         {"key": "clips/a-0001.wav", "source": a},  # older voxy: absolute, no run
-        {"key": "clips/a-2-0001.wav", "source": a, "source_path": a, "run": "20261102T000000.000000Z-abcdef"},
+        {
+            "key": "clips/a-2-0001.wav",
+            "source": a,
+            "source_path": a,
+            "run": "20261102T000000.000000Z-abcdef",
+        },
     ]
     assert [e["key"] for e in refprep.latest_runs(manifest)] == ["clips/a-2-0001.wav"]
