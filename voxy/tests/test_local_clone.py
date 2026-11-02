@@ -28,7 +28,9 @@ def fake_generate(calls):
     def generate(text, *, ref_audio, ref_text, **params):
         calls.append({"text": text, "ref_audio": ref_audio, **params})
         tone = 0.2 * np.sin(np.linspace(0, 100, SR // 2)).astype(np.float32)
-        return np.concatenate([np.zeros(400, np.float32), tone, np.zeros(400, np.float32)]), SR
+        return np.concatenate(
+            [np.zeros(400, np.float32), tone, np.zeros(400, np.float32)]
+        ), SR
 
     return generate
 
@@ -48,7 +50,10 @@ def test_synthesize_chunks_long_text_and_joins_with_pauses():
     voice = reference_profile("ref.wav", "Reference words.")
     text = "First sentence. Second one!\n\nA new paragraph."
     speech = model.synthesize(text, voice, nfe_step=16)
-    assert [c["text"] for c in calls] == ["First sentence. Second one!", "A new paragraph."]
+    assert [c["text"] for c in calls] == [
+        "First sentence. Second one!",
+        "A new paragraph.",
+    ]
     assert all(c["nfe_step"] == 16 and c["ref_audio"] == "ref.wav" for c in calls)
     samples, sr = read_wav(speech.audio)
     assert sr == SR
@@ -62,7 +67,10 @@ def test_clone_voice_profile_round_trips_through_the_library(tmp_path):
     voices = voices_store(rootdir=tmp_path)
     save_voice("ada", profile, voices=voices)
     loaded = load_voice("ada", model_type="f5tts", voices=voices)
-    assert loaded.segment == {"ref_audio": str(tmp_path / "ref.wav"), "ref_text": "Some words."}
+    assert loaded.segment == {
+        "ref_audio": str(tmp_path / "ref.wav"),
+        "ref_text": "Some words.",
+    }
 
 
 def test_text_to_speech_resolves_a_library_reference_voice(tmp_path):
@@ -108,7 +116,9 @@ def test_worker_reports_errors_and_keeps_serving(tmp_path):
     with Worker(sys.executable, adapter, log_path=tmp_path / "w.log") as worker:
         with pytest.raises(WorkerError, match="nope"):
             worker.call("boom")
-        assert worker.call("hello", name="x") == {"hi": "x"}  # stdout noise didn't break it
+        assert worker.call("hello", name="x") == {
+            "hi": "x"
+        }  # stdout noise didn't break it
     assert "noise on stdout" in (tmp_path / "w.log").read_text()
 
 
@@ -159,14 +169,22 @@ def test_prepare_reference_cuts_scores_and_saves_a_manifest(tmp_path):
         return dst
 
     def transcriber(path, language=None):
-        words = [_word(0.2, 1.5, "It"), _word(1.6, 3.9, "began."), _word(5.1, 7, "Then"),
-                 _word(7.1, 9.8, "ended.")]
+        words = [
+            _word(0.2, 1.5, "It"),
+            _word(1.6, 3.9, "began."),
+            _word(5.1, 7, "Then"),
+            _word(7.1, 9.8, "ended."),
+        ]
         return [{"start": 0, "end": 10, "text": "", "words": words}]
 
     samples = samples_store("ada", rootdir=tmp_path)
     manifest = refprep.prepare_reference(
-        [source], samples=samples, conditioner=conditioner, transcriber=transcriber,
-        min_seconds=2, log=lambda *a: None,
+        [source],
+        samples=samples,
+        conditioner=conditioner,
+        transcriber=transcriber,
+        min_seconds=2,
+        log=lambda *a: None,
     )
     assert sorted(c["text"] for c in manifest) == ["It began.", "Then ended."]
     assert all(0 <= c["score"] <= 1 and c["path"].endswith(".wav") for c in manifest)
@@ -174,10 +192,70 @@ def test_prepare_reference_cuts_scores_and_saves_a_manifest(tmp_path):
     assert "conditioned/tape.wav" in samples
 
 
+def test_prepare_reference_keeps_same_named_sources_apart(tmp_path):
+    """Demucs stems are all ``<track>/vocals.wav``: no clip may overwrite another's."""
+    rng = np.random.default_rng(2)
+    sources = {}
+    for folder, gain in [("song-a", 0.1), ("song-b", 0.4)]:
+        (tmp_path / folder).mkdir()
+        sources[folder] = tmp_path / folder / "vocals.wav"
+        sources[folder].write_bytes(
+            write_wav(gain * rng.standard_normal(SR * 4).astype(np.float32), SR)
+        )
+
+    def conditioner(src, dst, **kwargs):
+        dst.write_bytes(open(src, "rb").read())
+        return dst
+
+    def transcriber(path, language=None):
+        return [
+            {"start": 0, "end": 4, "text": "", "words": [_word(0.2, 3.8, "Hello.")]}
+        ]
+
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    manifest = refprep.prepare_reference(
+        list(sources.values()),
+        samples=samples,
+        conditioner=conditioner,
+        transcriber=transcriber,
+        min_seconds=2,
+        log=lambda *a: None,
+    )
+    assert len({c["key"] for c in manifest}) == len(manifest) == 2
+    for clip in manifest:
+        folder = Path(clip["source"]).parent.name
+        assert folder in clip["key"]
+        rms = np.sqrt(np.mean(read_wav(samples[clip["key"]])[0] ** 2))
+        assert (rms > 0.2) == (folder == "song-b")  # the bytes are this source's
+    for key in ("conditioned/song-a-vocals.wav", "conditioned/song-b-vocals.wav"):
+        assert key in samples  # (listing the store gives OS separators on Windows)
+
+
+def test_unique_slugs_deepens_only_names_that_collide():
+    """A unique stem keeps its key, whatever order the sources come in."""
+    unique, *stems = ["/s/one-vocals.wav", "/s/one/vocals.wav", "/s/two/vocals.wav"]
+    for sources in ([unique, *stems], [*stems, unique]):
+        slugs = dict(zip(sources, refprep.unique_slugs(sources)))
+        assert slugs[unique] == "one-vocals"
+        assert slugs["/s/two/vocals.wav"] == "two-vocals"
+        assert len(set(slugs.values())) == 3
+
+
+def test_unique_slugs_names_an_unsluggable_stem_source_not_its_folder():
+    assert refprep.unique_slugs(["/s/日本.wav", "/s/x.wav"]) == ["source", "x"]
+    assert refprep.unique_slugs(["/s/日本.wav", "/t/日本.wav"]) == [
+        "s-source",
+        "t-source",
+    ]
+
+
 def test_plan_clips_respects_max_length():
     words = [_word(i, i + 0.9, f"w{i}") for i in range(30)]
-    clips = refprep.plan_clips([{"words": words, "start": 0, "end": 30, "text": ""}],
-                               min_seconds=3, max_seconds=8)
+    clips = refprep.plan_clips(
+        [{"words": words, "start": 0, "end": 30, "text": ""}],
+        min_seconds=3,
+        max_seconds=8,
+    )
     assert all(c["end"] - c["start"] <= 8.5 for c in clips)
     assert " ".join(c["text"] for c in clips) == " ".join(w["text"] for w in words)
 
@@ -192,14 +270,27 @@ def test_render_grid_and_page(tmp_path):
         return LocalCloneSpeechModel(backend, generate=fake_generate(calls), **init)
 
     variants = diagnosis.expand_grid(
-        [{"backend": "f5tts", "params": {"nfe_step": [16, 32]}},
-         {"backend": "chatterbox", "init": {"variant": "turbo"}, "params": {"temperature": 0.7}}],
+        [
+            {"backend": "f5tts", "params": {"nfe_step": [16, 32]}},
+            {
+                "backend": "chatterbox",
+                "init": {"variant": "turbo"},
+                "params": {"temperature": 0.7},
+            },
+        ],
         references=["r1"],
     )
     assert len({v.id for v in variants}) == 3
     refs = {"r1": reference_profile("r.wav", "Hi.")}
-    results = diagnosis.render_grid("Hello there.", refs, variants, tmp_path,
-                                    model_factory=factory, audio_format="wav", log=lambda *a: None)
+    results = diagnosis.render_grid(
+        "Hello there.",
+        refs,
+        variants,
+        tmp_path,
+        model_factory=factory,
+        audio_format="wav",
+        log=lambda *a: None,
+    )
     assert all(not r.get("error") and (tmp_path / r["audio"]).exists() for r in results)
     page = diagnosis.build_page(results, tmp_path, title="T", text="Hello there.")
     content = page.read_text()
@@ -207,8 +298,15 @@ def test_render_grid_and_page(tmp_path):
     assert "<b>nfe_step=16</b>" in content and "nfe_step=32" in content
     # resume: nothing re-rendered
     n = len(calls)
-    diagnosis.render_grid("Hello there.", refs, variants, tmp_path, model_factory=factory,
-                          audio_format="wav", log=lambda *a: None)
+    diagnosis.render_grid(
+        "Hello there.",
+        refs,
+        variants,
+        tmp_path,
+        model_factory=factory,
+        audio_format="wav",
+        log=lambda *a: None,
+    )
     assert len(calls) == n
     saved = json.loads((tmp_path / diagnosis.RESULTS_FILE).read_text())
     assert len(saved["results"]) == 3
@@ -223,10 +321,18 @@ def test_a_failing_variant_is_recorded_not_fatal(tmp_path):
 
         return LocalCloneSpeechModel(backend, generate=generate)
 
-    variants = diagnosis.expand_grid([{"backend": "f5tts", "params": {"nfe_step": [16, 32]}}])
-    results = diagnosis.render_grid("Hi.", {"": reference_profile("r.wav", "x")}, variants,
-                                    tmp_path, model_factory=factory, audio_format="wav",
-                                    log=lambda *a: None)
+    variants = diagnosis.expand_grid(
+        [{"backend": "f5tts", "params": {"nfe_step": [16, 32]}}]
+    )
+    results = diagnosis.render_grid(
+        "Hi.",
+        {"": reference_profile("r.wav", "x")},
+        variants,
+        tmp_path,
+        model_factory=factory,
+        audio_format="wav",
+        log=lambda *a: None,
+    )
     errors = [r for r in results if r.get("error")]
     assert len(errors) == 1 and "diverged" in errors[0]["error"]
 
@@ -256,7 +362,9 @@ def test_chatterbox_adapter_routes_language_by_variant(tmp_path):
 
     from voxy.workers import adapter_path
 
-    spec = importlib.util.spec_from_file_location("cb_adapter", adapter_path("chatterbox"))
+    spec = importlib.util.spec_from_file_location(
+        "cb_adapter", adapter_path("chatterbox")
+    )
     adapter = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(adapter)
     pytest.importorskip("torch")
@@ -274,7 +382,12 @@ def test_chatterbox_adapter_routes_language_by_variant(tmp_path):
         pass
 
     multi = ChatterboxMultilingualTTS()
-    kw = dict(text="Bonjour.", ref_audio="r.wav", ref_text="x", out_path=str(tmp_path / "o.wav"))
+    kw = dict(
+        text="Bonjour.",
+        ref_audio="r.wav",
+        ref_text="x",
+        out_path=str(tmp_path / "o.wav"),
+    )
     adapter.synthesize(multi, language="fr", **kw)
     assert multi.kwargs["language_id"] == "fr"
     english_only = ChatterboxTTS()
@@ -306,7 +419,9 @@ def test_with_deepfilternet_runs_ffmpeg_df_ffmpeg_in_order(tmp_path):
         return dst
 
     chain = refprep.with_deepfilternet(conditioner, denoiser=denoiser)
-    out = chain("in.m4a", tmp_path / "out.wav", sample_rate=24000, filters=["highpass=f=70"])
+    out = chain(
+        "in.m4a", tmp_path / "out.wav", sample_rate=24000, filters=["highpass=f=70"]
+    )
     assert calls == [
         ("ffmpeg", refprep.DF_SAMPLE_RATE, []),
         ("df",),
@@ -329,13 +444,17 @@ def test_deepfilternet_denoise_calls_the_env_command_and_copies_the_result(tmp_p
 
     wide = tmp_path / "wide.wav"
     wide.write_bytes(b"in")
-    dst = refprep.deepfilternet_denoise(wide, tmp_path / "x" / "clean.wav", run=run, ensure=ensure)
+    dst = refprep.deepfilternet_denoise(
+        wide, tmp_path / "x" / "clean.wav", run=run, ensure=ensure
+    )
     assert dst.read_bytes() == b"clean"
     assert seen["cmd"][0].endswith("deepFilter") and seen["spec"] is refprep.DF_ENV
     assert "torch==2.0.1" in refprep.DF_ENV.requirements
 
 
-def test_prepare_reference_with_deepfilternet_wraps_the_conditioner(tmp_path, monkeypatch):
+def test_prepare_reference_with_deepfilternet_wraps_the_conditioner(
+    tmp_path, monkeypatch
+):
     steps = []
 
     def conditioner(src, dst, *, sample_rate, filters):
@@ -344,7 +463,9 @@ def test_prepare_reference_with_deepfilternet_wraps_the_conditioner(tmp_path, mo
         return dst
 
     monkeypatch.setattr(
-        refprep, "deepfilternet_denoise", lambda s, d, **k: (d.write_bytes(s.read_bytes()), d)[1]
+        refprep,
+        "deepfilternet_denoise",
+        lambda s, d, **k: (d.write_bytes(s.read_bytes()), d)[1],
     )
     refprep.prepare_reference(
         ["a.wav"],
@@ -358,7 +479,8 @@ def test_prepare_reference_with_deepfilternet_wraps_the_conditioner(tmp_path, mo
 
 
 @pytest.mark.skipif(
-    not is_env_ready(refprep.DF_ENV), reason="the deepfilternet env is not built (python -m voxy setup)"
+    not is_env_ready(refprep.DF_ENV),
+    reason="the deepfilternet env is not built (python -m voxy setup)",
 )
 def test_deepfilternet_lowers_noise_for_real(tmp_path):
     rng = np.random.default_rng(0)
@@ -391,8 +513,12 @@ def test_qwen_designs_a_voice_then_clones_from_the_chosen_preview(tmp_path):
 
     voices = voices_store(rootdir=tmp_path)
     profile = voxy.design_from_description(
-        "calm", "A calm deep voice", preview=previews[1], model=model,
-        voices=voices, rootdir=tmp_path,
+        "calm",
+        "A calm deep voice",
+        preview=previews[1],
+        model=model,
+        voices=voices,
+        rootdir=tmp_path,
     )
     clip = Path(profile.segment["ref_audio"])
     assert clip == tmp_path / "samples" / "calm" / "design.wav"
@@ -411,4 +537,6 @@ def test_design_voice_without_preview_takes_the_first_generated(tmp_path):
     profile = model.design_voice("x", name="n", rootdir=tmp_path, seeds=[9])
     assert profile.metadata["seed"] == 9 and profile.metadata["designed_from"] == "x"
     with pytest.raises(TypeError, match="design_voice_previews"):
-        model.design_voice("x", name="n", preview=model.design_voice_previews("x")[0], seeds=[1])
+        model.design_voice(
+            "x", name="n", preview=model.design_voice_previews("x")[0], seeds=[1]
+        )
