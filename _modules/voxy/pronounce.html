@@ -1457,7 +1457,7 @@
 </span><span id="line-1167">
 </span><span id="line-1168"><span class="sd">    A ``.json`` file holds that mapping; any other file is tab-separated</span>
 </span><span id="line-1169"><span class="sd">    ``word&lt;TAB&gt;reading name&lt;TAB&gt;IPA``, one reading per line (``#`` lines and blank</span>
-</span><span id="line-1170"><span class="sd">    lines skipped), e.g. a list derived from Lexique (``voxy.lexique.lexique_heteronyms``</span>
+</span><span id="line-1170"><span class="sd">    lines skipped), e.g. a list derived from Lexique (``voxy.lexique.cached_lexique_heteronyms``</span>
 </span><span id="line-1171"><span class="sd">    builds one from your copy; voxy ships no Lexique data).</span>
 </span><span id="line-1172"><span class="sd">    """</span>
 </span><span id="line-1173">    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
@@ -1492,7 +1492,7 @@
 </span><span id="line-1199"><span class="w">    </span><span class="sd">"""voxy's own heteronym table for ``language``: ``{word: {reading name: IPA}}``.</span>
 </span><span id="line-1200">
 </span><span id="line-1201"><span class="sd">    A short, hand-made list (French: *est*, *fils*, *plus*, *tous*, the *-ent* verbs...);</span>
-</span><span id="line-1202"><span class="sd">    merge a fuller one: ``{**voxy.lexique.lexique_heteronyms(path), **heteronym_readings()}``</span>
+</span><span id="line-1202"><span class="sd">    merge a fuller one: ``{**voxy.lexique.cached_lexique_heteronyms(path), **heteronym_readings()}``</span>
 </span><span id="line-1203"><span class="sd">    (Lexique-derived, the hand-made readings winning), or one read with :func:`load_readings`.</span>
 </span><span id="line-1204">
 </span><span id="line-1205"><span class="sd">    &gt;&gt;&gt; heteronym_readings("fr")["est"]["noun"]</span>
@@ -1948,7 +1948,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=a72e4630"></script>
+    <script src="../../_static/documentation_options.js?v=0356c229"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

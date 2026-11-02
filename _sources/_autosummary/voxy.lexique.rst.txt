@@ -18,12 +18,17 @@ voxy.lexique
       PHON
       LEMMA
       CGRAM
+      LEXIQUE_CACHE_KIND
+      CACHE_KEY_CHARS
+      LEXIQUE_DERIVATION_VERSION
    
    .. rubric:: Functions
 
    .. autosummary::
    
+      cached_lexique_heteronyms
       heteronyms_from_rows
+      lexique_cache
       lexique_heteronyms
       lexique_to_ipa
       phon_key

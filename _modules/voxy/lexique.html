@@ -227,220 +227,300 @@
 </span><span id="line-38"><span class="sd">"""</span>
 </span><span id="line-39">
 </span><span id="line-40"><span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
-</span><span id="line-41"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-</span><span id="line-42"><span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
-</span><span id="line-43"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
-</span><span id="line-44">
-</span><span id="line-45"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.pronounce</span><span class="w"> </span><span class="kn">import</span> <span class="n">VARIANT_SEPARATOR</span>
-</span><span id="line-46"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.speechtext</span><span class="w"> </span><span class="kn">import</span> <span class="n">FRENCH_READING_NAMES</span>
+</span><span id="line-41"><span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+</span><span id="line-42"><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+</span><span id="line-43"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+</span><span id="line-44"><span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
+</span><span id="line-45"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">MutableMapping</span>
+</span><span id="line-46"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 </span><span id="line-47">
-</span><span id="line-48"><span class="c1">#: Lexique's phonetic code -&gt; IPA in the vocabulary of voxy's phoneme model</span>
-</span><span id="line-49"><span class="c1">#: (``facebook/wav2vec2-lv-60-espeak-cv-ft``); Lexique's other letters are that IPA.</span>
-</span><span id="line-50"><span class="n">LEXIQUE_TO_IPA</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-51">    <span class="s2">"E"</span><span class="p">:</span> <span class="s2">"ɛ"</span><span class="p">,</span>
-</span><span id="line-52">    <span class="s2">"O"</span><span class="p">:</span> <span class="s2">"ɔ"</span><span class="p">,</span>
-</span><span id="line-53">    <span class="s2">"°"</span><span class="p">:</span> <span class="s2">"ə"</span><span class="p">,</span>
-</span><span id="line-54">    <span class="s2">"2"</span><span class="p">:</span> <span class="s2">"ø"</span><span class="p">,</span>
-</span><span id="line-55">    <span class="s2">"9"</span><span class="p">:</span> <span class="s2">"œ"</span><span class="p">,</span>
-</span><span id="line-56">    <span class="s2">"5"</span><span class="p">:</span> <span class="s2">"ɛ̃"</span><span class="p">,</span>
-</span><span id="line-57">    <span class="s2">"1"</span><span class="p">:</span> <span class="s2">"œ̃"</span><span class="p">,</span>
-</span><span id="line-58">    <span class="s2">"@"</span><span class="p">:</span> <span class="s2">"ɑ̃"</span><span class="p">,</span>
-</span><span id="line-59">    <span class="s2">"§"</span><span class="p">:</span> <span class="s2">"ɔ̃"</span><span class="p">,</span>
-</span><span id="line-60">    <span class="c1"># /ɥ/ (*huit*, *lui*) is not in the model's vocabulary, which could never hear it;</span>
-</span><span id="line-61">    <span class="c1"># /y/, the vowel it is the glide of, is the nearest symbol that is.</span>
-</span><span id="line-62">    <span class="s2">"8"</span><span class="p">:</span> <span class="s2">"y"</span><span class="p">,</span>
-</span><span id="line-63">    <span class="s2">"R"</span><span class="p">:</span> <span class="s2">"ʁ"</span><span class="p">,</span>
-</span><span id="line-64">    <span class="s2">"S"</span><span class="p">:</span> <span class="s2">"ʃ"</span><span class="p">,</span>
-</span><span id="line-65">    <span class="s2">"Z"</span><span class="p">:</span> <span class="s2">"ʒ"</span><span class="p">,</span>
-</span><span id="line-66">    <span class="s2">"N"</span><span class="p">:</span> <span class="s2">"ɲ"</span><span class="p">,</span>
-</span><span id="line-67">    <span class="s2">"G"</span><span class="p">:</span> <span class="s2">"ŋ"</span><span class="p">,</span>
-</span><span id="line-68">    <span class="s2">"g"</span><span class="p">:</span> <span class="s2">"ɡ"</span><span class="p">,</span>  <span class="c1"># IPA's script g (U+0261), the model's symbol, not the ASCII letter</span>
-</span><span id="line-69"><span class="p">}</span>
-</span><span id="line-70"><span class="c1">#: Lexique letters it writes inconsistently -&gt; the letter they are compared as: two</span>
-</span><span id="line-71"><span class="c1">#: pronunciations equal after this are one reading (open/closed vowels, schwa).</span>
-</span><span id="line-72"><span class="n">TRANSCRIPTION_NOISE</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"E"</span><span class="p">:</span> <span class="s2">"e"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">:</span> <span class="s2">"o"</span><span class="p">,</span> <span class="s2">"9"</span><span class="p">:</span> <span class="s2">"2"</span><span class="p">,</span> <span class="s2">"°"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"8"</span><span class="p">:</span> <span class="s2">"y"</span><span class="p">}</span>
-</span><span id="line-73"><span class="c1">#: Lexique's part of speech (``cgram``, whole or before its ``:``) -&gt; universal POS.</span>
-</span><span id="line-74"><span class="n">LEXIQUE_TO_UPOS</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-75">    <span class="s2">"NOM"</span><span class="p">:</span> <span class="s2">"NOUN"</span><span class="p">,</span>
-</span><span id="line-76">    <span class="s2">"VER"</span><span class="p">:</span> <span class="s2">"VERB"</span><span class="p">,</span>
-</span><span id="line-77">    <span class="s2">"AUX"</span><span class="p">:</span> <span class="s2">"AUX"</span><span class="p">,</span>
-</span><span id="line-78">    <span class="s2">"ADJ"</span><span class="p">:</span> <span class="s2">"ADJ"</span><span class="p">,</span>
-</span><span id="line-79">    <span class="s2">"ADJ:num"</span><span class="p">:</span> <span class="s2">"NUM"</span><span class="p">,</span>
-</span><span id="line-80">    <span class="s2">"ADJ:dem"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
-</span><span id="line-81">    <span class="s2">"ADJ:ind"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
-</span><span id="line-82">    <span class="s2">"ADJ:int"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
-</span><span id="line-83">    <span class="s2">"ADJ:pos"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
-</span><span id="line-84">    <span class="s2">"ADV"</span><span class="p">:</span> <span class="s2">"ADV"</span><span class="p">,</span>
-</span><span id="line-85">    <span class="s2">"PRE"</span><span class="p">:</span> <span class="s2">"ADP"</span><span class="p">,</span>
-</span><span id="line-86">    <span class="s2">"CON"</span><span class="p">:</span> <span class="s2">"CCONJ"</span><span class="p">,</span>
-</span><span id="line-87">    <span class="s2">"PRO"</span><span class="p">:</span> <span class="s2">"PRON"</span><span class="p">,</span>
-</span><span id="line-88">    <span class="s2">"ART"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
-</span><span id="line-89">    <span class="s2">"ONO"</span><span class="p">:</span> <span class="s2">"INTJ"</span><span class="p">,</span>
-</span><span id="line-90"><span class="p">}</span>
-</span><span id="line-91"><span class="c1">#: Lexique's part of speech -&gt; a reading name (``voxy.speechtext.FRENCH_READING_NAMES``).</span>
-</span><span id="line-92"><span class="n">LEXIQUE_POS_NAMES</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-93">    <span class="n">tag</span><span class="p">:</span> <span class="n">FRENCH_READING_NAMES</span><span class="p">[</span><span class="n">upos</span><span class="p">]</span> <span class="k">for</span> <span class="n">tag</span><span class="p">,</span> <span class="n">upos</span> <span class="ow">in</span> <span class="n">LEXIQUE_TO_UPOS</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-</span><span id="line-94"><span class="p">}</span>
-</span><span id="line-95"><span class="c1">#: A pronunciation with a verb row is named ``verb`` when its heaviest part of speech</span>
-</span><span id="line-96"><span class="c1">#: is one of these: Lexique tags some verb forms as nouns or adjectives too (*violent*,</span>
-</span><span id="line-97"><span class="c1">#: *insolent*), while an adverb (*plus*) is genuinely heavier than its verb rows.</span>
-</span><span id="line-98"><span class="n">VERB_NAME</span> <span class="o">=</span> <span class="n">FRENCH_READING_NAMES</span><span class="p">[</span><span class="s2">"VERB"</span><span class="p">]</span>
-</span><span id="line-99"><span class="n">VERB_OUTRANKS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">FRENCH_READING_NAMES</span><span class="p">[</span><span class="s2">"NOUN"</span><span class="p">],</span> <span class="n">FRENCH_READING_NAMES</span><span class="p">[</span><span class="s2">"ADJ"</span><span class="p">]})</span>
-</span><span id="line-100"><span class="c1">#: The name of a reading whose part of speech Lexique leaves empty.</span>
-</span><span id="line-101"><span class="n">UNTAGGED_NAME</span> <span class="o">=</span> <span class="s2">"word"</span>
-</span><span id="line-102"><span class="c1">#: Columns read from a Lexique 3 file.</span>
-</span><span id="line-103"><span class="n">ORTHO</span><span class="p">,</span> <span class="n">PHON</span><span class="p">,</span> <span class="n">LEMMA</span><span class="p">,</span> <span class="n">CGRAM</span> <span class="o">=</span> <span class="s2">"ortho"</span><span class="p">,</span> <span class="s2">"phon"</span><span class="p">,</span> <span class="s2">"lemme"</span><span class="p">,</span> <span class="s2">"cgram"</span>
-</span><span id="line-104"><span class="n">FREQUENCY_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"freqfilms2"</span><span class="p">,</span> <span class="s2">"freqlivres"</span><span class="p">)</span>
-</span><span id="line-105"><span class="n">REQUIRED_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="n">ORTHO</span><span class="p">,</span> <span class="n">PHON</span><span class="p">,</span> <span class="n">LEMMA</span><span class="p">,</span> <span class="n">CGRAM</span><span class="p">,</span> <span class="o">*</span><span class="n">FREQUENCY_COLUMNS</span><span class="p">)</span>
-</span><span id="line-106">
-</span><span id="line-107">
+</span><span id="line-48"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.pronounce</span><span class="w"> </span><span class="kn">import</span> <span class="n">VARIANT_SEPARATOR</span>
+</span><span id="line-49"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.speechtext</span><span class="w"> </span><span class="kn">import</span> <span class="n">FRENCH_READING_NAMES</span>
+</span><span id="line-50">
+</span><span id="line-51"><span class="c1">#: Lexique's phonetic code -&gt; IPA in the vocabulary of voxy's phoneme model</span>
+</span><span id="line-52"><span class="c1">#: (``facebook/wav2vec2-lv-60-espeak-cv-ft``); Lexique's other letters are that IPA.</span>
+</span><span id="line-53"><span class="n">LEXIQUE_TO_IPA</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-54">    <span class="s2">"E"</span><span class="p">:</span> <span class="s2">"ɛ"</span><span class="p">,</span>
+</span><span id="line-55">    <span class="s2">"O"</span><span class="p">:</span> <span class="s2">"ɔ"</span><span class="p">,</span>
+</span><span id="line-56">    <span class="s2">"°"</span><span class="p">:</span> <span class="s2">"ə"</span><span class="p">,</span>
+</span><span id="line-57">    <span class="s2">"2"</span><span class="p">:</span> <span class="s2">"ø"</span><span class="p">,</span>
+</span><span id="line-58">    <span class="s2">"9"</span><span class="p">:</span> <span class="s2">"œ"</span><span class="p">,</span>
+</span><span id="line-59">    <span class="s2">"5"</span><span class="p">:</span> <span class="s2">"ɛ̃"</span><span class="p">,</span>
+</span><span id="line-60">    <span class="s2">"1"</span><span class="p">:</span> <span class="s2">"œ̃"</span><span class="p">,</span>
+</span><span id="line-61">    <span class="s2">"@"</span><span class="p">:</span> <span class="s2">"ɑ̃"</span><span class="p">,</span>
+</span><span id="line-62">    <span class="s2">"§"</span><span class="p">:</span> <span class="s2">"ɔ̃"</span><span class="p">,</span>
+</span><span id="line-63">    <span class="c1"># /ɥ/ (*huit*, *lui*) is not in the model's vocabulary, which could never hear it;</span>
+</span><span id="line-64">    <span class="c1"># /y/, the vowel it is the glide of, is the nearest symbol that is.</span>
+</span><span id="line-65">    <span class="s2">"8"</span><span class="p">:</span> <span class="s2">"y"</span><span class="p">,</span>
+</span><span id="line-66">    <span class="s2">"R"</span><span class="p">:</span> <span class="s2">"ʁ"</span><span class="p">,</span>
+</span><span id="line-67">    <span class="s2">"S"</span><span class="p">:</span> <span class="s2">"ʃ"</span><span class="p">,</span>
+</span><span id="line-68">    <span class="s2">"Z"</span><span class="p">:</span> <span class="s2">"ʒ"</span><span class="p">,</span>
+</span><span id="line-69">    <span class="s2">"N"</span><span class="p">:</span> <span class="s2">"ɲ"</span><span class="p">,</span>
+</span><span id="line-70">    <span class="s2">"G"</span><span class="p">:</span> <span class="s2">"ŋ"</span><span class="p">,</span>
+</span><span id="line-71">    <span class="s2">"g"</span><span class="p">:</span> <span class="s2">"ɡ"</span><span class="p">,</span>  <span class="c1"># IPA's script g (U+0261), the model's symbol, not the ASCII letter</span>
+</span><span id="line-72"><span class="p">}</span>
+</span><span id="line-73"><span class="c1">#: Lexique letters it writes inconsistently -&gt; the letter they are compared as: two</span>
+</span><span id="line-74"><span class="c1">#: pronunciations equal after this are one reading (open/closed vowels, schwa).</span>
+</span><span id="line-75"><span class="n">TRANSCRIPTION_NOISE</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"E"</span><span class="p">:</span> <span class="s2">"e"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">:</span> <span class="s2">"o"</span><span class="p">,</span> <span class="s2">"9"</span><span class="p">:</span> <span class="s2">"2"</span><span class="p">,</span> <span class="s2">"°"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"8"</span><span class="p">:</span> <span class="s2">"y"</span><span class="p">}</span>
+</span><span id="line-76"><span class="c1">#: Lexique's part of speech (``cgram``, whole or before its ``:``) -&gt; universal POS.</span>
+</span><span id="line-77"><span class="n">LEXIQUE_TO_UPOS</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-78">    <span class="s2">"NOM"</span><span class="p">:</span> <span class="s2">"NOUN"</span><span class="p">,</span>
+</span><span id="line-79">    <span class="s2">"VER"</span><span class="p">:</span> <span class="s2">"VERB"</span><span class="p">,</span>
+</span><span id="line-80">    <span class="s2">"AUX"</span><span class="p">:</span> <span class="s2">"AUX"</span><span class="p">,</span>
+</span><span id="line-81">    <span class="s2">"ADJ"</span><span class="p">:</span> <span class="s2">"ADJ"</span><span class="p">,</span>
+</span><span id="line-82">    <span class="s2">"ADJ:num"</span><span class="p">:</span> <span class="s2">"NUM"</span><span class="p">,</span>
+</span><span id="line-83">    <span class="s2">"ADJ:dem"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
+</span><span id="line-84">    <span class="s2">"ADJ:ind"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
+</span><span id="line-85">    <span class="s2">"ADJ:int"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
+</span><span id="line-86">    <span class="s2">"ADJ:pos"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
+</span><span id="line-87">    <span class="s2">"ADV"</span><span class="p">:</span> <span class="s2">"ADV"</span><span class="p">,</span>
+</span><span id="line-88">    <span class="s2">"PRE"</span><span class="p">:</span> <span class="s2">"ADP"</span><span class="p">,</span>
+</span><span id="line-89">    <span class="s2">"CON"</span><span class="p">:</span> <span class="s2">"CCONJ"</span><span class="p">,</span>
+</span><span id="line-90">    <span class="s2">"PRO"</span><span class="p">:</span> <span class="s2">"PRON"</span><span class="p">,</span>
+</span><span id="line-91">    <span class="s2">"ART"</span><span class="p">:</span> <span class="s2">"DET"</span><span class="p">,</span>
+</span><span id="line-92">    <span class="s2">"ONO"</span><span class="p">:</span> <span class="s2">"INTJ"</span><span class="p">,</span>
+</span><span id="line-93"><span class="p">}</span>
+</span><span id="line-94"><span class="c1">#: Lexique's part of speech -&gt; a reading name (``voxy.speechtext.FRENCH_READING_NAMES``).</span>
+</span><span id="line-95"><span class="n">LEXIQUE_POS_NAMES</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-96">    <span class="n">tag</span><span class="p">:</span> <span class="n">FRENCH_READING_NAMES</span><span class="p">[</span><span class="n">upos</span><span class="p">]</span> <span class="k">for</span> <span class="n">tag</span><span class="p">,</span> <span class="n">upos</span> <span class="ow">in</span> <span class="n">LEXIQUE_TO_UPOS</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+</span><span id="line-97"><span class="p">}</span>
+</span><span id="line-98"><span class="c1">#: A pronunciation with a verb row is named ``verb`` when its heaviest part of speech</span>
+</span><span id="line-99"><span class="c1">#: is one of these: Lexique tags some verb forms as nouns or adjectives too (*violent*,</span>
+</span><span id="line-100"><span class="c1">#: *insolent*), while an adverb (*plus*) is genuinely heavier than its verb rows.</span>
+</span><span id="line-101"><span class="n">VERB_NAME</span> <span class="o">=</span> <span class="n">FRENCH_READING_NAMES</span><span class="p">[</span><span class="s2">"VERB"</span><span class="p">]</span>
+</span><span id="line-102"><span class="n">VERB_OUTRANKS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">FRENCH_READING_NAMES</span><span class="p">[</span><span class="s2">"NOUN"</span><span class="p">],</span> <span class="n">FRENCH_READING_NAMES</span><span class="p">[</span><span class="s2">"ADJ"</span><span class="p">]})</span>
+</span><span id="line-103"><span class="c1">#: The name of a reading whose part of speech Lexique leaves empty.</span>
+</span><span id="line-104"><span class="n">UNTAGGED_NAME</span> <span class="o">=</span> <span class="s2">"word"</span>
+</span><span id="line-105"><span class="c1">#: Columns read from a Lexique 3 file.</span>
+</span><span id="line-106"><span class="n">ORTHO</span><span class="p">,</span> <span class="n">PHON</span><span class="p">,</span> <span class="n">LEMMA</span><span class="p">,</span> <span class="n">CGRAM</span> <span class="o">=</span> <span class="s2">"ortho"</span><span class="p">,</span> <span class="s2">"phon"</span><span class="p">,</span> <span class="s2">"lemme"</span><span class="p">,</span> <span class="s2">"cgram"</span>
+</span><span id="line-107"><span class="n">FREQUENCY_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"freqfilms2"</span><span class="p">,</span> <span class="s2">"freqlivres"</span><span class="p">)</span>
+</span><span id="line-108"><span class="n">REQUIRED_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="n">ORTHO</span><span class="p">,</span> <span class="n">PHON</span><span class="p">,</span> <span class="n">LEMMA</span><span class="p">,</span> <span class="n">CGRAM</span><span class="p">,</span> <span class="o">*</span><span class="n">FREQUENCY_COLUMNS</span><span class="p">)</span>
+</span><span id="line-109">
+</span><span id="line-110">
 <div class="viewcode-block" id="lexique_to_ipa">
 <a class="viewcode-back" href="../../_autosummary/voxy.lexique.html#voxy.lexique.lexique_to_ipa">[docs]</a>
-</span><span id="line-108"><span class="k">def</span><span class="w"> </span><span class="nf">lexique_to_ipa</span><span class="p">(</span><span class="n">phon</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">symbols</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_TO_IPA</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-109"><span class="w">    </span><span class="sd">"""A Lexique pronunciation in IPA.</span>
-</span><span id="line-110">
-</span><span id="line-111"><span class="sd">    &gt;&gt;&gt; lexique_to_ipa("kuv@"), lexique_to_ipa("pRezid@"), lexique_to_ipa("Est")</span>
-</span><span id="line-112"><span class="sd">    ('kuvɑ̃', 'pʁezidɑ̃', 'ɛst')</span>
-</span><span id="line-113"><span class="sd">    """</span>
-</span><span id="line-114">    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">phon</span><span class="p">)</span></div>
+</span><span id="line-111"><span class="k">def</span><span class="w"> </span><span class="nf">lexique_to_ipa</span><span class="p">(</span><span class="n">phon</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">symbols</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_TO_IPA</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-112"><span class="w">    </span><span class="sd">"""A Lexique pronunciation in IPA.</span>
+</span><span id="line-113">
+</span><span id="line-114"><span class="sd">    &gt;&gt;&gt; lexique_to_ipa("kuv@"), lexique_to_ipa("pRezid@"), lexique_to_ipa("Est")</span>
+</span><span id="line-115"><span class="sd">    ('kuvɑ̃', 'pʁezidɑ̃', 'ɛst')</span>
+</span><span id="line-116"><span class="sd">    """</span>
+</span><span id="line-117">    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">symbols</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">phon</span><span class="p">)</span></div>
 
-</span><span id="line-115">
-</span><span id="line-116">
+</span><span id="line-118">
+</span><span id="line-119">
 <div class="viewcode-block" id="phon_key">
 <a class="viewcode-back" href="../../_autosummary/voxy.lexique.html#voxy.lexique.phon_key">[docs]</a>
-</span><span id="line-117"><span class="k">def</span><span class="w"> </span><span class="nf">phon_key</span><span class="p">(</span><span class="n">phon</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">noise</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">TRANSCRIPTION_NOISE</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-118"><span class="w">    </span><span class="sd">"""What a Lexique pronunciation is compared as, transcription noise removed.</span>
-</span><span id="line-119">
-</span><span id="line-120"><span class="sd">    &gt;&gt;&gt; phon_key("vjOl°"), phon_key("vjol")</span>
-</span><span id="line-121"><span class="sd">    ('vjol', 'vjol')</span>
-</span><span id="line-122"><span class="sd">    """</span>
-</span><span id="line-123">    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">noise</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">phon</span><span class="p">)</span></div>
+</span><span id="line-120"><span class="k">def</span><span class="w"> </span><span class="nf">phon_key</span><span class="p">(</span><span class="n">phon</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">noise</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">TRANSCRIPTION_NOISE</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-121"><span class="w">    </span><span class="sd">"""What a Lexique pronunciation is compared as, transcription noise removed.</span>
+</span><span id="line-122">
+</span><span id="line-123"><span class="sd">    &gt;&gt;&gt; phon_key("vjOl°"), phon_key("vjol")</span>
+</span><span id="line-124"><span class="sd">    ('vjol', 'vjol')</span>
+</span><span id="line-125"><span class="sd">    """</span>
+</span><span id="line-126">    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">noise</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">phon</span><span class="p">)</span></div>
 
-</span><span id="line-124">
-</span><span id="line-125">
-</span><span id="line-126"><span class="k">def</span><span class="w"> </span><span class="nf">_frequency</span><span class="p">(</span><span class="n">row</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-</span><span id="line-127"><span class="w">    </span><span class="sd">"""Occurrences per million (films and books, the larger)."""</span>
-</span><span id="line-128">    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">FREQUENCY_COLUMNS</span><span class="p">)</span>
-</span><span id="line-129">
-</span><span id="line-130">
-</span><span id="line-131"><span class="k">def</span><span class="w"> </span><span class="nf">_pos_name</span><span class="p">(</span><span class="n">cgram</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">names</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-132">    <span class="n">tag</span> <span class="o">=</span> <span class="n">cgram</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-133">    <span class="k">return</span> <span class="n">names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cgram</span><span class="p">)</span> <span class="ow">or</span> <span class="n">names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tag</span><span class="p">)</span> <span class="ow">or</span> <span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">or</span> <span class="n">UNTAGGED_NAME</span>
-</span><span id="line-134">
-</span><span id="line-135">
-</span><span id="line-136"><span class="k">def</span><span class="w"> </span><span class="nf">_heaviest</span><span class="p">(</span><span class="n">weighted</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-137"><span class="w">    </span><span class="sd">"""Keys by their summed weight, heaviest first (ties in first-seen order)."""</span>
-</span><span id="line-138">    <span class="n">totals</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
-</span><span id="line-139">    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">weight</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">:</span>
-</span><span id="line-140">        <span class="n">totals</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">+=</span> <span class="n">weight</span>
-</span><span id="line-141">    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">totals</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="o">-</span><span class="n">totals</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-</span><span id="line-142">
-</span><span id="line-143">
-</span><span id="line-144"><span class="k">def</span><span class="w"> </span><span class="nf">_reading</span><span class="p">(</span><span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span> <span class="n">pos_names</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-</span><span id="line-145"><span class="w">    </span><span class="sd">"""One reading of a spelling, from the rows of its pronunciations: its weight (the</span>
-</span><span id="line-146"><span class="sd">    sum of the rows' frequencies), part of speech, lemma, and pronunciations (heaviest</span>
-</span><span id="line-147"><span class="sd">    first)."""</span>
-</span><span id="line-148">    <span class="n">weighted</span> <span class="o">=</span> <span class="p">[(</span><span class="n">row</span><span class="p">,</span> <span class="n">_frequency</span><span class="p">(</span><span class="n">row</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
-</span><span id="line-149">    <span class="n">poses</span> <span class="o">=</span> <span class="n">_heaviest</span><span class="p">((</span><span class="n">_pos_name</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="n">CGRAM</span><span class="p">],</span> <span class="n">pos_names</span><span class="p">),</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">)</span>
-</span><span id="line-150">    <span class="k">return</span> <span class="p">{</span>
-</span><span id="line-151">        <span class="s2">"weight"</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">f</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">),</span>
-</span><span id="line-152">        <span class="s2">"pos"</span><span class="p">:</span> <span class="n">VERB_NAME</span>
-</span><span id="line-153">        <span class="k">if</span> <span class="n">VERB_NAME</span> <span class="ow">in</span> <span class="n">poses</span> <span class="ow">and</span> <span class="n">poses</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">VERB_OUTRANKS</span>
-</span><span id="line-154">        <span class="k">else</span> <span class="n">poses</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-</span><span id="line-155">        <span class="s2">"lemma"</span><span class="p">:</span> <span class="n">_heaviest</span><span class="p">((</span><span class="n">r</span><span class="p">[</span><span class="n">LEMMA</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
-</span><span id="line-156">        <span class="s2">"phons"</span><span class="p">:</span> <span class="n">_heaviest</span><span class="p">((</span><span class="n">r</span><span class="p">[</span><span class="n">PHON</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">),</span>
-</span><span id="line-157">    <span class="p">}</span>
-</span><span id="line-158">
-</span><span id="line-159">
-</span><span id="line-160"><span class="k">def</span><span class="w"> </span><span class="nf">_reading_names</span><span class="p">(</span><span class="n">readings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">symbols</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-161"><span class="w">    </span><span class="sd">"""A name per reading: its part of speech; readings sharing one are named by lemma,</span>
-</span><span id="line-162"><span class="sd">    or ``&lt;pos&gt;:&lt;IPA&gt;`` when their lemmas coincide too."""</span>
-</span><span id="line-163">    <span class="n">poses</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s2">"pos"</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">readings</span><span class="p">]</span>
-</span><span id="line-164">    <span class="n">names</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-165">    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">readings</span><span class="p">:</span>
-</span><span id="line-166">        <span class="n">sharing</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">readings</span> <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="s2">"pos"</span><span class="p">]</span> <span class="o">==</span> <span class="n">r</span><span class="p">[</span><span class="s2">"pos"</span><span class="p">]]</span>
-</span><span id="line-167">        <span class="n">lemmas</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sharing</span><span class="p">]</span>
-</span><span id="line-168">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sharing</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="line-169">            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"pos"</span><span class="p">])</span>
-</span><span id="line-170">        <span class="k">elif</span> <span class="n">r</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">lemmas</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">poses</span><span class="p">:</span>
-</span><span id="line-171">            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">])</span>
-</span><span id="line-172">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-173">            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'pos'</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">lexique_to_ipa</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">'phons'</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">symbols</span><span class="o">=</span><span class="n">symbols</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-174">    <span class="k">return</span> <span class="n">names</span>
-</span><span id="line-175">
-</span><span id="line-176">
+</span><span id="line-127">
+</span><span id="line-128">
+</span><span id="line-129"><span class="k">def</span><span class="w"> </span><span class="nf">_frequency</span><span class="p">(</span><span class="n">row</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+</span><span id="line-130"><span class="w">    </span><span class="sd">"""Occurrences per million (films and books, the larger)."""</span>
+</span><span id="line-131">    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">FREQUENCY_COLUMNS</span><span class="p">)</span>
+</span><span id="line-132">
+</span><span id="line-133">
+</span><span id="line-134"><span class="k">def</span><span class="w"> </span><span class="nf">_pos_name</span><span class="p">(</span><span class="n">cgram</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">names</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-135">    <span class="n">tag</span> <span class="o">=</span> <span class="n">cgram</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-136">    <span class="k">return</span> <span class="n">names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cgram</span><span class="p">)</span> <span class="ow">or</span> <span class="n">names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tag</span><span class="p">)</span> <span class="ow">or</span> <span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">or</span> <span class="n">UNTAGGED_NAME</span>
+</span><span id="line-137">
+</span><span id="line-138">
+</span><span id="line-139"><span class="k">def</span><span class="w"> </span><span class="nf">_heaviest</span><span class="p">(</span><span class="n">weighted</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-140"><span class="w">    </span><span class="sd">"""Keys by their summed weight, heaviest first (ties in first-seen order)."""</span>
+</span><span id="line-141">    <span class="n">totals</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+</span><span id="line-142">    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">weight</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">:</span>
+</span><span id="line-143">        <span class="n">totals</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">+=</span> <span class="n">weight</span>
+</span><span id="line-144">    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">totals</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="o">-</span><span class="n">totals</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+</span><span id="line-145">
+</span><span id="line-146">
+</span><span id="line-147"><span class="k">def</span><span class="w"> </span><span class="nf">_reading</span><span class="p">(</span><span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span> <span class="n">pos_names</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-148"><span class="w">    </span><span class="sd">"""One reading of a spelling, from the rows of its pronunciations: its weight (the</span>
+</span><span id="line-149"><span class="sd">    sum of the rows' frequencies), part of speech, lemma, and pronunciations (heaviest</span>
+</span><span id="line-150"><span class="sd">    first)."""</span>
+</span><span id="line-151">    <span class="n">weighted</span> <span class="o">=</span> <span class="p">[(</span><span class="n">row</span><span class="p">,</span> <span class="n">_frequency</span><span class="p">(</span><span class="n">row</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+</span><span id="line-152">    <span class="n">poses</span> <span class="o">=</span> <span class="n">_heaviest</span><span class="p">((</span><span class="n">_pos_name</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="n">CGRAM</span><span class="p">],</span> <span class="n">pos_names</span><span class="p">),</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">)</span>
+</span><span id="line-153">    <span class="k">return</span> <span class="p">{</span>
+</span><span id="line-154">        <span class="s2">"weight"</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">f</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">),</span>
+</span><span id="line-155">        <span class="s2">"pos"</span><span class="p">:</span> <span class="n">VERB_NAME</span>
+</span><span id="line-156">        <span class="k">if</span> <span class="n">VERB_NAME</span> <span class="ow">in</span> <span class="n">poses</span> <span class="ow">and</span> <span class="n">poses</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">VERB_OUTRANKS</span>
+</span><span id="line-157">        <span class="k">else</span> <span class="n">poses</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+</span><span id="line-158">        <span class="s2">"lemma"</span><span class="p">:</span> <span class="n">_heaviest</span><span class="p">((</span><span class="n">r</span><span class="p">[</span><span class="n">LEMMA</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+</span><span id="line-159">        <span class="s2">"phons"</span><span class="p">:</span> <span class="n">_heaviest</span><span class="p">((</span><span class="n">r</span><span class="p">[</span><span class="n">PHON</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">weighted</span><span class="p">),</span>
+</span><span id="line-160">    <span class="p">}</span>
+</span><span id="line-161">
+</span><span id="line-162">
+</span><span id="line-163"><span class="k">def</span><span class="w"> </span><span class="nf">_reading_names</span><span class="p">(</span><span class="n">readings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">symbols</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-164"><span class="w">    </span><span class="sd">"""A name per reading: its part of speech; readings sharing one are named by lemma,</span>
+</span><span id="line-165"><span class="sd">    or ``&lt;pos&gt;:&lt;IPA&gt;`` when their lemmas coincide too."""</span>
+</span><span id="line-166">    <span class="n">poses</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s2">"pos"</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">readings</span><span class="p">]</span>
+</span><span id="line-167">    <span class="n">names</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-168">    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">readings</span><span class="p">:</span>
+</span><span id="line-169">        <span class="n">sharing</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">readings</span> <span class="k">if</span> <span class="n">s</span><span class="p">[</span><span class="s2">"pos"</span><span class="p">]</span> <span class="o">==</span> <span class="n">r</span><span class="p">[</span><span class="s2">"pos"</span><span class="p">]]</span>
+</span><span id="line-170">        <span class="n">lemmas</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sharing</span><span class="p">]</span>
+</span><span id="line-171">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sharing</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="line-172">            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"pos"</span><span class="p">])</span>
+</span><span id="line-173">        <span class="k">elif</span> <span class="n">r</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">lemmas</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">poses</span><span class="p">:</span>
+</span><span id="line-174">            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"lemma"</span><span class="p">])</span>
+</span><span id="line-175">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-176">            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'pos'</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">lexique_to_ipa</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">'phons'</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">symbols</span><span class="o">=</span><span class="n">symbols</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-177">    <span class="k">return</span> <span class="n">names</span>
+</span><span id="line-178">
+</span><span id="line-179">
 <div class="viewcode-block" id="heteronyms_from_rows">
 <a class="viewcode-back" href="../../_autosummary/voxy.lexique.html#voxy.lexique.heteronyms_from_rows">[docs]</a>
-</span><span id="line-177"><span class="k">def</span><span class="w"> </span><span class="nf">heteronyms_from_rows</span><span class="p">(</span>
-</span><span id="line-178">    <span class="n">rows</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
-</span><span id="line-179">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-180">    <span class="n">min_frequency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-</span><span id="line-181">    <span class="n">pos_names</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_POS_NAMES</span><span class="p">,</span>
-</span><span id="line-182">    <span class="n">symbols</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_TO_IPA</span><span class="p">,</span>
-</span><span id="line-183">    <span class="n">noise</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">TRANSCRIPTION_NOISE</span><span class="p">,</span>
-</span><span id="line-184"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-</span><span id="line-185"><span class="w">    </span><span class="sd">"""``{word: {reading name: IPA}}`` for the spellings Lexique reads in more than one way.</span>
-</span><span id="line-186">
-</span><span id="line-187"><span class="sd">    Pronunciations equal under :func:`phon_key` are one reading, its heaviest</span>
-</span><span id="line-188"><span class="sd">    pronunciation the reading and the others ``&lt;name&gt;~&lt;IPA&gt;`` variants. Readings come</span>
-</span><span id="line-189"><span class="sd">    heaviest first (weight: the sum of their rows' frequencies) and are named by their</span>
-</span><span id="line-190"><span class="sd">    heaviest part of speech (``verb`` if any row is a verb); readings that share one</span>
-</span><span id="line-191"><span class="sd">    are named by lemma, or ``&lt;pos&gt;:&lt;IPA&gt;`` when their lemmas coincide too. Words whose</span>
-</span><span id="line-192"><span class="sd">    heaviest reading is under ``min_frequency`` (per million) are left out.</span>
-</span><span id="line-193"><span class="sd">    """</span>
-</span><span id="line-194">    <span class="n">by_word</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]]</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">))</span>
-</span><span id="line-195">    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
-</span><span id="line-196">        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="n">ORTHO</span><span class="p">]</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="n">PHON</span><span class="p">]:</span>
-</span><span id="line-197">            <span class="n">by_word</span><span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="n">ORTHO</span><span class="p">]][</span><span class="n">phon_key</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">PHON</span><span class="p">],</span> <span class="n">noise</span><span class="o">=</span><span class="n">noise</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
-</span><span id="line-198">    <span class="n">table</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-199">    <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">by_key</span> <span class="ow">in</span> <span class="n">by_word</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-</span><span id="line-200">        <span class="n">readings</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
-</span><span id="line-201">            <span class="p">(</span><span class="n">_reading</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">pos_names</span><span class="p">)</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">by_key</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
-</span><span id="line-202">            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="o">-</span><span class="n">r</span><span class="p">[</span><span class="s2">"weight"</span><span class="p">],</span>
-</span><span id="line-203">        <span class="p">)</span>
-</span><span id="line-204">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">readings</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">readings</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"weight"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">min_frequency</span><span class="p">:</span>
-</span><span id="line-205">            <span class="k">continue</span>
-</span><span id="line-206">        <span class="n">names</span> <span class="o">=</span> <span class="n">_reading_names</span><span class="p">(</span><span class="n">readings</span><span class="p">,</span> <span class="n">symbols</span><span class="o">=</span><span class="n">symbols</span><span class="p">)</span>
-</span><span id="line-207">        <span class="n">table</span><span class="p">[</span><span class="n">word</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-208">            <span class="p">(</span><span class="n">name</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">VARIANT_SEPARATOR</span><span class="si">}{</span><span class="n">ipa</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span> <span class="n">ipa</span>
-</span><span id="line-209">            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">readings</span><span class="p">)</span>
-</span><span id="line-210">            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ipa</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
-</span><span id="line-211">                <span class="n">lexique_to_ipa</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">symbols</span><span class="o">=</span><span class="n">symbols</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">r</span><span class="p">[</span><span class="s2">"phons"</span><span class="p">]</span>
-</span><span id="line-212">            <span class="p">)</span>
-</span><span id="line-213">        <span class="p">}</span>
-</span><span id="line-214">    <span class="k">return</span> <span class="n">table</span></div>
+</span><span id="line-180"><span class="k">def</span><span class="w"> </span><span class="nf">heteronyms_from_rows</span><span class="p">(</span>
+</span><span id="line-181">    <span class="n">rows</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
+</span><span id="line-182">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-183">    <span class="n">min_frequency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-184">    <span class="n">pos_names</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_POS_NAMES</span><span class="p">,</span>
+</span><span id="line-185">    <span class="n">symbols</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_TO_IPA</span><span class="p">,</span>
+</span><span id="line-186">    <span class="n">noise</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">TRANSCRIPTION_NOISE</span><span class="p">,</span>
+</span><span id="line-187"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+</span><span id="line-188"><span class="w">    </span><span class="sd">"""``{word: {reading name: IPA}}`` for the spellings Lexique reads in more than one way.</span>
+</span><span id="line-189">
+</span><span id="line-190"><span class="sd">    Pronunciations equal under :func:`phon_key` are one reading, its heaviest</span>
+</span><span id="line-191"><span class="sd">    pronunciation the reading and the others ``&lt;name&gt;~&lt;IPA&gt;`` variants. Readings come</span>
+</span><span id="line-192"><span class="sd">    heaviest first (weight: the sum of their rows' frequencies) and are named by their</span>
+</span><span id="line-193"><span class="sd">    heaviest part of speech (``verb`` if any row is a verb); readings that share one</span>
+</span><span id="line-194"><span class="sd">    are named by lemma, or ``&lt;pos&gt;:&lt;IPA&gt;`` when their lemmas coincide too. Words whose</span>
+</span><span id="line-195"><span class="sd">    heaviest reading is under ``min_frequency`` (per million) are left out.</span>
+</span><span id="line-196"><span class="sd">    """</span>
+</span><span id="line-197">    <span class="n">by_word</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]]</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">))</span>
+</span><span id="line-198">    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+</span><span id="line-199">        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="n">ORTHO</span><span class="p">]</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="n">PHON</span><span class="p">]:</span>
+</span><span id="line-200">            <span class="n">by_word</span><span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="n">ORTHO</span><span class="p">]][</span><span class="n">phon_key</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">PHON</span><span class="p">],</span> <span class="n">noise</span><span class="o">=</span><span class="n">noise</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+</span><span id="line-201">    <span class="n">table</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-202">    <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">by_key</span> <span class="ow">in</span> <span class="n">by_word</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+</span><span id="line-203">        <span class="n">readings</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+</span><span id="line-204">            <span class="p">(</span><span class="n">_reading</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">pos_names</span><span class="p">)</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">by_key</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+</span><span id="line-205">            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="o">-</span><span class="n">r</span><span class="p">[</span><span class="s2">"weight"</span><span class="p">],</span>
+</span><span id="line-206">        <span class="p">)</span>
+</span><span id="line-207">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">readings</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">readings</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"weight"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">min_frequency</span><span class="p">:</span>
+</span><span id="line-208">            <span class="k">continue</span>
+</span><span id="line-209">        <span class="n">names</span> <span class="o">=</span> <span class="n">_reading_names</span><span class="p">(</span><span class="n">readings</span><span class="p">,</span> <span class="n">symbols</span><span class="o">=</span><span class="n">symbols</span><span class="p">)</span>
+</span><span id="line-210">        <span class="n">table</span><span class="p">[</span><span class="n">word</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-211">            <span class="p">(</span><span class="n">name</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">VARIANT_SEPARATOR</span><span class="si">}{</span><span class="n">ipa</span><span class="si">}</span><span class="s2">"</span><span class="p">):</span> <span class="n">ipa</span>
+</span><span id="line-212">            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">readings</span><span class="p">)</span>
+</span><span id="line-213">            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ipa</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+</span><span id="line-214">                <span class="n">lexique_to_ipa</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">symbols</span><span class="o">=</span><span class="n">symbols</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">r</span><span class="p">[</span><span class="s2">"phons"</span><span class="p">]</span>
+</span><span id="line-215">            <span class="p">)</span>
+</span><span id="line-216">        <span class="p">}</span>
+</span><span id="line-217">    <span class="k">return</span> <span class="n">table</span></div>
 
-</span><span id="line-215">
-</span><span id="line-216">
+</span><span id="line-218">
+</span><span id="line-219">
 <div class="viewcode-block" id="lexique_heteronyms">
 <a class="viewcode-back" href="../../_autosummary/voxy.lexique.html#voxy.lexique.lexique_heteronyms">[docs]</a>
-</span><span id="line-217"><span class="k">def</span><span class="w"> </span><span class="nf">lexique_heteronyms</span><span class="p">(</span>
-</span><span id="line-218">    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
-</span><span id="line-219">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-220">    <span class="n">min_frequency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-</span><span id="line-221">    <span class="n">pos_names</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_POS_NAMES</span><span class="p">,</span>
-</span><span id="line-222">    <span class="n">symbols</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_TO_IPA</span><span class="p">,</span>
-</span><span id="line-223">    <span class="n">noise</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">TRANSCRIPTION_NOISE</span><span class="p">,</span>
-</span><span id="line-224"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-</span><span id="line-225"><span class="w">    </span><span class="sd">"""The heteronyms of a Lexique 3 file (tab-separated, e.g. ``Lexique383.tsv``), as</span>
-</span><span id="line-226"><span class="sd">    :func:`heteronyms_from_rows` derives them.</span>
-</span><span id="line-227">
-</span><span id="line-228"><span class="sd">    Raises ``ValueError`` if the file lacks one of :data:`REQUIRED_COLUMNS`.</span>
-</span><span id="line-229"><span class="sd">    """</span>
-</span><span id="line-230">    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span><span id="line-231">        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-232">        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">REQUIRED_COLUMNS</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">reader</span><span class="o">.</span><span class="n">fieldnames</span> <span class="ow">or</span> <span class="p">())]</span>
-</span><span id="line-233">        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
-</span><span id="line-234">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-235">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> is not a Lexique 3 file: no column </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="line-236">            <span class="p">)</span>
-</span><span id="line-237">        <span class="k">return</span> <span class="n">heteronyms_from_rows</span><span class="p">(</span>
-</span><span id="line-238">            <span class="n">reader</span><span class="p">,</span>
-</span><span id="line-239">            <span class="n">min_frequency</span><span class="o">=</span><span class="n">min_frequency</span><span class="p">,</span>
-</span><span id="line-240">            <span class="n">pos_names</span><span class="o">=</span><span class="n">pos_names</span><span class="p">,</span>
-</span><span id="line-241">            <span class="n">symbols</span><span class="o">=</span><span class="n">symbols</span><span class="p">,</span>
-</span><span id="line-242">            <span class="n">noise</span><span class="o">=</span><span class="n">noise</span><span class="p">,</span>
-</span><span id="line-243">        <span class="p">)</span></div>
+</span><span id="line-220"><span class="k">def</span><span class="w"> </span><span class="nf">lexique_heteronyms</span><span class="p">(</span>
+</span><span id="line-221">    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-222">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-223">    <span class="n">min_frequency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-224">    <span class="n">pos_names</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_POS_NAMES</span><span class="p">,</span>
+</span><span id="line-225">    <span class="n">symbols</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_TO_IPA</span><span class="p">,</span>
+</span><span id="line-226">    <span class="n">noise</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">TRANSCRIPTION_NOISE</span><span class="p">,</span>
+</span><span id="line-227"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+</span><span id="line-228"><span class="w">    </span><span class="sd">"""The heteronyms of a Lexique 3 file (tab-separated, e.g. ``Lexique383.tsv``), as</span>
+</span><span id="line-229"><span class="sd">    :func:`heteronyms_from_rows` derives them.</span>
+</span><span id="line-230">
+</span><span id="line-231"><span class="sd">    Raises ``ValueError`` if the file lacks one of :data:`REQUIRED_COLUMNS`.</span>
+</span><span id="line-232"><span class="sd">    """</span>
+</span><span id="line-233">    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="line-234">        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-235">        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">REQUIRED_COLUMNS</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">reader</span><span class="o">.</span><span class="n">fieldnames</span> <span class="ow">or</span> <span class="p">())]</span>
+</span><span id="line-236">        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+</span><span id="line-237">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-238">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> is not a Lexique 3 file: no column </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-239">            <span class="p">)</span>
+</span><span id="line-240">        <span class="k">return</span> <span class="n">heteronyms_from_rows</span><span class="p">(</span>
+</span><span id="line-241">            <span class="n">reader</span><span class="p">,</span>
+</span><span id="line-242">            <span class="n">min_frequency</span><span class="o">=</span><span class="n">min_frequency</span><span class="p">,</span>
+</span><span id="line-243">            <span class="n">pos_names</span><span class="o">=</span><span class="n">pos_names</span><span class="p">,</span>
+</span><span id="line-244">            <span class="n">symbols</span><span class="o">=</span><span class="n">symbols</span><span class="p">,</span>
+</span><span id="line-245">            <span class="n">noise</span><span class="o">=</span><span class="n">noise</span><span class="p">,</span>
+</span><span id="line-246">        <span class="p">)</span></div>
+
+</span><span id="line-247">
+</span><span id="line-248">
+</span><span id="line-249"><span class="c1">#: Folder (under voxy's cache) of derived tables, one JSON file per file and arguments.</span>
+</span><span id="line-250"><span class="n">LEXIQUE_CACHE_KIND</span> <span class="o">=</span> <span class="s2">"lexique"</span>
+</span><span id="line-251"><span class="c1">#: Hex characters of a cache key (64 bits: no collision among a user's tables).</span>
+</span><span id="line-252"><span class="n">CACHE_KEY_CHARS</span> <span class="o">=</span> <span class="mi">16</span>
+</span><span id="line-253"><span class="c1">#: Bump when the derivation's rules change, so cached tables are derived afresh.</span>
+</span><span id="line-254"><span class="n">LEXIQUE_DERIVATION_VERSION</span> <span class="o">=</span> <span class="mi">1</span>
+</span><span id="line-255">
+</span><span id="line-256">
+<div class="viewcode-block" id="lexique_cache">
+<a class="viewcode-back" href="../../_autosummary/voxy.lexique.html#voxy.lexique.lexique_cache">[docs]</a>
+</span><span id="line-257"><span class="k">def</span><span class="w"> </span><span class="nf">lexique_cache</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">cache_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MutableMapping</span><span class="p">:</span>
+</span><span id="line-258"><span class="w">    </span><span class="sd">"""Derived tables as JSON files, ``&lt;key&gt;.json`` under ``cache_dir`` (default:</span>
+</span><span id="line-259"><span class="sd">    ``voxy_cache_dir("lexique")``): derived from your Lexique copy, so never in a repo."""</span>
+</span><span id="line-260">    <span class="kn">from</span><span class="w"> </span><span class="nn">dol</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonFiles</span><span class="p">,</span> <span class="n">mk_dirs_if_missing</span>
+</span><span id="line-261">
+</span><span id="line-262">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.stores</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
+</span><span id="line-263">
+</span><span id="line-264">    <span class="n">folder</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">cache_dir</span> <span class="k">else</span> <span class="n">voxy_cache_dir</span><span class="p">(</span><span class="n">LEXIQUE_CACHE_KIND</span><span class="p">)</span>
+</span><span id="line-265">    <span class="k">return</span> <span class="n">mk_dirs_if_missing</span><span class="p">(</span><span class="n">JsonFiles</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">))</span></div>
+
+</span><span id="line-266">
+</span><span id="line-267">
+</span><span id="line-268"><span class="k">def</span><span class="w"> </span><span class="nf">_cache_key</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span> <span class="n">arguments</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-269"><span class="w">    </span><span class="sd">"""The file's identity (real path, size, modification time) and the derivation's</span>
+</span><span id="line-270"><span class="sd">    arguments, hashed: a changed file or changed arguments make a new key."""</span>
+</span><span id="line-271">    <span class="n">stat</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="line-272">    <span class="n">identity</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-273">        <span class="s2">"path"</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">path</span><span class="p">),</span>
+</span><span id="line-274">        <span class="s2">"size"</span><span class="p">:</span> <span class="n">stat</span><span class="o">.</span><span class="n">st_size</span><span class="p">,</span>
+</span><span id="line-275">        <span class="s2">"mtime_ns"</span><span class="p">:</span> <span class="n">stat</span><span class="o">.</span><span class="n">st_mtime_ns</span><span class="p">,</span>
+</span><span id="line-276">        <span class="s2">"arguments"</span><span class="p">:</span> <span class="n">arguments</span><span class="p">,</span>
+</span><span id="line-277">        <span class="s2">"derivation"</span><span class="p">:</span> <span class="n">LEXIQUE_DERIVATION_VERSION</span><span class="p">,</span>
+</span><span id="line-278">    <span class="p">}</span>
+</span><span id="line-279">    <span class="n">text</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">identity</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="line-280">    <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="n">CACHE_KEY_CHARS</span><span class="p">]</span> <span class="o">+</span> <span class="s2">".json"</span>
+</span><span id="line-281">
+</span><span id="line-282">
+<div class="viewcode-block" id="cached_lexique_heteronyms">
+<a class="viewcode-back" href="../../_autosummary/voxy.lexique.html#voxy.lexique.cached_lexique_heteronyms">[docs]</a>
+</span><span id="line-283"><span class="k">def</span><span class="w"> </span><span class="nf">cached_lexique_heteronyms</span><span class="p">(</span>
+</span><span id="line-284">    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-285">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-286">    <span class="n">cache</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-287">    <span class="n">min_frequency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-288">    <span class="n">pos_names</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_POS_NAMES</span><span class="p">,</span>
+</span><span id="line-289">    <span class="n">symbols</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">LEXIQUE_TO_IPA</span><span class="p">,</span>
+</span><span id="line-290">    <span class="n">noise</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">TRANSCRIPTION_NOISE</span><span class="p">,</span>
+</span><span id="line-291"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+</span><span id="line-292"><span class="w">    </span><span class="sd">""":func:`lexique_heteronyms`, derived once and kept in ``cache`` (default</span>
+</span><span id="line-293"><span class="sd">    :func:`lexique_cache`), rebuilt when the file, the arguments or the derivation</span>
+</span><span id="line-294"><span class="sd">    rules (``LEXIQUE_DERIVATION_VERSION``) change, or when the entry is unreadable.</span>
+</span><span id="line-295"><span class="sd">    Returns a copy, so changing it never changes what later calls get.</span>
+</span><span id="line-296">
+</span><span id="line-297"><span class="sd">    &gt;&gt;&gt; import tempfile, pathlib</span>
+</span><span id="line-298"><span class="sd">    &gt;&gt;&gt; tsv = pathlib.Path(tempfile.mkdtemp()) / "Lexique383.tsv"</span>
+</span><span id="line-299"><span class="sd">    &gt;&gt;&gt; _ = tsv.write_text("ortho\\tphon\\tlemme\\tcgram\\tfreqfilms2\\tfreqlivres\\n"</span>
+</span><span id="line-300"><span class="sd">    ...                    "est\\te\\têtre\\tVER\\t9\\t9\\nest\\tEst\\test\\tNOM\\t1\\t1\\n")</span>
+</span><span id="line-301"><span class="sd">    &gt;&gt;&gt; cache = {}</span>
+</span><span id="line-302"><span class="sd">    &gt;&gt;&gt; cached_lexique_heteronyms(tsv, cache=cache) == lexique_heteronyms(tsv), len(cache)</span>
+</span><span id="line-303"><span class="sd">    (True, 1)</span>
+</span><span id="line-304"><span class="sd">    """</span>
+</span><span id="line-305">    <span class="n">arguments</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-306">        <span class="s2">"min_frequency"</span><span class="p">:</span> <span class="n">min_frequency</span><span class="p">,</span>
+</span><span id="line-307">        <span class="s2">"pos_names"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">pos_names</span><span class="p">),</span>
+</span><span id="line-308">        <span class="s2">"symbols"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">symbols</span><span class="p">),</span>
+</span><span id="line-309">        <span class="s2">"noise"</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">noise</span><span class="p">),</span>
+</span><span id="line-310">    <span class="p">}</span>
+</span><span id="line-311">    <span class="n">cache</span> <span class="o">=</span> <span class="n">lexique_cache</span><span class="p">()</span> <span class="k">if</span> <span class="n">cache</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">cache</span>
+</span><span id="line-312">    <span class="n">key</span> <span class="o">=</span> <span class="n">_cache_key</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">arguments</span><span class="p">)</span>
+</span><span id="line-313">    <span class="k">try</span><span class="p">:</span>
+</span><span id="line-314">        <span class="n">table</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+</span><span id="line-315">    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>  <span class="c1"># not derived yet, or a write cut short</span>
+</span><span id="line-316">        <span class="n">table</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">lexique_heteronyms</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">arguments</span><span class="p">)</span>
+</span><span id="line-317">    <span class="k">return</span> <span class="p">{</span><span class="n">word</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">readings</span><span class="p">)</span> <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">readings</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -455,7 +535,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=a72e4630"></script>
+    <script src="../../_static/documentation_options.js?v=0356c229"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

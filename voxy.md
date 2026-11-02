@@ -1,4 +1,4 @@
-> built 2026-11-02 09:44 UTC from 327776f (main) · voxy 0.0.48. Details: build_info.json
+> built 2026-11-02 09:55 UTC from 5bc30e6 (main) · voxy 0.0.49. Details: build_info.json
 
 # index.html.md
 
@@ -285,7 +285,7 @@ findings = audit(
 misread = [f for f in findings if f.ok is False]  # re-render these
 ```
 
-voxy ships a short hand-made French table (`heteronym_readings("fr")`). For more, derive one from your copy of [Lexique](http://www.lexique.org) (voxy ships no Lexique data): `voxy.lexique.lexique_heteronyms("Lexique383.tsv", min_frequency=1)` returns the spellings Lexique gives more than one pronunciation, in the same `{word: {reading: IPA}}` shape, readings named by part of speech (or by lemma when two share one) and pronunciations that differ only by Lexique’s open/closed vowels or schwa folded into `name~variant`. Merge it under the hand-made table, `{**derived, **heteronym_readings("fr")}`: Lexique keeps one pronunciation per spelling, part of speech and lemma, and no liaison or variant readings, so *tous*, *os*, *six*, *dix*, *christ*, *lacs* and *fait* are not in it.
+voxy ships a short hand-made French table (`heteronym_readings("fr")`). For more, derive one from your copy of [Lexique](http://www.lexique.org) (voxy ships no Lexique data): `voxy.lexique.cached_lexique_heteronyms("Lexique383.tsv", min_frequency=1)` (derived once, then kept in voxy’s cache) returns the spellings Lexique gives more than one pronunciation, in the same `{word: {reading: IPA}}` shape, readings named by part of speech (or by lemma when two share one) and pronunciations that differ only by Lexique’s open/closed vowels or schwa folded into `name~variant`. Merge it under the hand-made table, `{**derived, **heteronym_readings("fr")}`: Lexique keeps one pronunciation per spelling, part of speech and lemma, and no liaison or variant readings, so *tous*, *os*, *six*, *dix*, *christ*, *lacs* and *fait* are not in it.
 
 `audit` finds each flagged word in the render and scores its readings, written in IPA, as the whole phrase around it (neighbours written out by a bundled espeak-ng) with a wav2vec2 phoneme recogniser; both run in their own environment, built on first use. Expected readings come from `expected` (a mapping, or a function of each risk) or from a detector such as `voxy.speechtext.pos_detector()`. A heteronym elided onto a clitic that can precede its noun reading (French *l’Est*, *vent d’est*) is flagged and checked too; name it in the mapping by its clitic (`{"est": "verb", "l'est": "noun"}`), since `"est"` alone does not cover it. A mapping is checked whole up front: a key that is not a word of the readings table (a typo), or a reading that word does not have, raises a `ValueError` before any ASR, and `audit_verifier` raises it when built, before the first render; a detector’s proposal naming no reading is dropped with a warning. While rendering, `render_verified` scores the same way and re-renders a line whose word came out wrong; its one `verify=` seam, `(text, audio, line) -> findings`, defaults to `audit` on the line, occurrence by occurrence, elided forms included; pass `verify=audit_verifier(lines, readings=..., expected=..., detectors=...)` for `audit`’s own options. The older `checks=` (`checks_by_line`, `verify_words`) is a legacy adapter that matches words by spelling. `audit` takes `scoring=` (`"phrase"`, `"spot"` or `"crop"`), and all three take a `scorer=` (a name or a scorer from `phrase_scorer`/`spot_scorer`/`crop_scorer`, each carrying the margin it is calibrated for); cropping the word at its ASR times credits a neighbour’s /s/ or /t/ to the longer reading, so keep the default.
 
@@ -1971,25 +1971,37 @@ part of speech:
 
 ### Module Attributes
 
-| [`LEXIQUE_TO_IPA`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEXIQUE_TO_IPA)      | Lexique's phonetic code -> IPA in the vocabulary of voxy's phoneme model (`facebook/wav2vec2-lv-60-espeak-cv-ft`); Lexique's other letters are that IPA.                                                                                             |
-|----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`TRANSCRIPTION_NOISE`](_autosummary/voxy.lexique.html.md#voxy.lexique.TRANSCRIPTION_NOISE) | two pronunciations equal after this are one reading (open/closed vowels, schwa).                                                                                                                                                                     |
-| [`LEXIQUE_TO_UPOS`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEXIQUE_TO_UPOS)     | Lexique's part of speech (`cgram`, whole or before its `:`) -> universal POS.                                                                                                                                                                        |
-| [`LEXIQUE_POS_NAMES`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEXIQUE_POS_NAMES)   | Lexique's part of speech -> a reading name (`voxy.speechtext.FRENCH_READING_NAMES`).                                                                                                                                                                 |
-| [`VERB_NAME`](_autosummary/voxy.lexique.html.md#voxy.lexique.VERB_NAME)           | A pronunciation with a verb row is named `verb` when its heaviest part of speech is one of these: Lexique tags some verb forms as nouns or adjectives too (*violent*, *insolent*), while an adverb (*plus*) is genuinely heavier than its verb rows. |
-| [`UNTAGGED_NAME`](_autosummary/voxy.lexique.html.md#voxy.lexique.UNTAGGED_NAME)       | The name of a reading whose part of speech Lexique leaves empty.                                                                                                                                                                                     |
-| [`ORTHO`](_autosummary/voxy.lexique.html.md#voxy.lexique.ORTHO)               | Columns read from a Lexique 3 file.                                                                                                                                                                                                                  |
-| [`PHON`](_autosummary/voxy.lexique.html.md#voxy.lexique.PHON)                | Columns read from a Lexique 3 file.                                                                                                                                                                                                                  |
-| [`LEMMA`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEMMA)               | Columns read from a Lexique 3 file.                                                                                                                                                                                                                  |
-| [`CGRAM`](_autosummary/voxy.lexique.html.md#voxy.lexique.CGRAM)               | Columns read from a Lexique 3 file.                                                                                                                                                                                                                  |
+| [`LEXIQUE_TO_IPA`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEXIQUE_TO_IPA)             | Lexique's phonetic code -> IPA in the vocabulary of voxy's phoneme model (`facebook/wav2vec2-lv-60-espeak-cv-ft`); Lexique's other letters are that IPA.                                                                                             |
+|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`TRANSCRIPTION_NOISE`](_autosummary/voxy.lexique.html.md#voxy.lexique.TRANSCRIPTION_NOISE)        | two pronunciations equal after this are one reading (open/closed vowels, schwa).                                                                                                                                                                     |
+| [`LEXIQUE_TO_UPOS`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEXIQUE_TO_UPOS)            | Lexique's part of speech (`cgram`, whole or before its `:`) -> universal POS.                                                                                                                                                                        |
+| [`LEXIQUE_POS_NAMES`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEXIQUE_POS_NAMES)          | Lexique's part of speech -> a reading name (`voxy.speechtext.FRENCH_READING_NAMES`).                                                                                                                                                                 |
+| [`VERB_NAME`](_autosummary/voxy.lexique.html.md#voxy.lexique.VERB_NAME)                  | A pronunciation with a verb row is named `verb` when its heaviest part of speech is one of these: Lexique tags some verb forms as nouns or adjectives too (*violent*, *insolent*), while an adverb (*plus*) is genuinely heavier than its verb rows. |
+| [`UNTAGGED_NAME`](_autosummary/voxy.lexique.html.md#voxy.lexique.UNTAGGED_NAME)              | The name of a reading whose part of speech Lexique leaves empty.                                                                                                                                                                                     |
+| [`ORTHO`](_autosummary/voxy.lexique.html.md#voxy.lexique.ORTHO)                      | Columns read from a Lexique 3 file.                                                                                                                                                                                                                  |
+| [`PHON`](_autosummary/voxy.lexique.html.md#voxy.lexique.PHON)                       | Columns read from a Lexique 3 file.                                                                                                                                                                                                                  |
+| [`LEMMA`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEMMA)                      | Columns read from a Lexique 3 file.                                                                                                                                                                                                                  |
+| [`CGRAM`](_autosummary/voxy.lexique.html.md#voxy.lexique.CGRAM)                      | Columns read from a Lexique 3 file.                                                                                                                                                                                                                  |
+| [`LEXIQUE_CACHE_KIND`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEXIQUE_CACHE_KIND)         | Folder (under voxy's cache) of derived tables, one JSON file per file and arguments.                                                                                                                                                                 |
+| [`CACHE_KEY_CHARS`](_autosummary/voxy.lexique.html.md#voxy.lexique.CACHE_KEY_CHARS)            | no collision among a user's tables).                                                                                                                                                                                                                 |
+| [`LEXIQUE_DERIVATION_VERSION`](_autosummary/voxy.lexique.html.md#voxy.lexique.LEXIQUE_DERIVATION_VERSION) | Bump when the derivation's rules change, so cached tables are derived afresh.                                                                                                                                                                        |
 
 ### Functions
 
-| [`heteronyms_from_rows`](_autosummary/voxy.lexique.html.md#voxy.lexique.heteronyms_from_rows)(rows, \*[, ...])              | `{word: {reading name: IPA}}` for the spellings Lexique reads in more than one way.                                                                                 |
-|-----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`lexique_heteronyms`](_autosummary/voxy.lexique.html.md#voxy.lexique.lexique_heteronyms)(path, \*[, min_frequency, ...]) | The heteronyms of a Lexique 3 file (tab-separated, e.g. `Lexique383.tsv`), as [`heteronyms_from_rows()`](_autosummary/voxy.lexique.html.md#voxy.lexique.heteronyms_from_rows) derives them. |
-| [`lexique_to_ipa`](_autosummary/voxy.lexique.html.md#voxy.lexique.lexique_to_ipa)(phon, \*[, symbols])                | A Lexique pronunciation in IPA.                                                                                                                                     |
-| [`phon_key`](_autosummary/voxy.lexique.html.md#voxy.lexique.phon_key)(phon, \*[, noise])                        | What a Lexique pronunciation is compared as, transcription noise removed.                                                                                           |
+| [`cached_lexique_heteronyms`](_autosummary/voxy.lexique.html.md#voxy.lexique.cached_lexique_heteronyms)(path, \*[, cache, ...])   | [`lexique_heteronyms()`](_autosummary/voxy.lexique.html.md#voxy.lexique.lexique_heteronyms), derived once and kept in `cache` (default [`lexique_cache()`](_autosummary/voxy.lexique.html.md#voxy.lexique.lexique_cache)), rebuilt when the file, the arguments or the derivation rules (`LEXIQUE_DERIVATION_VERSION`) change, or when the entry is unreadable.   |
+|------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`heteronyms_from_rows`](_autosummary/voxy.lexique.html.md#voxy.lexique.heteronyms_from_rows)(rows, \*[, ...])               | `{word: {reading name: IPA}}` for the spellings Lexique reads in more than one way.                                                                                                                                                                                                                                        |
+| [`lexique_cache`](_autosummary/voxy.lexique.html.md#voxy.lexique.lexique_cache)(\*[, cache_dir])                      | Derived tables as JSON files, `<key>.json` under `cache_dir` (default: `voxy_cache_dir("lexique")`): derived from your Lexique copy, so never in a repo.                                                                                                                                                                   |
+| [`lexique_heteronyms`](_autosummary/voxy.lexique.html.md#voxy.lexique.lexique_heteronyms)(path, \*[, min_frequency, ...])  | The heteronyms of a Lexique 3 file (tab-separated, e.g. `Lexique383.tsv`), as [`heteronyms_from_rows()`](_autosummary/voxy.lexique.html.md#voxy.lexique.heteronyms_from_rows) derives them.                                                                                                                                                        |
+| [`lexique_to_ipa`](_autosummary/voxy.lexique.html.md#voxy.lexique.lexique_to_ipa)(phon, \*[, symbols])                 | A Lexique pronunciation in IPA.                                                                                                                                                                                                                                                                                            |
+| [`phon_key`](_autosummary/voxy.lexique.html.md#voxy.lexique.phon_key)(phon, \*[, noise])                         | What a Lexique pronunciation is compared as, transcription noise removed.                                                                                                                                                                                                                                                  |
+
+### voxy.lexique.CACHE_KEY_CHARS *= 16*
+
+no collision among a user’s tables).
+
+* **Type:**
+  Hex characters of a cache key (64 bits
 
 ### voxy.lexique.CGRAM *= 'cgram'*
 
@@ -1998,6 +2010,14 @@ Columns read from a Lexique 3 file.
 ### voxy.lexique.LEMMA *= 'lemme'*
 
 Columns read from a Lexique 3 file.
+
+### voxy.lexique.LEXIQUE_CACHE_KIND *= 'lexique'*
+
+Folder (under voxy’s cache) of derived tables, one JSON file per file and arguments.
+
+### voxy.lexique.LEXIQUE_DERIVATION_VERSION *= 1*
+
+Bump when the derivation’s rules change, so cached tables are derived afresh.
 
 ### voxy.lexique.LEXIQUE_POS_NAMES *= {'ADJ': 'adjective', 'ADJ:dem': 'det', 'ADJ:ind': 'det', 'ADJ:int': 'det', 'ADJ:num': 'numeral', 'ADJ:pos': 'det', 'ADV': 'adverb', 'ART': 'det', 'AUX': 'verb', 'CON': 'conjunction', 'NOM': 'noun', 'ONO': 'interjection', 'PRE': 'preposition', 'PRO': 'pronoun', 'VER': 'verb'}*
 
@@ -2038,6 +2058,26 @@ A pronunciation with a verb row is named `verb` when its heaviest part of speech
 is one of these: Lexique tags some verb forms as nouns or adjectives too (*violent*,
 *insolent*), while an adverb (*plus*) is genuinely heavier than its verb rows.
 
+### voxy.lexique.cached_lexique_heteronyms(path, , cache=None, min_frequency=0.0, pos_names={'ADJ': 'adjective', 'ADJ:dem': 'det', 'ADJ:ind': 'det', 'ADJ:int': 'det', 'ADJ:num': 'numeral', 'ADJ:pos': 'det', 'ADV': 'adverb', 'ART': 'det', 'AUX': 'verb', 'CON': 'conjunction', 'NOM': 'noun', 'ONO': 'interjection', 'PRE': 'preposition', 'PRO': 'pronoun', 'VER': 'verb'}, symbols={'1': 'œ̃', '2': 'ø', '5': 'ɛ̃', '8': 'y', '9': 'œ', '@': 'ɑ̃', 'E': 'ɛ', 'G': 'ŋ', 'N': 'ɲ', 'O': 'ɔ', 'R': 'ʁ', 'S': 'ʃ', 'Z': 'ʒ', 'g': 'ɡ', '§': 'ɔ̃', '°': 'ə'}, noise={'8': 'y', '9': '2', 'E': 'e', 'O': 'o', '°': ''})
+
+[`lexique_heteronyms()`](_autosummary/voxy.lexique.html.md#voxy.lexique.lexique_heteronyms), derived once and kept in `cache` (default
+[`lexique_cache()`](_autosummary/voxy.lexique.html.md#voxy.lexique.lexique_cache)), rebuilt when the file, the arguments or the derivation
+rules (`LEXIQUE_DERIVATION_VERSION`) change, or when the entry is unreadable.
+Returns a copy, so changing it never changes what later calls get.
+
+```pycon
+>>> import tempfile, pathlib
+>>> tsv = pathlib.Path(tempfile.mkdtemp()) / "Lexique383.tsv"
+>>> _ = tsv.write_text("ortho\tphon\tlemme\tcgram\tfreqfilms2\tfreqlivres\n"
+...                    "est\te\têtre\tVER\t9\t9\nest\tEst\test\tNOM\t1\t1\n")
+>>> cache = {}
+>>> cached_lexique_heteronyms(tsv, cache=cache) == lexique_heteronyms(tsv), len(cache)
+(True, 1)
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
+
 ### voxy.lexique.heteronyms_from_rows(rows, , min_frequency=0.0, pos_names={'ADJ': 'adjective', 'ADJ:dem': 'det', 'ADJ:ind': 'det', 'ADJ:int': 'det', 'ADJ:num': 'numeral', 'ADJ:pos': 'det', 'ADV': 'adverb', 'ART': 'det', 'AUX': 'verb', 'CON': 'conjunction', 'NOM': 'noun', 'ONO': 'interjection', 'PRE': 'preposition', 'PRO': 'pronoun', 'VER': 'verb'}, symbols={'1': 'œ̃', '2': 'ø', '5': 'ɛ̃', '8': 'y', '9': 'œ', '@': 'ɑ̃', 'E': 'ɛ', 'G': 'ŋ', 'N': 'ɲ', 'O': 'ɔ', 'R': 'ʁ', 'S': 'ʃ', 'Z': 'ʒ', 'g': 'ɡ', '§': 'ɔ̃', '°': 'ə'}, noise={'8': 'y', '9': '2', 'E': 'e', 'O': 'o', '°': ''})
 
 `{word: {reading name: IPA}}` for the spellings Lexique reads in more than one way.
@@ -2051,6 +2091,14 @@ heaviest reading is under `min_frequency` (per million) are left out.
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
+
+### voxy.lexique.lexique_cache(, cache_dir=None)
+
+Derived tables as JSON files, `<key>.json` under `cache_dir` (default:
+`voxy_cache_dir("lexique")`): derived from your Lexique copy, so never in a repo.
+
+* **Return type:**
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
 
 ### voxy.lexique.lexique_heteronyms(path, , min_frequency=0.0, pos_names={'ADJ': 'adjective', 'ADJ:dem': 'det', 'ADJ:ind': 'det', 'ADJ:int': 'det', 'ADJ:num': 'numeral', 'ADJ:pos': 'det', 'ADV': 'adverb', 'ART': 'det', 'AUX': 'verb', 'CON': 'conjunction', 'NOM': 'noun', 'ONO': 'interjection', 'PRE': 'preposition', 'PRO': 'pronoun', 'VER': 'verb'}, symbols={'1': 'œ̃', '2': 'ø', '5': 'ɛ̃', '8': 'y', '9': 'œ', '@': 'ɑ̃', 'E': 'ɛ', 'G': 'ŋ', 'N': 'ɲ', 'O': 'ɔ', 'R': 'ʁ', 'S': 'ʃ', 'Z': 'ʒ', 'g': 'ɡ', '§': 'ɔ̃', '°': 'ə'}, noise={'8': 'y', '9': '2', 'E': 'e', 'O': 'o', '°': ''})
 
@@ -2973,7 +3021,7 @@ The verdicts whose word was decidedly read the wrong way (`ok is False`).
 voxy’s own heteronym table for `language`: `{word: {reading name: IPA}}`.
 
 A short, hand-made list (French: *est*, *fils*, *plus*, *tous*, the  *-ent* verbs…);
-merge a fuller one: `{**voxy.lexique.lexique_heteronyms(path), **heteronym_readings()}`
+merge a fuller one: `{**voxy.lexique.cached_lexique_heteronyms(path), **heteronym_readings()}`
 (Lexique-derived, the hand-made readings winning), or one read with [`load_readings()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.load_readings).
 
 ```pycon
@@ -3003,7 +3051,7 @@ Heteronym readings `{word: {reading name: IPA}}` from a caller’s file.
 
 A `.json` file holds that mapping; any other file is tab-separated
 `word<TAB>reading name<TAB>IPA`, one reading per line (`#` lines and blank
-lines skipped), e.g. a list derived from Lexique (`voxy.lexique.lexique_heteronyms`
+lines skipped), e.g. a list derived from Lexique (`voxy.lexique.cached_lexique_heteronyms`
 builds one from your copy; voxy ships no Lexique data).
 
 * **Return type:**
@@ -5423,7 +5471,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 09:44 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/327776f983ead0a464c721a5e7a175b136caca83"><code>327776f</code></a> on branch <code>main</code>, for **voxy 0.0.48** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 09:55 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/5bc30e6e72575a9a7617e9d4aa2e10283c0493f5"><code>5bc30e6</code></a> on branch <code>main</code>, for **voxy 0.0.49** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -5432,7 +5480,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/327776f983ead0a464c721a5e7a175b136caca83"><code>327776f983ead0a464c721a5e7a175b136caca83</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/5bc30e6e72575a9a7617e9d4aa2e10283c0493f5"><code>5bc30e6e72575a9a7617e9d4aa2e10283c0493f5</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -5443,9 +5491,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41422804392">41422804392</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41424196414">41424196414</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>327776f983ead0a464c721a5e7a175b136caca83</code> (in the history of the built commit) |
+| Event commit | <code>5bc30e6e72575a9a7617e9d4aa2e10283c0493f5</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5470,13 +5518,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.48/">0.0.48</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.49/">0.0.49</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 327776f983ead0a464c721a5e7a175b136caca83
+git checkout 5bc30e6e72575a9a7617e9d4aa2e10283c0493f5
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

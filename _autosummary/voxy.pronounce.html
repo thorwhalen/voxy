@@ -834,7 +834,7 @@ the recogniser’s env, so its IPA is the recogniser’s own alphabet.</p>
 <span class="sig-prename descclassname"><span class="pre">voxy.pronounce.</span></span><span class="sig-name descname"><span class="pre">heteronym_readings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">language</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'fr'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/pronounce.html#heteronym_readings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.pronounce.heteronym_readings" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.pronounce.heteronym_readings'">¶</a></dt>
 <dd><p>voxy’s own heteronym table for <code class="docutils literal notranslate"><span class="pre">language</span></code>: <code class="docutils literal notranslate"><span class="pre">{word:</span> <span class="pre">{reading</span> <span class="pre">name:</span> <span class="pre">IPA}}</span></code>.</p>
 <p>A short, hand-made list (French: <em>est</em>, <em>fils</em>, <em>plus</em>, <em>tous</em>, the <em>-ent</em> verbs…);
-merge a fuller one: <code class="docutils literal notranslate"><span class="pre">{**voxy.lexique.lexique_heteronyms(path),</span> <span class="pre">**heteronym_readings()}</span></code>
+merge a fuller one: <code class="docutils literal notranslate"><span class="pre">{**voxy.lexique.cached_lexique_heteronyms(path),</span> <span class="pre">**heteronym_readings()}</span></code>
 (Lexique-derived, the hand-made readings winning), or one read with <a class="reference internal" href="#voxy.pronounce.load_readings" title="voxy.pronounce.load_readings"><code class="xref py py-func docutils literal notranslate"><span class="pre">load_readings()</span></code></a>.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">heteronym_readings</span><span class="p">(</span><span class="s2">"fr"</span><span class="p">)[</span><span class="s2">"est"</span><span class="p">][</span><span class="s2">"noun"</span><span class="p">]</span>
 </span><span id="line-2"><span class="go">'ɛst'</span>
@@ -867,7 +867,7 @@ and anything else it never emits are dropped.</p>
 <dd><p>Heteronym readings <code class="docutils literal notranslate"><span class="pre">{word:</span> <span class="pre">{reading</span> <span class="pre">name:</span> <span class="pre">IPA}}</span></code> from a caller’s file.</p>
 <p>A <code class="docutils literal notranslate"><span class="pre">.json</span></code> file holds that mapping; any other file is tab-separated
 <code class="docutils literal notranslate"><span class="pre">word&lt;TAB&gt;reading</span> <span class="pre">name&lt;TAB&gt;IPA</span></code>, one reading per line (<code class="docutils literal notranslate"><span class="pre">#</span></code> lines and blank
-lines skipped), e.g. a list derived from Lexique (<code class="docutils literal notranslate"><span class="pre">voxy.lexique.lexique_heteronyms</span></code>
+lines skipped), e.g. a list derived from Lexique (<code class="docutils literal notranslate"><span class="pre">voxy.lexique.cached_lexique_heteronyms</span></code>
 builds one from your copy; voxy ships no Lexique data).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -1359,7 +1359,7 @@ inject <code class="docutils literal notranslate"><span class="pre">phrase_score
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=a72e4630"></script>
+<script src="../_static/documentation_options.js?v=0356c229"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
