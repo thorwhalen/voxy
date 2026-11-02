@@ -965,7 +965,7 @@ def checks_verifier(
         for word, _, expected in line_checks:
             risk = Risk(line, word, "check", expected=expected)
             mine = [v for v in verdicts if v.word == word]
-            found += [Finding(risk, v, expected) for v in mine] or [
+            found += [Finding(risk, v, expected, located="asr") for v in mine] or [
                 Finding(risk, None, expected)
             ]
         return found
@@ -1349,6 +1349,9 @@ class Finding:
     verdict: Verdict | None = None
     #: The reading the word should have, when known (also when ``verdict`` is None).
     expected: str | None = None
+    #: How the word was found in the audio: "asr" (its ASR word), "text" (forced
+    #: alignment of the text, ``audit(align_missing=...)``), or None (not found).
+    located: str | None = None
 
     @property
     def ok(self) -> bool | None:
@@ -1513,6 +1516,33 @@ def _vet_caller_expected(text: str, options: Mapping) -> None:
         _expected_readings(risks, expected=expected, proposed={}, table=table)
 
 
+def _text_located(text, audio, align_missing, *, elisions) -> Callable:
+    """A function giving the text's words as timed words (``{"text", "start", "end"}``,
+    in ``_text_words`` order) by forced alignment, computed once on first call; None
+    when ``align_missing`` is None or the alignment fails (too long, no fit)."""
+    cache: dict = {}
+
+    def located():
+        if align_missing is None:
+            return None
+        if "words" not in cache:
+            tokens = [word for _, word, _ in _text_words(text, elisions=elisions)]
+            try:  # the worker re-raises the aligner's errors as WorkerError (Runtime)
+                spans = align_missing(str(audio), tokens)
+                cache["words"] = [
+                    {"text": t, "start": s.get("start"), "end": s.get("end")}
+                    for t, s in zip(tokens, spans, strict=True)
+                ]
+            except (ValueError, RuntimeError) as e:  # e.g. audio over its limit
+                warnings.warn(
+                    f"align_missing could not align the text: {e}", stacklevel=3
+                )
+                cache["words"] = None
+        return cache["words"]
+
+    return located
+
+
 def audit(
     text: str,
     audio: str | os.PathLike,
@@ -1532,6 +1562,7 @@ def audit(
     padding: float = DFLT_CROP_PADDING,
     margin: float | None = None,
     scorer: Scorer | None = None,
+    align_missing: Callable[[str, Sequence[str]], Sequence[Mapping]] | None = None,
 ) -> list[Finding]:
     """Which reading did each heteronym of ``text`` get in the finished ``audio``?
 
@@ -1569,6 +1600,15 @@ def audit(
         context: Words kept on each side of the flagged one.
         margin: See :attr:`Verdict.decided`; default ``scorer.margin``.
         scorer: A ready :class:`Scorer`; wins over ``scoring`` and its options.
+        align_missing: ``(audio_path, words) -> [{"start", "end", ...}, ...]``, e.g.
+            ``voxy.align.force_align``: when ASR heard a flagged word as something
+            else (a misread can change the word: "de l'est" heard "de lait"), the
+            text's own words are aligned in the audio and the word is scored where
+            the text puts it (``Finding.located == "text"``). Default None: such a
+            word is reported, not checked. The aligner takes one pass over the whole
+            ``audio`` (``force_align``: up to 30 s), so it serves per-line audits
+            (``audit_verifier``/``render_verified`` pass it through); a longer
+            recording warns and leaves such words unchecked.
 
     Returns the findings in text order; ``[f for f in findings if f.ok is False]`` are
     the words decidedly misread (re-render those), ``f.ok is None`` ones were not
@@ -1613,16 +1653,21 @@ def audit(
     heard_at = align_words(text, words, elisions=elisions)
 
     places = _risk_places(text, risks, elisions=elisions)
+    text_located = _text_located(text, audio, align_missing, elisions=elisions)
     findings = []
     for risk, place, want in zip(risks, places, wants):
         key = risk.word.casefold()
-        if heard_at.get(place) is None:
+        located, context_words, i = "asr", words, heard_at.get(place)
+        if i is None and place is not None and (aligned := text_located()) is not None:
+            if aligned[place]["start"] is not None:  # timed words only, as context
+                timed = [j for j, w in enumerate(aligned) if w["start"] is not None]
+                located, context_words = "text", [aligned[j] for j in timed]
+                i = timed.index(place)
+        if i is None:
             findings.append(Finding(risk, expected=want))
             continue
-        i = heard_at[place]
-        start, end = words[i]["start"], words[i]["end"]
-        scores = scorer(str(audio), words, i, table[key])
-        findings.append(
-            Finding(risk, Verdict(risk.word, start, end, scores, want, margin), want)
-        )
+        start, end = context_words[i]["start"], context_words[i]["end"]
+        scores = scorer(str(audio), context_words, i, table[key])
+        verdict = Verdict(risk.word, start, end, scores, want, margin)
+        findings.append(Finding(risk, verdict, want, located=located))
     return findings
