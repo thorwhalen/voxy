@@ -169,8 +169,9 @@ lint = []
 format = []
 
 [tool.wads.ci.install]
-# The tests exercise the tensor paths too.
-extras = ["local"]
+# The tests exercise the tensor paths, and the ElevenLabs request building against
+# the real (latest) SDK, offline.
+extras = ["local", "elevenlabs"]
 
 [tool.wads.ci.env]
 required_envvars = []

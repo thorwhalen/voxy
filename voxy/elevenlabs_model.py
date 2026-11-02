@@ -219,10 +219,13 @@ class VoiceDesignPreview:
 def _create_with_labels(create: Callable, *, labels: Mapping[str, str], **kwargs):
     """Call ``create`` (a multipart SDK endpoint) with ``labels`` in the form it takes.
 
-    SDK 2.x releases differ: some JSON-encode a labels dict themselves (so a JSON
-    string would be double-encoded: 400 invalid_labels), and some (2.45) pass it to
-    httpx, which refuses a dict in a multipart form with a ``TypeError`` before
-    anything is sent. So send the dict, and the JSON string if that is refused.
+    SDK releases differ, with the boundary at 2.59.0 (bisected offline against every
+    release from 2.0.0 to 2.75.0): through 2.58 the SDK passes a dict to httpx, which
+    refuses it in a multipart form with a ``TypeError`` before anything is sent, and
+    a JSON string is right; from 2.59 the SDK JSON-encodes a dict itself, so a JSON
+    string would be double-encoded (400 invalid_labels). So send the dict, and the
+    JSON string if that is refused; with ``elevenlabs>=2.59`` required, this could be
+    the dict alone.
     Labels are sent even when empty: some releases encode an omitted value too.
 
     >>> def strict(*, labels, **kw):
