@@ -44,7 +44,8 @@ ALIGN_ENV = EnvSpec(
 #: The aligner workers, one per (model, threads, data root), made on demand.
 _ALIGN_POOL = WorkerPool(ALIGN_ENV, "align")
 
-Run = Callable[[str, Sequence[str]], Sequence["dict | None"]]
+#: ``(audio_path, words, *, start, end) -> [span or None, ...]``
+Run = Callable[..., Sequence["dict | None"]]
 
 
 def close_alignment() -> None:

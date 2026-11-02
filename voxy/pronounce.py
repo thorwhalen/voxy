@@ -1516,6 +1516,12 @@ def _vet_caller_expected(text: str, options: Mapping) -> None:
         _expected_readings(risks, expected=expected, proposed={}, table=table)
 
 
+#: Words ASR placed, on each side of a missing one, that bound its aligned stretch.
+GAP_ANCHORS = 2
+#: Audio added on each side of that stretch (s).
+GAP_MARGIN_S = 0.15
+
+
 def _gap_located(text, audio, align_missing, *, asr_words, heard_at, elisions):
     """A function ``(place) -> (timed words, index) | None`` for a text word ASR did not
     place: the text between the nearest words ASR did place on either side (those
@@ -1527,12 +1533,18 @@ def _gap_located(text, audio, align_missing, *, asr_words, heard_at, elisions):
     cache: dict = {}
 
     def gap(place):
-        before = max((k for k in placed if k < place), default=None)
-        after = min((k for k in placed if k > place), default=None)
-        lo = 0 if before is None else before
-        hi = len(tokens) - 1 if after is None else after
-        start = None if before is None else asr_words[heard_at[before]]["start"]
-        end = None if after is None else asr_words[heard_at[after]]["end"]
+        # two placed words each side (a clitic placed by ASR has no length, and a
+        # tight stretch makes the aligner squeeze), plus a margin of audio
+        before = [k for k in placed if k < place][-GAP_ANCHORS:]
+        after = [k for k in placed if k > place][:GAP_ANCHORS]
+        lo = before[0] if before else 0
+        hi = after[-1] if after else len(tokens) - 1
+        start = (
+            max(0.0, asr_words[heard_at[lo]]["start"] - GAP_MARGIN_S)
+            if before
+            else None
+        )
+        end = asr_words[heard_at[hi]]["end"] + GAP_MARGIN_S if after else None
         return lo, hi, start, end
 
     def located(place):
@@ -1581,7 +1593,7 @@ def audit(
     padding: float = DFLT_CROP_PADDING,
     margin: float | None = None,
     scorer: Scorer | None = None,
-    align_missing: Callable[[str, Sequence[str]], Sequence[Mapping]] | None = None,
+    align_missing: Callable[..., Sequence[Mapping]] | None = None,
 ) -> list[Finding]:
     """Which reading did each heteronym of ``text`` get in the finished ``audio``?
 

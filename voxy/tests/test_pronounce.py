@@ -862,5 +862,6 @@ def test_align_missing_aligns_only_the_gap_between_the_words_asr_placed():
     found = audit("un deux est trois quatre", "take.wav", readings={"est": READINGS},
                   expected={"est": "verb"}, scoring="spot", emitter=heard,
                   words_of=lambda audio: asr, align_missing=align_missing)
-    assert calls == [(["deux", "est", "trois"], 1.0, 3.5)]
-    assert found[0].located == "text" and found[0].verdict.start == 1.5
+    # two placed words each side, plus a margin: "un deux est trois quatre", 0.0-4.65 s
+    assert calls == [(["un", "deux", "est", "trois", "quatre"], 0.0, 4.65)]
+    assert found[0].located == "text" and found[0].verdict.start == 1.0
