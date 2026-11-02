@@ -39,7 +39,7 @@ Steps, each a seam (keyword argument of ``replace_words``):
 >>> fixed = replace_words(speech, "smyth", "Smith", words=words, sample_rate=sr,
 ...                       render=lambda text: (tone(0.8, 0.9), sr), verify=())
 >>> fixed.replaced, round(fixed.start, 3), round(fixed.end, 3), fixed.passed
-((1.375, 2.625), 1.36, 2.16, None)
+((1.375, 2.625), 1.48, 2.28, None)
 """
 
 import os
@@ -66,6 +66,10 @@ DFLT_LOUD_MARGIN_DB = 20.0
 #: Audio heard around the splice when checking it (ASR needs some context).
 DFLT_CHECK_CONTEXT_S = 1.0
 DFLT_PEAK = 0.99
+#: A frame this far below the loudest of a stretch counts as pause, not speech.
+DFLT_PAUSE_DROP_DB = 25.0
+#: Length of the recording's quietest stretch used as room tone.
+DFLT_ROOM_TONE_S = 0.3
 #: ElevenLabs returns mp3 by default; raw PCM decodes without ffmpeg.
 DFLT_RENDER_FORMATS = {"elevenlabs": "pcm_24000"}
 #: Slack for float error when turning a time into a frame index (3.0 s / 10 ms is 300).
@@ -201,6 +205,50 @@ def speech_level(
     frames = np.asarray(samples[: n * size], dtype=np.float64).reshape(n, size)
     loud = frames[levels >= levels.max() - margin_db]
     return float(np.sqrt(np.mean(loud**2)))
+
+
+def edge_pauses(
+    samples: np.ndarray, sample_rate: int, *, drop_db: float = DFLT_PAUSE_DROP_DB
+) -> tuple[float, float]:
+    """Seconds of pause at the start and at the end of ``samples``: frames more than
+    ``drop_db`` below its loudest frame (relative, so a noisy floor still counts).
+
+    >>> x = np.concatenate([np.zeros(800), 0.5 * np.ones(1600), np.zeros(2400)])
+    >>> edge_pauses(x, 8000)
+    (0.1, 0.3)
+    """
+    levels = frame_db(samples, sample_rate)
+    if not len(levels):
+        return 0.0, 0.0
+    loud = np.flatnonzero(levels > levels.max() - drop_db)
+    step = FRAME_MS / 1000
+    return round(float(loud[0] * step), 6), round(
+        float((len(levels) - 1 - loud[-1]) * step), 6
+    )
+
+
+def room_tone(
+    samples: np.ndarray,
+    sample_rate: int,
+    length: int,
+    *,
+    window_s: float = DFLT_ROOM_TONE_S,
+) -> np.ndarray:
+    """``length`` samples of the recording's own background: its quietest
+    ``window_s`` stretch, laid end to end, every other copy reversed (no clicks).
+
+    >>> x = np.concatenate([np.full(4000, 0.5), np.full(2400, 0.01)])
+    >>> tone = room_tone(x, 8000, 5000)
+    >>> len(tone), round(float(np.abs(tone).max()), 3)
+    (5000, 0.01)
+    """
+    size = min(len(samples), max(1, int(window_s * sample_rate)))
+    energy = np.convolve(np.asarray(samples, np.float64) ** 2, np.ones(size), "valid")
+    start = int(np.argmin(energy))
+    piece = np.asarray(samples[start : start + size], np.float32)
+    copies = -(-length // len(piece))
+    tiles = [piece if i % 2 == 0 else piece[::-1] for i in range(copies)]
+    return np.concatenate(tiles)[:length]
 
 
 def match_loudness(
@@ -490,6 +538,20 @@ def _insert(
     return match_loudness(insert, reference, sample_rate, level=level)
 
 
+def _pause_padding(
+    cut: np.ndarray, insert: np.ndarray, sample_rate: int
+) -> tuple[int, int]:
+    """Samples of silence to add before and after ``insert`` so its pauses match the
+    pauses at the edges of ``cut`` (what it replaces)."""
+    (cut_lead, cut_tail), (ins_lead, ins_tail) = (
+        edge_pauses(x, sample_rate) for x in (cut, insert)
+    )
+    return (
+        max(0, int((cut_lead - ins_lead) * sample_rate)),
+        max(0, int((cut_tail - ins_tail) * sample_rate)),
+    )
+
+
 def _checks(verify, transcriber) -> tuple[Check, ...]:
     checks = (heard_check(transcriber=transcriber),) if verify is None else verify
     return (checks,) if callable(checks) else tuple(checks)
@@ -510,6 +572,8 @@ def replace_words(
     max_margin_ms: float = DFLT_MAX_MARGIN_MS,
     snap_ms: float = DFLT_SNAP_MS,
     level: Level = speech_level,
+    keep_pauses: bool = True,
+    with_room_tone: bool = True,
     verify: Check | Sequence[Check] | None = None,
 ) -> Replacement:
     """Replace the spoken phrase ``old`` with ``new``, rendered in ``voice``.
@@ -550,11 +614,24 @@ def replace_words(
     )
     a, b = int(cut[0] * sr), int(cut[1] * sr)
     insert = _insert(render, new, sr, reference=samples[a:b], level=level)
+    lead = tail = 0
+    if keep_pauses:  # the quiet the cut removed, around the new phrase too
+        lead, tail = _pause_padding(samples[a:b], insert, sr)
+        insert = np.concatenate(
+            [np.zeros(lead, np.float32), insert, np.zeros(tail, np.float32)]
+        )
+    if with_room_tone:  # the recording's background under the new phrase, no drop-out
+        insert = insert + room_tone(samples, sr, len(insert))
     fade = int(sr * crossfade_ms / 1000)
     joined, at = crossfade_join(samples[:a], insert, samples[b:], fade=fade)
     speech = Speech(write_wav(joined, sr), format="wav", sample_rate=sr)
     result = Replacement(
-        speech, old, new, start=at / sr, end=(at + len(insert)) / sr, replaced=cut
+        speech,
+        old,
+        new,
+        start=(at + lead) / sr,
+        end=(at + len(insert) - tail) / sr,
+        replaced=cut,
     )
     result.checks = [
         check(joined, sr, result) for check in _checks(verify, transcriber)

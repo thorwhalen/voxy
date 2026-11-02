@@ -431,3 +431,52 @@ def test_voice_check_fails_rather_than_raises_on_a_silent_remainder():
     assert (
         fixed.checks[0]["passed"] is False and "No speech" in fixed.checks[0]["reason"]
     )
+
+
+def _noisy_speech(floor=0.01, seed=0):
+    """Two "words" (tones) with a 0.4 s pause between them, over a noise floor."""
+    rng = np.random.default_rng(seed)
+    word = lambda s, f: tone(s, f, 0.3)
+    x = np.concatenate([np.zeros(SR // 2), word(0.6, 300), np.zeros(int(0.4 * SR)), word(0.6, 500), np.zeros(SR // 2)])
+    return (x + floor * rng.standard_normal(len(x))).astype(np.float32)
+
+
+NOISY_WORDS = [{"text": "one", "start": 0.5, "end": 1.1}, {"text": "two", "start": 1.5, "end": 2.1}]
+
+
+def _clean_render(text):
+    pad = np.zeros(SR // 10, dtype=np.float32)
+    return np.concatenate([pad, tone(0.5, 1000, 0.9), pad]), SR
+
+
+def test_room_tone_fills_the_spliced_span_so_nothing_drops_to_silence():
+    x = _noisy_speech()
+    rms = lambda y: float(np.sqrt(np.mean(y**2)))
+    for with_tone, expect_floor in ((True, True), (False, False)):
+        fixed = replace_words(x, "two", "deux", words=NOISY_WORDS, sample_rate=SR,
+                              render=_clean_render, verify=(), with_room_tone=with_tone)
+        out, _ = read_wav(fixed.audio)
+        quiet = out[int((fixed.start - 0.08) * SR) : int((fixed.start - 0.02) * SR)]  # the kept pause
+        assert (rms(quiet) > 0.005) == expect_floor
+
+
+def test_the_pauses_around_the_phrase_keep_their_length():
+    x = _noisy_speech()
+    fixed = replace_words(x, "two", "deux", words=NOISY_WORDS, sample_rate=SR,
+                          render=_clean_render, verify=())
+    out, _ = read_wav(fixed.audio)
+    from voxy.wavutil import frame_db
+
+    levels = frame_db(out, SR)
+    loud = np.flatnonzero(levels > levels.max() - 20)
+    gaps = np.diff(loud)
+    pause = (gaps.max() - 1) * 0.01  # the longest run of quiet frames between the words
+    assert abs(pause - 0.4) < 0.03  # the 0.4 s pause before "two" is still 0.4 s
+
+
+def test_keep_pauses_off_gives_the_old_tighter_splice():
+    x = _noisy_speech()
+    kept = replace_words(x, "two", "deux", words=NOISY_WORDS, sample_rate=SR, render=_clean_render, verify=())
+    tight = replace_words(x, "two", "deux", words=NOISY_WORDS, sample_rate=SR, render=_clean_render,
+                          verify=(), keep_pauses=False)
+    assert len(read_wav(tight.audio)[0]) < len(read_wav(kept.audio)[0])
