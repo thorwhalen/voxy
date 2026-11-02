@@ -926,7 +926,9 @@ def audit_verifier(
     if any("\n" in line for line in lines):
         raise ValueError("each line must be a single line (no newline inside)")
     _vet_caller_expected("\n".join(lines), audit_options)  # before any render
-    proposals = _proposals_by_line(lines, audit_options)
+    proposals = _known_proposals(
+        _proposals_by_line(lines, audit_options), audit_options
+    )
 
     def verify(text: str, audio: str, line: int) -> list["Finding"]:
         found = audit(
@@ -1074,6 +1076,32 @@ def render_verified(
                 break
         results.append(LineTakes(number, text, tuple(takes)))
     return results
+
+
+def _known_proposals(proposals: Mapping[int, list], options: Mapping | None) -> dict:
+    """``proposals`` (by real line) with every expected reading the readings table
+    lacks dropped, all reported in one warning with their real lines (``audit`` would
+    see each line alone, as line 1, and warn once per identical message)."""
+    keys = ("readings", "language", "elisions", "clitics")
+    table, _, _ = _audit_tables(
+        **{k: v for k, v in (options or {}).items() if k in keys}
+    )
+    dropped, kept = [], {}
+    for line, risks in proposals.items():
+        for risk in risks:
+            want = getattr(risk, "expected", None)
+            have = _reading_names(table, risk.word)
+            if want is not None and reading_name(want) not in have:
+                dropped.append(f"line {line} {risk.word!r}: {want!r} not in {have}")
+                risk = replace(risk, expected=None)
+            kept.setdefault(line, []).append(risk)
+    if dropped:
+        warnings.warn(
+            "Ignored detector proposals naming no reading of their word (those "
+            "words are reported, not checked):\n  " + "\n  ".join(dropped),
+            stacklevel=3,
+        )
+    return kept
 
 
 def _proposals_by_line(

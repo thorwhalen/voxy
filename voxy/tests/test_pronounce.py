@@ -758,3 +758,24 @@ def test_audit_verifier_refuses_a_bad_expected_name_before_any_render_with_its_r
         render_verified(lines, render=lambda *a: rendered.append(a),
                         verify=audit_verifier(lines, readings={"est": READINGS}, expected={"est": "adjective"}))
     assert rendered == []  # refused before the first (paid) render
+
+
+def test_audit_verifier_warns_once_about_every_bad_proposal_with_its_real_line():
+    from dataclasses import dataclass
+
+    @dataclass(frozen=True)
+    class Proposal:
+        line: int
+        word: str
+        expected: str
+        clitic: str = ""
+
+    def detector(text):
+        return [Proposal(2, "est", "pronoun"), Proposal(3, "est", "pronoun"), Proposal(4, "est", "verb")]
+
+    lines = ["rien", "il est", "il est", "il est"]
+    with pytest.warns(UserWarning) as caught:
+        audit_verifier(lines, readings={"est": READINGS}, detectors=[detector])
+    assert len(caught) == 1
+    message = str(caught[0].message)
+    assert "line 2 'est'" in message and "line 3 'est'" in message and "line 4" not in message
