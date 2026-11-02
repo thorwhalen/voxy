@@ -423,19 +423,41 @@ def _slug(path: str | os.PathLike, *, parents: int = 0) -> str:
 
 
 def _deepened(paths: list[Path]) -> list[str]:
-    """Slugs for same-stem ``paths`` with the fewest parent folders that tell them apart
-    (only depths every path has); plain stems if no depth does.
+    """Slugs for same-stem ``paths``, each with the fewest parent folders that tell it
+    apart from the others.
+
+    A path adds a folder only while it still matches another path that more folders
+    could tell apart from it (not one in the same folder, a repeat, or one whose
+    folders only differ in case or characters slugs drop: those are numbered later),
+    and keeps what it has once it runs out of folders.
 
     >>> _deepened([Path("/s/one/vocals.wav"), Path("/s/two/vocals.wav")])
     ['one-vocals', 'two-vocals']
     >>> _deepened([Path("/home/x/talk.m4a"), Path("/home/x/talk.wav")])
     ['talk', 'talk']
+    >>> _deepened([Path("a/v.wav"), Path("v.wav"), Path("b/v.wav")])
+    ['a-v', 'v', 'b-v']
+    >>> _deepened([Path("/s/a/x/v.wav"), Path("/s/b/x/v.wav"), Path("/s/c/y/v.wav")])
+    ['a-x-v', 'b-x-v', 'y-v']
     """
-    for depth in range(1, min(len(p.parent.parts) for p in paths) + 1):
-        slugs = [_slug(p, parents=depth) for p in paths]
-        if len(set(slugs)) == len(slugs):
+    # what a path could ever become: folders that only slug alike (case, accents,
+    # scripts) can never tell paths apart, so they do not count as different
+    whole = [_slug(p, parents=len(p.parent.parts)) for p in paths]
+    depth = [0] * len(paths)
+    while True:
+        slugs = [_slug(p, parents=d) for p, d in zip(paths, depth)]
+        futures: dict[str, set[str]] = {}
+        for slug, full in zip(slugs, whole):
+            futures.setdefault(slug, set()).add(full)
+        deeper = [
+            i
+            for i, path in enumerate(paths)
+            if depth[i] < len(path.parent.parts) and len(futures[slugs[i]]) > 1
+        ]
+        if not deeper:
             return slugs
-    return [_slug(p) for p in paths]
+        for i in deeper:
+            depth[i] += 1
 
 
 def _numbered(slugs: list[str]) -> list[str]:

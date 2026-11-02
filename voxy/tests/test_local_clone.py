@@ -367,6 +367,30 @@ def test_unique_slugs_deepens_only_names_that_collide():
         assert len(set(slugs.values())) == 3
 
 
+def test_unique_slugs_one_repeat_or_folderless_member_does_not_collapse_its_group():
+    """#69: a same-folder pair or a bare relative path used to number the whole group."""
+    assert refprep.unique_slugs(["/x/talk.wav", "/x/talk.m4a", "/y/talk.wav"]) == [
+        "x-talk",
+        "x-talk-2",
+        "y-talk",  # keeps its folder
+    ]
+    assert refprep.unique_slugs(["a/v.wav", "v.wav", "b/v.wav"]) == ["a-v", "v", "b-v"]
+    # folders that only slug alike never separate paths: no climb to the home folder
+    assert refprep.unique_slugs(["/Users/x/Audio/v.wav", "/Users/x/audio/v.wav"]) == [
+        "v",
+        "v-2",
+    ]
+    assert refprep.unique_slugs(["/home/me/日本/v.wav", "/home/me/中国/v.wav"]) == [
+        "v",
+        "v-2",
+    ]
+    assert refprep.unique_slugs(["/s/a/x/v.wav", "/s/b/x/v.wav", "/s/c/y/v.wav"]) == [
+        "a-x-v",
+        "b-x-v",
+        "y-v",  # the shortest that separates it
+    ]
+
+
 def test_unique_slugs_names_an_unsluggable_stem_source_not_its_folder():
     assert refprep.unique_slugs(["/s/日本.wav", "/s/x.wav"]) == ["source", "x"]
     assert refprep.unique_slugs(["/s/日本.wav", "/t/日本.wav"]) == [
