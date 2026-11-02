@@ -106,3 +106,31 @@ def test_the_encoder_accepts_samples_by_channels():
     assert len(samples) == 100 and np.allclose(samples, 0.25, atol=1e-4)
     channels_first = left_right.T  # (2, 100)
     assert read_wav(tensor_to_wav_bytes(channels_first, 8000))[0].shape == (100,)
+
+
+def test_a_trailing_chunk_after_placeholder_or_empty_data_is_not_audio():
+    frames = np.array([0, 16384], "<i2").tobytes()
+    info = b"LIST" + struct.pack("<I", 10) + b"INFOISFT\x02\x00"
+    for placeholder in (0, 0xFFFFFFFF):
+        samples, _ = read_wav(wav(frames + info, data_size=placeholder))
+        assert np.allclose(samples, [0, 0.5], atol=1e-4)
+    assert len(read_wav(wav(info, data_size=0))[0]) == 0  # really empty, then a LIST
+
+
+def test_24_bit_pcm():
+    frames = bytes([0xFF, 0xFF, 0x7F, 0x00, 0x00, 0x00])
+    assert read_wav(wav(frames, width=3))[0].tolist() == [1.0, 0.0]
+
+
+@pytest.mark.parametrize(
+    "payload, match",
+    [
+        (b"RIFF\x00\x00\x00\x00WAVEfmt \x04\x00\x00\x00\x01\x00\x01\x00", "too short"),
+        (None, "channels"),
+    ],
+)
+def test_degenerate_fmt_chunks_are_refused(payload, match):
+    if payload is None:
+        payload = wav(b"\x00\x00", channels=0)
+    with pytest.raises(ValueError, match=match):
+        read_wav(payload)

@@ -25,7 +25,6 @@ from __future__ import annotations
 import io
 import json
 import os
-import wave
 from dataclasses import dataclass
 from collections.abc import Callable, Iterable, Mapping
 from functools import cached_property

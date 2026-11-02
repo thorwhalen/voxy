@@ -468,8 +468,8 @@ def tensor_to_wav_bytes(audio: torch.Tensor | np.ndarray, sample_rate: int) -> b
     ``audio`` is a numpy array or a torch tensor (torch is not needed for arrays).
     Integer audio is taken as PCM and scaled to [-1, 1] first (8-bit PCM is
     unsigned). A 2-D input is ``[channels, samples]`` unless it has more rows than
-    columns, which only ``[samples, channels]`` (soundfile's layout) can have;
-    channels are averaged, and ``voxy.wavutil.write_wav`` does the encoding.
+    columns, which only ``[samples, channels]`` (soundfile's layout) can have (a
+    square input is read channels-first); channels are averaged, and ``voxy.wavutil.write_wav`` does the encoding.
 
     >>> data = tensor_to_wav_bytes(np.zeros(160), 16000)
     >>> data[:4], len(data)
@@ -481,7 +481,7 @@ def tensor_to_wav_bytes(audio: torch.Tensor | np.ndarray, sample_rate: int) -> b
     >>> tensor_to_wav_bytes(np.zeros((1, 2, 3)), 8000)
     Traceback (most recent call last):
       ...
-    ValueError: Audio must be [samples] or [channels, samples], not 3-D
+    ValueError: Audio must be 1-D or 2-D (channels and samples), not 3-D
     """
 
     def as_array(audio) -> np.ndarray:
@@ -497,7 +497,7 @@ def tensor_to_wav_bytes(audio: torch.Tensor | np.ndarray, sample_rate: int) -> b
     audio = as_array(audio)
     if audio.ndim > 2:
         raise ValueError(
-            f"Audio must be [samples] or [channels, samples], not {audio.ndim}-D"
+            f"Audio must be 1-D or 2-D (channels and samples), not {audio.ndim}-D"
         )
     if audio.dtype == np.uint8:  # unsigned PCM: silence is 128
         audio = (audio.astype(np.float64) - 128) / 128

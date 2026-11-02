@@ -14,6 +14,7 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 
 import io
 import os
+import re
 import wave
 
 import numpy as np
@@ -22,13 +23,18 @@ PCM_SAMPLE_WIDTH = 2
 PCM_SCALE = 32767.0
 #: WAV ``fmt`` format tags: integer PCM, IEEE float, and the extensible wrapper.
 WAVE_FORMAT_PCM, WAVE_FORMAT_FLOAT, WAVE_FORMAT_EXTENSIBLE = 1, 3, 0xFFFE
+#: Chunks that can follow audio whose ``data`` size is a streaming placeholder.
+TRAILING_CHUNK_IDS = re.compile(
+    rb"LIST|id3 |ID3 |fact|cue |smpl|bext|JUNK|PAD |iXML|_PMX|acid|inst|plst"
+)
 DFLT_SILENCE_DB = -45.0
 DFLT_KEEP_MS = 60
 FRAME_MS = 10
 
 
 def pcm_to_float(raw: bytes, width: int = PCM_SAMPLE_WIDTH) -> np.ndarray:
-    """Little-endian PCM samples of ``width`` bytes as floats in ``[-1, 1]``.
+    """Little-endian PCM samples of ``width`` bytes as floats in about ``[-1, 1]``
+    (the most negative sample is a hair below -1).
 
     8-bit PCM is unsigned (silence is 128); a trailing partial sample (a stream cut
     mid-sample) is dropped.
@@ -37,23 +43,52 @@ def pcm_to_float(raw: bytes, width: int = PCM_SAMPLE_WIDTH) -> np.ndarray:
     [0.0, 1.0]
     >>> pcm_to_float(bytes([0, 128, 255]), 1).tolist()
     [-1.0, 0.0, 0.9921875]
+    >>> pcm_to_float(bytes([0xFF, 0xFF, 0x7F, 0x00, 0x00, 0x80]), 3).tolist()
+    [1.0, -1.0000001192092896]
     """
     raw = raw[: len(raw) - len(raw) % width]
     if width == 1:
         return (np.frombuffer(raw, dtype=np.uint8).astype(np.float32) - 128) / 128
     if width == 2:
         return np.frombuffer(raw, dtype="<i2").astype(np.float32) / PCM_SCALE
+    if width == 3:  # 24-bit: widen each sample to 32 bits, keeping its sign
+        b = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 3).astype(np.int32)
+        ints = b[:, 0] | (b[:, 1] << 8) | (b[:, 2] << 16)
+        ints = np.where(ints & 0x800000, ints - 0x1000000, ints)
+        return ints.astype(np.float32) / 8388607.0
     if width == 4:
         return np.frombuffer(raw, dtype="<i4").astype(np.float32) / 2147483647.0
     raise ValueError(f"Unsupported PCM sample width: {width} bytes")
 
 
+def _chunks_reach_end(data, pos: int) -> bool:
+    """Does ``data`` from ``pos`` read as whole chunks ending exactly at its end?"""
+    while pos < len(data):
+        if pos + 8 > len(data):
+            return False
+        size = int.from_bytes(data[pos + 4 : pos + 8], "little")
+        pos += 8 + size + size % 2
+    return pos in (len(data), len(data) + 1)  # a final pad byte may be missing
+
+
+def _placeholder_data_end(data, body: int) -> int:
+    """Where audio whose ``data`` size is unusable really ends: at the first known
+    chunk id (word-aligned) from which the rest parses as chunks to the end of the
+    payload, else at the end (a stream cut short)."""
+    for match in TRAILING_CHUNK_IDS.finditer(data, body):
+        pos = match.start()
+        if pos % 2 == 0 and _chunks_reach_end(data, pos):
+            return pos
+    return len(data)
+
+
 def _wav_chunks(data: bytes):
-    """``(chunk id, body)`` of a RIFF/WAVE payload; a data chunk whose size is a
-    streaming placeholder (0 or past the end) runs to the end of the payload."""
+    """``(chunk id, body)`` of a RIFF/WAVE payload, the bodies as memoryviews (no
+    copies). A ``data`` chunk whose size is a streaming placeholder (0 or past the
+    end) runs to the next trailing chunk, or to the end of the payload."""
     if data[:4] != b"RIFF" or data[8:12] != b"WAVE":
         raise ValueError("Not a WAV payload")
-    pos = 12
+    view, pos = memoryview(data), 12
     while pos + 8 <= len(data):
         chunk, size = (
             data[pos : pos + 4],
@@ -61,16 +96,17 @@ def _wav_chunks(data: bytes):
         )
         body = pos + 8
         if chunk == b"data" and not 0 < size <= len(data) - body:
-            size = len(data) - body
-        yield chunk, data[body : body + size]
+            size = _placeholder_data_end(data, body) - body
+        yield chunk, view[body : body + size]
         pos = body + size + size % 2
 
 
 def read_wav(source: str | os.PathLike | bytes) -> tuple[np.ndarray, int]:
     """``(samples, sample_rate)`` of a WAV (path or bytes), channels averaged.
 
-    Integer PCM (8, 16, 32 bit) and 32-bit float, plain or extensible headers, and
-    streamed files whose header carries a placeholder size.
+    Integer PCM (8, 16, 24, 32 bit) and 32-bit float, plain or extensible headers,
+    and streamed files whose header carries a placeholder size (the audio then ends
+    at a trailing chunk such as ``LIST``, or at the end of the file).
     """
     if not isinstance(source, bytes):
         with open(source, "rb") as f:
@@ -78,11 +114,21 @@ def read_wav(source: str | os.PathLike | bytes) -> tuple[np.ndarray, int]:
     fmt = None
     for chunk, body in _wav_chunks(source):
         if chunk == b"fmt ":
+            if len(body) < 16:
+                raise ValueError(f"WAV fmt chunk too short ({len(body)} bytes)")
             tag, channels, rate = (
                 int.from_bytes(body[i:j], "little") for i, j in ((0, 2), (2, 4), (4, 8))
             )
             width = int.from_bytes(body[14:16], "little") // 8
-            if tag == WAVE_FORMAT_EXTENSIBLE and len(body) >= 26:
+            if not (channels and width):
+                raise ValueError(
+                    f"WAV fmt chunk has {channels} channels of {width} bytes"
+                )
+            if tag == WAVE_FORMAT_EXTENSIBLE:
+                if len(body) < 26:
+                    raise ValueError(
+                        "WAV extensible fmt chunk too short for its sub-format"
+                    )
                 tag = int.from_bytes(body[24:26], "little")  # the sub-format's tag
             fmt = (tag, channels, rate, width)
         elif chunk == b"data":
