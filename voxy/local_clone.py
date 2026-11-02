@@ -99,16 +99,20 @@ class LocalBackend:
 #: The old name of ``LocalBackend``; kept for compatibility, remove after the next release.
 LocalCloneBackend = LocalBackend
 
-#: Every local model, by name. Read it through ``local_backends()``, which registers
-#: the built-in ones that live in their own modules first.
-LOCAL_BACKENDS: dict[str, LocalBackend] = {}
+#: Every local model, by name; private: read it through ``local_backends()``, which
+#: registers the built-in ones that live in their own modules first.
+_LOCAL_BACKENDS: dict[str, LocalBackend] = {}
 #: Modules that register a built-in local backend when imported.
 BUILTIN_BACKEND_MODULES = ("voxy.kokoro_model",)
 
 
-def register_local_backend(backend: LocalBackend) -> LocalBackend:
-    """Add (or replace) a local backend description."""
-    LOCAL_BACKENDS[backend.name] = backend
+def register_local_backend(
+    backend: LocalBackend, *, replace: bool = True
+) -> LocalBackend:
+    """Add a local backend description (``replace=False``: keep one already there,
+    as built-in modules do, so a user's own registration under that name wins)."""
+    if replace or backend.name not in _LOCAL_BACKENDS:
+        _LOCAL_BACKENDS[backend.name] = backend
     return backend
 
 
@@ -122,7 +126,7 @@ def local_backends() -> dict[str, LocalBackend]:
 
     for module in BUILTIN_BACKEND_MODULES:
         importlib.import_module(module)
-    return LOCAL_BACKENDS
+    return _LOCAL_BACKENDS
 
 
 class _Cloners(Mapping):
@@ -139,6 +143,9 @@ class _Cloners(Mapping):
 
     def __len__(self) -> int:
         return len(self._items())
+
+    def __repr__(self) -> str:
+        return repr(self._items())
 
 
 LOCAL_CLONE_BACKENDS: Mapping[str, LocalBackend] = _Cloners()

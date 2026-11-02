@@ -137,7 +137,8 @@ KOKORO = register_local_backend(
         licence="code MIT (kokoro-onnx); weights Apache-2.0",
         notes="Stock voices only (no cloning); CPU, faster than realtime; no torch.",
         clones=False,
-    )
+    ),
+    replace=False,
 )
 
 

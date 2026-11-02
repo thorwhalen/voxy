@@ -780,3 +780,40 @@ def test_setup_builds_every_local_backends_environment(monkeypatch, capsys):
     monkeypatch.setattr("voxy.envs.ensure_env", lambda spec, **kw: built.append(spec.name) or "py")
     cli.main(["setup"])
     assert {"kokoro", "f5tts", "asr", "speaker", "phonemes"} <= set(built)
+
+
+
+def test_the_diagnosis_grid_does_not_cross_a_stock_voice_backend_with_references(tmp_path):
+    variants = diagnosis.expand_grid(
+        [{"backend": "kokoro", "params": {"voice": ["af_heart", "bf_emma"]}},
+         {"backend": "f5tts"}],
+        references=["r1", "r2"],
+    )
+    assert [(v.backend, v.reference) for v in variants] == [
+        ("kokoro", ""), ("kokoro", ""), ("f5tts", "r1"), ("f5tts", "r2"),
+    ]
+    voices = []
+
+    class Stock:
+        def synthesize(self, text, voice, **params):
+            voices.append((voice, params))
+            from voxy.base import Speech
+
+            return Speech(write_wav(np.zeros(80, dtype=np.float32), SR), format="wav")
+
+    diagnosis.render_grid("Hi.", {}, variants[:2], tmp_path, audio_format="wav",
+                          model_factory=lambda backend, **init: Stock(), log=lambda *a: None)
+    assert voices == [("af_heart", {}), ("bf_emma", {})]  # the swept voice, as the voice
+
+
+def test_a_builtin_registration_never_replaces_one_already_there():
+    from voxy.local_clone import LocalBackend, local_backends, register_local_backend
+
+    mine = LocalBackend("demo-tts", EnvSpec("demo-tts", ()), clones=False)
+    builtin = LocalBackend("demo-tts", EnvSpec("demo-tts", ("pkg",)), clones=False)
+    try:
+        register_local_backend(mine)
+        register_local_backend(builtin, replace=False)
+        assert local_backends()["demo-tts"] is mine
+    finally:
+        local_backends().pop("demo-tts", None)

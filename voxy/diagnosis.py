@@ -110,14 +110,20 @@ def expand_grid(
 
     A row: ``{"backend": ..., "params": {...}, "init": {...}, "label": ...}``.
     ``init`` values may be lists too (e.g. ``{"variant": ["original", "turbo"]}``).
-    Every variant is rendered once per reference name.
+    Every variant is rendered once per reference name, except a stock-voice backend's
+    (kokoro): its rows are not crossed with references; sweep its voices with
+    ``params={"voice": [...]}``.
 
     >>> vs = expand_grid([{"backend": "f5tts", "params": {"nfe_step": [16, 32], "speed": 1}}])
     >>> [(v.backend, v.params) for v in vs]
     [('f5tts', {'nfe_step': 16, 'speed': 1}), ('f5tts', {'nfe_step': 32, 'speed': 1})]
     """
+    from voxy.local_clone import local_backends
+
     variants = []
     for row in grid:
+        spec = local_backends().get(row["backend"])
+        refs = ("",) if spec is not None and not spec.clones else references
 
         def combos(d):
             keys = list(d)
@@ -126,7 +132,7 @@ def expand_grid(
 
         for init in combos(row.get("init", {})):
             for params in combos(row.get("params", {})):
-                for ref in references:
+                for ref in refs:
                     variants.append(
                         Variant(row["backend"], params, init, ref, row.get("label", ""))
                     )
@@ -216,7 +222,9 @@ def render_grid(
                 log(f"voxy.diagnosis: {v.id} {backend} {v.init} {v.params}")
                 try:
                     start = time.perf_counter()
-                    speech = model.synthesize(text, references[v.reference], **v.params)
+                    params = dict(v.params)
+                    voice = params.pop("voice", references.get(v.reference))
+                    speech = model.synthesize(text, voice, **params)
                     seconds = time.perf_counter() - start
                     audio_s = _audio_seconds(speech.audio)
                     path = _encode_audio(
