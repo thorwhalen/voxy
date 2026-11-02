@@ -8,7 +8,8 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-import torch
+
+torch = pytest.importorskip("torch")
 
 from voxy import ElevenLabsSpeechModel, create_speech_model
 from voxy.base import VoiceProfile
@@ -33,7 +34,11 @@ class FakeClient:
 
         self.calls.append(("ttv.design", kwargs))
         previews = [
-            SimpleNamespace(generated_voice_id=f"gen{i}", audio_base_64=base64.b64encode(b"ID3" + bytes([i])).decode(), duration_secs=2.0)
+            SimpleNamespace(
+                generated_voice_id=f"gen{i}",
+                audio_base_64=base64.b64encode(b"ID3" + bytes([i])).decode(),
+                duration_secs=2.0,
+            )
             for i in range(3)
         ]
         return SimpleNamespace(previews=previews, text="auto text")
@@ -72,7 +77,9 @@ def model(client):
 
 
 def test_selected_by_keyword(client):
-    m = create_speech_model("ElevenLabs", api_key="k", client_factory=lambda key: client)
+    m = create_speech_model(
+        "ElevenLabs", api_key="k", client_factory=lambda key: client
+    )
     assert isinstance(m, ElevenLabsSpeechModel)
 
 
@@ -84,7 +91,7 @@ def test_clone_uploads_every_sample_and_returns_profile(model, client, tmp_path)
         name="ada",
         labels={"language": "en"},
     )
-    (op, kwargs), = client.calls
+    ((op, kwargs),) = client.calls
     assert op == "ivc.create"
     assert kwargs["name"] == "ada"
     assert kwargs["labels"] == {"language": "en"}  # a dict, unless the SDK refuses one
@@ -101,7 +108,7 @@ def test_clone_uploads_every_sample_and_returns_profile(model, client, tmp_path)
 
 def test_clone_single_input_and_default_name(model, client):
     model.clone_voice(b"x", speaker_id=7)
-    (_, kwargs), = client.calls
+    ((_, kwargs),) = client.calls
     assert kwargs["name"] == "voxy-7"
     assert kwargs["files"] == [("sample_000", b"x")]
 
@@ -119,7 +126,9 @@ def test_clone_applies_cleanup_fn(model, client):
         seen.append(sr)
         return audio * 0
 
-    model.clone_voice(torch.ones(800), cleanup_audio_fn=cleanup, assumed_sample_rate=8000)
+    model.clone_voice(
+        torch.ones(800), cleanup_audio_fn=cleanup, assumed_sample_rate=8000
+    )
     assert seen == [8000]
 
 
@@ -221,13 +230,16 @@ def test_clone_accepts_generators_and_int_arrays(model, client, tmp_path):
     model.clone_voice(sorted(tmp_path.glob("*.wav")))
     assert [n for n, _ in client.calls[-1][1]["files"]] == ["c0.wav", "c1.wav"]
     model.clone_voice(np.full(800, 16000, dtype=np.int16), assumed_sample_rate=8000)
-    (name, content), = client.calls[-1][1]["files"]
+    ((name, content),) = client.calls[-1][1]["files"]
     assert content[:4] == b"RIFF" and b"\x00\x00" * 4 not in content[-8:]
 
 
 def test_bytes_uploads_get_a_sniffed_suffix(model, client):
     model.clone_voice([b"ID3rest", b"\x00\x00\x00\x18ftypM4A "])
-    assert [n for n, _ in client.calls[-1][1]["files"]] == ["sample_000.mp3", "sample_001.m4a"]
+    assert [n for n, _ in client.calls[-1][1]["files"]] == [
+        "sample_000.mp3",
+        "sample_001.m4a",
+    ]
 
 
 def test_streamed_wav_with_placeholder_size_decodes(model, client):
@@ -244,7 +256,9 @@ class StrictMultipartClient(FakeClient):
 
     def _ivc_create(self, **kwargs):
         if isinstance(kwargs.get("labels"), dict):
-            raise TypeError("Invalid type for value. Expected primitive type, got <class 'dict'>: {}")
+            raise TypeError(
+                "Invalid type for value. Expected primitive type, got <class 'dict'>: {}"
+            )
         return super()._ivc_create(**kwargs)
 
 
@@ -277,7 +291,9 @@ def test_clone_builds_a_valid_request_with_the_installed_sdk(labels):
 
     def handler(request):
         sent.append(request)
-        return httpx.Response(200, json={"voice_id": "vid", "requires_verification": False})
+        return httpx.Response(
+            200, json={"voice_id": "vid", "requires_verification": False}
+        )
 
     def factory(key):
         transport = httpx.Client(transport=httpx.MockTransport(handler))

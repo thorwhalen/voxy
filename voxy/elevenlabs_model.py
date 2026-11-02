@@ -20,6 +20,8 @@ the voice's owner (or their guardian) to do so.
 24000
 """
 
+from __future__ import annotations
+
 import io
 import json
 import os
@@ -27,22 +29,25 @@ import wave
 from dataclasses import dataclass
 from collections.abc import Callable, Iterable, Mapping
 from functools import cached_property
-from typing import Any, BinaryIO
+from typing import TYPE_CHECKING, Any, BinaryIO, Union
 
 import numpy as np
-import torch
 
 from voxy.base import (
     DFLT_ASSUMED_SAMPLE_RATE,
-    DFLT_VOXY_DEVICE,
     Speech,
     SpeechModel,
     VoiceInfo,
     VoiceProfile,
     _resolve_audio_input,
     _resolve_text_input,
+    is_tensor,
+    optional_import,
     tensor_to_wav_bytes,
 )
+
+if TYPE_CHECKING:
+    import torch
 
 ELEVENLABS_MODEL_TYPE = "elevenlabs"
 ELEVENLABS_API_KEY_ENVVARS = ("ELEVEN_API_KEY", "ELEVENLABS_API_KEY")
@@ -61,7 +66,7 @@ DFLT_VOICE_DESIGN_MODEL_ID = "eleven_multilingual_ttv_v2"
 # The ElevenLabs IVC form accepts at most this many sample files per voice.
 DFLT_MAX_CLONE_FILES = 25
 
-AudioInput = str | os.PathLike | bytes | BinaryIO | torch.Tensor | np.ndarray
+AudioInput = Union[str, os.PathLike, bytes, BinaryIO, "torch.Tensor", np.ndarray]
 
 
 def resolve_elevenlabs_api_key(
@@ -101,26 +106,25 @@ def default_elevenlabs_client_factory(api_key: str):
 _wav_bytes = tensor_to_wav_bytes  # one WAV encoder, in voxy.base
 
 
-def _pcm16_to_tensor(pcm: bytes) -> torch.Tensor:
-    """Decode little-endian 16-bit mono PCM into a float tensor in [-1, 1].
+def _pcm16_to_array(pcm: bytes) -> np.ndarray:
+    """Decode little-endian 16-bit mono PCM into float samples in [-1, 1].
 
-    >>> _pcm16_to_tensor(b"\\x00\\x00\\xff\\x7f").tolist()
+    >>> _pcm16_to_array(b"\\x00\\x00\\xff\\x7f").tolist()
     [0.0, 0.999969482421875]
-    >>> _pcm16_to_tensor(b"\\x00\\x00\\xff").tolist()
+    >>> _pcm16_to_array(b"\\x00\\x00\\xff").tolist()
     [0.0]
     """
     pcm = pcm[: len(pcm) - len(pcm) % 2]  # a truncated stream can end mid-sample
-    samples = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
-    return torch.from_numpy(samples)
+    return np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
 
 
-def _wav_to_tensor(data: bytes) -> tuple[torch.Tensor, int]:
-    """Decode 16-bit mono WAV bytes to ``(tensor, sample_rate)``.
+def _wav_to_array(data: bytes) -> tuple[np.ndarray, int]:
+    """Decode 16-bit mono WAV bytes to ``(samples, sample_rate)``.
 
     Reads the samples from the ``data`` chunk directly, so a streamed WAV whose
     header carries a placeholder size still decodes.
 
-    >>> audio, sr = _wav_to_tensor(_wav_bytes(torch.zeros(10), 16000))
+    >>> audio, sr = _wav_to_array(_wav_bytes(np.zeros(10), 16000))
     >>> tuple(audio.shape), sr
     ((10,), 16000)
     """
@@ -144,7 +148,7 @@ def _wav_to_tensor(data: bytes) -> tuple[torch.Tensor, int]:
                     f"Expected 16-bit mono WAV, got (channels, rate, bits)={fmt}"
                 )
             end = body + size if 0 < size <= len(data) - body else len(data)
-            return _pcm16_to_tensor(data[body:end]), fmt[1]
+            return _pcm16_to_array(data[body:end]), fmt[1]
         pos = body + size + (size % 2)
     raise ValueError("WAV payload has no data chunk")
 
@@ -178,9 +182,8 @@ def _to_upload_file(
     if isinstance(audio_input, os.PathLike):
         audio_input = os.fspath(audio_input)
 
-    if cleanup_audio_fn is None and not isinstance(
-        audio_input, (torch.Tensor, np.ndarray)
-    ):
+    raw = isinstance(audio_input, np.ndarray) or is_tensor(audio_input)
+    if cleanup_audio_fn is None and not raw:
         if isinstance(audio_input, str):
             if not os.path.isfile(audio_input):
                 raise ValueError(f"Audio path does not exist: {audio_input}")
@@ -196,10 +199,10 @@ def _to_upload_file(
             return default_name + _sniff_suffix(content), content
         raise TypeError(f"Unsupported audio input type: {type(audio_input)}")
 
+    if cleanup_audio_fn is None:  # raw samples: encode them, no decoding needed
+        return f"{default_name}.wav", _wav_bytes(audio_input, sample_rate)
     audio, rate = _resolve_audio_input(audio_input, assumed_sample_rate=sample_rate)
-    if cleanup_audio_fn is not None:
-        audio = cleanup_audio_fn(audio, rate)
-    return f"{default_name}.wav", _wav_bytes(audio, rate)
+    return f"{default_name}.wav", _wav_bytes(cleanup_audio_fn(audio, rate), rate)
 
 
 def _sniff_suffix(content: bytes) -> str:
@@ -220,7 +223,7 @@ def _sniff_suffix(content: bytes) -> str:
     return ""
 
 
-_SINGLE_AUDIO_TYPES = (str, bytes, os.PathLike, torch.Tensor, np.ndarray)
+_SINGLE_AUDIO_TYPES = (str, bytes, os.PathLike, np.ndarray)
 
 
 def _as_input_list(audio_input) -> list:
@@ -233,7 +236,8 @@ def _as_input_list(audio_input) -> list:
     >>> _as_input_list(x for x in ["a.wav", "b.wav"])
     ['a.wav', 'b.wav']
     """
-    if isinstance(audio_input, _SINGLE_AUDIO_TYPES) or hasattr(audio_input, "read"):
+    single = isinstance(audio_input, _SINGLE_AUDIO_TYPES) or is_tensor(audio_input)
+    if single or hasattr(audio_input, "read"):
         return [audio_input]
     if isinstance(audio_input, Iterable):
         return list(audio_input)
@@ -306,7 +310,7 @@ class ElevenLabsSpeechModel(SpeechModel):
         model_id: str = DFLT_ELEVENLABS_MODEL_ID,
         output_format: str = DFLT_ELEVENLABS_OUTPUT_FORMAT,
         client_factory: Callable[[str], Any] | None = None,
-        device: str = DFLT_VOXY_DEVICE,
+        device: str | None = None,
     ):
         super().__init__(device)
         self._explicit_api_key = api_key  # env vars are read when the client is built
@@ -574,7 +578,7 @@ class ElevenLabsSpeechModel(SpeechModel):
             text, voice, output_format=output_format, **kwargs
         )
         if codec == "pcm":  # raw samples aren't a playable file: wrap them as WAV
-            payload, codec = _wav_bytes(_pcm16_to_tensor(payload), rate), "wav"
+            payload, codec = _wav_bytes(_pcm16_to_array(payload), rate), "wav"
         return Speech(
             payload,
             format=codec,
@@ -616,7 +620,7 @@ class ElevenLabsSpeechModel(SpeechModel):
         )
         payload = chunks if isinstance(chunks, bytes) else b"".join(chunks)
         if codec == "pcm":
-            payload, codec = _wav_bytes(_pcm16_to_tensor(payload), rate), "wav"
+            payload, codec = _wav_bytes(_pcm16_to_array(payload), rate), "wav"
         return Speech(
             payload,
             format=codec,
@@ -693,12 +697,12 @@ class ElevenLabsSpeechModel(SpeechModel):
             text, voice_profile, output_format=output_format, **kwargs
         )
         if codec == "pcm":
-            audio = _pcm16_to_tensor(payload)
+            audio = _pcm16_to_array(payload)
         else:
-            audio, rate = _wav_to_tensor(payload)
+            audio, rate = _wav_to_array(payload)
         if output_path:
             _write_bytes(output_path, _wav_bytes(audio, rate))
-        return audio.to(self.device)
+        return optional_import("torch").from_numpy(audio).to(self.device)
 
 
 def _voice_id(voice: VoiceProfile | str) -> str:
