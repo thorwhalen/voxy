@@ -227,9 +227,8 @@ def test_prepare_reference_keeps_same_named_sources_apart(tmp_path):
         assert folder in clip["key"]
         rms = np.sqrt(np.mean(read_wav(samples[clip["key"]])[0] ** 2))
         assert (rms > 0.2) == (folder == "song-b")  # the bytes are this source's
-    assert {"conditioned/song-a-vocals.wav", "conditioned/song-b-vocals.wav"} <= set(
-        samples
-    )
+    for key in ("conditioned/song-a-vocals.wav", "conditioned/song-b-vocals.wav"):
+        assert key in samples  # (listing the store gives OS separators on Windows)
 
 
 def test_unique_slugs_deepens_only_names_that_collide():
