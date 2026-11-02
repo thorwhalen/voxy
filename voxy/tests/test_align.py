@@ -50,3 +50,35 @@ def test_the_default_run_uses_the_pooled_worker(monkeypatch):
     (op, request), = calls
     assert op == "align" and Path(request["audio"]).is_absolute() and request["words"] == ["un", "mot"]
     assert made == [{"model": "MMS_FA", "threads": None, "rootdir": None}]
+
+
+def test_which_said_ranks_candidates_with_margins_and_passes_the_crop():
+    seen = []
+
+    def run(audio, texts, *, start=None, end=None):
+        seen.append((Path(audio).read_bytes(), list(texts), start, end))
+        return [-10.0, -4.0, -6.5]
+
+    ranked = align.which_said(b"RIFF-x", ["bitch", "witch", "which"], start=1.0, end=2.5, run=run)
+    assert seen == [(b"RIFF-x", ["bitch", "witch", "which"], 1.0, 2.5)]
+    assert [(c["text"], c["score"], c["margin"]) for c in ranked] == [
+        ("witch", -4.0, 2.5), ("which", -6.5, 3.5), ("bitch", -10.0, None)
+    ]
+
+
+def test_the_default_scorer_calls_the_pooled_workers_score(monkeypatch):
+    calls = []
+
+    class FakeWorker:
+        def call(self, op, **request):
+            calls.append((op, request))
+            return {"scores": [-1.0 for _ in request["texts"]]}
+
+    monkeypatch.setattr(align._ALIGN_POOL, "_make", lambda spec, adapter, **key: FakeWorker())
+    align.close_alignment()
+    try:
+        align.which_said(b"RIFF", ["a", "b"], end=0.5, run=align.worker_score())
+    finally:
+        align.close_alignment()
+    (op, request), = calls
+    assert op == "score" and request["texts"] == ["a", "b"] and request["end"] == 0.5

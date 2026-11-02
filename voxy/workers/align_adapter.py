@@ -95,3 +95,62 @@ def align(state, *, audio, words, max_seconds=30.0):
             }
         )
     return {"words": out}
+
+
+#: The shortest crop the aligner's convolutions take.
+MIN_CROP_SECONDS = 0.1
+
+
+def score(state, *, audio, texts, start=None, end=None, max_seconds=30.0):
+    """``{"scores": [...]}``: for each of ``texts``, the log-likelihood the aligner
+    gives it over ``audio`` (cropped to ``start``-``end`` seconds when given), i.e.
+    minus the CTC loss; ``-inf`` for a text too long for the crop. Higher is more
+    likely; compare texts on the same crop only.
+
+    Every candidate must be spelled in letters: a number or a symbol would become the
+    "any sound" token, which fits any audio and would always win.
+    """
+    import math
+
+    import soundfile
+    import torch
+    import torchaudio.functional as F
+
+    bundle, index = state["bundle"], state["index"]
+    letters = []
+    for text in texts:
+        spelled = "".join(_letters(w, index) for w in text.split())
+        if not spelled or STAR in spelled:
+            raise ValueError(
+                f"candidate {text!r} needs letters only (spell numbers out; no empty text)"
+            )
+        letters.append(spelled)
+    samples, rate = soundfile.read(audio, dtype="float32", always_2d=True)
+    mono = samples.mean(axis=1)
+    total = len(mono) / rate
+    lo, hi = max(0.0, start or 0.0), min(total, total if end is None else end)
+    if hi - lo < MIN_CROP_SECONDS:
+        raise ValueError(f"crop {lo:.2f}-{hi:.2f} s of {total:.2f} s is too short")
+    if hi - lo > max_seconds:
+        raise ValueError(f"crop of {hi - lo:.0f} s is over max_seconds={max_seconds}")
+    crop = mono[int(lo * rate) : int(hi * rate)]
+    wav = F.resample(torch.from_numpy(crop.copy())[None], rate, bundle.sample_rate)
+    with torch.inference_mode():
+        emission, _ = state["model"](wav.to(state["device"]))
+    log_probs = emission[0].cpu().log_softmax(-1)[:, None]
+    scores = []
+    for spelled in letters:
+        tokens = torch.tensor([[index[c] for c in spelled]], dtype=torch.long)
+        loss = float(
+            torch.nn.functional.ctc_loss(
+                log_probs,
+                tokens,
+                [log_probs.shape[0]],
+                [tokens.shape[1]],
+                blank=0,
+                reduction="sum",
+                zero_infinity=False,
+            )
+        )
+        scores.append(-math.inf if math.isinf(loss) else round(-loss, 4))
+    return {"scores": scores}
