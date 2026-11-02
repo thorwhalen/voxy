@@ -295,10 +295,10 @@
 </span><span id="line-102">        <span class="n">pos</span> <span class="o">=</span> <span class="n">body</span> <span class="o">+</span> <span class="n">size</span> <span class="o">+</span> <span class="n">size</span> <span class="o">%</span> <span class="mi">2</span>
 </span><span id="line-103">
 </span><span id="line-104">
-<div class="viewcode-block" id="read_wav">
-<a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.read_wav">[docs]</a>
-</span><span id="line-105"><span class="k">def</span><span class="w"> </span><span class="nf">read_wav</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-</span><span id="line-106"><span class="w">    </span><span class="sd">"""``(samples, sample_rate)`` of a WAV (path or bytes), channels averaged.</span>
+<div class="viewcode-block" id="read_wav_channels">
+<a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.read_wav_channels">[docs]</a>
+</span><span id="line-105"><span class="k">def</span><span class="w"> </span><span class="nf">read_wav_channels</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="line-106"><span class="w">    </span><span class="sd">"""``(samples (frames, channels), sample_rate)`` of a WAV (path or bytes).</span>
 </span><span id="line-107">
 </span><span id="line-108"><span class="sd">    Integer PCM (8, 16, 24, 32 bit) and 32-bit float, plain or extensible headers,</span>
 </span><span id="line-109"><span class="sd">    and streamed files whose header carries a placeholder size (the audio then ends</span>
@@ -339,99 +339,139 @@
 </span><span id="line-144">                <span class="n">samples</span> <span class="o">=</span> <span class="n">pcm_to_float</span><span class="p">(</span><span class="n">body</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
 </span><span id="line-145">            <span class="k">else</span><span class="p">:</span>
 </span><span id="line-146">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unsupported WAV format: tag </span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="mi">8</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">width</span><span class="si">}</span><span class="s2"> bit"</span><span class="p">)</span>
-</span><span id="line-147">            <span class="k">if</span> <span class="n">channels</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="line-148">                <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">%</span> <span class="n">channels</span><span class="p">]</span>
-</span><span id="line-149">                <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="line-150">            <span class="k">return</span> <span class="n">samples</span><span class="p">,</span> <span class="n">rate</span>
-</span><span id="line-151">    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"WAV payload has no data chunk"</span><span class="p">)</span></div>
+</span><span id="line-147">            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">%</span> <span class="n">channels</span><span class="p">]</span>
+</span><span id="line-148">            <span class="k">return</span> <span class="n">samples</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">channels</span><span class="p">),</span> <span class="n">rate</span>
+</span><span id="line-149">    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"WAV payload has no data chunk"</span><span class="p">)</span></div>
 
-</span><span id="line-152">
-</span><span id="line-153">
+</span><span id="line-150">
+</span><span id="line-151">
+<div class="viewcode-block" id="read_wav">
+<a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.read_wav">[docs]</a>
+</span><span id="line-152"><span class="k">def</span><span class="w"> </span><span class="nf">read_wav</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="line-153"><span class="w">    </span><span class="sd">"""``(samples, sample_rate)`` of a WAV (path or bytes), channels averaged; reads</span>
+</span><span id="line-154"><span class="sd">    what :func:`read_wav_channels` reads."""</span>
+</span><span id="line-155">    <span class="n">samples</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">read_wav_channels</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+</span><span id="line-156">    <span class="k">return</span> <span class="n">samples</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">samples</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">rate</span></div>
+
+</span><span id="line-157">
+</span><span id="line-158">
 <div class="viewcode-block" id="write_wav">
 <a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.write_wav">[docs]</a>
-</span><span id="line-154"><span class="k">def</span><span class="w"> </span><span class="nf">write_wav</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-</span><span id="line-155"><span class="w">    </span><span class="sd">"""Mono 16-bit PCM WAV bytes from floats in ``[-1, 1]`` (clipped)."""</span>
-</span><span id="line-156">    <span class="n">pcm</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">PCM_SCALE</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
-</span><span id="line-157">        <span class="s2">"&lt;i2"</span>
-</span><span id="line-158">    <span class="p">)</span>
-</span><span id="line-159">    <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
-</span><span id="line-160">    <span class="k">with</span> <span class="n">wave</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">w</span><span class="p">:</span>
-</span><span id="line-161">        <span class="n">w</span><span class="o">.</span><span class="n">setnchannels</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="line-162">        <span class="n">w</span><span class="o">.</span><span class="n">setsampwidth</span><span class="p">(</span><span class="n">PCM_SAMPLE_WIDTH</span><span class="p">)</span>
-</span><span id="line-163">        <span class="n">w</span><span class="o">.</span><span class="n">setframerate</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">))</span>
-</span><span id="line-164">        <span class="n">w</span><span class="o">.</span><span class="n">writeframes</span><span class="p">(</span><span class="n">pcm</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span>
-</span><span id="line-165">    <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span></div>
+</span><span id="line-159"><span class="k">def</span><span class="w"> </span><span class="nf">write_wav</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+</span><span id="line-160"><span class="w">    </span><span class="sd">"""Mono 16-bit PCM WAV bytes from floats in ``[-1, 1]`` (clipped)."""</span>
+</span><span id="line-161">    <span class="n">pcm</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">PCM_SCALE</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
+</span><span id="line-162">        <span class="s2">"&lt;i2"</span>
+</span><span id="line-163">    <span class="p">)</span>
+</span><span id="line-164">    <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+</span><span id="line-165">    <span class="k">with</span> <span class="n">wave</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">w</span><span class="p">:</span>
+</span><span id="line-166">        <span class="n">w</span><span class="o">.</span><span class="n">setnchannels</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="line-167">        <span class="n">w</span><span class="o">.</span><span class="n">setsampwidth</span><span class="p">(</span><span class="n">PCM_SAMPLE_WIDTH</span><span class="p">)</span>
+</span><span id="line-168">        <span class="n">w</span><span class="o">.</span><span class="n">setframerate</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">))</span>
+</span><span id="line-169">        <span class="n">w</span><span class="o">.</span><span class="n">writeframes</span><span class="p">(</span><span class="n">pcm</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span>
+</span><span id="line-170">    <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span></div>
 
-</span><span id="line-166">
-</span><span id="line-167">
+</span><span id="line-171">
+</span><span id="line-172">
+<div class="viewcode-block" id="write_wav_channels">
+<a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.write_wav_channels">[docs]</a>
+</span><span id="line-173"><span class="k">def</span><span class="w"> </span><span class="nf">write_wav_channels</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+</span><span id="line-174"><span class="w">    </span><span class="sd">"""32-bit float WAV bytes of ``samples`` ``(frames, channels)`` (or 1-D: mono),</span>
+</span><span id="line-175"><span class="sd">    lossless, for handing audio to another process.</span>
+</span><span id="line-176">
+</span><span id="line-177"><span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+</span><span id="line-178"><span class="sd">    &gt;&gt;&gt; x = np.array([[0.25, -0.5], [1.5, 0.0]], dtype=np.float32)</span>
+</span><span id="line-179"><span class="sd">    &gt;&gt;&gt; back, sr = read_wav_channels(write_wav_channels(x, 8000))</span>
+</span><span id="line-180"><span class="sd">    &gt;&gt;&gt; sr, back.tolist()</span>
+</span><span id="line-181"><span class="sd">    (8000, [[0.25, -0.5], [1.5, 0.0]])</span>
+</span><span id="line-182"><span class="sd">    """</span>
+</span><span id="line-183">    <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"&lt;f4"</span><span class="p">)</span>
+</span><span id="line-184">    <span class="k">if</span> <span class="n">samples</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="line-185">        <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+</span><span id="line-186">    <span class="n">frames</span><span class="p">,</span> <span class="n">channels</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">shape</span>
+</span><span id="line-187">    <span class="n">data</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">tobytes</span><span class="p">()</span>
+</span><span id="line-188">    <span class="n">block</span> <span class="o">=</span> <span class="n">channels</span> <span class="o">*</span> <span class="mi">4</span>
+</span><span id="line-189">    <span class="n">fmt</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-190">        <span class="n">WAVE_FORMAT_FLOAT</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">)</span>
+</span><span id="line-191">        <span class="o">+</span> <span class="n">channels</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">)</span>
+</span><span id="line-192">        <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">)</span>
+</span><span id="line-193">        <span class="o">+</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">)</span> <span class="o">*</span> <span class="n">block</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">)</span>
+</span><span id="line-194">        <span class="o">+</span> <span class="n">block</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">)</span>
+</span><span id="line-195">        <span class="o">+</span> <span class="p">(</span><span class="mi">32</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">)</span>
+</span><span id="line-196">    <span class="p">)</span>
+</span><span id="line-197">    <span class="n">body</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">"WAVE"</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">"fmt "</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">)</span> <span class="o">+</span> <span class="n">fmt</span>
+</span><span id="line-198">    <span class="n">body</span> <span class="o">+=</span> <span class="sa">b</span><span class="s2">"data"</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">)</span> <span class="o">+</span> <span class="n">data</span>
+</span><span id="line-199">    <span class="k">return</span> <span class="sa">b</span><span class="s2">"RIFF"</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">body</span><span class="p">)</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">)</span> <span class="o">+</span> <span class="n">body</span></div>
+
+</span><span id="line-200">
+</span><span id="line-201">
 <div class="viewcode-block" id="frame_db">
 <a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.frame_db">[docs]</a>
-</span><span id="line-168"><span class="k">def</span><span class="w"> </span><span class="nf">frame_db</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">frame_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">FRAME_MS</span><span class="p">):</span>
-</span><span id="line-169"><span class="w">    </span><span class="sd">"""RMS level (dBFS) of consecutive ``frame_ms`` frames.</span>
-</span><span id="line-170">
-</span><span id="line-171"><span class="sd">    &gt;&gt;&gt; frame_db(np.zeros(160), 8000).round().tolist()</span>
-</span><span id="line-172"><span class="sd">    [-100.0, -100.0]</span>
-</span><span id="line-173"><span class="sd">    """</span>
-</span><span id="line-174">    <span class="n">size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">frame_ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">))</span>
-</span><span id="line-175">    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">//</span> <span class="n">size</span>
-</span><span id="line-176">    <span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">samples</span><span class="p">[:</span> <span class="n">n</span> <span class="o">*</span> <span class="n">size</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-</span><span id="line-177">    <span class="n">rms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">frames</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
-</span><span id="line-178">    <span class="k">return</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">rms</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">))</span></div>
+</span><span id="line-202"><span class="k">def</span><span class="w"> </span><span class="nf">frame_db</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">frame_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">FRAME_MS</span><span class="p">):</span>
+</span><span id="line-203"><span class="w">    </span><span class="sd">"""RMS level (dBFS) of consecutive ``frame_ms`` frames.</span>
+</span><span id="line-204">
+</span><span id="line-205"><span class="sd">    &gt;&gt;&gt; frame_db(np.zeros(160), 8000).round().tolist()</span>
+</span><span id="line-206"><span class="sd">    [-100.0, -100.0]</span>
+</span><span id="line-207"><span class="sd">    """</span>
+</span><span id="line-208">    <span class="n">size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">frame_ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">))</span>
+</span><span id="line-209">    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">//</span> <span class="n">size</span>
+</span><span id="line-210">    <span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">samples</span><span class="p">[:</span> <span class="n">n</span> <span class="o">*</span> <span class="n">size</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+</span><span id="line-211">    <span class="n">rms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">frames</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+</span><span id="line-212">    <span class="k">return</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">rms</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">))</span></div>
 
-</span><span id="line-179">
-</span><span id="line-180">
+</span><span id="line-213">
+</span><span id="line-214">
 <div class="viewcode-block" id="trim_silence">
 <a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.trim_silence">[docs]</a>
-</span><span id="line-181"><span class="k">def</span><span class="w"> </span><span class="nf">trim_silence</span><span class="p">(</span>
-</span><span id="line-182">    <span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-</span><span id="line-183">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-</span><span id="line-184">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-185">    <span class="n">threshold_db</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_SILENCE_DB</span><span class="p">,</span>
-</span><span id="line-186">    <span class="n">keep_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_KEEP_MS</span><span class="p">,</span>
-</span><span id="line-187"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-188"><span class="w">    </span><span class="sd">"""Drop leading and trailing frames quieter than ``threshold_db`` (keeping ``keep_ms``).</span>
-</span><span id="line-189">
-</span><span id="line-190"><span class="sd">    &gt;&gt;&gt; x = np.concatenate([np.zeros(800), 0.5 * np.ones(800), np.zeros(800)])</span>
-</span><span id="line-191"><span class="sd">    &gt;&gt;&gt; len(trim_silence(x, 8000, keep_ms=0))</span>
-</span><span id="line-192"><span class="sd">    800</span>
-</span><span id="line-193"><span class="sd">    """</span>
-</span><span id="line-194">    <span class="n">levels</span> <span class="o">=</span> <span class="n">frame_db</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">)</span>
-</span><span id="line-195">    <span class="n">loud</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">levels</span> <span class="o">&gt;</span> <span class="n">threshold_db</span><span class="p">)</span>
-</span><span id="line-196">    <span class="k">if</span> <span class="n">loud</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-197">        <span class="k">return</span> <span class="n">samples</span><span class="p">[:</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-198">    <span class="n">size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">FRAME_MS</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">))</span>
-</span><span id="line-199">    <span class="n">keep</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">keep_ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span>
-</span><span id="line-200">    <span class="n">start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">loud</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">size</span> <span class="o">-</span> <span class="n">keep</span><span class="p">)</span>
-</span><span id="line-201">    <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">),</span> <span class="p">(</span><span class="n">loud</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">size</span> <span class="o">+</span> <span class="n">keep</span><span class="p">)</span>
-</span><span id="line-202">    <span class="k">return</span> <span class="n">samples</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span></div>
+</span><span id="line-215"><span class="k">def</span><span class="w"> </span><span class="nf">trim_silence</span><span class="p">(</span>
+</span><span id="line-216">    <span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+</span><span id="line-217">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+</span><span id="line-218">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-219">    <span class="n">threshold_db</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_SILENCE_DB</span><span class="p">,</span>
+</span><span id="line-220">    <span class="n">keep_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_KEEP_MS</span><span class="p">,</span>
+</span><span id="line-221"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-222"><span class="w">    </span><span class="sd">"""Drop leading and trailing frames quieter than ``threshold_db`` (keeping ``keep_ms``).</span>
+</span><span id="line-223">
+</span><span id="line-224"><span class="sd">    &gt;&gt;&gt; x = np.concatenate([np.zeros(800), 0.5 * np.ones(800), np.zeros(800)])</span>
+</span><span id="line-225"><span class="sd">    &gt;&gt;&gt; len(trim_silence(x, 8000, keep_ms=0))</span>
+</span><span id="line-226"><span class="sd">    800</span>
+</span><span id="line-227"><span class="sd">    """</span>
+</span><span id="line-228">    <span class="n">levels</span> <span class="o">=</span> <span class="n">frame_db</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">)</span>
+</span><span id="line-229">    <span class="n">loud</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">levels</span> <span class="o">&gt;</span> <span class="n">threshold_db</span><span class="p">)</span>
+</span><span id="line-230">    <span class="k">if</span> <span class="n">loud</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="line-231">        <span class="k">return</span> <span class="n">samples</span><span class="p">[:</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-232">    <span class="n">size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">FRAME_MS</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">))</span>
+</span><span id="line-233">    <span class="n">keep</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">keep_ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span>
+</span><span id="line-234">    <span class="n">start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">loud</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">size</span> <span class="o">-</span> <span class="n">keep</span><span class="p">)</span>
+</span><span id="line-235">    <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">),</span> <span class="p">(</span><span class="n">loud</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">size</span> <span class="o">+</span> <span class="n">keep</span><span class="p">)</span>
+</span><span id="line-236">    <span class="k">return</span> <span class="n">samples</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span></div>
 
-</span><span id="line-203">
-</span><span id="line-204">
+</span><span id="line-237">
+</span><span id="line-238">
 <div class="viewcode-block" id="silence">
 <a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.silence">[docs]</a>
-</span><span id="line-205"><span class="k">def</span><span class="w"> </span><span class="nf">silence</span><span class="p">(</span><span class="n">ms</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-206"><span class="w">    </span><span class="sd">"""``ms`` milliseconds of silence.</span>
-</span><span id="line-207">
-</span><span id="line-208"><span class="sd">    &gt;&gt;&gt; len(silence(250, 8000))</span>
-</span><span id="line-209"><span class="sd">    2000</span>
-</span><span id="line-210"><span class="sd">    """</span>
-</span><span id="line-211">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
+</span><span id="line-239"><span class="k">def</span><span class="w"> </span><span class="nf">silence</span><span class="p">(</span><span class="n">ms</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-240"><span class="w">    </span><span class="sd">"""``ms`` milliseconds of silence.</span>
+</span><span id="line-241">
+</span><span id="line-242"><span class="sd">    &gt;&gt;&gt; len(silence(250, 8000))</span>
+</span><span id="line-243"><span class="sd">    2000</span>
+</span><span id="line-244"><span class="sd">    """</span>
+</span><span id="line-245">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span> <span class="o">*</span> <span class="n">ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
 
-</span><span id="line-212">
-</span><span id="line-213">
+</span><span id="line-246">
+</span><span id="line-247">
 <div class="viewcode-block" id="resample">
 <a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.resample">[docs]</a>
-</span><span id="line-214"><span class="k">def</span><span class="w"> </span><span class="nf">resample</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">from_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">to_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-215"><span class="w">    </span><span class="sd">"""Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).</span>
-</span><span id="line-216">
-</span><span id="line-217"><span class="sd">    &gt;&gt;&gt; len(resample(np.zeros(100), 8000, 16000))</span>
-</span><span id="line-218"><span class="sd">    200</span>
-</span><span id="line-219"><span class="sd">    """</span>
-</span><span id="line-220">    <span class="k">if</span> <span class="n">from_rate</span> <span class="o">==</span> <span class="n">to_rate</span><span class="p">:</span>
-</span><span id="line-221">        <span class="k">return</span> <span class="n">samples</span>
-</span><span id="line-222">    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">*</span> <span class="n">to_rate</span> <span class="o">/</span> <span class="n">from_rate</span><span class="p">))</span>
-</span><span id="line-223">    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-</span><span id="line-224">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)),</span> <span class="n">samples</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
+</span><span id="line-248"><span class="k">def</span><span class="w"> </span><span class="nf">resample</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">from_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">to_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-249"><span class="w">    </span><span class="sd">"""Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).</span>
+</span><span id="line-250">
+</span><span id="line-251"><span class="sd">    &gt;&gt;&gt; len(resample(np.zeros(100), 8000, 16000))</span>
+</span><span id="line-252"><span class="sd">    200</span>
+</span><span id="line-253"><span class="sd">    """</span>
+</span><span id="line-254">    <span class="k">if</span> <span class="n">from_rate</span> <span class="o">==</span> <span class="n">to_rate</span><span class="p">:</span>
+</span><span id="line-255">        <span class="k">return</span> <span class="n">samples</span>
+</span><span id="line-256">    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">*</span> <span class="n">to_rate</span> <span class="o">/</span> <span class="n">from_rate</span><span class="p">))</span>
+</span><span id="line-257">    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+</span><span id="line-258">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)),</span> <span class="n">samples</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -446,7 +486,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=d78a2f11"></script>
+    <script src="../../_static/documentation_options.js?v=1c03bfdc"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

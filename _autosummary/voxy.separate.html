@@ -171,10 +171,13 @@ the voice, and <code class="docutils literal notranslate"><span class="pre">rest
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.separate.DFLT_STEM" title="voxy.separate.DFLT_STEM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_STEM</span></code></a></p></td>
 <td><p>The stem kept as "the voice"; Demucs also has drums, bass and other.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.separate.MODEL_SOURCES" title="voxy.separate.MODEL_SOURCES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MODEL_SOURCES</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.separate.FLOAT_SUBTYPE" title="voxy.separate.FLOAT_SUBTYPE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FLOAT_SUBTYPE</span></code></a></p></td>
+<td><p>float, so no level is lost.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.separate.MODEL_SOURCES" title="voxy.separate.MODEL_SOURCES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MODEL_SOURCES</span></code></a></p></td>
 <td><p>The stems of the pretrained models whose sources are known before loading them.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.separate.SEPARATION_ENV" title="voxy.separate.SEPARATION_ENV"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SEPARATION_ENV</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.separate.SEPARATION_ENV" title="voxy.separate.SEPARATION_ENV"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SEPARATION_ENV</span></code></a></p></td>
 <td><p>torch is bounded to the releases Demucs 4.0.1 was checked with.</p></td>
 </tr>
 </tbody>
@@ -191,7 +194,10 @@ the voice, and <code class="docutils literal notranslate"><span class="pre">rest
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.separate.separate" title="voxy.separate.separate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">separate</span></code></a>(audio, *[, stem, sample_rate, run])</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">{stem:</span> <span class="pre">wav,</span> <span class="pre">"rest":</span> <span class="pre">wav}</span></code>: <code class="docutils literal notranslate"><span class="pre">audio</span></code> split into <code class="docutils literal notranslate"><span class="pre">stem</span></code> and everything else.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.separate.worker_run" title="voxy.separate.worker_run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker_run</span></code></a>(*[, model, threads, rootdir])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.separate.speech_separator" title="voxy.separate.speech_separator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speech_separator</span></code></a>(*[, stem, run])</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">separate</span></code> as a <code class="docutils literal notranslate"><span class="pre">(samples</span> <span class="pre">(frames,</span> <span class="pre">channels),</span> <span class="pre">sample_rate)</span> <span class="pre">-&gt;</span> <span class="pre">(speech,</span> <span class="pre">music)</span></code> callable, the separator seam of reeleehq/mixing (<code class="docutils literal notranslate"><span class="pre">mixing.audio.separation.separate_speech(audio,</span> <span class="pre">separator=speech_separator())</span></code>), so mixing can run Demucs out of process, in voxy's environment.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.separate.worker_run" title="voxy.separate.worker_run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker_run</span></code></a>(*[, model, threads, rootdir])</p></td>
 <td><p>The default <code class="docutils literal notranslate"><span class="pre">run</span></code>: the Demucs adapter in its own environment.</p></td>
 </tr>
 </tbody>
@@ -200,6 +206,16 @@ the voice, and <code class="docutils literal notranslate"><span class="pre">rest
 <dt class="sig sig-object py" id="voxy.separate.DFLT_STEM">
 <span class="sig-prename descclassname"><span class="pre">voxy.separate.</span></span><span class="sig-name descname"><span class="pre">DFLT_STEM</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'vocals'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.separate.DFLT_STEM" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.separate.DFLT_STEM'">¶</a></dt>
 <dd><p>The stem kept as “the voice”; Demucs also has drums, bass and other.</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.separate.FLOAT_SUBTYPE">
+<span class="sig-prename descclassname"><span class="pre">voxy.separate.</span></span><span class="sig-name descname"><span class="pre">FLOAT_SUBTYPE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'FLOAT'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.separate.FLOAT_SUBTYPE" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.separate.FLOAT_SUBTYPE'">¶</a></dt>
+<dd><p>float, so no level is lost.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>What <code class="docutils literal notranslate"><span class="pre">speech_separator</span></code> asks the worker to write</p>
+</dd>
+</dl>
 </dd></dl>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.separate.MODEL_SOURCES">
@@ -272,6 +288,36 @@ other).</p></li>
 </dl>
 </dd></dl>
 <dl class="py function">
+<dt class="sig sig-object py" id="voxy.separate.speech_separator">
+<span class="sig-prename descclassname"><span class="pre">voxy.separate.</span></span><span class="sig-name descname"><span class="pre">speech_separator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">stem</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'vocals'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/separate.html#speech_separator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.separate.speech_separator" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.separate.speech_separator'">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">separate</span></code> as a <code class="docutils literal notranslate"><span class="pre">(samples</span> <span class="pre">(frames,</span> <span class="pre">channels),</span> <span class="pre">sample_rate)</span> <span class="pre">-&gt;</span> <span class="pre">(speech,</span> <span class="pre">music)</span></code>
+callable, the separator seam of reeleehq/mixing
+(<code class="docutils literal notranslate"><span class="pre">mixing.audio.separation.separate_speech(audio,</span> <span class="pre">separator=speech_separator())</span></code>),
+so mixing can run Demucs out of process, in voxy’s environment.</p>
+<p>Mono or stereo in; the stems come back at the input’s rate, channels and length,
+at the input’s level (no clip rescaling, float WAV in between: <code class="docutils literal notranslate"><span class="pre">speech</span> <span class="pre">+</span> <span class="pre">music</span></code>
+is the input). Keyword arguments are <code class="docutils literal notranslate"><span class="pre">separate</span></code>’s. For mixing’s <code class="docutils literal notranslate"><span class="pre">remove_talk</span></code>,
+give it htdemucs’s context: <code class="docutils literal notranslate"><span class="pre">SeparationStrategy(...,</span> <span class="pre">context_s=3.0)</span></code> around this
+callable (a bare callable gets mixing’s 1 s default).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">fake</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">stem</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">):</span>
+</span><span id="line-2"><span class="gp">... </span>    <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">read_wav_channels</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
+</span><span id="line-3"><span class="gp">... </span>    <span class="n">paths</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-4"><span class="gp">... </span>    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="p">((</span><span class="n">stem</span><span class="p">,</span> <span class="n">samples</span> <span class="o">*</span> <span class="mf">0.75</span><span class="p">),</span> <span class="p">(</span><span class="s2">"rest"</span><span class="p">,</span> <span class="n">samples</span> <span class="o">*</span> <span class="mf">0.25</span><span class="p">)):</span>
+</span><span id="line-5"><span class="gp">... </span>        <span class="n">paths</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">out_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.wav"</span>
+</span><span id="line-6"><span class="gp">... </span>        <span class="nb">open</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="s2">"wb"</span><span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">write_wav_channels</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="n">sr</span><span class="p">))</span>
+</span><span id="line-7"><span class="gp">... </span>    <span class="k">return</span> <span class="n">paths</span>
+</span><span id="line-8"><span class="gp">&gt;&gt;&gt; </span><span class="n">speech</span><span class="p">,</span> <span class="n">music</span> <span class="o">=</span> <span class="n">speech_separator</span><span class="p">(</span><span class="n">run</span><span class="o">=</span><span class="n">fake</span><span class="p">)(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span> <span class="mi">8000</span><span class="p">)</span>
+</span><span id="line-9"><span class="gp">&gt;&gt;&gt; </span><span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">speech</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">music</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+</span><span id="line-10"><span class="go">((4, 2), 0.75, 0.25)</span>
+</span></code></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[[<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>, <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>], <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>]]</span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="voxy.separate.worker_run">
 <span class="sig-prename descclassname"><span class="pre">voxy.separate.</span></span><span class="sig-name descname"><span class="pre">worker_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'htdemucs_ft'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/separate.html#worker_run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.separate.worker_run" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.separate.worker_run'">¶</a></dt>
 <dd><p>The default <code class="docutils literal notranslate"><span class="pre">run</span></code>: the Demucs adapter in its own environment.</p>
@@ -289,11 +335,13 @@ message) for the others.</p>
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
 <li><a :data-current="activeSection === '#voxy.separate.DFLT_STEM'" class="reference internal" href="#voxy.separate.DFLT_STEM"><code class="docutils literal notranslate"><span class="pre">DFLT_STEM</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.separate.FLOAT_SUBTYPE'" class="reference internal" href="#voxy.separate.FLOAT_SUBTYPE"><code class="docutils literal notranslate"><span class="pre">FLOAT_SUBTYPE</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.separate.MODEL_SOURCES'" class="reference internal" href="#voxy.separate.MODEL_SOURCES"><code class="docutils literal notranslate"><span class="pre">MODEL_SOURCES</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.separate.SEPARATION_ENV'" class="reference internal" href="#voxy.separate.SEPARATION_ENV"><code class="docutils literal notranslate"><span class="pre">SEPARATION_ENV</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.separate.check_stem'" class="reference internal" href="#voxy.separate.check_stem"><code class="docutils literal notranslate"><span class="pre">check_stem()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.separate.close_separation'" class="reference internal" href="#voxy.separate.close_separation"><code class="docutils literal notranslate"><span class="pre">close_separation()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.separate.separate'" class="reference internal" href="#voxy.separate.separate"><code class="docutils literal notranslate"><span class="pre">separate()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.separate.speech_separator'" class="reference internal" href="#voxy.separate.speech_separator"><code class="docutils literal notranslate"><span class="pre">speech_separator()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.separate.worker_run'" class="reference internal" href="#voxy.separate.worker_run"><code class="docutils literal notranslate"><span class="pre">worker_run()</span></code></a></li>
 </ul>
 </div>
@@ -308,7 +356,7 @@ message) for the others.</p>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=d78a2f11"></script>
+<script src="../_static/documentation_options.js?v=1c03bfdc"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

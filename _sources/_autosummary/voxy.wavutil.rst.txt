@@ -20,8 +20,10 @@ voxy.wavutil
       frame_db
       pcm_to_float
       read_wav
+      read_wav_channels
       resample
       silence
       trim_silence
       write_wav
+      write_wav_channels
    

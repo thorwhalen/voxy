@@ -1,4 +1,4 @@
-> built 2026-11-02 10:28 UTC from f8c3395 (main) · voxy 0.0.53. Details: build_info.json
+> built 2026-11-02 10:40 UTC from 43c3de0 (main) · voxy 0.0.54. Details: build_info.json
 
 # index.html.md
 
@@ -4104,20 +4104,29 @@ the voice, and `rest`, the input minus the voice (so the two add back up to it).
 
 | [`DFLT_STEM`](_autosummary/voxy.separate.html.md#voxy.separate.DFLT_STEM)      | The stem kept as "the voice"; Demucs also has drums, bass and other.            |
 |-----------------------------------------------------------------|---------------------------------------------------------------------------------|
+| [`FLOAT_SUBTYPE`](_autosummary/voxy.separate.html.md#voxy.separate.FLOAT_SUBTYPE)  | float, so no level is lost.                                                     |
 | [`MODEL_SOURCES`](_autosummary/voxy.separate.html.md#voxy.separate.MODEL_SOURCES)  | The stems of the pretrained models whose sources are known before loading them. |
 | [`SEPARATION_ENV`](_autosummary/voxy.separate.html.md#voxy.separate.SEPARATION_ENV) | torch is bounded to the releases Demucs 4.0.1 was checked with.                 |
 
 ### Functions
 
-| [`check_stem`](_autosummary/voxy.separate.html.md#voxy.separate.check_stem)(stem, model)                       | Raise `ValueError` if `model` is known (`MODEL_SOURCES`) and lacks `stem`.   |
-|------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
-| [`close_separation`](_autosummary/voxy.separate.html.md#voxy.separate.close_separation)()                            | Stop the Demucs workers (free their memory).                                 |
-| [`separate`](_autosummary/voxy.separate.html.md#voxy.separate.separate)(audio, \*[, stem, sample_rate, run]) | `{stem: wav, "rest": wav}`: `audio` split into `stem` and everything else.   |
-| [`worker_run`](_autosummary/voxy.separate.html.md#voxy.separate.worker_run)(\*[, model, threads, rootdir])     | The default `run`: the Demucs adapter in its own environment.                |
+| [`check_stem`](_autosummary/voxy.separate.html.md#voxy.separate.check_stem)(stem, model)                       | Raise `ValueError` if `model` is known (`MODEL_SOURCES`) and lacks `stem`.                                                                                                                                                                                                       |
+|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`close_separation`](_autosummary/voxy.separate.html.md#voxy.separate.close_separation)()                            | Stop the Demucs workers (free their memory).                                                                                                                                                                                                                                     |
+| [`separate`](_autosummary/voxy.separate.html.md#voxy.separate.separate)(audio, \*[, stem, sample_rate, run]) | `{stem: wav, "rest": wav}`: `audio` split into `stem` and everything else.                                                                                                                                                                                                       |
+| [`speech_separator`](_autosummary/voxy.separate.html.md#voxy.separate.speech_separator)(\*[, stem, run])             | `separate` as a `(samples (frames, channels), sample_rate) -> (speech, music)` callable, the separator seam of reeleehq/mixing (`mixing.audio.separation.separate_speech(audio, separator=speech_separator())`), so mixing can run Demucs out of process, in voxy's environment. |
+| [`worker_run`](_autosummary/voxy.separate.html.md#voxy.separate.worker_run)(\*[, model, threads, rootdir])     | The default `run`: the Demucs adapter in its own environment.                                                                                                                                                                                                                    |
 
 ### voxy.separate.DFLT_STEM *= 'vocals'*
 
 The stem kept as “the voice”; Demucs also has drums, bass and other.
+
+### voxy.separate.FLOAT_SUBTYPE *= 'FLOAT'*
+
+float, so no level is lost.
+
+* **Type:**
+  What `speech_separator` asks the worker to write
 
 ### voxy.separate.MODEL_SOURCES *= {'htdemucs': ('drums', 'bass', 'other', 'vocals'), 'htdemucs_6s': ('drums', 'bass', 'other', 'vocals', 'guitar', 'piano'), 'htdemucs_ft': ('drums', 'bass', 'other', 'vocals')}*
 
@@ -4177,6 +4186,35 @@ fine-tuned for `stem`); split hours-long recordings first.
   * **\*\*options** – Passed to `run` (Demucs: `shifts`, `overlap`).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)]
+
+### voxy.separate.speech_separator(, stem='vocals', run=None, \*\*options)
+
+`separate` as a `(samples (frames, channels), sample_rate) -> (speech, music)`
+callable, the separator seam of reeleehq/mixing
+(`mixing.audio.separation.separate_speech(audio, separator=speech_separator())`),
+so mixing can run Demucs out of process, in voxy’s environment.
+
+Mono or stereo in; the stems come back at the input’s rate, channels and length,
+at the input’s level (no clip rescaling, float WAV in between: `speech + music`
+is the input). Keyword arguments are `separate`’s. For mixing’s `remove_talk`,
+give it htdemucs’s context: `SeparationStrategy(..., context_s=3.0)` around this
+callable (a bare callable gets mixing’s 1 s default).
+
+```pycon
+>>> def fake(audio, out_dir, *, stem, sample_rate, **options):
+...     samples, sr = read_wav_channels(audio)
+...     paths = {}
+...     for name, part in ((stem, samples * 0.75), ("rest", samples * 0.25)):
+...         paths[name] = f"{out_dir}/{name}.wav"
+...         open(paths[name], "wb").write(write_wav_channels(part, sr))
+...     return paths
+>>> speech, music = speech_separator(run=fake)(np.ones((4, 2)), 8000)
+>>> speech.shape, float(speech[0, 0]), float(music[0, 1])
+((4, 2), 0.75, 0.25)
+```
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, `ndarray`]]
 
 ### voxy.separate.worker_run(, model='htdemucs_ft', threads=None, rootdir=None)
 
@@ -5292,14 +5330,16 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 
 ### Functions
 
-| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                     |
-|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
-| [`pcm_to_float`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1). |
-| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged.                                                  |
-| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).                                       |
-| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                          |
-| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                      |
-| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                          |
+| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                                                           |
+|---------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`pcm_to_float`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1).                                       |
+| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads what [`read_wav_channels()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels) reads. |
+| [`read_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels)(source)                        | `(samples (frames, channels), sample_rate)` of a WAV (path or bytes).                                                                                        |
+| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).                                                                             |
+| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                                                                |
+| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                                                            |
+| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                                                                |
+| [`write_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav_channels)(samples, sample_rate)         | 32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono), lossless, for handing audio to another process.                                     |
 
 ### voxy.wavutil.TRAILING_CHUNK_IDS *= re.compile(b'LIST|id3 |ID3 |fact|cue |smpl|bext|JUNK|PAD |iXML|_PMX|acid|inst|plst')*
 
@@ -5357,7 +5397,15 @@ mid-sample) is dropped.
 
 ### voxy.wavutil.read_wav(source)
 
-`(samples, sample_rate)` of a WAV (path or bytes), channels averaged.
+`(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads
+what [`read_wav_channels()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels) reads.
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)]
+
+### voxy.wavutil.read_wav_channels(source)
+
+`(samples (frames, channels), sample_rate)` of a WAV (path or bytes).
 
 Integer PCM (8, 16, 24, 32 bit) and 32-bit float, plain or extensible headers,
 and streamed files whose header carries a placeholder size (the audio then ends
@@ -5406,6 +5454,22 @@ Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`)
 ### voxy.wavutil.write_wav(samples, sample_rate)
 
 Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).
+
+* **Return type:**
+  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
+
+### voxy.wavutil.write_wav_channels(samples, sample_rate)
+
+32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono),
+lossless, for handing audio to another process.
+
+```pycon
+>>> import numpy as np
+>>> x = np.array([[0.25, -0.5], [1.5, 0.0]], dtype=np.float32)
+>>> back, sr = read_wav_channels(write_wav_channels(x, 8000))
+>>> sr, back.tolist()
+(8000, [[0.25, -0.5], [1.5, 0.0]])
+```
 
 * **Return type:**
   [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
@@ -5598,13 +5662,15 @@ divide every stem by one common factor.
 * **Type:**
   Demucs’s guard against clipping
 
-### voxy.workers.demucs_adapter.separate(state, , audio, out_dir, stem='vocals', sample_rate=None, shifts=1, overlap=0.25)
+### voxy.workers.demucs_adapter.separate(state, , audio, out_dir, stem='vocals', sample_rate=None, shifts=1, overlap=0.25, clip_mode='rescale', subtype='PCM_16')
 
 Write `<stem>.wav` and `rest.wav` (the input minus the voice) into `out_dir`.
 
-Both are 16-bit PCM WAV with the model’s channels, at `sample_rate` (default: the
-model’s rate). If either stem would clip, both are scaled by one common factor, so
-`voice + rest` is the input times that factor.
+Both are WAV (`subtype`, default 16-bit PCM) with the model’s channels, at
+`sample_rate` (default: the model’s rate). With `clip_mode="rescale"` (the
+default), if either stem would clip both are scaled by one common factor, so
+`voice + rest` is the input times that factor; `clip_mode=None` with
+`subtype="FLOAT"` keeps the level exactly (values may exceed 1).
 
 ### voxy.workers.demucs_adapter.stem_model(model, index)
 
@@ -5820,7 +5886,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 10:28 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/f8c3395271be93d2067991f70520749fcf5393ae"><code>f8c3395</code></a> on branch <code>main</code>, for **voxy 0.0.53** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 10:40 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/43c3de01fb36e1b19b0fec55a486c374a1c21374"><code>43c3de0</code></a> on branch <code>main</code>, for **voxy 0.0.54** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -5829,7 +5895,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/f8c3395271be93d2067991f70520749fcf5393ae"><code>f8c3395271be93d2067991f70520749fcf5393ae</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/43c3de01fb36e1b19b0fec55a486c374a1c21374"><code>43c3de01fb36e1b19b0fec55a486c374a1c21374</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -5840,9 +5906,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41428800676">41428800676</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41430402428">41430402428</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>f8c3395271be93d2067991f70520749fcf5393ae</code> (in the history of the built commit) |
+| Event commit | <code>43c3de01fb36e1b19b0fec55a486c374a1c21374</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5867,13 +5933,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.53/">0.0.53</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.54/">0.0.54</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout f8c3395271be93d2067991f70520749fcf5393ae
+git checkout 43c3de01fb36e1b19b0fec55a486c374a1c21374
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

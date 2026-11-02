@@ -219,134 +219,205 @@
 </span><span id="line-29"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span>
 </span><span id="line-30"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 </span><span id="line-31">
-</span><span id="line-32"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvSpec</span>
-</span><span id="line-33"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorkerPool</span>
-</span><span id="line-34">
-</span><span id="line-35"><span class="n">DFLT_SEPARATION_MODEL</span> <span class="o">=</span> <span class="s2">"htdemucs_ft"</span>
-</span><span id="line-36"><span class="c1">#: The stem kept as "the voice"; Demucs also has drums, bass and other.</span>
-</span><span id="line-37"><span class="n">DFLT_STEM</span> <span class="o">=</span> <span class="s2">"vocals"</span>
-</span><span id="line-38"><span class="n">REST_STEM</span> <span class="o">=</span> <span class="s2">"rest"</span>
-</span><span id="line-39"><span class="n">_FOUR_SOURCES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"drums"</span><span class="p">,</span> <span class="s2">"bass"</span><span class="p">,</span> <span class="s2">"other"</span><span class="p">,</span> <span class="s2">"vocals"</span><span class="p">)</span>
-</span><span id="line-40"><span class="c1">#: The stems of the pretrained models whose sources are known before loading them.</span>
-</span><span id="line-41"><span class="n">MODEL_SOURCES</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-42">    <span class="s2">"htdemucs"</span><span class="p">:</span> <span class="n">_FOUR_SOURCES</span><span class="p">,</span>
-</span><span id="line-43">    <span class="s2">"htdemucs_ft"</span><span class="p">:</span> <span class="n">_FOUR_SOURCES</span><span class="p">,</span>
-</span><span id="line-44">    <span class="s2">"htdemucs_6s"</span><span class="p">:</span> <span class="p">(</span><span class="o">*</span><span class="n">_FOUR_SOURCES</span><span class="p">,</span> <span class="s2">"guitar"</span><span class="p">,</span> <span class="s2">"piano"</span><span class="p">),</span>
-</span><span id="line-45"><span class="p">}</span>
-</span><span id="line-46"><span class="c1">#: torch is bounded to the releases Demucs 4.0.1 was checked with. torchaudio comes in</span>
-</span><span id="line-47"><span class="c1">#: as a Demucs dependency, unpinned: Demucs imports it but never calls it here.</span>
-</span><span id="line-48"><span class="n">SEPARATION_ENV</span> <span class="o">=</span> <span class="n">EnvSpec</span><span class="p">(</span>
-</span><span id="line-49">    <span class="s2">"demucs"</span><span class="p">,</span>
-</span><span id="line-50">    <span class="p">(</span><span class="s2">"demucs==4.0.1"</span><span class="p">,</span> <span class="s2">"torch&gt;=2.11,&lt;2.16"</span><span class="p">,</span> <span class="s2">"soundfile"</span><span class="p">,</span> <span class="s2">"numpy"</span><span class="p">),</span>
-</span><span id="line-51">    <span class="n">env_vars</span><span class="o">=</span><span class="p">{</span><span class="s2">"TORCH_HOME"</span><span class="p">:</span> <span class="s2">"</span><span class="si">{models}</span><span class="s2">"</span><span class="p">},</span>
-</span><span id="line-52"><span class="p">)</span>
-</span><span id="line-53">
-</span><span id="line-54"><span class="c1">#: The Demucs workers, one per (model, threads, data root), made on demand.</span>
-</span><span id="line-55"><span class="n">_DEMUCS_POOL</span> <span class="o">=</span> <span class="n">WorkerPool</span><span class="p">(</span><span class="n">SEPARATION_ENV</span><span class="p">,</span> <span class="s2">"demucs"</span><span class="p">)</span>
-</span><span id="line-56">
-</span><span id="line-57">
-<div class="viewcode-block" id="close_separation">
-<a class="viewcode-back" href="../../_autosummary/voxy.separate.html#voxy.separate.close_separation">[docs]</a>
-</span><span id="line-58"><span class="k">def</span><span class="w"> </span><span class="nf">close_separation</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-59"><span class="w">    </span><span class="sd">"""Stop the Demucs workers (free their memory)."""</span>
-</span><span id="line-60">    <span class="n">_DEMUCS_POOL</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
-
+</span><span id="line-32"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="line-33">
+</span><span id="line-34"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvSpec</span>
+</span><span id="line-35"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_wav_channels</span><span class="p">,</span> <span class="n">write_wav_channels</span>
+</span><span id="line-36"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorkerPool</span>
+</span><span id="line-37">
+</span><span id="line-38"><span class="n">DFLT_SEPARATION_MODEL</span> <span class="o">=</span> <span class="s2">"htdemucs_ft"</span>
+</span><span id="line-39"><span class="c1">#: The stem kept as "the voice"; Demucs also has drums, bass and other.</span>
+</span><span id="line-40"><span class="n">DFLT_STEM</span> <span class="o">=</span> <span class="s2">"vocals"</span>
+</span><span id="line-41"><span class="n">REST_STEM</span> <span class="o">=</span> <span class="s2">"rest"</span>
+</span><span id="line-42"><span class="c1">#: What ``speech_separator`` asks the worker to write: float, so no level is lost.</span>
+</span><span id="line-43"><span class="n">FLOAT_SUBTYPE</span> <span class="o">=</span> <span class="s2">"FLOAT"</span>
+</span><span id="line-44"><span class="n">_FOUR_SOURCES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"drums"</span><span class="p">,</span> <span class="s2">"bass"</span><span class="p">,</span> <span class="s2">"other"</span><span class="p">,</span> <span class="s2">"vocals"</span><span class="p">)</span>
+</span><span id="line-45"><span class="c1">#: The stems of the pretrained models whose sources are known before loading them.</span>
+</span><span id="line-46"><span class="n">MODEL_SOURCES</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-47">    <span class="s2">"htdemucs"</span><span class="p">:</span> <span class="n">_FOUR_SOURCES</span><span class="p">,</span>
+</span><span id="line-48">    <span class="s2">"htdemucs_ft"</span><span class="p">:</span> <span class="n">_FOUR_SOURCES</span><span class="p">,</span>
+</span><span id="line-49">    <span class="s2">"htdemucs_6s"</span><span class="p">:</span> <span class="p">(</span><span class="o">*</span><span class="n">_FOUR_SOURCES</span><span class="p">,</span> <span class="s2">"guitar"</span><span class="p">,</span> <span class="s2">"piano"</span><span class="p">),</span>
+</span><span id="line-50"><span class="p">}</span>
+</span><span id="line-51"><span class="c1">#: torch is bounded to the releases Demucs 4.0.1 was checked with. torchaudio comes in</span>
+</span><span id="line-52"><span class="c1">#: as a Demucs dependency, unpinned: Demucs imports it but never calls it here.</span>
+</span><span id="line-53"><span class="n">SEPARATION_ENV</span> <span class="o">=</span> <span class="n">EnvSpec</span><span class="p">(</span>
+</span><span id="line-54">    <span class="s2">"demucs"</span><span class="p">,</span>
+</span><span id="line-55">    <span class="p">(</span><span class="s2">"demucs==4.0.1"</span><span class="p">,</span> <span class="s2">"torch&gt;=2.11,&lt;2.16"</span><span class="p">,</span> <span class="s2">"soundfile"</span><span class="p">,</span> <span class="s2">"numpy"</span><span class="p">),</span>
+</span><span id="line-56">    <span class="n">env_vars</span><span class="o">=</span><span class="p">{</span><span class="s2">"TORCH_HOME"</span><span class="p">:</span> <span class="s2">"</span><span class="si">{models}</span><span class="s2">"</span><span class="p">},</span>
+</span><span id="line-57"><span class="p">)</span>
+</span><span id="line-58">
+</span><span id="line-59"><span class="c1">#: The Demucs workers, one per (model, threads, data root), made on demand.</span>
+</span><span id="line-60"><span class="n">_DEMUCS_POOL</span> <span class="o">=</span> <span class="n">WorkerPool</span><span class="p">(</span><span class="n">SEPARATION_ENV</span><span class="p">,</span> <span class="s2">"demucs"</span><span class="p">)</span>
 </span><span id="line-61">
 </span><span id="line-62">
+<div class="viewcode-block" id="close_separation">
+<a class="viewcode-back" href="../../_autosummary/voxy.separate.html#voxy.separate.close_separation">[docs]</a>
+</span><span id="line-63"><span class="k">def</span><span class="w"> </span><span class="nf">close_separation</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-64"><span class="w">    </span><span class="sd">"""Stop the Demucs workers (free their memory)."""</span>
+</span><span id="line-65">    <span class="n">_DEMUCS_POOL</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+</span><span id="line-66">
+</span><span id="line-67">
 <div class="viewcode-block" id="check_stem">
 <a class="viewcode-back" href="../../_autosummary/voxy.separate.html#voxy.separate.check_stem">[docs]</a>
-</span><span id="line-63"><span class="k">def</span><span class="w"> </span><span class="nf">check_stem</span><span class="p">(</span><span class="n">stem</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-64"><span class="w">    </span><span class="sd">"""Raise ``ValueError`` if ``model`` is known (``MODEL_SOURCES``) and lacks ``stem``.</span>
-</span><span id="line-65">
-</span><span id="line-66"><span class="sd">    &gt;&gt;&gt; check_stem("vocals", "htdemucs_ft")</span>
-</span><span id="line-67"><span class="sd">    &gt;&gt;&gt; check_stem("guitar", "htdemucs_ft")</span>
-</span><span id="line-68"><span class="sd">    Traceback (most recent call last):</span>
-</span><span id="line-69"><span class="sd">      ...</span>
-</span><span id="line-70"><span class="sd">    ValueError: 'guitar' is not a stem of htdemucs_ft: ['drums', 'bass', 'other', 'vocals']</span>
-</span><span id="line-71"><span class="sd">    """</span>
-</span><span id="line-72">    <span class="n">sources</span> <span class="o">=</span> <span class="n">MODEL_SOURCES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-</span><span id="line-73">    <span class="k">if</span> <span class="n">sources</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">stem</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
-</span><span id="line-74">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stem</span><span class="si">!r}</span><span class="s2"> is not a stem of </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+</span><span id="line-68"><span class="k">def</span><span class="w"> </span><span class="nf">check_stem</span><span class="p">(</span><span class="n">stem</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-69"><span class="w">    </span><span class="sd">"""Raise ``ValueError`` if ``model`` is known (``MODEL_SOURCES``) and lacks ``stem``.</span>
+</span><span id="line-70">
+</span><span id="line-71"><span class="sd">    &gt;&gt;&gt; check_stem("vocals", "htdemucs_ft")</span>
+</span><span id="line-72"><span class="sd">    &gt;&gt;&gt; check_stem("guitar", "htdemucs_ft")</span>
+</span><span id="line-73"><span class="sd">    Traceback (most recent call last):</span>
+</span><span id="line-74"><span class="sd">      ...</span>
+</span><span id="line-75"><span class="sd">    ValueError: 'guitar' is not a stem of htdemucs_ft: ['drums', 'bass', 'other', 'vocals']</span>
+</span><span id="line-76"><span class="sd">    """</span>
+</span><span id="line-77">    <span class="n">sources</span> <span class="o">=</span> <span class="n">MODEL_SOURCES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span id="line-78">    <span class="k">if</span> <span class="n">sources</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">stem</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+</span><span id="line-79">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stem</span><span class="si">!r}</span><span class="s2"> is not a stem of </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
 
-</span><span id="line-75">
-</span><span id="line-76">
+</span><span id="line-80">
+</span><span id="line-81">
 <div class="viewcode-block" id="worker_run">
 <a class="viewcode-back" href="../../_autosummary/voxy.separate.html#voxy.separate.worker_run">[docs]</a>
-</span><span id="line-77"><span class="k">def</span><span class="w"> </span><span class="nf">worker_run</span><span class="p">(</span>
-</span><span id="line-78">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-79">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SEPARATION_MODEL</span><span class="p">,</span>
-</span><span id="line-80">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-81">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-82"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-</span><span id="line-83"><span class="w">    </span><span class="sd">"""The default ``run``: the Demucs adapter in its own environment.</span>
-</span><span id="line-84">
-</span><span id="line-85"><span class="sd">    A stem the model lacks fails before the worker starts for the models in</span>
-</span><span id="line-86"><span class="sd">    ``MODEL_SOURCES``, and inside the worker (a ``WorkerError`` carrying the same</span>
-</span><span id="line-87"><span class="sd">    message) for the others.</span>
-</span><span id="line-88"><span class="sd">    """</span>
+</span><span id="line-82"><span class="k">def</span><span class="w"> </span><span class="nf">worker_run</span><span class="p">(</span>
+</span><span id="line-83">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-84">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SEPARATION_MODEL</span><span class="p">,</span>
+</span><span id="line-85">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-86">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-87"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+</span><span id="line-88"><span class="w">    </span><span class="sd">"""The default ``run``: the Demucs adapter in its own environment.</span>
 </span><span id="line-89">
-</span><span id="line-90">    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
-</span><span id="line-91">        <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">stem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_STEM</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span>
-</span><span id="line-92">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-93">        <span class="n">check_stem</span><span class="p">(</span><span class="n">stem</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
-</span><span id="line-94">        <span class="n">worker</span> <span class="o">=</span> <span class="n">_DEMUCS_POOL</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-95">        <span class="c1"># the worker runs in its own working directory: hand it absolute paths</span>
-</span><span id="line-96">        <span class="n">reply</span> <span class="o">=</span> <span class="n">worker</span><span class="o">.</span><span class="n">call</span><span class="p">(</span>
-</span><span id="line-97">            <span class="s2">"separate"</span><span class="p">,</span>
-</span><span id="line-98">            <span class="n">audio</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>
-</span><span id="line-99">            <span class="n">out_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>
-</span><span id="line-100">            <span class="n">stem</span><span class="o">=</span><span class="n">stem</span><span class="p">,</span>
-</span><span id="line-101">            <span class="o">**</span><span class="n">options</span><span class="p">,</span>
-</span><span id="line-102">        <span class="p">)</span>
-</span><span id="line-103">        <span class="k">return</span> <span class="n">reply</span><span class="p">[</span><span class="s2">"paths"</span><span class="p">]</span>
-</span><span id="line-104">
-</span><span id="line-105">    <span class="k">return</span> <span class="n">run</span></div>
+</span><span id="line-90"><span class="sd">    A stem the model lacks fails before the worker starts for the models in</span>
+</span><span id="line-91"><span class="sd">    ``MODEL_SOURCES``, and inside the worker (a ``WorkerError`` carrying the same</span>
+</span><span id="line-92"><span class="sd">    message) for the others.</span>
+</span><span id="line-93"><span class="sd">    """</span>
+</span><span id="line-94">
+</span><span id="line-95">    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
+</span><span id="line-96">        <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">stem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_STEM</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span>
+</span><span id="line-97">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-98">        <span class="n">check_stem</span><span class="p">(</span><span class="n">stem</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+</span><span id="line-99">        <span class="n">worker</span> <span class="o">=</span> <span class="n">_DEMUCS_POOL</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-100">        <span class="c1"># the worker runs in its own working directory: hand it absolute paths</span>
+</span><span id="line-101">        <span class="n">reply</span> <span class="o">=</span> <span class="n">worker</span><span class="o">.</span><span class="n">call</span><span class="p">(</span>
+</span><span id="line-102">            <span class="s2">"separate"</span><span class="p">,</span>
+</span><span id="line-103">            <span class="n">audio</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>
+</span><span id="line-104">            <span class="n">out_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>
+</span><span id="line-105">            <span class="n">stem</span><span class="o">=</span><span class="n">stem</span><span class="p">,</span>
+</span><span id="line-106">            <span class="o">**</span><span class="n">options</span><span class="p">,</span>
+</span><span id="line-107">        <span class="p">)</span>
+</span><span id="line-108">        <span class="k">return</span> <span class="n">reply</span><span class="p">[</span><span class="s2">"paths"</span><span class="p">]</span>
+</span><span id="line-109">
+</span><span id="line-110">    <span class="k">return</span> <span class="n">run</span></div>
 
-</span><span id="line-106">
-</span><span id="line-107">
+</span><span id="line-111">
+</span><span id="line-112">
 <div class="viewcode-block" id="separate">
 <a class="viewcode-back" href="../../_autosummary/voxy.separate.html#voxy.separate.separate">[docs]</a>
-</span><span id="line-108"><span class="k">def</span><span class="w"> </span><span class="nf">separate</span><span class="p">(</span>
-</span><span id="line-109">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">,</span>
-</span><span id="line-110">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-111">    <span class="n">stem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_STEM</span><span class="p">,</span>
-</span><span id="line-112">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-113">    <span class="n">run</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-114">    <span class="o">**</span><span class="n">options</span><span class="p">,</span>
-</span><span id="line-115"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
-</span><span id="line-116"><span class="w">    </span><span class="sd">"""``{stem: wav, "rest": wav}``: ``audio`` split into ``stem`` and everything else.</span>
-</span><span id="line-117">
-</span><span id="line-118"><span class="sd">    ``rest`` is the input minus the voice, so ``stem + rest`` rebuilds the input (as</span>
-</span><span id="line-119"><span class="sd">    the model hears it: resampled and with its channels). Both are 16-bit PCM WAV</span>
-</span><span id="line-120"><span class="sd">    with the model's channels (Demucs: stereo; a mono input is duplicated, the first</span>
-</span><span id="line-121"><span class="sd">    two channels of a wider one are kept) at the model's rate (Demucs: 44.1 kHz)</span>
-</span><span id="line-122"><span class="sd">    unless ``sample_rate`` says otherwise, whatever the input. If either stem would</span>
-</span><span id="line-123"><span class="sd">    clip, both are divided by one common factor (Demucs's ``prevent_clip``), so they</span>
-</span><span id="line-124"><span class="sd">    still add up to the input times that factor.</span>
-</span><span id="line-125">
-</span><span id="line-126"><span class="sd">    The whole file is decoded and held in memory, and Demucs takes about 24 s per</span>
-</span><span id="line-127"><span class="sd">    minute of audio on CPU for one model (``htdemucs_ft`` runs only the sub-model</span>
-</span><span id="line-128"><span class="sd">    fine-tuned for ``stem``); split hours-long recordings first.</span>
-</span><span id="line-129">
-</span><span id="line-130"><span class="sd">    Args:</span>
-</span><span id="line-131"><span class="sd">        audio: A path to any format soundfile reads (WAV, FLAC, OGG, MP3 with a</span>
-</span><span id="line-132"><span class="sd">            recent libsndfile), or WAV bytes.</span>
-</span><span id="line-133"><span class="sd">        stem: The stem to keep apart (``"vocals"``; Demucs also has drums, bass,</span>
-</span><span id="line-134"><span class="sd">            other).</span>
-</span><span id="line-135"><span class="sd">        sample_rate: The rate of the returned WAVs (default: the model's).</span>
-</span><span id="line-136"><span class="sd">        run: ``(audio_path, out_dir, *, stem, sample_rate, **options) -&gt;</span>
-</span><span id="line-137"><span class="sd">            {stem: path}``; default ``worker_run()`` (Demucs ``htdemucs_ft`` on CPU).</span>
-</span><span id="line-138"><span class="sd">        **options: Passed to ``run`` (Demucs: ``shifts``, ``overlap``).</span>
-</span><span id="line-139"><span class="sd">    """</span>
-</span><span id="line-140">    <span class="n">run</span> <span class="o">=</span> <span class="n">run</span> <span class="ow">or</span> <span class="n">worker_run</span><span class="p">()</span>
-</span><span id="line-141">    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
-</span><span id="line-142">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
-</span><span id="line-143">            <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"input.wav"</span>
-</span><span id="line-144">            <span class="n">path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
-</span><span id="line-145">            <span class="n">audio</span> <span class="o">=</span> <span class="n">path</span>
-</span><span id="line-146">        <span class="n">paths</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span> <span class="n">tmp</span><span class="p">,</span> <span class="n">stem</span><span class="o">=</span><span class="n">stem</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
-</span><span id="line-147">        <span class="k">return</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="n">name</span><span class="p">])</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="n">stem</span><span class="p">,</span> <span class="n">REST_STEM</span><span class="p">)}</span></div>
+</span><span id="line-113"><span class="k">def</span><span class="w"> </span><span class="nf">separate</span><span class="p">(</span>
+</span><span id="line-114">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">,</span>
+</span><span id="line-115">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-116">    <span class="n">stem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_STEM</span><span class="p">,</span>
+</span><span id="line-117">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-118">    <span class="n">run</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-119">    <span class="o">**</span><span class="n">options</span><span class="p">,</span>
+</span><span id="line-120"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
+</span><span id="line-121"><span class="w">    </span><span class="sd">"""``{stem: wav, "rest": wav}``: ``audio`` split into ``stem`` and everything else.</span>
+</span><span id="line-122">
+</span><span id="line-123"><span class="sd">    ``rest`` is the input minus the voice, so ``stem + rest`` rebuilds the input (as</span>
+</span><span id="line-124"><span class="sd">    the model hears it: resampled and with its channels). Both are 16-bit PCM WAV</span>
+</span><span id="line-125"><span class="sd">    with the model's channels (Demucs: stereo; a mono input is duplicated, the first</span>
+</span><span id="line-126"><span class="sd">    two channels of a wider one are kept) at the model's rate (Demucs: 44.1 kHz)</span>
+</span><span id="line-127"><span class="sd">    unless ``sample_rate`` says otherwise, whatever the input. If either stem would</span>
+</span><span id="line-128"><span class="sd">    clip, both are divided by one common factor (Demucs's ``prevent_clip``), so they</span>
+</span><span id="line-129"><span class="sd">    still add up to the input times that factor.</span>
+</span><span id="line-130">
+</span><span id="line-131"><span class="sd">    The whole file is decoded and held in memory, and Demucs takes about 24 s per</span>
+</span><span id="line-132"><span class="sd">    minute of audio on CPU for one model (``htdemucs_ft`` runs only the sub-model</span>
+</span><span id="line-133"><span class="sd">    fine-tuned for ``stem``); split hours-long recordings first.</span>
+</span><span id="line-134">
+</span><span id="line-135"><span class="sd">    Args:</span>
+</span><span id="line-136"><span class="sd">        audio: A path to any format soundfile reads (WAV, FLAC, OGG, MP3 with a</span>
+</span><span id="line-137"><span class="sd">            recent libsndfile), or WAV bytes.</span>
+</span><span id="line-138"><span class="sd">        stem: The stem to keep apart (``"vocals"``; Demucs also has drums, bass,</span>
+</span><span id="line-139"><span class="sd">            other).</span>
+</span><span id="line-140"><span class="sd">        sample_rate: The rate of the returned WAVs (default: the model's).</span>
+</span><span id="line-141"><span class="sd">        run: ``(audio_path, out_dir, *, stem, sample_rate, **options) -&gt;</span>
+</span><span id="line-142"><span class="sd">            {stem: path}``; default ``worker_run()`` (Demucs ``htdemucs_ft`` on CPU).</span>
+</span><span id="line-143"><span class="sd">        **options: Passed to ``run`` (Demucs: ``shifts``, ``overlap``).</span>
+</span><span id="line-144"><span class="sd">    """</span>
+</span><span id="line-145">    <span class="n">run</span> <span class="o">=</span> <span class="n">run</span> <span class="ow">or</span> <span class="n">worker_run</span><span class="p">()</span>
+</span><span id="line-146">    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+</span><span id="line-147">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+</span><span id="line-148">            <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"input.wav"</span>
+</span><span id="line-149">            <span class="n">path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
+</span><span id="line-150">            <span class="n">audio</span> <span class="o">=</span> <span class="n">path</span>
+</span><span id="line-151">        <span class="n">paths</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span> <span class="n">tmp</span><span class="p">,</span> <span class="n">stem</span><span class="o">=</span><span class="n">stem</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+</span><span id="line-152">        <span class="k">return</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">paths</span><span class="p">[</span><span class="n">name</span><span class="p">])</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="n">stem</span><span class="p">,</span> <span class="n">REST_STEM</span><span class="p">)}</span></div>
 
+</span><span id="line-153">
+</span><span id="line-154">
+<div class="viewcode-block" id="speech_separator">
+<a class="viewcode-back" href="../../_autosummary/voxy.separate.html#voxy.separate.speech_separator">[docs]</a>
+</span><span id="line-155"><span class="k">def</span><span class="w"> </span><span class="nf">speech_separator</span><span class="p">(</span>
+</span><span id="line-156">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-157">    <span class="n">stem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_STEM</span><span class="p">,</span>
+</span><span id="line-158">    <span class="n">run</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-159">    <span class="o">**</span><span class="n">options</span><span class="p">,</span>
+</span><span id="line-160"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
+</span><span id="line-161"><span class="w">    </span><span class="sd">"""``separate`` as a ``(samples (frames, channels), sample_rate) -&gt; (speech, music)``</span>
+</span><span id="line-162"><span class="sd">    callable, the separator seam of reeleehq/mixing</span>
+</span><span id="line-163"><span class="sd">    (``mixing.audio.separation.separate_speech(audio, separator=speech_separator())``),</span>
+</span><span id="line-164"><span class="sd">    so mixing can run Demucs out of process, in voxy's environment.</span>
+</span><span id="line-165">
+</span><span id="line-166"><span class="sd">    Mono or stereo in; the stems come back at the input's rate, channels and length,</span>
+</span><span id="line-167"><span class="sd">    at the input's level (no clip rescaling, float WAV in between: ``speech + music``</span>
+</span><span id="line-168"><span class="sd">    is the input). Keyword arguments are ``separate``'s. For mixing's ``remove_talk``,</span>
+</span><span id="line-169"><span class="sd">    give it htdemucs's context: ``SeparationStrategy(..., context_s=3.0)`` around this</span>
+</span><span id="line-170"><span class="sd">    callable (a bare callable gets mixing's 1 s default).</span>
+</span><span id="line-171">
+</span><span id="line-172"><span class="sd">    &gt;&gt;&gt; def fake(audio, out_dir, *, stem, sample_rate, **options):</span>
+</span><span id="line-173"><span class="sd">    ...     samples, sr = read_wav_channels(audio)</span>
+</span><span id="line-174"><span class="sd">    ...     paths = {}</span>
+</span><span id="line-175"><span class="sd">    ...     for name, part in ((stem, samples * 0.75), ("rest", samples * 0.25)):</span>
+</span><span id="line-176"><span class="sd">    ...         paths[name] = f"{out_dir}/{name}.wav"</span>
+</span><span id="line-177"><span class="sd">    ...         open(paths[name], "wb").write(write_wav_channels(part, sr))</span>
+</span><span id="line-178"><span class="sd">    ...     return paths</span>
+</span><span id="line-179"><span class="sd">    &gt;&gt;&gt; speech, music = speech_separator(run=fake)(np.ones((4, 2)), 8000)</span>
+</span><span id="line-180"><span class="sd">    &gt;&gt;&gt; speech.shape, float(speech[0, 0]), float(music[0, 1])</span>
+</span><span id="line-181"><span class="sd">    ((4, 2), 0.75, 0.25)</span>
+</span><span id="line-182"><span class="sd">    """</span>
+</span><span id="line-183">
+</span><span id="line-184">    <span class="k">def</span><span class="w"> </span><span class="nf">separator</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+</span><span id="line-185">        <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</span><span id="line-186">        <span class="n">frames_by_channels</span> <span class="o">=</span> <span class="n">samples</span> <span class="k">if</span> <span class="n">samples</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">samples</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+</span><span id="line-187">        <span class="n">frames</span><span class="p">,</span> <span class="n">channels</span> <span class="o">=</span> <span class="n">frames_by_channels</span><span class="o">.</span><span class="n">shape</span>
+</span><span id="line-188">        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">frames_by_channels</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+</span><span id="line-189">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"speech_separator needs finite samples (no NaN or inf)"</span><span class="p">)</span>
+</span><span id="line-190">        <span class="k">if</span> <span class="n">channels</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+</span><span id="line-191">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-192">                <span class="sa">f</span><span class="s2">"speech_separator takes mono or stereo, not </span><span class="si">{</span><span class="n">channels</span><span class="si">}</span><span class="s2"> channels"</span>
+</span><span id="line-193">            <span class="p">)</span>
+</span><span id="line-194">        <span class="n">stems</span> <span class="o">=</span> <span class="n">separate</span><span class="p">(</span>
+</span><span id="line-195">            <span class="n">write_wav_channels</span><span class="p">(</span><span class="n">frames_by_channels</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">),</span>
+</span><span id="line-196">            <span class="n">stem</span><span class="o">=</span><span class="n">stem</span><span class="p">,</span>
+</span><span id="line-197">            <span class="n">run</span><span class="o">=</span><span class="n">run</span><span class="p">,</span>
+</span><span id="line-198">            <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
+</span><span id="line-199">            <span class="o">**</span><span class="p">{</span><span class="s2">"clip_mode"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"subtype"</span><span class="p">:</span> <span class="n">FLOAT_SUBTYPE</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">},</span>
+</span><span id="line-200">        <span class="p">)</span>
+</span><span id="line-201">        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span>
+</span><span id="line-202">            <span class="n">_shaped</span><span class="p">(</span><span class="n">read_wav_channels</span><span class="p">(</span><span class="n">stems</span><span class="p">[</span><span class="n">name</span><span class="p">])[</span><span class="mi">0</span><span class="p">],</span> <span class="n">frames</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>
+</span><span id="line-203">            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="n">stem</span><span class="p">,</span> <span class="n">REST_STEM</span><span class="p">)</span>
+</span><span id="line-204">        <span class="p">)</span>
+</span><span id="line-205">
+</span><span id="line-206">    <span class="k">return</span> <span class="n">separator</span></div>
+
+</span><span id="line-207">
+</span><span id="line-208">
+</span><span id="line-209"><span class="k">def</span><span class="w"> </span><span class="nf">_shaped</span><span class="p">(</span><span class="n">stem</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">frames</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-210"><span class="w">    </span><span class="sd">"""``stem`` as ``(frames, channels)``: stereo mixed down for a mono input, cut or</span>
+</span><span id="line-211"><span class="sd">    zero-padded to ``frames`` (resampling can be a few frames off)."""</span>
+</span><span id="line-212">    <span class="k">if</span> <span class="n">channels</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">stem</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="line-213">        <span class="n">stem</span> <span class="o">=</span> <span class="n">stem</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-214">    <span class="n">stem</span> <span class="o">=</span> <span class="n">stem</span><span class="p">[:</span><span class="n">frames</span><span class="p">]</span>
+</span><span id="line-215">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">stem</span><span class="p">,</span> <span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">frames</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">stem</span><span class="p">)),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
 </span></code></pre></div>
     </div></div>
           </main>
@@ -360,7 +431,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=d78a2f11"></script>
+    <script src="../../_static/documentation_options.js?v=1c03bfdc"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

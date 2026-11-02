@@ -31,13 +31,15 @@ divide every stem by one common factor.
 * **Type:**
   Demucs’s guard against clipping
 
-### voxy.workers.demucs_adapter.separate(state, , audio, out_dir, stem='vocals', sample_rate=None, shifts=1, overlap=0.25)
+### voxy.workers.demucs_adapter.separate(state, , audio, out_dir, stem='vocals', sample_rate=None, shifts=1, overlap=0.25, clip_mode='rescale', subtype='PCM_16')
 
 Write `<stem>.wav` and `rest.wav` (the input minus the voice) into `out_dir`.
 
-Both are 16-bit PCM WAV with the model’s channels, at `sample_rate` (default: the
-model’s rate). If either stem would clip, both are scaled by one common factor, so
-`voice + rest` is the input times that factor.
+Both are WAV (`subtype`, default 16-bit PCM) with the model’s channels, at
+`sample_rate` (default: the model’s rate). With `clip_mode="rescale"` (the
+default), if either stem would clip both are scaled by one common factor, so
+`voice + rest` is the input times that factor; `clip_mode=None` with
+`subtype="FLOAT"` keeps the level exactly (values may exceed 1).
 
 ### voxy.workers.demucs_adapter.stem_model(model, index)
 

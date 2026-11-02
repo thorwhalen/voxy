@@ -32,20 +32,29 @@ the voice, and `rest`, the input minus the voice (so the two add back up to it).
 
 | [`DFLT_STEM`](#voxy.separate.DFLT_STEM)      | The stem kept as "the voice"; Demucs also has drums, bass and other.            |
 |-----------------------------------------------------------------|---------------------------------------------------------------------------------|
+| [`FLOAT_SUBTYPE`](#voxy.separate.FLOAT_SUBTYPE)  | float, so no level is lost.                                                     |
 | [`MODEL_SOURCES`](#voxy.separate.MODEL_SOURCES)  | The stems of the pretrained models whose sources are known before loading them. |
 | [`SEPARATION_ENV`](#voxy.separate.SEPARATION_ENV) | torch is bounded to the releases Demucs 4.0.1 was checked with.                 |
 
 ### Functions
 
-| [`check_stem`](#voxy.separate.check_stem)(stem, model)                       | Raise `ValueError` if `model` is known (`MODEL_SOURCES`) and lacks `stem`.   |
-|------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
-| [`close_separation`](#voxy.separate.close_separation)()                            | Stop the Demucs workers (free their memory).                                 |
-| [`separate`](#voxy.separate.separate)(audio, \*[, stem, sample_rate, run]) | `{stem: wav, "rest": wav}`: `audio` split into `stem` and everything else.   |
-| [`worker_run`](#voxy.separate.worker_run)(\*[, model, threads, rootdir])     | The default `run`: the Demucs adapter in its own environment.                |
+| [`check_stem`](#voxy.separate.check_stem)(stem, model)                       | Raise `ValueError` if `model` is known (`MODEL_SOURCES`) and lacks `stem`.                                                                                                                                                                                                       |
+|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`close_separation`](#voxy.separate.close_separation)()                            | Stop the Demucs workers (free their memory).                                                                                                                                                                                                                                     |
+| [`separate`](#voxy.separate.separate)(audio, \*[, stem, sample_rate, run]) | `{stem: wav, "rest": wav}`: `audio` split into `stem` and everything else.                                                                                                                                                                                                       |
+| [`speech_separator`](#voxy.separate.speech_separator)(\*[, stem, run])             | `separate` as a `(samples (frames, channels), sample_rate) -> (speech, music)` callable, the separator seam of reeleehq/mixing (`mixing.audio.separation.separate_speech(audio, separator=speech_separator())`), so mixing can run Demucs out of process, in voxy's environment. |
+| [`worker_run`](#voxy.separate.worker_run)(\*[, model, threads, rootdir])     | The default `run`: the Demucs adapter in its own environment.                                                                                                                                                                                                                    |
 
 ### voxy.separate.DFLT_STEM *= 'vocals'*
 
 The stem kept as “the voice”; Demucs also has drums, bass and other.
+
+### voxy.separate.FLOAT_SUBTYPE *= 'FLOAT'*
+
+float, so no level is lost.
+
+* **Type:**
+  What `speech_separator` asks the worker to write
 
 ### voxy.separate.MODEL_SOURCES *= {'htdemucs': ('drums', 'bass', 'other', 'vocals'), 'htdemucs_6s': ('drums', 'bass', 'other', 'vocals', 'guitar', 'piano'), 'htdemucs_ft': ('drums', 'bass', 'other', 'vocals')}*
 
@@ -105,6 +114,35 @@ fine-tuned for `stem`); split hours-long recordings first.
   * **\*\*options** – Passed to `run` (Demucs: `shifts`, `overlap`).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)]
+
+### voxy.separate.speech_separator(, stem='vocals', run=None, \*\*options)
+
+`separate` as a `(samples (frames, channels), sample_rate) -> (speech, music)`
+callable, the separator seam of reeleehq/mixing
+(`mixing.audio.separation.separate_speech(audio, separator=speech_separator())`),
+so mixing can run Demucs out of process, in voxy’s environment.
+
+Mono or stereo in; the stems come back at the input’s rate, channels and length,
+at the input’s level (no clip rescaling, float WAV in between: `speech + music`
+is the input). Keyword arguments are `separate`’s. For mixing’s `remove_talk`,
+give it htdemucs’s context: `SeparationStrategy(..., context_s=3.0)` around this
+callable (a bare callable gets mixing’s 1 s default).
+
+```pycon
+>>> def fake(audio, out_dir, *, stem, sample_rate, **options):
+...     samples, sr = read_wav_channels(audio)
+...     paths = {}
+...     for name, part in ((stem, samples * 0.75), ("rest", samples * 0.25)):
+...         paths[name] = f"{out_dir}/{name}.wav"
+...         open(paths[name], "wb").write(write_wav_channels(part, sr))
+...     return paths
+>>> speech, music = speech_separator(run=fake)(np.ones((4, 2)), 8000)
+>>> speech.shape, float(speech[0, 0]), float(music[0, 1])
+((4, 2), 0.75, 0.25)
+```
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, `ndarray`]]
 
 ### voxy.separate.worker_run(, model='htdemucs_ft', threads=None, rootdir=None)
 

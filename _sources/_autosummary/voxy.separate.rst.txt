@@ -9,6 +9,7 @@ voxy.separate
    .. autosummary::
    
       DFLT_STEM
+      FLOAT_SUBTYPE
       MODEL_SOURCES
       SEPARATION_ENV
    
@@ -19,5 +20,6 @@ voxy.separate
       check_stem
       close_separation
       separate
+      speech_separator
       worker_run
    
