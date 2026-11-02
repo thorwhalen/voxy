@@ -221,7 +221,10 @@ reference clip) and fine-tuning (<code class="docutils literal notranslate"><spa
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.transcribe_text" title="voxy.refprep.transcribe_text"><code class="xref py py-obj docutils literal notranslate"><span class="pre">transcribe_text</span></code></a>(audio, **kwargs)</p></td>
 <td><p>The transcript of <code class="docutils literal notranslate"><span class="pre">audio</span></code> as one string.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.with_deepfilternet" title="voxy.refprep.with_deepfilternet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">with_deepfilternet</span></code></a>([conditioner, denoiser, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.refprep.unique_slugs" title="voxy.refprep.unique_slugs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unique_slugs</span></code></a>(sources)</p></td>
+<td><p>One distinct slug per source: the file's stem, plus parent folders only within a group of sources sharing a stem (stem tracks: every one is <code class="docutils literal notranslate"><span class="pre">vocals.wav</span></code>), numbered where folders cannot tell them apart.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.refprep.with_deepfilternet" title="voxy.refprep.with_deepfilternet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">with_deepfilternet</span></code></a>([conditioner, denoiser, ...])</p></td>
 <td><p>A <code class="docutils literal notranslate"><span class="pre">conditioner</span></code> that denoises with DeepFilterNet between two ffmpeg passes.</p></td>
 </tr>
 </tbody>
@@ -446,6 +449,27 @@ annotated by <code class="docutils literal notranslate"><span class="pre">voxy.s
 </dl>
 </dd></dl>
 <dl class="py function">
+<dt class="sig sig-object py" id="voxy.refprep.unique_slugs">
+<span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">unique_slugs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sources</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/refprep.html#unique_slugs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.unique_slugs" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.unique_slugs'">¶</a></dt>
+<dd><p>One distinct slug per source: the file’s stem, plus parent folders only within a
+group of sources sharing a stem (stem tracks: every one is <code class="docutils literal notranslate"><span class="pre">vocals.wav</span></code>), numbered
+where folders cannot tell them apart. Slugs never climb past what separates a group,
+and a source whose stem is unique keeps it.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">unique_slugs</span><span class="p">([</span><span class="s2">"/s/one/vocals.wav"</span><span class="p">,</span> <span class="s2">"/s/two/vocals.wav"</span><span class="p">,</span> <span class="s2">"/s/talk.m4a"</span><span class="p">])</span>
+</span><span id="line-2"><span class="go">['one-vocals', 'two-vocals', 'talk']</span>
+</span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="n">unique_slugs</span><span class="p">([</span><span class="s2">"/Users/x/audio/talk.m4a"</span><span class="p">,</span> <span class="s2">"/Users/x/audio/talk.wav"</span><span class="p">])</span>
+</span><span id="line-4"><span class="go">['talk', 'talk-2']</span>
+</span><span id="line-5"><span class="gp">&gt;&gt;&gt; </span><span class="n">unique_slugs</span><span class="p">([</span><span class="s2">"/s/a.wav"</span><span class="p">,</span> <span class="s2">"/s/a.wav"</span><span class="p">,</span> <span class="s2">"/s/a-2.wav"</span><span class="p">])</span>
+</span><span id="line-6"><span class="go">['a', 'a-3', 'a-2']</span>
+</span></code></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="voxy.refprep.with_deepfilternet">
 <span class="sig-prename descclassname"><span class="pre">voxy.refprep.</span></span><span class="sig-name descname"><span class="pre">with_deepfilternet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">conditioner</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">denoiser</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/refprep.html#with_deepfilternet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.refprep.with_deepfilternet" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.refprep.with_deepfilternet'">¶</a></dt>
 <dd><p>A <code class="docutils literal notranslate"><span class="pre">conditioner</span></code> that denoises with DeepFilterNet between two ffmpeg passes.</p>
@@ -478,6 +502,7 @@ it; pass 2 applies the usual <code class="docutils literal notranslate"><span cl
 <li><a :data-current="activeSection === '#voxy.refprep.summarize'" class="reference internal" href="#voxy.refprep.summarize"><code class="docutils literal notranslate"><span class="pre">summarize()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.transcribe'" class="reference internal" href="#voxy.refprep.transcribe"><code class="docutils literal notranslate"><span class="pre">transcribe()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.transcribe_text'" class="reference internal" href="#voxy.refprep.transcribe_text"><code class="docutils literal notranslate"><span class="pre">transcribe_text()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.refprep.unique_slugs'" class="reference internal" href="#voxy.refprep.unique_slugs"><code class="docutils literal notranslate"><span class="pre">unique_slugs()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.refprep.with_deepfilternet'" class="reference internal" href="#voxy.refprep.with_deepfilternet"><code class="docutils literal notranslate"><span class="pre">with_deepfilternet()</span></code></a></li>
 </ul>
 </div>
@@ -492,7 +517,7 @@ it; pass 2 applies the usual <code class="docutils literal notranslate"><span cl
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=aa2ad26f"></script>
+<script src="../_static/documentation_options.js?v=423071ad"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

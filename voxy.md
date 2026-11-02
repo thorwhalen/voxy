@@ -1,4 +1,4 @@
-> built 2026-11-02 08:14 UTC from e8b36b9 (main) · voxy 0.0.37. Details: build_info.json
+> built 2026-11-02 08:19 UTC from d86cd25 (main) · voxy 0.0.38. Details: build_info.json
 
 # index.html.md
 
@@ -3124,21 +3124,22 @@ reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same d
 
 ### Functions
 
-| [`best_references`](_autosummary/voxy.refprep.html.md#voxy.refprep.best_references)(manifest, \*[, n, ...])            | The `n` best clips for zero-shot reference (length in range, best score first).         |
-|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
-| [`close_asr`](_autosummary/voxy.refprep.html.md#voxy.refprep.close_asr)()                                        | Stop the transcription workers (free their memory).                                     |
-| [`condition`](_autosummary/voxy.refprep.html.md#voxy.refprep.condition)(src, dst, \*[, sample_rate, start, ...]) | Convert `src` (any format ffmpeg reads) to clean mono 16-bit WAV at `dst`.              |
-| [`conditioning_filters`](_autosummary/voxy.refprep.html.md#voxy.refprep.conditioning_filters)(\*[, denoise, ...])           | The ffmpeg audio filter chain for `condition`.                                          |
-| [`deepfilternet_denoise`](_autosummary/voxy.refprep.html.md#voxy.refprep.deepfilternet_denoise)(src, dst, \*[, ...])         | Denoise the 48 kHz WAV `src` into `dst` with DeepFilterNet 3.                           |
-| [`load_manifest`](_autosummary/voxy.refprep.html.md#voxy.refprep.load_manifest)(samples)                             | The manifest saved by `prepare_reference` in a samples store.                           |
-| [`partial_transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.partial_transcribe)([rootdir])                      | The default transcriber, bound to a data root.                                          |
-| [`plan_clips`](_autosummary/voxy.refprep.html.md#voxy.refprep.plan_clips)(segments, \*[, min_seconds, ...])       | Clips `[{start, end, text, words}]` cut between words, ending sentences where possible. |
-| [`prepare_reference`](_autosummary/voxy.refprep.html.md#voxy.refprep.prepare_reference)(sources, \*[, voice, ...])       | Condition, transcribe, cut and score `sources`; save clips and manifest; return it.     |
-| [`score_clip`](_autosummary/voxy.refprep.html.md#voxy.refprep.score_clip)(samples, sample_rate, \*[, words, ...]) | Quality measures of a clip, and their combination `score` in [0, 1].                    |
-| [`summarize`](_autosummary/voxy.refprep.html.md#voxy.refprep.summarize)(manifest)                                | Totals for a manifest: clips, minutes, minutes above score thresholds.                  |
-| [`transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe)(audio, \*[, language, model, ...])      | Timed segments `[{start, end, text, confidence, words: [...]}, ...]` of `audio`.        |
-| [`transcribe_text`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe_text)(audio, \*\*kwargs)                 | The transcript of `audio` as one string.                                                |
-| [`with_deepfilternet`](_autosummary/voxy.refprep.html.md#voxy.refprep.with_deepfilternet)([conditioner, denoiser, ...])   | A `conditioner` that denoises with DeepFilterNet between two ffmpeg passes.             |
+| [`best_references`](_autosummary/voxy.refprep.html.md#voxy.refprep.best_references)(manifest, \*[, n, ...])            | The `n` best clips for zero-shot reference (length in range, best score first).                                                                                                                           |
+|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`close_asr`](_autosummary/voxy.refprep.html.md#voxy.refprep.close_asr)()                                        | Stop the transcription workers (free their memory).                                                                                                                                                       |
+| [`condition`](_autosummary/voxy.refprep.html.md#voxy.refprep.condition)(src, dst, \*[, sample_rate, start, ...]) | Convert `src` (any format ffmpeg reads) to clean mono 16-bit WAV at `dst`.                                                                                                                                |
+| [`conditioning_filters`](_autosummary/voxy.refprep.html.md#voxy.refprep.conditioning_filters)(\*[, denoise, ...])           | The ffmpeg audio filter chain for `condition`.                                                                                                                                                            |
+| [`deepfilternet_denoise`](_autosummary/voxy.refprep.html.md#voxy.refprep.deepfilternet_denoise)(src, dst, \*[, ...])         | Denoise the 48 kHz WAV `src` into `dst` with DeepFilterNet 3.                                                                                                                                             |
+| [`load_manifest`](_autosummary/voxy.refprep.html.md#voxy.refprep.load_manifest)(samples)                             | The manifest saved by `prepare_reference` in a samples store.                                                                                                                                             |
+| [`partial_transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.partial_transcribe)([rootdir])                      | The default transcriber, bound to a data root.                                                                                                                                                            |
+| [`plan_clips`](_autosummary/voxy.refprep.html.md#voxy.refprep.plan_clips)(segments, \*[, min_seconds, ...])       | Clips `[{start, end, text, words}]` cut between words, ending sentences where possible.                                                                                                                   |
+| [`prepare_reference`](_autosummary/voxy.refprep.html.md#voxy.refprep.prepare_reference)(sources, \*[, voice, ...])       | Condition, transcribe, cut and score `sources`; save clips and manifest; return it.                                                                                                                       |
+| [`score_clip`](_autosummary/voxy.refprep.html.md#voxy.refprep.score_clip)(samples, sample_rate, \*[, words, ...]) | Quality measures of a clip, and their combination `score` in [0, 1].                                                                                                                                      |
+| [`summarize`](_autosummary/voxy.refprep.html.md#voxy.refprep.summarize)(manifest)                                | Totals for a manifest: clips, minutes, minutes above score thresholds.                                                                                                                                    |
+| [`transcribe`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe)(audio, \*[, language, model, ...])      | Timed segments `[{start, end, text, confidence, words: [...]}, ...]` of `audio`.                                                                                                                          |
+| [`transcribe_text`](_autosummary/voxy.refprep.html.md#voxy.refprep.transcribe_text)(audio, \*\*kwargs)                 | The transcript of `audio` as one string.                                                                                                                                                                  |
+| [`unique_slugs`](_autosummary/voxy.refprep.html.md#voxy.refprep.unique_slugs)(sources)                              | One distinct slug per source: the file's stem, plus parent folders only within a group of sources sharing a stem (stem tracks: every one is `vocals.wav`), numbered where folders cannot tell them apart. |
+| [`with_deepfilternet`](_autosummary/voxy.refprep.html.md#voxy.refprep.with_deepfilternet)([conditioner, denoiser, ...])   | A `conditioner` that denoises with DeepFilterNet between two ffmpeg passes.                                                                                                                               |
 
 ### voxy.refprep.DENOISE_FILTERS *= {'afftdn': ['afftdn=nr=12:nf=-50:tn=1'], 'anlmdn': ['anlmdn=s=0.0005'], 'deepfilternet': [], None: []}*
 
@@ -3316,6 +3317,25 @@ The transcript of `audio` as one string.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.refprep.unique_slugs(sources)
+
+One distinct slug per source: the file’s stem, plus parent folders only within a
+group of sources sharing a stem (stem tracks: every one is `vocals.wav`), numbered
+where folders cannot tell them apart. Slugs never climb past what separates a group,
+and a source whose stem is unique keeps it.
+
+```pycon
+>>> unique_slugs(["/s/one/vocals.wav", "/s/two/vocals.wav", "/s/talk.m4a"])
+['one-vocals', 'two-vocals', 'talk']
+>>> unique_slugs(["/Users/x/audio/talk.m4a", "/Users/x/audio/talk.wav"])
+['talk', 'talk-2']
+>>> unique_slugs(["/s/a.wav", "/s/a.wav", "/s/a-2.wav"])
+['a', 'a-3', 'a-2']
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ### voxy.refprep.with_deepfilternet(conditioner=None, , denoiser=None, rootdir=None)
 
@@ -4707,16 +4727,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 08:14 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/e8b36b9ca2298914f56d0bdc7611c46cc23a11d0"><code>e8b36b9</code></a> on branch <code>main</code>, for **voxy 0.0.37** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 08:19 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/d86cd257b127866c56b81bef6b69f212c576f81b"><code>d86cd25</code></a> on branch <code>main</code>, for **voxy 0.0.38** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.38) is behind the latest release on PyPI (0.0.39): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/e8b36b9ca2298914f56d0bdc7611c46cc23a11d0"><code>e8b36b9ca2298914f56d0bdc7611c46cc23a11d0</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/d86cd257b127866c56b81bef6b69f212c576f81b"><code>d86cd257b127866c56b81bef6b69f212c576f81b</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -4727,9 +4749,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41411164435">41411164435</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41411704134">41411704134</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>e8b36b9ca2298914f56d0bdc7611c46cc23a11d0</code> (in the history of the built commit) |
+| Event commit | <code>d86cd257b127866c56b81bef6b69f212c576f81b</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4754,13 +4776,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.37/">0.0.37</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.39/">0.0.39</a>, newer than the documented version (0.0.38).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout e8b36b9ca2298914f56d0bdc7611c46cc23a11d0
+git checkout d86cd257b127866c56b81bef6b69f212c576f81b
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

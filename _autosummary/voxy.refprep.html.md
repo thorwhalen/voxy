@@ -38,21 +38,22 @@ reference clip) and fine-tuning (`voxy.finetune`, the whole set) read the same d
 
 ### Functions
 
-| [`best_references`](#voxy.refprep.best_references)(manifest, \*[, n, ...])            | The `n` best clips for zero-shot reference (length in range, best score first).         |
-|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
-| [`close_asr`](#voxy.refprep.close_asr)()                                        | Stop the transcription workers (free their memory).                                     |
-| [`condition`](#voxy.refprep.condition)(src, dst, \*[, sample_rate, start, ...]) | Convert `src` (any format ffmpeg reads) to clean mono 16-bit WAV at `dst`.              |
-| [`conditioning_filters`](#voxy.refprep.conditioning_filters)(\*[, denoise, ...])           | The ffmpeg audio filter chain for `condition`.                                          |
-| [`deepfilternet_denoise`](#voxy.refprep.deepfilternet_denoise)(src, dst, \*[, ...])         | Denoise the 48 kHz WAV `src` into `dst` with DeepFilterNet 3.                           |
-| [`load_manifest`](#voxy.refprep.load_manifest)(samples)                             | The manifest saved by `prepare_reference` in a samples store.                           |
-| [`partial_transcribe`](#voxy.refprep.partial_transcribe)([rootdir])                      | The default transcriber, bound to a data root.                                          |
-| [`plan_clips`](#voxy.refprep.plan_clips)(segments, \*[, min_seconds, ...])       | Clips `[{start, end, text, words}]` cut between words, ending sentences where possible. |
-| [`prepare_reference`](#voxy.refprep.prepare_reference)(sources, \*[, voice, ...])       | Condition, transcribe, cut and score `sources`; save clips and manifest; return it.     |
-| [`score_clip`](#voxy.refprep.score_clip)(samples, sample_rate, \*[, words, ...]) | Quality measures of a clip, and their combination `score` in [0, 1].                    |
-| [`summarize`](#voxy.refprep.summarize)(manifest)                                | Totals for a manifest: clips, minutes, minutes above score thresholds.                  |
-| [`transcribe`](#voxy.refprep.transcribe)(audio, \*[, language, model, ...])      | Timed segments `[{start, end, text, confidence, words: [...]}, ...]` of `audio`.        |
-| [`transcribe_text`](#voxy.refprep.transcribe_text)(audio, \*\*kwargs)                 | The transcript of `audio` as one string.                                                |
-| [`with_deepfilternet`](#voxy.refprep.with_deepfilternet)([conditioner, denoiser, ...])   | A `conditioner` that denoises with DeepFilterNet between two ffmpeg passes.             |
+| [`best_references`](#voxy.refprep.best_references)(manifest, \*[, n, ...])            | The `n` best clips for zero-shot reference (length in range, best score first).                                                                                                                           |
+|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`close_asr`](#voxy.refprep.close_asr)()                                        | Stop the transcription workers (free their memory).                                                                                                                                                       |
+| [`condition`](#voxy.refprep.condition)(src, dst, \*[, sample_rate, start, ...]) | Convert `src` (any format ffmpeg reads) to clean mono 16-bit WAV at `dst`.                                                                                                                                |
+| [`conditioning_filters`](#voxy.refprep.conditioning_filters)(\*[, denoise, ...])           | The ffmpeg audio filter chain for `condition`.                                                                                                                                                            |
+| [`deepfilternet_denoise`](#voxy.refprep.deepfilternet_denoise)(src, dst, \*[, ...])         | Denoise the 48 kHz WAV `src` into `dst` with DeepFilterNet 3.                                                                                                                                             |
+| [`load_manifest`](#voxy.refprep.load_manifest)(samples)                             | The manifest saved by `prepare_reference` in a samples store.                                                                                                                                             |
+| [`partial_transcribe`](#voxy.refprep.partial_transcribe)([rootdir])                      | The default transcriber, bound to a data root.                                                                                                                                                            |
+| [`plan_clips`](#voxy.refprep.plan_clips)(segments, \*[, min_seconds, ...])       | Clips `[{start, end, text, words}]` cut between words, ending sentences where possible.                                                                                                                   |
+| [`prepare_reference`](#voxy.refprep.prepare_reference)(sources, \*[, voice, ...])       | Condition, transcribe, cut and score `sources`; save clips and manifest; return it.                                                                                                                       |
+| [`score_clip`](#voxy.refprep.score_clip)(samples, sample_rate, \*[, words, ...]) | Quality measures of a clip, and their combination `score` in [0, 1].                                                                                                                                      |
+| [`summarize`](#voxy.refprep.summarize)(manifest)                                | Totals for a manifest: clips, minutes, minutes above score thresholds.                                                                                                                                    |
+| [`transcribe`](#voxy.refprep.transcribe)(audio, \*[, language, model, ...])      | Timed segments `[{start, end, text, confidence, words: [...]}, ...]` of `audio`.                                                                                                                          |
+| [`transcribe_text`](#voxy.refprep.transcribe_text)(audio, \*\*kwargs)                 | The transcript of `audio` as one string.                                                                                                                                                                  |
+| [`unique_slugs`](#voxy.refprep.unique_slugs)(sources)                              | One distinct slug per source: the file's stem, plus parent folders only within a group of sources sharing a stem (stem tracks: every one is `vocals.wav`), numbered where folders cannot tell them apart. |
+| [`with_deepfilternet`](#voxy.refprep.with_deepfilternet)([conditioner, denoiser, ...])   | A `conditioner` that denoises with DeepFilterNet between two ffmpeg passes.                                                                                                                               |
 
 ### voxy.refprep.DENOISE_FILTERS *= {'afftdn': ['afftdn=nr=12:nf=-50:tn=1'], 'anlmdn': ['anlmdn=s=0.0005'], 'deepfilternet': [], None: []}*
 
@@ -230,6 +231,25 @@ The transcript of `audio` as one string.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.refprep.unique_slugs(sources)
+
+One distinct slug per source: the file’s stem, plus parent folders only within a
+group of sources sharing a stem (stem tracks: every one is `vocals.wav`), numbered
+where folders cannot tell them apart. Slugs never climb past what separates a group,
+and a source whose stem is unique keeps it.
+
+```pycon
+>>> unique_slugs(["/s/one/vocals.wav", "/s/two/vocals.wav", "/s/talk.m4a"])
+['one-vocals', 'two-vocals', 'talk']
+>>> unique_slugs(["/Users/x/audio/talk.m4a", "/Users/x/audio/talk.wav"])
+['talk', 'talk-2']
+>>> unique_slugs(["/s/a.wav", "/s/a.wav", "/s/a-2.wav"])
+['a', 'a-3', 'a-2']
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 ### voxy.refprep.with_deepfilternet(conditioner=None, , denoiser=None, rootdir=None)
 

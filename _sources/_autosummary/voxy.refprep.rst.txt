@@ -29,5 +29,6 @@ voxy.refprep
       summarize
       transcribe
       transcribe_text
+      unique_slugs
       with_deepfilternet
    
