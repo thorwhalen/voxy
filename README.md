@@ -205,6 +205,18 @@ voxy.text_to_speech("Hello.", "bf_emma", backend="kokoro", speed=1.1).save("hi.w
 voxy.list_voices("kokoro")
 ```
 
+### Correcting words in a recording
+
+`voxy.replace_words` replaces a spoken phrase with a new one in the speaker's voice: it finds the phrase in the recording's ASR words, renders the new phrase (TTS in `voice=` by default, or any `render=`), cuts at the quietest moment near each end, matches loudness, crossfades, and checks that the new words are heard there.
+
+```python
+fixed = voxy.replace_words("narration.wav", "Anna Jones", "Anna Smith", voice="ada")
+fixed.heard, fixed.checks       # True, [{'check': 'heard', 'passed': True, ...}]
+fixed.save("narration-fixed.wav")
+```
+
+Replace the whole phrase around a word (first name and surname), not the word alone: the neighbouring sounds anticipate it. `old` is the phrase as ASR heard it.
+
 ### Local voice cloning (no service, CPU works)
 
 Five local models clone a voice from one clean clip and its transcript: `voxcpm` (VoxCPM2), `qwen3tts` (Qwen3-TTS), `chatterbox`, `f5tts` (F5-TTS) and `xtts` (XTTS-v2). Each runs in its own Python environment, built on first use with [uv](https://docs.astral.sh/uv/) under `$VOXY_DATA_DIR/envs/` (weights under `$VOXY_DATA_DIR/models/`), so their clashing torch/transformers pins never touch yours. Requirements: `uv` and `ffmpeg` on the PATH.
