@@ -275,6 +275,34 @@ def test_audit_checks_each_occurrence_against_its_own_expected_reading():
     assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (2, True), (3, False)]
 
 
+def test_audit_refuses_an_expected_reading_the_table_does_not_have_before_any_work():
+    asked = []
+
+    def words_of(audio):
+        asked.append(audio)
+        return [{"start": 0.0, "end": 0.2, "text": "est"}]
+
+    with pytest.raises(ValueError, match=r"'est': 'adjective' not in \['noun', 'verb'\]"):
+        audit("est", "take.wav", readings={"est": READINGS}, expected={"est": "adjective"},
+              scoring="spot", emitter=lambda *a: None, words_of=words_of)
+
+    class Proposal:  # what a detector yields: a risk with a proposed reading
+        line, word, clitic, expected = 1, "est", "", "pronoun"
+
+    assert asked == []  # refused before transcribing anything
+    # a detector's proposal is machine output: dropped with a warning, the word reported
+    heard = lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB)
+    with pytest.warns(UserWarning, match="'pronoun' not in"):
+        findings = audit("est", "take.wav", readings={"est": READINGS}, detectors=[lambda text: [Proposal()]],
+                         scoring="spot", emitter=heard, words_of=words_of)
+    assert findings[0].expected is None and findings[0].ok is None
+    # a variant name of a real reading is fine
+    audit("est", "take.wav", readings={"est": READINGS}, expected={"est": "verb~liaison"},
+          scoring="spot",
+          emitter=lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB),
+          words_of=words_of)
+
+
 def test_audit_aligns_text_and_asr_words_and_leaves_missing_ones_unchecked():
     heard = ["a", "ɛ", "ɛ", "a"]
     findings = audit("est\nest", "take.wav", readings={"est": READINGS}, scoring="spot",
@@ -677,3 +705,77 @@ def test_an_llm_proposal_for_an_elided_noun_reaches_audit_on_the_elided_place():
     findings = audit("Il est à l'Est", "t.wav", readings={"est": READINGS}, detectors=[llm_detector(chat=chat)],
                      scoring="spot", context=0, emitter=emitter, words_of=lambda audio: words)
     assert [(f.risk.clitic, f.verdict.expected) for f in findings] == [("", None), ("l'", "noun")]
+
+
+def test_a_detectors_bad_proposal_is_not_blamed_on_the_callers_mapping():
+    class Proposal:  # the detector names a reading "as" does not have
+        line, word, clitic, expected = 1, "as", "", "pronoun"
+
+    readings = {"est": READINGS, "as": {"verb": "a", "noun": "as"}}
+    heard = lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB)
+    words = [{"start": 0.0, "end": 0.2, "text": "est"}, {"start": 1.0, "end": 1.2, "text": "as"}]
+    with pytest.warns(UserWarning, match="line 1 'as': 'pronoun'"):
+        findings = audit("est as", "take.wav", readings=readings, scoring="spot",
+                         expected={"est": "verb"}, detectors=[lambda text: [Proposal()]],
+                         emitter=heard, words_of=lambda audio: words)
+    assert [(f.risk.word, f.expected) for f in findings] == [("est", "verb"), ("as", None)]
+
+
+def test_audit_checks_an_expected_mapping_whole_key_typos_and_clitic_keys_included():
+    def never(*args):
+        raise AssertionError("called before the expected readings were checked")
+
+    run = lambda text, expected: audit(text, "take.wav", readings={"est": READINGS}, expected=expected,
+                                       scoring="spot", emitter=never, words_of=never)
+    with pytest.raises(ValueError, match=r"'ets': 'ets' is not a word of the readings table"):
+        run("est", {"est": "verb", "ets": "noun"})  # a typo would silently never match
+    with pytest.raises(ValueError, match=r"\"l'est\": 'x' not in \['noun', 'verb'\]"):
+        run("à l'Est", {"l'est": "x"})
+    with pytest.raises(ValueError, match=r"'L’esst': 'esst' is not a word"):
+        run("à l'Est", {"L’esst": "noun"})
+    with pytest.raises(ValueError, match=r"'rien': 'rien' is not a word"):
+        run("rien", {"rien": "noun"})  # checked even when the text flags nothing
+
+
+def test_audit_refuses_a_bad_name_from_an_expected_function():
+    def never(*args):
+        raise AssertionError("called before the expected readings were checked")
+
+    with pytest.raises(ValueError, match=r"line 2 'est': 'adjective' not in"):
+        audit("rien\nest", "take.wav", readings={"est": READINGS}, scoring="spot",
+              expected=lambda risk: "adjective", emitter=never, words_of=never)
+
+
+def test_audit_verifier_refuses_a_bad_expected_name_before_any_render_with_its_real_line():
+    lines = ["rien", "", "il est là"]
+    with pytest.raises(ValueError, match=r"line 3 'est': 'adjective' not in"):
+        audit_verifier(lines, readings={"est": READINGS},
+                       expected=lambda risk: "noun" if risk.clitic else "adjective")
+    with pytest.raises(ValueError, match=r"'ets': 'ets' is not a word"):
+        audit_verifier(lines, readings={"est": READINGS}, expected={"ets": "noun"})
+    rendered = []
+    with pytest.raises(ValueError, match="'adjective' not in"):
+        render_verified(lines, render=lambda *a: rendered.append(a),
+                        verify=audit_verifier(lines, readings={"est": READINGS}, expected={"est": "adjective"}))
+    assert rendered == []  # refused before the first (paid) render
+
+
+def test_audit_verifier_warns_once_about_every_bad_proposal_with_its_real_line():
+    from dataclasses import dataclass
+
+    @dataclass(frozen=True)
+    class Proposal:
+        line: int
+        word: str
+        expected: str
+        clitic: str = ""
+
+    def detector(text):
+        return [Proposal(2, "est", "pronoun"), Proposal(3, "est", "pronoun"), Proposal(4, "est", "verb")]
+
+    lines = ["rien", "il est", "il est", "il est"]
+    with pytest.warns(UserWarning) as caught:
+        audit_verifier(lines, readings={"est": READINGS}, detectors=[detector])
+    assert len(caught) == 1
+    message = str(caught[0].message)
+    assert "line 2 'est'" in message and "line 3 'est'" in message and "line 4" not in message

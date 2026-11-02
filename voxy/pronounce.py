@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import inspect
 import os
+import warnings
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -897,11 +898,20 @@ def audit_verifier(
     they read a sentence that spans two lines in context; the risks they propose for a
     line outside the text are dropped. ``emitter``, ``words_of``, ``scorer`` and
     ``margin`` are the defaults for ``audit``'s.
+
+    Raises:
+        ValueError: Here, before anything is rendered, when ``expected`` names a word
+            or a reading the readings table does not have (with the real line number
+            for an ``expected`` function), or when a line holds a newline. A detector's
+            proposal naming no reading is dropped with a warning, as in ``audit``.
     """
     lines = list(lines)
     if any("\n" in line for line in lines):
         raise ValueError("each line must be a single line (no newline inside)")
-    proposals = _proposals_by_line(lines, audit_options)
+    _vet_caller_expected("\n".join(lines), audit_options)  # before any render
+    proposals = _known_proposals(
+        _proposals_by_line(lines, audit_options), audit_options
+    )
 
     def verify(text: str, audio: str, line: int) -> list["Finding"]:
         found = audit(
@@ -1001,6 +1011,11 @@ def render_verified(
             ``phrase_scorer(emitter=..., phonemize=fake)`` or use ``"crop"``). They
             default the default verifier and ``checks``; a ``verify`` has its own.
 
+    Raises:
+        ValueError: For a bad ``max_attempts``, both ``verify`` and ``checks``, or (from
+            :func:`audit_verifier`, when it is built) an expected reading the readings
+            table does not have: all before the first render.
+
     >>> heard = {"est": "ɛ"}  # a fake recogniser: what each word sounds like
     >>> def emitter(audio, start, end):
     ...     vocab = ["<pad>", "ɛ", "s", "t", "l"]
@@ -1044,6 +1059,32 @@ def render_verified(
                 break
         results.append(LineTakes(number, text, tuple(takes)))
     return results
+
+
+def _known_proposals(proposals: Mapping[int, list], options: Mapping | None) -> dict:
+    """``proposals`` (by real line) with every expected reading the readings table
+    lacks dropped, all reported in one warning with their real lines (``audit`` would
+    see each line alone, as line 1, and warn once per identical message)."""
+    keys = ("readings", "language", "elisions", "clitics")
+    table, _, _ = _audit_tables(
+        **{k: v for k, v in (options or {}).items() if k in keys}
+    )
+    dropped, kept = [], {}
+    for line, risks in proposals.items():
+        for risk in risks:
+            want = getattr(risk, "expected", None)
+            have = _reading_names(table, risk.word)
+            if want is not None and reading_name(want) not in have:
+                dropped.append(f"line {line} {risk.word!r}: {want!r} not in {have}")
+                risk = replace(risk, expected=None)
+            kept.setdefault(line, []).append(risk)
+    if dropped:
+        warnings.warn(
+            "Ignored detector proposals naming no reading of their word (those "
+            "words are reported, not checked):\n  " + "\n  ".join(dropped),
+            stacklevel=3,
+        )
+    return kept
 
 
 def _proposals_by_line(
@@ -1310,6 +1351,163 @@ class Finding:
         return None if self.verdict is None else self.verdict.ok
 
 
+_UNKNOWN_EXPECTED = (
+    "Expected readings that the readings table does not have (rename them, "
+    "or extend the table):"
+)
+_DROPPED_PROPOSALS = (
+    "Ignored detector proposals naming no reading of their word (those "
+    "words are reported, not checked):"
+)
+
+
+def _listing(heading: str, problems: Iterable[str]) -> str:
+    return "\n  ".join([heading, *problems])
+
+
+def _audit_tables(
+    *,
+    readings: Mapping[str, Mapping[str, str]] | None = None,
+    language: str = DFLT_LANGUAGE,
+    elisions: Mapping[str, str] | None = None,
+    clitics: Collection[str] | None = None,
+) -> tuple[dict[str, dict[str, str]], Mapping[str, str], Collection[str]]:
+    """``(readings table, elisions, clitics)``, with :func:`audit`'s defaults."""
+    table = {
+        k.casefold(): dict(v)
+        for k, v in (readings or heteronym_readings(language)).items()
+    }
+    if elisions is None:
+        elisions = ELISIONS.get(language, {})
+    if clitics is None:
+        clitics = NOUN_CLITICS.get(language, ())
+    return table, elisions, clitics
+
+
+def _reading_names(table: Mapping[str, Mapping[str, str]], word: str) -> list[str]:
+    """The readings ``word`` has in ``table``, variants folded (none if not a word of it)."""
+    return sorted({reading_name(n) for n in table.get(word.casefold(), ())})
+
+
+def _checked_mapping(
+    expected: Mapping[str, str],
+    table: Mapping[str, Mapping[str, str]],
+    clitics: Collection[str],
+) -> dict[str, str]:
+    """``expected`` keyed as :func:`audit` looks it up, every entry checked first.
+
+    Each key must be a word of ``table``, possibly elided onto one of ``clitics``
+    (``"l'est"`` is ``"est"``), and its value one of that word's readings: a
+    ``ValueError`` lists the entries that are not (a key typo would never match).
+
+    >>> _checked_mapping({"L’Est": "noun"}, {"est": {"verb": "ɛ", "noun": "ɛst"}}, ["l'"])
+    {"l'est": 'noun'}
+    """
+    bad = []
+    for key, want in expected.items():
+        word = split_clitic(key, clitics)[1]
+        have = _reading_names(table, word)
+        if not have:
+            bad.append(f"{key!r}: {word!r} is not a word of the readings table")
+        elif want is not None and reading_name(want) not in have:
+            bad.append(f"{key!r}: {want!r} not in {have}")
+    if bad:
+        raise ValueError(_listing(_UNKNOWN_EXPECTED, bad))
+    return {_clitic_key(k): v for k, v in expected.items()}
+
+
+def _place_key(risk) -> tuple[int, str, str]:
+    """Where a risk is on its line: "l'Est" is not "est"."""
+    return risk.line, risk.word.casefold(), _clitic_key(getattr(risk, "clitic", ""))
+
+
+def _proposed_readings(proposals: Iterable) -> dict[tuple[int, str, str], list]:
+    """The readings that detectors' ``proposals`` name, by place, in text order."""
+    proposed: dict[tuple[int, str, str], list] = {}
+    for risk in proposals:
+        if getattr(risk, "expected", None) is not None:
+            proposed.setdefault(_place_key(risk), []).append(risk.expected)
+    return proposed
+
+
+def _vet_expected(
+    risks: Sequence,
+    wants: Sequence,
+    by_caller: Sequence[bool],
+    table: Mapping[str, Mapping[str, str]],
+) -> list:
+    """``wants`` with every expected reading checked against its word's readings.
+
+    A name the table does not have would be compared with a reading that can never
+    be heard, and reported as a misread. The caller's own names (``expected=``) must
+    exist: a ``ValueError`` lists those that do not. A detector's proposal that names
+    no reading is dropped (that word is reported, not checked), with a warning.
+    """
+    caller_bad, dropped, vetted = [], [], []
+    for risk, want, named in zip(risks, wants, by_caller):
+        have = _reading_names(table, risk.word)
+        if want is None or reading_name(want) in have:
+            vetted.append(want)
+            continue
+        problem = f"line {risk.line} {risk.word!r}: {want!r} not in {have}"
+        (caller_bad if named else dropped).append(problem)
+        vetted.append(None)
+    if caller_bad:
+        raise ValueError(_listing(_UNKNOWN_EXPECTED, caller_bad))
+    if dropped:
+        warnings.warn(_listing(_DROPPED_PROPOSALS, dropped), stacklevel=4)
+    return vetted
+
+
+def _expected_readings(
+    risks: Sequence,
+    *,
+    expected: Mapping[str, str] | Callable[[object], "str | None"] | None,
+    proposed: Mapping[tuple[int, str, str], Sequence],
+    table: Mapping[str, Mapping[str, str]],
+) -> list:
+    """The expected reading of each of ``risks``, vetted (:func:`_vet_expected`).
+
+    The caller's ``expected`` wins: ``risk -> reading``, or a mapping keyed as
+    :func:`_checked_mapping` returns it. Otherwise the n-th reading ``proposed`` for a
+    place goes to the n-th occurrence of the word there.
+    """
+    on_line: dict[tuple, int] = {}
+
+    def expected_of(risk) -> tuple[str | None, bool]:
+        """``(expected reading, whether the caller named it)``; else a detector's."""
+        _, word, clitic = key = _place_key(risk)
+        nth, on_line[key] = on_line.get(key, 0), on_line.get(key, 0) + 1
+        if callable(expected):
+            return expected(risk), True
+        if expected is not None and clitic + word in expected:
+            return expected[clitic + word], True
+        found = proposed.get(key, ())
+        return (found[nth] if nth < len(found) else None), False
+
+    named = [expected_of(risk) for risk in risks]
+    wants, by_caller = [w for w, _ in named], [c for _, c in named]
+    return _vet_expected(risks, wants, by_caller, table)
+
+
+def _vet_caller_expected(text: str, options: Mapping) -> None:
+    """Raise as :func:`audit` would on ``options``' ``expected``, for all of ``text``.
+
+    A mapping is checked whole; a function is asked about each risk of ``text``, with
+    its real line number.
+    """
+    expected = options.get("expected")
+    if expected is None:
+        return
+    tables = ("readings", "language", "elisions", "clitics")
+    table, _, clitics = _audit_tables(**{k: options[k] for k in tables if k in options})
+    if isinstance(expected, Mapping):
+        _checked_mapping(expected, table, clitics)
+    else:
+        risks = flag_risks(text, heteronyms=table, clitics=clitics)
+        _expected_readings(risks, expected=expected, proposed={}, table=table)
+
+
 def audit(
     text: str,
     audio: str | os.PathLike,
@@ -1370,37 +1568,20 @@ def audit(
     Returns the findings in text order; ``[f for f in findings if f.ok is False]`` are
     the words decidedly misread (re-render those), ``f.ok is None`` ones were not
     decided or not found.
+
+    Raises:
+        ValueError: Before any ASR or scoring, when ``expected`` names a word or a
+            reading the readings table does not have (a mapping is checked whole, so
+            a key typo is caught too). A detector's proposal naming no reading of its
+            word is dropped instead, with a warning: that word is reported, not checked.
     """
-    table = {
-        k.casefold(): dict(v)
-        for k, v in (readings or heteronym_readings(language)).items()
-    }
-    if elisions is None:
-        elisions = ELISIONS.get(language, {})
-    if clitics is None:
-        clitics = NOUN_CLITICS.get(language, ())
-    risks = flag_risks(text, heteronyms=table, clitics=clitics)
-
-    def place_key(risk):  # where a risk is on its line: "l'Est" is not "est"
-        return risk.line, risk.word.casefold(), _clitic_key(getattr(risk, "clitic", ""))
-
-    proposed: dict[tuple[int, str, str], list] = {}
-    for detector in detectors:
-        for risk in detector(text):
-            if getattr(risk, "expected", None) is not None:
-                proposed.setdefault(place_key(risk), []).append(risk.expected)
-
-    def expected_of(risk, nth_on_line):
-        if callable(expected):
-            return expected(risk)
-        named = _clitic_key(getattr(risk, "clitic", "")) + risk.word.casefold()
-        if expected is not None and named in expected:
-            return expected[named]
-        found = proposed.get(place_key(risk), [])
-        return found[nth_on_line] if nth_on_line < len(found) else None
-
+    table, elisions, clitics = _audit_tables(
+        readings=readings, language=language, elisions=elisions, clitics=clitics
+    )
     if isinstance(expected, Mapping):
-        expected = {_clitic_key(k): v for k, v in expected.items()}
+        expected = _checked_mapping(expected, table, clitics)
+    risks = flag_risks(text, heteronyms=table, clitics=clitics)
+    proposed = _proposed_readings(r for d in detectors for r in d(text))
     if scorer is None:
         options = dict(
             phonemize=phonemize,
@@ -1420,20 +1601,16 @@ def audit(
     margin = scorer.margin if margin is None else margin
     if not risks:
         return []
+    wants = _expected_readings(  # before any ASR or scoring
+        risks, expected=expected, proposed=proposed, table=table
+    )
     words = split_elisions(words_of(str(audio)), elisions=elisions)
     heard_at = align_words(text, words, elisions=elisions)
 
     places = _risk_places(text, risks, elisions=elisions)
-    on_line: dict[tuple, int] = {}
     findings = []
-    for risk, place in zip(risks, places):
+    for risk, place, want in zip(risks, places, wants):
         key = risk.word.casefold()
-        line_key = place_key(risk)
-        nth_on_line, on_line[line_key] = (
-            on_line.get(line_key, 0),
-            on_line.get(line_key, 0) + 1,
-        )
-        want = expected_of(risk, nth_on_line)
         if heard_at.get(place) is None:
             findings.append(Finding(risk, expected=want))
             continue
