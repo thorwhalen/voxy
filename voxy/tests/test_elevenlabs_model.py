@@ -306,5 +306,5 @@ def test_clone_builds_a_valid_request_with_the_installed_sdk(labels):
     body = request.read()
     assert request.url.path.endswith("/v1/voices/add")
     assert b'name="labels"' in body and b"raw-audio" in body
-    if labels:
-        assert b'"accent": "irish"' in body or b'"accent":"irish"' in body
+    part = body.split(b'name="labels"', 1)[1].split(b"\r\n\r\n", 1)[1].split(b"\r\n", 1)[0]
+    assert json.loads(part) == (labels or {})  # exactly once encoded, empty labels too
