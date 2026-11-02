@@ -51,20 +51,21 @@ def pcm_to_float(raw: bytes, width: int = PCM_SAMPLE_WIDTH) -> np.ndarray:
         return (np.frombuffer(raw, dtype=np.uint8).astype(np.float32) - 128) / 128
     if width == 2:
         return np.frombuffer(raw, dtype="<i2").astype(np.float32) / PCM_SCALE
-    if width == 3:  # 24-bit: widen each sample to 32 bits, keeping its sign
-        b = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 3).astype(np.int32)
-        ints = b[:, 0] | (b[:, 1] << 8) | (b[:, 2] << 16)
-        ints = np.where(ints & 0x800000, ints - 0x1000000, ints)
-        return ints.astype(np.float32) / 8388607.0
+    if width == 3:  # 24-bit: each sample in the top 3 bytes of an int32, shifted down
+        padded = np.zeros((len(raw) // 3, 4), dtype=np.uint8)
+        padded[:, 1:] = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 3)
+        return (padded.view("<i4").ravel() >> 8).astype(np.float32) / 8388607.0
     if width == 4:
         return np.frombuffer(raw, dtype="<i4").astype(np.float32) / 2147483647.0
     raise ValueError(f"Unsupported PCM sample width: {width} bytes")
 
 
 def _chunks_reach_end(data, pos: int) -> bool:
-    """Does ``data`` from ``pos`` read as whole chunks ending exactly at its end?"""
+    """Does ``data`` from ``pos`` read as whole known trailing chunks ending exactly at
+    its end? (Known ids only: a run of digital silence would otherwise read as
+    zero-size chunks all the way to the end.)"""
     while pos < len(data):
-        if pos + 8 > len(data):
+        if pos + 8 > len(data) or not TRAILING_CHUNK_IDS.fullmatch(data[pos : pos + 4]):
             return False
         size = int.from_bytes(data[pos + 4 : pos + 8], "little")
         pos += 8 + size + size % 2

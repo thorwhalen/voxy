@@ -134,3 +134,11 @@ def test_degenerate_fmt_chunks_are_refused(payload, match):
         payload = wav(b"\x00\x00", channels=0)
     with pytest.raises(ValueError, match=match):
         read_wav(payload)
+
+
+def test_digital_silence_after_a_stray_chunk_id_is_still_audio():
+    """b"LIST" inside the samples, then zeros: zeros must not read as zero-size chunks."""
+    frames = np.zeros(1000, "<i2")
+    frames[100:102] = np.frombuffer(b"LIST", "<i2")
+    samples, _ = read_wav(wav(frames.tobytes(), data_size=0))
+    assert len(samples) == 1000

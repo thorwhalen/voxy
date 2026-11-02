@@ -469,7 +469,8 @@ def tensor_to_wav_bytes(audio: torch.Tensor | np.ndarray, sample_rate: int) -> b
     Integer audio is taken as PCM and scaled to [-1, 1] first (8-bit PCM is
     unsigned). A 2-D input is ``[channels, samples]`` unless it has more rows than
     columns, which only ``[samples, channels]`` (soundfile's layout) can have (a
-    square input is read channels-first); channels are averaged, and ``voxy.wavutil.write_wav`` does the encoding.
+    square input is read channels-first); channels are averaged, and
+    ``voxy.wavutil.write_wav`` does the encoding.
 
     >>> data = tensor_to_wav_bytes(np.zeros(160), 16000)
     >>> data[:4], len(data)
