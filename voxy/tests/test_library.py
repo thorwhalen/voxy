@@ -106,3 +106,22 @@ def test_reserved_record_fields_are_refused(tmp_path):
 def test_empty_samples_fail_before_building_a_model():
     with pytest.raises(ValueError, match="No audio samples"):
         clone_from_samples("ada", samples={}, voices={})  # no API key needed
+
+
+def test_clone_from_samples_display_name_differs_from_the_library_key():
+    calls = []
+
+    class Model:
+        name = "elevenlabs"
+
+        def clone_voice(self, files, **kwargs):
+            calls.append(kwargs)
+            from voxy.base import VoiceProfile
+
+            return VoiceProfile("vid", 1, "elevenlabs", 24000)
+
+    clone_from_samples(
+        "kyle", model=Model(), samples={"a.wav": b"x"}, voices={}, display_name="Kyle (sung)"
+    )
+    clone_from_samples("kyle2", model=Model(), samples={"a.wav": b"x"}, voices={})
+    assert [c["name"] for c in calls] == ["Kyle (sung)", "kyle2"]

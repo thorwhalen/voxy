@@ -259,6 +259,29 @@ class VoiceDesignPreview:
         return path
 
 
+def _create_with_labels(create: Callable, *, labels: Mapping[str, str], **kwargs):
+    """Call ``create`` (a multipart SDK endpoint) with ``labels`` in the form it takes.
+
+    SDK 2.x releases differ: some JSON-encode a labels dict themselves (so a JSON
+    string would be double-encoded: 400 invalid_labels), and some (2.45) pass it to
+    httpx, which refuses a dict in a multipart form with a ``TypeError`` before
+    anything is sent. So send the dict, and the JSON string if that is refused.
+
+    >>> def strict(*, labels, **kw):
+    ...     if isinstance(labels, dict):
+    ...         raise TypeError("Expected primitive type, got <class 'dict'>")
+    ...     return labels
+    >>> _create_with_labels(strict, labels={"accent": "irish"})
+    '{"accent": "irish"}'
+    """
+    try:
+        return create(labels=dict(labels), **kwargs)
+    except TypeError as e:
+        if "dict" not in str(e):
+            raise
+    return create(labels=json.dumps(dict(labels)), **kwargs)
+
+
 class ElevenLabsSpeechModel(SpeechModel):
     """Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).
 
@@ -377,13 +400,11 @@ class ElevenLabsSpeechModel(SpeechModel):
         name = name or DFLT_CLONE_NAME_TEMPLATE.format(speaker_id=speaker_id)
         optional = {
             "description": description,
-            # The SDK (>=2.x) JSON-encodes labels itself; pre-encoding double-encodes
-            # them and ElevenLabs answers 400 invalid_labels. It also encodes an
-            # omitted value, so always send a dict (empty when there are no labels).
-            "labels": dict(labels) if labels is not None else {},
             "remove_background_noise": remove_background_noise,
         }
-        response = self.client.voices.ivc.create(
+        response = _create_with_labels(
+            self.client.voices.ivc.create,
+            labels=dict(labels or {}),
             name=name,
             files=files,
             **{k: v for k, v in optional.items() if v is not None},
