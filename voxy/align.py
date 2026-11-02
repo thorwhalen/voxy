@@ -24,6 +24,7 @@ over a long recording drifts, sung audio most.
 ['Bonjour', 'le', 'monde']
 """
 
+import math
 import os
 import tempfile
 from collections.abc import Callable, Sequence
@@ -106,6 +107,9 @@ def force_align(
 
 
 ScoreRun = Callable[..., Sequence[float]]
+#: A lead (in log-likelihood) under this is a tie: tight crops can favour a slightly
+#: shorter text by fractions of a point.
+DFLT_DECISIVE_MARGIN = 1.0
 
 
 def worker_score(
@@ -137,18 +141,24 @@ def which_said(
     start: float | None = None,
     end: float | None = None,
     run: ScoreRun | None = None,
+    decisive_margin: float = DFLT_DECISIVE_MARGIN,
 ) -> list[dict]:
     """The ``candidates`` (texts) ranked by how well the audio supports each, best first:
-    ``[{"text", "score", "margin"}]``, ``score`` the aligner's log-likelihood (minus
-    its CTC loss) and ``margin`` the lead over the next candidate.
+    ``[{"text", "score", "margin", "decisive"}]``: ``score`` the aligner's
+    log-likelihood (minus its CTC loss; ``-inf`` for a text too long for the crop),
+    ``margin`` the lead over the next candidate, ``decisive`` whether that lead is at
+    least ``decisive_margin``.
 
     A forced choice, so it cannot hallucinate as transcribing a short crop can: use it
     to check an edit ("witch" or the old word?) on a crop around it (``start``/``end``,
-    s; include the neighbouring words for context). Compare scores on one crop only.
+    s). Cut the crop at silences and include the neighbouring words: a crop that ends
+    inside a word, or holds one word alone, favours shorter texts by small margins,
+    which ``decisive`` flags. Candidates are spelled in letters (numbers spelled out).
 
     >>> fake = lambda audio, texts, start=None, end=None: [-5.0, -2.0]
-    >>> [(c["text"], c["margin"]) for c in which_said(b"RIFF", ["bitch", "witch"], run=fake)]
-    [('witch', 3.0), ('bitch', None)]
+    >>> [(c["text"], c["margin"], c["decisive"])
+    ...  for c in which_said(b"RIFF", ["bitch", "witch"], run=fake)]
+    [('witch', 3.0, True), ('bitch', None, None)]
     """
     run = run or worker_score()
     with tempfile.TemporaryDirectory() as tmp:
@@ -157,14 +167,14 @@ def which_said(
             path.write_bytes(audio)
             audio = path
         scores = run(str(audio), list(candidates), start=start, end=end)
-    ranked = sorted(zip(candidates, scores), key=lambda ts: -ts[1])
-    return [
-        {
-            "text": text,
-            "score": score,
-            "margin": round(score - ranked[i + 1][1], 4)
-            if i + 1 < len(ranked)
-            else None,
-        }
-        for i, (text, score) in enumerate(ranked)
-    ]
+    ranked = sorted(zip(candidates, scores, strict=True), key=lambda ts: -ts[1])
+    out = []
+    for i, (text, score) in enumerate(ranked):
+        margin = score - ranked[i + 1][1] if i + 1 < len(ranked) else None
+        if margin is not None and math.isfinite(margin):
+            margin = round(margin, 4)
+        decisive = None if margin is None else bool(margin >= decisive_margin)
+        out.append(
+            {"text": text, "score": score, "margin": margin, "decisive": decisive}
+        )
+    return out
