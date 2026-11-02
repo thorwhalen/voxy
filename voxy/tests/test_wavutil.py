@@ -153,3 +153,33 @@ def test_downsampling_does_not_alias():
     kept = resample(np.sin(2 * np.pi * 1000 * t), sr, 8000)
     rms = lambda y: float(np.sqrt(np.mean(y[500:-500] ** 2)))
     assert rms(above) < 0.01 and abs(rms(kept) - 0.707) < 0.02
+
+
+def test_upsampling_invents_nothing_above_the_source_nyquist():
+    """#105: a 24 kHz render into a 48 kHz narration gets no images above 12 kHz."""
+    from voxy.wavutil import resample
+
+    sr, out = 24000, 48000
+    t = np.arange(sr) / sr
+    y = resample(np.sin(2 * np.pi * 3000 * t), sr, out)
+    middle = y[2000:-2000] * np.hanning(len(y) - 4000)
+    spectrum = np.abs(np.fft.rfft(middle))
+    freqs = np.fft.rfftfreq(len(middle), 1 / out)
+    assert spectrum[freqs > 12500].max() / spectrum.max() < 1e-4  # below -80 dB
+    ideal = np.sin(2 * np.pi * 3000 * np.arange(len(y)) / out)
+    assert np.abs(y[2000:-2000] - ideal[2000:-2000]).max() < 1e-3
+
+
+@pytest.mark.parametrize("n, src, dst", [(1, 16000, 48000), (2, 16000, 48000), (999, 24000, 44100), (10, 22050, 44100)])
+def test_upsampling_lengths_and_short_inputs(n, src, dst):
+    from voxy.wavutil import resample
+
+    y = resample(np.ones(n, np.float32), src, dst)
+    assert len(y) == round(n * dst / src) and np.isfinite(y).all()
+
+
+def test_lowpass_keeps_the_length_of_a_short_input():
+    from voxy.wavutil import lowpass
+
+    for n in (1, 50, 254, 255, 1000):
+        assert len(lowpass(np.ones(n), 4000, 48000)) == n
