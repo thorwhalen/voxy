@@ -32,6 +32,7 @@ without torch.
 from __future__ import annotations
 
 import inspect
+import warnings
 import os
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
@@ -1327,6 +1328,42 @@ class Finding:
         return None if self.verdict is None else self.verdict.ok
 
 
+def _vet_expected(
+    risks: Sequence,
+    wants: Sequence,
+    by_caller: Sequence[bool],
+    table: Mapping[str, Mapping[str, str]],
+) -> list:
+    """``wants`` with every expected reading checked against its word's readings.
+
+    A name the table does not have would be compared with a reading that can never
+    be heard, and reported as a misread. The caller's own names (``expected=``) must
+    exist: a ``ValueError`` lists those that do not. A detector's proposal that names
+    no reading is dropped (that word is reported, not checked), with a warning.
+    """
+    caller_bad, dropped, vetted = [], [], []
+    for risk, want, named in zip(risks, wants, by_caller):
+        have = sorted({reading_name(n) for n in table[risk.word.casefold()]})
+        if want is None or reading_name(want) in have:
+            vetted.append(want)
+            continue
+        problem = f"line {risk.line} {risk.word!r}: {want!r} not in {have}"
+        (caller_bad if named else dropped).append(problem)
+        vetted.append(None)
+    if caller_bad:
+        raise ValueError(
+            "Expected readings that the readings table does not have (rename them, "
+            "or extend the table):\n  " + "\n  ".join(caller_bad)
+        )
+    if dropped:
+        warnings.warn(
+            "Ignored detector proposals naming no reading of their word (those "
+            "words are reported, not checked):\n  " + "\n  ".join(dropped),
+            stacklevel=3,
+        )
+    return vetted
+
+
 def audit(
     text: str,
     audio: str | os.PathLike,
@@ -1407,14 +1444,15 @@ def audit(
             if getattr(risk, "expected", None) is not None:
                 proposed.setdefault(place_key(risk), []).append(risk.expected)
 
-    def expected_of(risk, nth_on_line):
+    def expected_of(risk, nth_on_line) -> tuple[str | None, bool]:
+        """``(expected reading, whether the caller named it)``; else a detector's."""
         if callable(expected):
-            return expected(risk)
+            return expected(risk), True
         named = _clitic_key(getattr(risk, "clitic", "")) + risk.word.casefold()
         if expected is not None and named in expected:
-            return expected[named]
+            return expected[named], True
         found = proposed.get(place_key(risk), [])
-        return found[nth_on_line] if nth_on_line < len(found) else None
+        return (found[nth_on_line] if nth_on_line < len(found) else None), False
 
     if isinstance(expected, Mapping):
         expected = {_clitic_key(k): v for k, v in expected.items()}
@@ -1437,20 +1475,25 @@ def audit(
     margin = scorer.margin if margin is None else margin
     if not risks:
         return []
-    words = split_elisions(words_of(str(audio)), elisions=elisions)
-    heard_at = align_words(text, words, elisions=elisions)
-
-    places = _risk_places(text, risks, elisions=elisions)
     on_line: dict[tuple, int] = {}
-    findings = []
-    for risk, place in zip(risks, places):
-        key = risk.word.casefold()
+    wants, by_caller = [], []
+    for risk in risks:
         line_key = place_key(risk)
         nth_on_line, on_line[line_key] = (
             on_line.get(line_key, 0),
             on_line.get(line_key, 0) + 1,
         )
-        want = expected_of(risk, nth_on_line)
+        want, named = expected_of(risk, nth_on_line)
+        wants.append(want)
+        by_caller.append(named)
+    wants = _vet_expected(risks, wants, by_caller, table)  # before any ASR or scoring
+    words = split_elisions(words_of(str(audio)), elisions=elisions)
+    heard_at = align_words(text, words, elisions=elisions)
+
+    places = _risk_places(text, risks, elisions=elisions)
+    findings = []
+    for risk, place, want in zip(risks, places, wants):
+        key = risk.word.casefold()
         if heard_at.get(place) is None:
             findings.append(Finding(risk, expected=want))
             continue

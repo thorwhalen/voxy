@@ -275,6 +275,34 @@ def test_audit_checks_each_occurrence_against_its_own_expected_reading():
     assert [(f.risk.line, f.ok) for f in findings] == [(1, True), (2, True), (3, False)]
 
 
+def test_audit_refuses_an_expected_reading_the_table_does_not_have_before_any_work():
+    asked = []
+
+    def words_of(audio):
+        asked.append(audio)
+        return [{"start": 0.0, "end": 0.2, "text": "est"}]
+
+    with pytest.raises(ValueError, match=r"line 1 'est': 'adjective' not in \['noun', 'verb'\]"):
+        audit("est", "take.wav", readings={"est": READINGS}, expected={"est": "adjective"},
+              scoring="spot", emitter=lambda *a: None, words_of=words_of)
+
+    class Proposal:  # what a detector yields: a risk with a proposed reading
+        line, word, clitic, expected = 1, "est", "", "pronoun"
+
+    assert asked == []  # refused before transcribing anything
+    # a detector's proposal is machine output: dropped with a warning, the word reported
+    heard = lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB)
+    with pytest.warns(UserWarning, match="'pronoun' not in"):
+        findings = audit("est", "take.wav", readings={"est": READINGS}, detectors=[lambda text: [Proposal()]],
+                         scoring="spot", emitter=heard, words_of=words_of)
+    assert findings[0].expected is None and findings[0].ok is None
+    # a variant name of a real reading is fine
+    audit("est", "take.wav", readings={"est": READINGS}, expected={"est": "verb~liaison"},
+          scoring="spot",
+          emitter=lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB),
+          words_of=words_of)
+
+
 def test_audit_aligns_text_and_asr_words_and_leaves_missing_ones_unchecked():
     heard = ["a", "ɛ", "ɛ", "a"]
     findings = audit("est\nest", "take.wav", readings={"est": READINGS}, scoring="spot",
@@ -677,3 +705,17 @@ def test_an_llm_proposal_for_an_elided_noun_reaches_audit_on_the_elided_place():
     findings = audit("Il est à l'Est", "t.wav", readings={"est": READINGS}, detectors=[llm_detector(chat=chat)],
                      scoring="spot", context=0, emitter=emitter, words_of=lambda audio: words)
     assert [(f.risk.clitic, f.verdict.expected) for f in findings] == [("", None), ("l'", "noun")]
+
+
+def test_a_detectors_bad_proposal_is_not_blamed_on_the_callers_mapping():
+    class Proposal:  # the detector names a reading "fils" does not have
+        line, word, clitic, expected = 1, "as", "", "pronoun"
+
+    readings = {"est": READINGS, "as": {"verb": "a", "noun": "as"}}
+    heard = lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB)
+    words = [{"start": 0.0, "end": 0.2, "text": "est"}, {"start": 1.0, "end": 1.2, "text": "as"}]
+    with pytest.warns(UserWarning, match="line 1 'as': 'pronoun'"):
+        findings = audit("est as", "take.wav", readings=readings, scoring="spot",
+                         expected={"est": "verb"}, detectors=[lambda text: [Proposal()]],
+                         emitter=heard, words_of=lambda audio: words)
+    assert [(f.risk.word, f.expected) for f in findings] == [("est", "verb"), ("as", None)]
