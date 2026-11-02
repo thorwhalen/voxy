@@ -1,4 +1,4 @@
-> built 2026-10-30 07:51 UTC from 7ac4d06 (main) · voxy 0.0.35. Details: build_info.json
+> built 2026-11-02 07:59 UTC from cd03791 (main) · voxy 0.0.36. Details: build_info.json
 
 # index.html.md
 
@@ -1755,7 +1755,7 @@ saved; a local model’s in-memory segment (CSM) cannot.
 | [`profile_to_dict`](_autosummary/voxy.library.html.md#voxy.library.profile_to_dict)(profile)                          | A JSON-ready dict of `profile`; refuses segments that aren't plain data.             |
 | [`save_voice`](_autosummary/voxy.library.html.md#voxy.library.save_voice)(name, profile, \*[, voices])           | Save `profile` under `name` (merged into any existing record) and return the record. |
 
-### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, overwrite=False, \*\*clone_kwargs)
+### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, overwrite=False, display_name=None, \*\*clone_kwargs)
 
 Clone the voice `name` from its stored samples and save the profile.
 
@@ -1769,8 +1769,9 @@ Clone the voice `name` from its stored samples and save the profile.
   * **record_fields** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra fields for the voice record (aliases, consent…).
   * **overwrite** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Replace an existing profile of this backend for `name`
     (otherwise refused before anything is uploaded).
+  * **display_name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The voice’s name in the backend (default `name`).
   * **\*\*clone_kwargs** ([`Any`](https://docs.python.org/3/library/typing.html#typing.Any)) – Passed to `model.clone_voice` (e.g. `labels=`,
-    `remove_background_noise=`). `name=` defaults to `name`.
+    `remove_background_noise=`).
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
 
@@ -4541,18 +4542,16 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-10-30 07:51 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/7ac4d060b65c616826adcfa33eeeb64e41a8601f"><code>7ac4d06</code></a> on branch <code>main</code>, for **voxy 0.0.35** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 07:59 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/cd03791a4265831ba935e64ffd323e0960e041a2"><code>cd03791</code></a> on branch <code>main</code>, for **voxy 0.0.36** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.35) is behind the latest release on PyPI (0.0.36): `pip install voxy` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/7ac4d060b65c616826adcfa33eeeb64e41a8601f"><code>7ac4d060b65c616826adcfa33eeeb64e41a8601f</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/cd03791a4265831ba935e64ffd323e0960e041a2"><code>cd03791a4265831ba935e64ffd323e0960e041a2</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -4563,9 +4562,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41022274243">41022274243</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41409384557">41409384557</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>7ac4d060b65c616826adcfa33eeeb64e41a8601f</code> (in the history of the built commit) |
+| Event commit | <code>cd03791a4265831ba935e64ffd323e0960e041a2</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4590,13 +4589,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.36/">0.0.36</a>, newer than the documented version (0.0.35).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.36/">0.0.36</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 7ac4d060b65c616826adcfa33eeeb64e41a8601f
+git checkout cd03791a4265831ba935e64ffd323e0960e041a2
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -34,7 +34,7 @@ saved; a local model’s in-memory segment (CSM) cannot.
 | [`profile_to_dict`](#voxy.library.profile_to_dict)(profile)                          | A JSON-ready dict of `profile`; refuses segments that aren't plain data.             |
 | [`save_voice`](#voxy.library.save_voice)(name, profile, \*[, voices])           | Save `profile` under `name` (merged into any existing record) and return the record. |
 
-### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, overwrite=False, \*\*clone_kwargs)
+### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, overwrite=False, display_name=None, \*\*clone_kwargs)
 
 Clone the voice `name` from its stored samples and save the profile.
 
@@ -48,8 +48,9 @@ Clone the voice `name` from its stored samples and save the profile.
   * **record_fields** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra fields for the voice record (aliases, consent…).
   * **overwrite** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Replace an existing profile of this backend for `name`
     (otherwise refused before anything is uploaded).
+  * **display_name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The voice’s name in the backend (default `name`).
   * **\*\*clone_kwargs** ([`Any`](https://docs.python.org/3/library/typing.html#typing.Any)) – Passed to `model.clone_voice` (e.g. `labels=`,
-    `remove_background_noise=`). `name=` defaults to `name`.
+    `remove_background_noise=`).
 * **Return type:**
   [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
 
