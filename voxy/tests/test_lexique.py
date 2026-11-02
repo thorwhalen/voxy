@@ -220,3 +220,12 @@ def test_rows_without_a_spelling_or_pronunciation_are_skipped(missing):
     rows = [row("x", "a", "NOM"), row("x", "b", "NOM")]
     rows[1][missing] = ""
     assert heteronyms_from_rows(rows) == {}
+
+
+def test_a_genuine_adverb_outweighing_its_verb_rows_keeps_its_name():
+    rows = [
+        row("plus", "ply", "ADV", 5000, 5000),
+        row("plus", "ply", "VER", 5, 5),
+        row("plus", "plys", "NOM", 3, 3),
+    ]
+    assert heteronyms_from_rows(rows)["plus"] == {"adverb": "ply", "noun": "plys"}

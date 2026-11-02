@@ -69,7 +69,7 @@ LEXIQUE_TO_IPA = {
 }
 #: Lexique letters it writes inconsistently -> the letter they are compared as: two
 #: pronunciations equal after this are one reading (open/closed vowels, schwa).
-TRANSCRIPTION_NOISE = {"E": "e", "O": "o", "9": "2", "°": ""}
+TRANSCRIPTION_NOISE = {"E": "e", "O": "o", "9": "2", "°": "", "8": "y"}
 #: Lexique's part of speech (``cgram``, whole or before its ``:``) -> universal POS.
 LEXIQUE_TO_UPOS = {
     "NOM": "NOUN",
@@ -92,9 +92,11 @@ LEXIQUE_TO_UPOS = {
 LEXIQUE_POS_NAMES = {
     tag: FRENCH_READING_NAMES[upos] for tag, upos in LEXIQUE_TO_UPOS.items()
 }
-#: The reading name that wins over every other part of speech of a pronunciation:
-#: Lexique tags some verb forms as nouns too (*violent*, *insolent*).
+#: A pronunciation with a verb row is named ``verb`` when its heaviest part of speech
+#: is one of these: Lexique tags some verb forms as nouns or adjectives too (*violent*,
+#: *insolent*), while an adverb (*plus*) is genuinely heavier than its verb rows.
 VERB_NAME = FRENCH_READING_NAMES["VERB"]
+VERB_OUTRANKS = frozenset({FRENCH_READING_NAMES["NOUN"], FRENCH_READING_NAMES["ADJ"]})
 #: The name of a reading whose part of speech Lexique leaves empty.
 UNTAGGED_NAME = "word"
 #: Columns read from a Lexique 3 file.
@@ -147,7 +149,9 @@ def _reading(rows: list[Mapping], pos_names: Mapping[str, str]) -> dict:
     poses = _heaviest((_pos_name(r[CGRAM], pos_names), f) for r, f in weighted)
     return {
         "weight": sum(f for _, f in weighted),
-        "pos": VERB_NAME if VERB_NAME in poses else poses[0],
+        "pos": VERB_NAME
+        if VERB_NAME in poses and poses[0] in VERB_OUTRANKS
+        else poses[0],
         "lemma": _heaviest((r[LEMMA], f) for r, f in weighted)[0],
         "phons": _heaviest((r[PHON], f) for r, f in weighted),
     }
