@@ -98,12 +98,12 @@ without torch.
 
 ### Classes
 
-| [`Finding`](#voxy.pronounce.Finding)(risk[, verdict, expected])       | One flagged word of a render: the risk, and what the audio said about it.                                                               |
-|-------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| [`LineTakes`](#voxy.pronounce.LineTakes)(line, text[, takes])           | Every take of one line (1-based `line`, as [`voxy.speechtext.Risk`](voxy.speechtext.html.md#voxy.speechtext.Risk)). |
-| [`Scorer`](#voxy.pronounce.Scorer)(\*args, \*\*kwargs)               | Scores the readings of timed ASR word `words[i]` in `audio` (higher is better).                                                         |
-| [`Take`](#voxy.pronounce.Take)(attempt, audio[, findings])         | One render of a line and what the audio says about its flagged words.                                                                   |
-| [`Verdict`](#voxy.pronounce.Verdict)(word, start, end, scores[, ...]) | What the audio says about one flagged word.                                                                                             |
+| [`Finding`](#voxy.pronounce.Finding)(risk[, verdict, expected, located])   | One flagged word of a render: the risk, and what the audio said about it.                                                               |
+|------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| [`LineTakes`](#voxy.pronounce.LineTakes)(line, text[, takes])                | Every take of one line (1-based `line`, as [`voxy.speechtext.Risk`](voxy.speechtext.html.md#voxy.speechtext.Risk)). |
+| [`Scorer`](#voxy.pronounce.Scorer)(\*args, \*\*kwargs)                    | Scores the readings of timed ASR word `words[i]` in `audio` (higher is better).                                                         |
+| [`Take`](#voxy.pronounce.Take)(attempt, audio[, findings])              | One render of a line and what the audio says about its flagged words.                                                                   |
+| [`Verdict`](#voxy.pronounce.Verdict)(word, start, end, scores[, ...])      | What the audio says about one flagged word.                                                                                             |
 
 ### voxy.pronounce.BLANK_SYMBOL *= '<pad>'*
 
@@ -178,7 +178,7 @@ espeak voices for [`audit()`](#voxy.pronounce.audit)’s `language` codes (other
 
 alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]]
 
-### *class* voxy.pronounce.Finding(risk, verdict=None, expected=None)
+### *class* voxy.pronounce.Finding(risk, verdict=None, expected=None, located=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -190,6 +190,14 @@ a different number of times than the text has it): listen to that one.
 #### expected *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
 
 The reading the word should have, when known (also when `verdict` is None).
+
+#### located *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
+
+“asr” (its ASR word), “text” (forced
+alignment of the text, `audit(align_missing=...)`), or None (not found).
+
+* **Type:**
+  How the word was found in the audio
 
 #### *property* ok *: [bool](https://docs.python.org/3/builtins/functions.html#bool) | [None](https://docs.python.org/3/builtins/constants.html#None)*
 
@@ -328,7 +336,7 @@ counterpart is left out. A word elided onto one of `elisions` counts as two
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)]
 
-### voxy.pronounce.audit(text, audio, \*, readings=None, language='fr', elisions=None, clitics=None, expected=None, detectors=(), emitter=None, words_of=<function \_transcribed_words>, scoring='phrase', phonemize=None, context=1, filler_penalty=1.0, padding=0.08, margin=None, scorer=None)
+### voxy.pronounce.audit(text, audio, \*, readings=None, language='fr', elisions=None, clitics=None, expected=None, detectors=(), emitter=None, words_of=<function \_transcribed_words>, scoring='phrase', phonemize=None, context=1, filler_penalty=1.0, padding=0.08, margin=None, scorer=None, align_missing=None)
 
 Which reading did each heteronym of `text` get in the finished `audio`?
 
@@ -366,6 +374,15 @@ readings with the phoneme recogniser.
   * **context** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Words kept on each side of the flagged one.
   * **margin** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`Verdict.decided`](#voxy.pronounce.Verdict.decided); default `scorer.margin`.
   * **scorer** ([`Scorer`](#voxy.pronounce.Scorer) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready [`Scorer`](#voxy.pronounce.Scorer); wins over `scoring` and its options.
+  * **align_missing** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words) -> [{"start", "end", ...}, ...]`, e.g.
+    `voxy.align.force_align`: when ASR heard a flagged word as something
+    else (a misread can change the word: “de l’est” heard “de lait”), the
+    text’s own words are aligned in the audio and the word is scored where
+    the text puts it (`Finding.located == "text"`). Default None: such a
+    word is reported, not checked. The aligner takes one pass over the whole
+    `audio` (`force_align`: up to 30 s), so it serves per-line audits
+    (`audit_verifier`/`render_verified` pass it through); a longer
+    recording warns and leaves such words unchecked.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Finding`](#voxy.pronounce.Finding)]
 
