@@ -299,3 +299,31 @@ def test_the_default_cache_lives_under_voxys_cache_dir(tmp_path, monkeypatch):
     tsv = _tsv(tmp_path / "Lexique383.tsv", ROWS)
     lexique.cached_lexique_heteronyms(tsv)
     assert len(list((tmp_path / "cache" / "lexique").glob("*.json"))) == 1
+
+
+def test_an_unreadable_cache_entry_is_derived_again_and_copies_are_returned(tmp_path):
+    from voxy import lexique
+
+    tsv = _tsv(tmp_path / "Lexique383.tsv", ROWS)
+    cache = {}
+    table = lexique.cached_lexique_heteronyms(tsv, cache=cache)
+    table["est"]["noun"] = "changed"  # a caller changing its copy
+    assert lexique.cached_lexique_heteronyms(tsv, cache=cache)["est"]["noun"] == "ɛst"
+
+    class Corrupt(dict):  # a JSON file cut short by a crashed or concurrent write
+        def __getitem__(self, key):
+            raise ValueError("Expecting value: line 1 column 1")
+
+    corrupt = Corrupt()
+    assert lexique.cached_lexique_heteronyms(tsv, cache=corrupt)["est"]["noun"] == "ɛst"
+
+
+def test_a_new_derivation_version_derives_afresh(tmp_path, monkeypatch):
+    from voxy import lexique
+
+    tsv = _tsv(tmp_path / "Lexique383.tsv", ROWS)
+    cache = {}
+    lexique.cached_lexique_heteronyms(tsv, cache=cache)
+    monkeypatch.setattr(lexique, "LEXIQUE_DERIVATION_VERSION", lexique.LEXIQUE_DERIVATION_VERSION + 1)
+    lexique.cached_lexique_heteronyms(tsv, cache=cache)
+    assert len(cache) == 2

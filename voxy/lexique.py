@@ -250,6 +250,8 @@ def lexique_heteronyms(
 LEXIQUE_CACHE_KIND = "lexique"
 #: Hex characters of a cache key (64 bits: no collision among a user's tables).
 CACHE_KEY_CHARS = 16
+#: Bump when the derivation's rules change, so cached tables are derived afresh.
+LEXIQUE_DERIVATION_VERSION = 1
 
 
 def lexique_cache(*, cache_dir: str | os.PathLike | None = None) -> MutableMapping:
@@ -272,6 +274,7 @@ def _cache_key(path: str | os.PathLike, arguments: Mapping) -> str:
         "size": stat.st_size,
         "mtime_ns": stat.st_mtime_ns,
         "arguments": arguments,
+        "derivation": LEXIQUE_DERIVATION_VERSION,
     }
     text = json.dumps(identity, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(text.encode()).hexdigest()[:CACHE_KEY_CHARS] + ".json"
@@ -287,7 +290,9 @@ def cached_lexique_heteronyms(
     noise: Mapping[str, str] = TRANSCRIPTION_NOISE,
 ) -> dict[str, dict[str, str]]:
     """:func:`lexique_heteronyms`, derived once and kept in ``cache`` (default
-    :func:`lexique_cache`), rebuilt when the file or the arguments change.
+    :func:`lexique_cache`), rebuilt when the file, the arguments or the derivation
+    rules (``LEXIQUE_DERIVATION_VERSION``) change, or when the entry is unreadable.
+    Returns a copy, so changing it never changes what later calls get.
 
     >>> import tempfile, pathlib
     >>> tsv = pathlib.Path(tempfile.mkdtemp()) / "Lexique383.tsv"
@@ -305,6 +310,8 @@ def cached_lexique_heteronyms(
     }
     cache = lexique_cache() if cache is None else cache
     key = _cache_key(path, arguments)
-    if key not in cache:
-        cache[key] = lexique_heteronyms(path, **arguments)
-    return cache[key]
+    try:
+        table = cache[key]
+    except (KeyError, ValueError):  # not derived yet, or a write cut short
+        table = cache[key] = lexique_heteronyms(path, **arguments)
+    return {word: dict(readings) for word, readings in table.items()}
