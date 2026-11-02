@@ -69,6 +69,7 @@ def main(argv=None) -> int:
         from voxy.envs import ensure_env
         from voxy.local_clone import local_backends
         from voxy.refprep import ASR_ENV
+        from voxy.align import ALIGN_ENV
         from voxy.pronounce import PHONEME_ENV
         from voxy.separate import SEPARATION_ENV
         from voxy.speakers import SPEAKER_ENV
@@ -77,6 +78,7 @@ def main(argv=None) -> int:
         envs["asr"] = ASR_ENV
         envs["speaker"] = SPEAKER_ENV
         envs["phonemes"] = PHONEME_ENV
+        envs["align"] = ALIGN_ENV
         envs["demucs"] = SEPARATION_ENV
         for name in args.backends or list(envs):
             print(f"{name}\t{ensure_env(envs[name])}")
