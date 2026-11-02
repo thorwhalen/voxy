@@ -459,19 +459,56 @@
 
 </span><span id="line-246">
 </span><span id="line-247">
+</span><span id="line-248"><span class="c1">#: Taps of the anti-aliasing filter applied before downsampling (odd).</span>
+</span><span id="line-249"><span class="n">DFLT_LOWPASS_TAPS</span> <span class="o">=</span> <span class="mi">255</span>
+</span><span id="line-250"><span class="c1">#: The filter's cutoff, as a share of the target rate's Nyquist frequency.</span>
+</span><span id="line-251"><span class="n">DFLT_LOWPASS_SHARE</span> <span class="o">=</span> <span class="mf">0.95</span>
+</span><span id="line-252">
+</span><span id="line-253">
+<div class="viewcode-block" id="lowpass">
+<a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.lowpass">[docs]</a>
+</span><span id="line-254"><span class="k">def</span><span class="w"> </span><span class="nf">lowpass</span><span class="p">(</span>
+</span><span id="line-255">    <span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+</span><span id="line-256">    <span class="n">cutoff_hz</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+</span><span id="line-257">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+</span><span id="line-258">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-259">    <span class="n">taps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_LOWPASS_TAPS</span><span class="p">,</span>
+</span><span id="line-260"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-261"><span class="w">    </span><span class="sd">"""``samples`` with what lies above ``cutoff_hz`` removed (windowed-sinc FIR,</span>
+</span><span id="line-262"><span class="sd">    Blackman window, zero phase: same length, no delay).</span>
+</span><span id="line-263">
+</span><span id="line-264"><span class="sd">    &gt;&gt;&gt; sr = 48000; t = np.arange(sr) / sr</span>
+</span><span id="line-265"><span class="sd">    &gt;&gt;&gt; hiss = lowpass(np.sin(2 * np.pi * 12000 * t), 4000, sr)</span>
+</span><span id="line-266"><span class="sd">    &gt;&gt;&gt; bool(np.abs(hiss[1000:-1000]).max() &lt; 0.01)</span>
+</span><span id="line-267"><span class="sd">    True</span>
+</span><span id="line-268"><span class="sd">    """</span>
+</span><span id="line-269">    <span class="n">taps</span> <span class="o">=</span> <span class="n">taps</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">taps</span> <span class="o">%</span> <span class="mi">2</span>  <span class="c1"># odd: a centred, delay-free kernel</span>
+</span><span id="line-270">    <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">taps</span><span class="p">)</span> <span class="o">-</span> <span class="n">taps</span> <span class="o">//</span> <span class="mi">2</span>
+</span><span id="line-271">    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sinc</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cutoff_hz</span> <span class="o">/</span> <span class="n">sample_rate</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">blackman</span><span class="p">(</span><span class="n">taps</span><span class="p">)</span>
+</span><span id="line-272">    <span class="n">kernel</span> <span class="o">/=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+</span><span id="line-273">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"same"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
+</span><span id="line-274">        <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+</span><span id="line-275">    <span class="p">)</span></div>
+
+</span><span id="line-276">
+</span><span id="line-277">
 <div class="viewcode-block" id="resample">
 <a class="viewcode-back" href="../../_autosummary/voxy.wavutil.html#voxy.wavutil.resample">[docs]</a>
-</span><span id="line-248"><span class="k">def</span><span class="w"> </span><span class="nf">resample</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">from_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">to_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-249"><span class="w">    </span><span class="sd">"""Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).</span>
-</span><span id="line-250">
-</span><span id="line-251"><span class="sd">    &gt;&gt;&gt; len(resample(np.zeros(100), 8000, 16000))</span>
-</span><span id="line-252"><span class="sd">    200</span>
-</span><span id="line-253"><span class="sd">    """</span>
-</span><span id="line-254">    <span class="k">if</span> <span class="n">from_rate</span> <span class="o">==</span> <span class="n">to_rate</span><span class="p">:</span>
-</span><span id="line-255">        <span class="k">return</span> <span class="n">samples</span>
-</span><span id="line-256">    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">*</span> <span class="n">to_rate</span> <span class="o">/</span> <span class="n">from_rate</span><span class="p">))</span>
-</span><span id="line-257">    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-</span><span id="line-258">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)),</span> <span class="n">samples</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
+</span><span id="line-278"><span class="k">def</span><span class="w"> </span><span class="nf">resample</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">from_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">to_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-279"><span class="w">    </span><span class="sd">"""Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below</span>
+</span><span id="line-280"><span class="sd">    the target's Nyquist frequency first when downsampling (so a 24 kHz render put into</span>
+</span><span id="line-281"><span class="sd">    an 8 kHz recording does not alias), then linear interpolation.</span>
+</span><span id="line-282">
+</span><span id="line-283"><span class="sd">    &gt;&gt;&gt; len(resample(np.zeros(100), 8000, 16000))</span>
+</span><span id="line-284"><span class="sd">    200</span>
+</span><span id="line-285"><span class="sd">    """</span>
+</span><span id="line-286">    <span class="k">if</span> <span class="n">from_rate</span> <span class="o">==</span> <span class="n">to_rate</span><span class="p">:</span>
+</span><span id="line-287">        <span class="k">return</span> <span class="n">samples</span>
+</span><span id="line-288">    <span class="k">if</span> <span class="n">to_rate</span> <span class="o">&lt;</span> <span class="n">from_rate</span><span class="p">:</span>
+</span><span id="line-289">        <span class="n">samples</span> <span class="o">=</span> <span class="n">lowpass</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">DFLT_LOWPASS_SHARE</span> <span class="o">*</span> <span class="n">to_rate</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">from_rate</span><span class="p">)</span>
+</span><span id="line-290">    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">*</span> <span class="n">to_rate</span> <span class="o">/</span> <span class="n">from_rate</span><span class="p">))</span>
+</span><span id="line-291">    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+</span><span id="line-292">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)),</span> <span class="n">samples</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -486,7 +523,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=2bfb35b6"></script>
+    <script src="../../_static/documentation_options.js?v=c3e19674"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

@@ -1,4 +1,4 @@
-> built 2026-11-02 11:02 UTC from c37f08a (main) · voxy 0.0.57. Details: build_info.json
+> built 2026-11-02 11:10 UTC from 6525fe4 (main) · voxy 0.0.58. Details: build_info.json
 
 # index.html.md
 
@@ -4938,7 +4938,13 @@ Steps, each a seam (keyword argument of `replace_words`):
   times when there is none, since those are often early (a final /z/ left behind
   was heard as “Smith’s”). The render is trimmed, resampled, loudness-matched to
   what it replaces (`level`: by default the RMS of the loud frames on both
-  sides, `speech_level`, so pauses do not count), and crossfaded.
+  sides, `speech_level`, so pauses do not count), and crossfaded. With
+  `keep_pauses` (default), the pauses the cut removed are put back around the
+  render from the cut’s own edges, so they keep their length and their background.
+- `background(samples, sample_rate, length)`: what is mixed under the render so
+  the recording’s floor does not drop out while the new words play (default
+  `quiet_background`: the recording’s quietest frames, or nothing when even
+  those are not quiet, as in wall-to-wall audio; `None` for no background).
 - `verify`: checks of the result (default `heard_check`: the new words are
   transcribed where they were put, and the old ones are gone; `voice_check`
   compares the new phrase’s voice print with the rest of the recording’s,
@@ -4956,37 +4962,60 @@ Steps, each a seam (keyword argument of `replace_words`):
 >>> fixed = replace_words(speech, "smyth", "Smith", words=words, sample_rate=sr,
 ...                       render=lambda text: (tone(0.8, 0.9), sr), verify=())
 >>> fixed.replaced, round(fixed.start, 3), round(fixed.end, 3), fixed.passed
-((1.375, 2.625), 1.36, 2.16, None)
+((1.375, 2.625), 1.48, 2.28, None)
 ```
 
 ### Module Attributes
 
-| [`DFLT_MAX_MARGIN_MS`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_MAX_MARGIN_MS)      | How far a cut may sit from the phrase when the neighbouring gap is wider.       |
-|--------------------------------------------------------------------------|---------------------------------------------------------------------------------|
-| [`DFLT_SNAP_MS`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_SNAP_MS)            | How far past an ASR word boundary the cut may look for a quiet moment.          |
-| [`DFLT_QUIET_TOLERANCE_DB`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_QUIET_TOLERANCE_DB) | Frames within this many dB of the quietest count as equally quiet.              |
-| [`DFLT_LOUD_MARGIN_DB`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_LOUD_MARGIN_DB)     | Frames within this many dB of the loudest count as speech when matching levels. |
-| [`DFLT_CHECK_CONTEXT_S`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_CHECK_CONTEXT_S)    | Audio heard around the splice when checking it (ASR needs some context).        |
-| [`DFLT_RENDER_FORMATS`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_RENDER_FORMATS)     | ElevenLabs returns mp3 by default; raw PCM decodes without ffmpeg.              |
+| [`DFLT_MAX_MARGIN_MS`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_MAX_MARGIN_MS)        | How far a cut may sit from the phrase when the neighbouring gap is wider.                                                                              |
+|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`DFLT_SNAP_MS`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_SNAP_MS)              | How far past an ASR word boundary the cut may look for a quiet moment.                                                                                 |
+| [`DFLT_QUIET_TOLERANCE_DB`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_QUIET_TOLERANCE_DB)   | Frames within this many dB of the quietest count as equally quiet.                                                                                     |
+| [`DFLT_LOUD_MARGIN_DB`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_LOUD_MARGIN_DB)       | Frames within this many dB of the loudest count as speech when matching levels.                                                                        |
+| [`DFLT_CHECK_CONTEXT_S`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_CHECK_CONTEXT_S)      | Audio heard around the splice when checking it (ASR needs some context).                                                                               |
+| [`DFLT_PAUSE_DROP_DB`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_PAUSE_DROP_DB)        | A frame this far below the loudest of a stretch counts as pause, not speech.                                                                           |
+| [`DFLT_BACKGROUND_SHARE`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_BACKGROUND_SHARE)     | Share of the recording's frames, the quietest, that its background is built from.                                                                      |
+| [`DFLT_BACKGROUND_DROP_DB`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_BACKGROUND_DROP_DB)   | Those frames count as background only this far below the speech level, or further.                                                                     |
+| [`DFLT_BACKGROUND_SPREAD_DB`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_BACKGROUND_SPREAD_DB) |                                                                                                                                                        |
+| [`DFLT_PAUSE_ABOVE_FLOOR_DB`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_PAUSE_ABOVE_FLOOR_DB) | A frame within this much of the recording's floor counts as pause when padding: soft consonants (/f/, /s/, /h/, 25-35 dB below the vowel) stay speech. |
+| [`FLOOR_PERCENTILE`](_autosummary/voxy.splice.html.md#voxy.splice.FLOOR_PERCENTILE)          | this percentile of its frame levels.                                                                                                                   |
+| [`DFLT_RENDER_FORMATS`](_autosummary/voxy.splice.html.md#voxy.splice.DFLT_RENDER_FORMATS)       | ElevenLabs returns mp3 by default; raw PCM decodes without ffmpeg.                                                                                     |
 
 ### Functions
 
-| [`crossfade_join`](_autosummary/voxy.splice.html.md#voxy.splice.crossfade_join)(head, middle, tail, \*, fade)      | `(head + middle + tail, where middle starts in it)`, with linear crossfades of up to `fade` samples at each join (shorter where a piece is too short; none at an edge of the audio).              |
-|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`cut_points`](_autosummary/voxy.splice.html.md#voxy.splice.cut_points)(samples, sample_rate, words, ...)      | Where to cut (s): the quietest moment before `words[first]` and after `words[last]`, searched in the gap to the neighbouring word (up to `max_margin`) and at least `snap` past the ASR boundary. |
-| [`find_phrase`](_autosummary/voxy.splice.html.md#voxy.splice.find_phrase)(words, phrase, \*[, occurrence])      | Indices `(first, last)` of the `occurrence`-th run of ASR words saying `phrase`.                                                                                                                  |
-| [`heard_check`](_autosummary/voxy.splice.html.md#voxy.splice.heard_check)(\*[, transcriber, context, heard_as]) | A check: are the new words transcribed where they were spliced in, and the old gone?                                                                                                              |
-| [`match_loudness`](_autosummary/voxy.splice.html.md#voxy.splice.match_loudness)(samples, reference, ...[, ...])    | `samples` scaled to `reference`'s `level`, its peak capped at `peak`.                                                                                                                             |
-| [`quietest`](_autosummary/voxy.splice.html.md#voxy.splice.quietest)(samples, sample_rate, lo, hi, \*[, ...]) | The time (s) of the quietest frame in `[lo, hi]`; of equally quiet frames (within `tolerance_db`), the one nearest the middle of the window.                                                      |
-| [`replace_words`](_autosummary/voxy.splice.html.md#voxy.splice.replace_words)(audio, old, new, \*[, voice, ...])  | Replace the spoken phrase `old` with `new`, rendered in `voice`.                                                                                                                                  |
-| [`speech_level`](_autosummary/voxy.splice.html.md#voxy.splice.speech_level)(samples, sample_rate, \*[, ...])     | RMS of the loud frames (within `margin_db` of the loudest), so that pauses do not lower it; plain RMS when there is no full frame.                                                                |
-| [`tts_render`](_autosummary/voxy.splice.html.md#voxy.splice.tts_render)([voice, backend, voices, ...])         | A `render` speaking the text with `voxy.text_to_speech` in `voice`.                                                                                                                               |
-| [`voice_check`](_autosummary/voxy.splice.html.md#voxy.splice.voice_check)(\*[, embed, min_similarity, window])  | A check: does the new phrase sound like the rest of the recording's speaker?                                                                                                                      |
+| [`cap_peak`](_autosummary/voxy.splice.html.md#voxy.splice.cap_peak)(samples[, peak])                          | `samples`, scaled down if needed so that no sample exceeds `peak`.                                                                                                                                |
+|-----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`crossfade_join`](_autosummary/voxy.splice.html.md#voxy.splice.crossfade_join)(head, middle, tail, \*, fade)       | `(head + middle + tail, where middle starts in it)`, with linear crossfades of up to `fade` samples at each join (shorter where a piece is too short; none at an edge of the audio).              |
+| [`cut_points`](_autosummary/voxy.splice.html.md#voxy.splice.cut_points)(samples, sample_rate, words, ...)       | Where to cut (s): the quietest moment before `words[first]` and after `words[last]`, searched in the gap to the neighbouring word (up to `max_margin`) and at least `snap` past the ASR boundary. |
+| [`edge_pauses`](_autosummary/voxy.splice.html.md#voxy.splice.edge_pauses)(samples, sample_rate, \*[, ...])       | Seconds of pause at the start and at the end of `samples`: frames at or below `quiet_db` when given (e.g. the recording's floor plus a margin), else more than `drop_db` below its loudest frame. |
+| [`find_phrase`](_autosummary/voxy.splice.html.md#voxy.splice.find_phrase)(words, phrase, \*[, occurrence])       | Indices `(first, last)` of the `occurrence`-th run of ASR words saying `phrase`.                                                                                                                  |
+| [`heard_check`](_autosummary/voxy.splice.html.md#voxy.splice.heard_check)(\*[, transcriber, context, heard_as])  | A check: are the new words transcribed where they were spliced in, and the old gone?                                                                                                              |
+| [`match_loudness`](_autosummary/voxy.splice.html.md#voxy.splice.match_loudness)(samples, reference, ...[, ...])     | `samples` scaled to `reference`'s `level`, its peak capped at `peak`.                                                                                                                             |
+| [`quiet_background`](_autosummary/voxy.splice.html.md#voxy.splice.quiet_background)(samples, sample_rate, length, \*) | `length` samples of the recording's background, or `None` when it has none quiet enough to trust.                                                                                                 |
+| [`quietest`](_autosummary/voxy.splice.html.md#voxy.splice.quietest)(samples, sample_rate, lo, hi, \*[, ...])  | The time (s) of the quietest frame in `[lo, hi]`; of equally quiet frames (within `tolerance_db`), the one nearest the middle of the window.                                                      |
+| [`recording_floor`](_autosummary/voxy.splice.html.md#voxy.splice.recording_floor)(samples, sample_rate)              | The level (dB) of a recording's background: a low percentile of its frames.                                                                                                                       |
+| [`replace_words`](_autosummary/voxy.splice.html.md#voxy.splice.replace_words)(audio, old, new, \*[, voice, ...])   | Replace the spoken phrase `old` with `new`, rendered in `voice`.                                                                                                                                  |
+| [`speech_level`](_autosummary/voxy.splice.html.md#voxy.splice.speech_level)(samples, sample_rate, \*[, ...])      | RMS of the loud frames (within `margin_db` of the loudest), so that pauses do not lower it; plain RMS when there is no full frame.                                                                |
+| [`tts_render`](_autosummary/voxy.splice.html.md#voxy.splice.tts_render)([voice, backend, voices, ...])          | A `render` speaking the text with `voxy.text_to_speech` in `voice`.                                                                                                                               |
+| [`voice_check`](_autosummary/voxy.splice.html.md#voxy.splice.voice_check)(\*[, embed, min_similarity, window])   | A check: does the new phrase sound like the rest of the recording's speaker?                                                                                                                      |
 
 ### Classes
 
 | [`Replacement`](_autosummary/voxy.splice.html.md#voxy.splice.Replacement)(speech, old, new, start, end, ...)   | A corrected recording, where the new phrase is, and what the checks found.   |
 |---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+
+### voxy.splice.DFLT_BACKGROUND_DROP_DB *= 20.0*
+
+Those frames count as background only this far below the speech level, or further.
+
+### voxy.splice.DFLT_BACKGROUND_SHARE *= 0.05*
+
+Share of the recording’s frames, the quietest, that its background is built from.
+
+### voxy.splice.DFLT_BACKGROUND_SPREAD_DB *= 6.0*
+
+… and its quiet frames must be steady (within this spread), as noise is and
+speech or music is not.
 
 ### voxy.splice.DFLT_CHECK_CONTEXT_S *= 1.0*
 
@@ -5000,6 +5029,15 @@ Frames within this many dB of the loudest count as speech when matching levels.
 
 How far a cut may sit from the phrase when the neighbouring gap is wider.
 
+### voxy.splice.DFLT_PAUSE_ABOVE_FLOOR_DB *= 10.0*
+
+A frame within this much of the recording’s floor counts as pause when padding:
+soft consonants (/f/, /s/, /h/, 25-35 dB below the vowel) stay speech.
+
+### voxy.splice.DFLT_PAUSE_DROP_DB *= 25.0*
+
+A frame this far below the loudest of a stretch counts as pause, not speech.
+
 ### voxy.splice.DFLT_QUIET_TOLERANCE_DB *= 1.0*
 
 Frames within this many dB of the quietest count as equally quiet.
@@ -5011,6 +5049,13 @@ ElevenLabs returns mp3 by default; raw PCM decodes without ffmpeg.
 ### voxy.splice.DFLT_SNAP_MS *= 80*
 
 How far past an ASR word boundary the cut may look for a quiet moment.
+
+### voxy.splice.FLOOR_PERCENTILE *= 5*
+
+this percentile of its frame levels.
+
+* **Type:**
+  The recording’s floor
 
 ### *class* voxy.splice.Replacement(speech, old, new, start, end, replaced, checks=list())
 
@@ -5032,6 +5077,18 @@ Write the WAV to `path`.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.splice.cap_peak(samples, peak=0.99)
+
+`samples`, scaled down if needed so that no sample exceeds `peak`.
+
+```pycon
+>>> cap_peak(np.array([0.5, -2.0]), 1.0).tolist()
+[0.25, -1.0]
+```
+
+* **Return type:**
+  `ndarray`
 
 ### voxy.splice.crossfade_join(head, middle, tail, , fade)
 
@@ -5064,6 +5121,21 @@ edge of the audio is cut at that edge.
 >>> ws = [{"start": 0, "end": 1}, {"start": 1.2, "end": 2.2}, {"start": 3.2, "end": 4.2}]
 >>> cut_points(x, sr, ws, 1, 1), cut_points(x, sr, ws, 0, 0)[0], cut_points(x, sr, ws, 2, 2)[1]
 ((1.095, 2.325), 0.0, 4.2)
+```
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`float`](https://docs.python.org/3/builtins/functions.html#float), [`float`](https://docs.python.org/3/builtins/functions.html#float)]
+
+### voxy.splice.edge_pauses(samples, sample_rate, , quiet_db=None, drop_db=25.0)
+
+Seconds of pause at the start and at the end of `samples`: frames at or below
+`quiet_db` when given (e.g. the recording’s floor plus a margin), else more than
+`drop_db` below its loudest frame.
+
+```pycon
+>>> x = np.concatenate([np.zeros(800), 0.5 * np.ones(1600), np.zeros(2400)])
+>>> edge_pauses(x, 8000)
+(0.1, 0.3)
 ```
 
 * **Return type:**
@@ -5109,6 +5181,32 @@ and not at all when the new phrase contains it.
 * **Return type:**
   `ndarray`
 
+### voxy.splice.quiet_background(samples, sample_rate, length, , share=0.05, drop_db=20.0, spread_db=6.0)
+
+`length` samples of the recording’s background, or `None` when it has none
+quiet enough to trust.
+
+The background is made of the quietest `share` of its 10 ms frames, in time
+order, overlap-added (`_overlap_add`) and cycled to `length`. It is used only
+when every one of those frames is at least `drop_db` below `speech_level` and
+they are steady (within `spread_db` of each other): otherwise they would carry
+speech (a recording with no pause) or music (wall-to-wall audio), and nothing is
+better than that under the new words.
+O(len(samples)).
+
+```pycon
+>>> rng = np.random.default_rng(0)
+>>> x = np.concatenate([np.full(4000, 0.5), 0.005 * rng.standard_normal(2400)])
+>>> bg = quiet_background(x, 8000, 5000)
+>>> len(bg), round(float(np.sqrt(np.mean(bg**2))), 4)  # the floor's quietest frames
+(5000, 0.0044)
+>>> print(quiet_background(np.full(8000, 0.5), 8000, 5000))  # wall-to-wall
+None
+```
+
+* **Return type:**
+  `ndarray` | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### voxy.splice.quietest(samples, sample_rate, lo, hi, , tolerance_db=1.0, fallback=None)
 
 The time (s) of the quietest frame in `[lo, hi]`; of equally quiet frames
@@ -5127,7 +5225,21 @@ frame lies there (an empty window, or one past the last full frame):
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
-### voxy.splice.replace_words(audio, old, new, \*, voice=None, render=None, words=None, transcriber=None, sample_rate=None, occurrence=0, crossfade_ms=15, max_margin_ms=250, snap_ms=80, level=<function speech_level>, verify=None)
+### voxy.splice.recording_floor(samples, sample_rate)
+
+The level (dB) of a recording’s background: a low percentile of its frames.
+
+```pycon
+>>> rng = np.random.default_rng(0)
+>>> x = np.concatenate([0.5 * np.ones(8000), 0.01 * rng.standard_normal(8000)])
+>>> round(recording_floor(x, 8000))
+-41
+```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
+### voxy.splice.replace_words(audio, old, new, \*, voice=None, render=None, words=None, transcriber=None, sample_rate=None, occurrence=0, crossfade_ms=15, max_margin_ms=250, snap_ms=80, level=<function speech_level>, keep_pauses=True, background=<function quiet_background>, verify=None)
 
 Replace the spoken phrase `old` with `new`, rendered in `voice`.
 
@@ -5149,6 +5261,13 @@ Replace the spoken phrase `old` with `new`, rendered in `voice`.
   * **snap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – How far past an ASR boundary a cut may look for quiet.
   * **level** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)], [`float`](https://docs.python.org/3/builtins/functions.html#float)]) – `(samples, sample_rate) -> level` the render is matched on;
     default `speech_level` (e.g. `partial(speech_level, margin_db=10)`).
+  * **keep_pauses** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Put back, around the render, the pauses at the edges of the
+    cut (taken from the cut itself, background included), so the pauses
+    keep their length; `False` for the tighter splice.
+  * **background** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int), [`int`](https://docs.python.org/3/builtins/functions.html#int)], `ndarray` | [`None`](https://docs.python.org/3/builtins/constants.html#None)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(samples, sample_rate, length) -> samples or None`: what to
+    mix under the render (`None` from it: nothing); default
+    `quiet_background`, which gives nothing for audio with no quiet
+    frames (wall-to-wall speech or music); `None` for no background.
   * **verify** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int), [`Replacement`](_autosummary/voxy.splice.html.md#voxy.splice.Replacement)], [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)] | [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int), [`Replacement`](_autosummary/voxy.splice.html.md#voxy.splice.Replacement)], [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A check or checks (`(samples, sample_rate, replacement) -> dict`
     with a `passed` key); default `heard_check`; `()` for none.
 * **Return type:**
@@ -5456,19 +5575,30 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 | [`WAVE_FORMAT_FLOAT`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_FLOAT)      | integer PCM, IEEE float, and the extensible wrapper.                       |
 | [`WAVE_FORMAT_EXTENSIBLE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE) | integer PCM, IEEE float, and the extensible wrapper.                       |
 | [`TRAILING_CHUNK_IDS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.TRAILING_CHUNK_IDS)     | Chunks that can follow audio whose `data` size is a streaming placeholder. |
+| [`DFLT_LOWPASS_TAPS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.DFLT_LOWPASS_TAPS)      | Taps of the anti-aliasing filter applied before downsampling (odd).        |
+| [`DFLT_LOWPASS_SHARE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.DFLT_LOWPASS_SHARE)     | The filter's cutoff, as a share of the target rate's Nyquist frequency.    |
 
 ### Functions
 
-| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                                                           |
-|---------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`pcm_to_float`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1).                                       |
-| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads what [`read_wav_channels()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels) reads. |
-| [`read_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels)(source)                        | `(samples (frames, channels), sample_rate)` of a WAV (path or bytes).                                                                                        |
-| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).                                                                             |
-| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                                                                |
-| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                                                            |
-| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                                                                |
-| [`write_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav_channels)(samples, sample_rate)         | 32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono), lossless, for handing audio to another process.                                     |
+| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                                                                                                                                  |
+|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`lowpass`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.lowpass)(samples, cutoff_hz, sample_rate, \*)     | `samples` with what lies above `cutoff_hz` removed (windowed-sinc FIR, Blackman window, zero phase: same length, no delay).                                                                                                         |
+| [`pcm_to_float`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1).                                                                                                              |
+| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads what [`read_wav_channels()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels) reads.                                                                        |
+| [`read_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels)(source)                        | `(samples (frames, channels), sample_rate)` of a WAV (path or bytes).                                                                                                                                                               |
+| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below the target's Nyquist frequency first when downsampling (so a 24 kHz render put into an 8 kHz recording does not alias), then linear interpolation. |
+| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                                                                                                                                       |
+| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                                                                                                                                   |
+| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                                                                                                                                       |
+| [`write_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav_channels)(samples, sample_rate)         | 32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono), lossless, for handing audio to another process.                                                                                                            |
+
+### voxy.wavutil.DFLT_LOWPASS_SHARE *= 0.95*
+
+The filter’s cutoff, as a share of the target rate’s Nyquist frequency.
+
+### voxy.wavutil.DFLT_LOWPASS_TAPS *= 255*
+
+Taps of the anti-aliasing filter applied before downsampling (odd).
 
 ### voxy.wavutil.TRAILING_CHUNK_IDS *= re.compile(b'LIST|id3 |ID3 |fact|cue |smpl|bext|JUNK|PAD |iXML|_PMX|acid|inst|plst')*
 
@@ -5503,6 +5633,21 @@ RMS level (dBFS) of consecutive `frame_ms` frames.
 >>> frame_db(np.zeros(160), 8000).round().tolist()
 [-100.0, -100.0]
 ```
+
+### voxy.wavutil.lowpass(samples, cutoff_hz, sample_rate, , taps=255)
+
+`samples` with what lies above `cutoff_hz` removed (windowed-sinc FIR,
+Blackman window, zero phase: same length, no delay).
+
+```pycon
+>>> sr = 48000; t = np.arange(sr) / sr
+>>> hiss = lowpass(np.sin(2 * np.pi * 12000 * t), 4000, sr)
+>>> bool(np.abs(hiss[1000:-1000]).max() < 0.01)
+True
+```
+
+* **Return type:**
+  `ndarray`
 
 ### voxy.wavutil.pcm_to_float(raw, width=2)
 
@@ -5545,7 +5690,9 @@ at a trailing chunk such as `LIST`, or at the end of the file).
 
 ### voxy.wavutil.resample(samples, from_rate, to_rate)
 
-Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).
+Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below
+the target’s Nyquist frequency first when downsampling (so a 24 kHz render put into
+an 8 kHz recording does not alias), then linear interpolation.
 
 ```pycon
 >>> len(resample(np.zeros(100), 8000, 16000))
@@ -6015,16 +6162,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 11:02 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/c37f08a391a8627645c3ae16aa64af60aef2f9f5"><code>c37f08a</code></a> on branch <code>main</code>, for **voxy 0.0.57** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 11:10 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/6525fe448b4d03765bfeac16feccaf8a203ad821"><code>6525fe4</code></a> on branch <code>main</code>, for **voxy 0.0.58** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.58) is behind the latest release on PyPI (0.0.59): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/c37f08a391a8627645c3ae16aa64af60aef2f9f5"><code>c37f08a391a8627645c3ae16aa64af60aef2f9f5</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/6525fe448b4d03765bfeac16feccaf8a203ad821"><code>6525fe448b4d03765bfeac16feccaf8a203ad821</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6035,9 +6184,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41433139015">41433139015</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41434286689">41434286689</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>c37f08a391a8627645c3ae16aa64af60aef2f9f5</code> (in the history of the built commit) |
+| Event commit | <code>6525fe448b4d03765bfeac16feccaf8a203ad821</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6062,13 +6211,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.57/">0.0.57</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.59/">0.0.59</a>, newer than the documented version (0.0.58).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout c37f08a391a8627645c3ae16aa64af60aef2f9f5
+git checkout 6525fe448b4d03765bfeac16feccaf8a203ad821
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

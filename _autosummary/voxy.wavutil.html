@@ -168,6 +168,12 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.TRAILING_CHUNK_IDS" title="voxy.wavutil.TRAILING_CHUNK_IDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TRAILING_CHUNK_IDS</span></code></a></p></td>
 <td><p>Chunks that can follow audio whose <code class="docutils literal notranslate"><span class="pre">data</span></code> size is a streaming placeholder.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.DFLT_LOWPASS_TAPS" title="voxy.wavutil.DFLT_LOWPASS_TAPS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_LOWPASS_TAPS</span></code></a></p></td>
+<td><p>Taps of the anti-aliasing filter applied before downsampling (odd).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.DFLT_LOWPASS_SHARE" title="voxy.wavutil.DFLT_LOWPASS_SHARE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_LOWPASS_SHARE</span></code></a></p></td>
+<td><p>The filter's cutoff, as a share of the target rate's Nyquist frequency.</p></td>
+</tr>
 </tbody>
 </table>
 <p class="rubric">Functions</p>
@@ -176,32 +182,45 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.frame_db" title="voxy.wavutil.frame_db"><code class="xref py py-obj docutils literal notranslate"><span class="pre">frame_db</span></code></a>(samples, sample_rate, *[, frame_ms])</p></td>
 <td><p>RMS level (dBFS) of consecutive <code class="docutils literal notranslate"><span class="pre">frame_ms</span></code> frames.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.pcm_to_float" title="voxy.wavutil.pcm_to_float"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pcm_to_float</span></code></a>(raw[, width])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.lowpass" title="voxy.wavutil.lowpass"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lowpass</span></code></a>(samples, cutoff_hz, sample_rate, *)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">samples</span></code> with what lies above <code class="docutils literal notranslate"><span class="pre">cutoff_hz</span></code> removed (windowed-sinc FIR, Blackman window, zero phase: same length, no delay).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.pcm_to_float" title="voxy.wavutil.pcm_to_float"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pcm_to_float</span></code></a>(raw[, width])</p></td>
 <td><p>Little-endian PCM samples of <code class="docutils literal notranslate"><span class="pre">width</span></code> bytes as floats in about <code class="docutils literal notranslate"><span class="pre">[-1,</span> <span class="pre">1]</span></code> (the most negative sample is a hair below -1).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.read_wav" title="voxy.wavutil.read_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_wav</span></code></a>(source)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.read_wav" title="voxy.wavutil.read_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_wav</span></code></a>(source)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">(samples,</span> <span class="pre">sample_rate)</span></code> of a WAV (path or bytes), channels averaged; reads what <a class="reference internal" href="#voxy.wavutil.read_wav_channels" title="voxy.wavutil.read_wav_channels"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_wav_channels()</span></code></a> reads.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.read_wav_channels" title="voxy.wavutil.read_wav_channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_wav_channels</span></code></a>(source)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.read_wav_channels" title="voxy.wavutil.read_wav_channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_wav_channels</span></code></a>(source)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">(samples</span> <span class="pre">(frames,</span> <span class="pre">channels),</span> <span class="pre">sample_rate)</span></code> of a WAV (path or bytes).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.resample" title="voxy.wavutil.resample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resample</span></code></a>(samples, from_rate, to_rate)</p></td>
-<td><p>Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.resample" title="voxy.wavutil.resample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resample</span></code></a>(samples, from_rate, to_rate)</p></td>
+<td><p>Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below the target's Nyquist frequency first when downsampling (so a 24 kHz render put into an 8 kHz recording does not alias), then linear interpolation.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.silence" title="voxy.wavutil.silence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">silence</span></code></a>(ms, sample_rate)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.silence" title="voxy.wavutil.silence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">silence</span></code></a>(ms, sample_rate)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ms</span></code> milliseconds of silence.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.trim_silence" title="voxy.wavutil.trim_silence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trim_silence</span></code></a>(samples, sample_rate, *[, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.trim_silence" title="voxy.wavutil.trim_silence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trim_silence</span></code></a>(samples, sample_rate, *[, ...])</p></td>
 <td><p>Drop leading and trailing frames quieter than <code class="docutils literal notranslate"><span class="pre">threshold_db</span></code> (keeping <code class="docutils literal notranslate"><span class="pre">keep_ms</span></code>).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.write_wav" title="voxy.wavutil.write_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_wav</span></code></a>(samples, sample_rate)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.write_wav" title="voxy.wavutil.write_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_wav</span></code></a>(samples, sample_rate)</p></td>
 <td><p>Mono 16-bit PCM WAV bytes from floats in <code class="docutils literal notranslate"><span class="pre">[-1,</span> <span class="pre">1]</span></code> (clipped).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.write_wav_channels" title="voxy.wavutil.write_wav_channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_wav_channels</span></code></a>(samples, sample_rate)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.write_wav_channels" title="voxy.wavutil.write_wav_channels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_wav_channels</span></code></a>(samples, sample_rate)</p></td>
 <td><p>32-bit float WAV bytes of <code class="docutils literal notranslate"><span class="pre">samples</span></code> <code class="docutils literal notranslate"><span class="pre">(frames,</span> <span class="pre">channels)</span></code> (or 1-D: mono), lossless, for handing audio to another process.</p></td>
 </tr>
 </tbody>
 </table>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.wavutil.DFLT_LOWPASS_SHARE">
+<span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">DFLT_LOWPASS_SHARE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.95</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.DFLT_LOWPASS_SHARE" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.DFLT_LOWPASS_SHARE'">¶</a></dt>
+<dd><p>The filter’s cutoff, as a share of the target rate’s Nyquist frequency.</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.wavutil.DFLT_LOWPASS_TAPS">
+<span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">DFLT_LOWPASS_TAPS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">255</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.DFLT_LOWPASS_TAPS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.DFLT_LOWPASS_TAPS'">¶</a></dt>
+<dd><p>Taps of the anti-aliasing filter applied before downsampling (odd).</p>
+</dd></dl>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.wavutil.TRAILING_CHUNK_IDS">
 <span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">TRAILING_CHUNK_IDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">re.compile(b'LIST|id3</span> <span class="pre">|ID3</span> <span class="pre">|fact|cue</span> <span class="pre">|smpl|bext|JUNK|PAD</span> <span class="pre">|iXML|_PMX|acid|inst|plst')</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.TRAILING_CHUNK_IDS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.TRAILING_CHUNK_IDS'">¶</a></dt>
@@ -246,6 +265,23 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 </span></code></pre></div>
 </div>
 <dl class="field-list simple">
+</dl>
+</dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.wavutil.lowpass">
+<span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">lowpass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cutoff_hz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">taps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">255</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/wavutil.html#lowpass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.lowpass" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.lowpass'">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">samples</span></code> with what lies above <code class="docutils literal notranslate"><span class="pre">cutoff_hz</span></code> removed (windowed-sinc FIR,
+Blackman window, zero phase: same length, no delay).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">sr</span> <span class="o">=</span> <span class="mi">48000</span><span class="p">;</span> <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">sr</span><span class="p">)</span> <span class="o">/</span> <span class="n">sr</span>
+</span><span id="line-2"><span class="gp">&gt;&gt;&gt; </span><span class="n">hiss</span> <span class="o">=</span> <span class="n">lowpass</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="mi">12000</span> <span class="o">*</span> <span class="n">t</span><span class="p">),</span> <span class="mi">4000</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
+</span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hiss</span><span class="p">[</span><span class="mi">1000</span><span class="p">:</span><span class="o">-</span><span class="mi">1000</span><span class="p">])</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.01</span><span class="p">)</span>
+</span><span id="line-4"><span class="go">True</span>
+</span></code></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></span></p>
+</dd>
 </dl>
 </dd></dl>
 <dl class="py function">
@@ -296,7 +332,9 @@ at a trailing chunk such as <code class="docutils literal notranslate"><span cla
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.wavutil.resample">
 <span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">resample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/wavutil.html#resample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.resample" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.resample'">¶</a></dt>
-<dd><p>Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).</p>
+<dd><p>Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below
+the target’s Nyquist frequency first when downsampling (so a 24 kHz render put into
+an 8 kHz recording does not alias), then linear interpolation.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="mi">8000</span><span class="p">,</span> <span class="mi">16000</span><span class="p">))</span>
 </span><span id="line-2"><span class="go">200</span>
 </span></code></pre></div>
@@ -368,11 +406,14 @@ lossless, for handing audio to another process.</p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
+<li><a :data-current="activeSection === '#voxy.wavutil.DFLT_LOWPASS_SHARE'" class="reference internal" href="#voxy.wavutil.DFLT_LOWPASS_SHARE"><code class="docutils literal notranslate"><span class="pre">DFLT_LOWPASS_SHARE</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.wavutil.DFLT_LOWPASS_TAPS'" class="reference internal" href="#voxy.wavutil.DFLT_LOWPASS_TAPS"><code class="docutils literal notranslate"><span class="pre">DFLT_LOWPASS_TAPS</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.TRAILING_CHUNK_IDS'" class="reference internal" href="#voxy.wavutil.TRAILING_CHUNK_IDS"><code class="docutils literal notranslate"><span class="pre">TRAILING_CHUNK_IDS</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE'" class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE"><code class="docutils literal notranslate"><span class="pre">WAVE_FORMAT_EXTENSIBLE</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.WAVE_FORMAT_FLOAT'" class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_FLOAT"><code class="docutils literal notranslate"><span class="pre">WAVE_FORMAT_FLOAT</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.WAVE_FORMAT_PCM'" class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_PCM"><code class="docutils literal notranslate"><span class="pre">WAVE_FORMAT_PCM</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.frame_db'" class="reference internal" href="#voxy.wavutil.frame_db"><code class="docutils literal notranslate"><span class="pre">frame_db()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.wavutil.lowpass'" class="reference internal" href="#voxy.wavutil.lowpass"><code class="docutils literal notranslate"><span class="pre">lowpass()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.pcm_to_float'" class="reference internal" href="#voxy.wavutil.pcm_to_float"><code class="docutils literal notranslate"><span class="pre">pcm_to_float()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.read_wav'" class="reference internal" href="#voxy.wavutil.read_wav"><code class="docutils literal notranslate"><span class="pre">read_wav()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.read_wav_channels'" class="reference internal" href="#voxy.wavutil.read_wav_channels"><code class="docutils literal notranslate"><span class="pre">read_wav_channels()</span></code></a></li>
@@ -394,7 +435,7 @@ lossless, for handing audio to another process.</p>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=2bfb35b6"></script>
+<script src="../_static/documentation_options.js?v=c3e19674"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

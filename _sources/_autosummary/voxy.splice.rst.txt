@@ -13,18 +13,28 @@ voxy.splice
       DFLT_QUIET_TOLERANCE_DB
       DFLT_LOUD_MARGIN_DB
       DFLT_CHECK_CONTEXT_S
+      DFLT_PAUSE_DROP_DB
+      DFLT_BACKGROUND_SHARE
+      DFLT_BACKGROUND_DROP_DB
+      DFLT_BACKGROUND_SPREAD_DB
+      DFLT_PAUSE_ABOVE_FLOOR_DB
+      FLOOR_PERCENTILE
       DFLT_RENDER_FORMATS
    
    .. rubric:: Functions
 
    .. autosummary::
    
+      cap_peak
       crossfade_join
       cut_points
+      edge_pauses
       find_phrase
       heard_check
       match_loudness
+      quiet_background
       quietest
+      recording_floor
       replace_words
       speech_level
       tts_render

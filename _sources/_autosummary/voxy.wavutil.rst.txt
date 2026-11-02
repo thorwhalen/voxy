@@ -12,12 +12,15 @@ voxy.wavutil
       WAVE_FORMAT_FLOAT
       WAVE_FORMAT_EXTENSIBLE
       TRAILING_CHUNK_IDS
+      DFLT_LOWPASS_TAPS
+      DFLT_LOWPASS_SHARE
    
    .. rubric:: Functions
 
    .. autosummary::
    
       frame_db
+      lowpass
       pcm_to_float
       read_wav
       read_wav_channels
