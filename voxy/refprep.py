@@ -679,7 +679,7 @@ def latest_runs(manifest: Iterable[Mapping]) -> list[Mapping]:
 
     >>> m = [{"key": "a1", "source_path": "/a", "run": "20260101T000000.000000Z-x"},
     ...      {"key": "a2", "source_path": "/a", "run": "20261101T000000.000000Z-y"},
-    ...      {"key": "a0", "source": "/a"},
+    ...      {"key": "a0", "source_path": "/a"},
     ...      {"key": "b1", "source_path": "/b"},
     ...      {"key": "t", "source": "tape.wav"}]
     >>> [e["key"] for e in latest_runs(m)]

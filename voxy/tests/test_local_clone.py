@@ -646,20 +646,21 @@ def test_forget_keeps_files_a_remaining_entry_names_or_shares_a_slug_with():
     samples = {
         k: b"x" for k in ("clips/a-0001.wav", "clips/a-0002.wav", "conditioned/a.wav")
     }
+    a, b = (
+        os.path.realpath("/s/a.wav"),
+        os.path.realpath("/s/b.wav"),
+    )  # a drive on Windows
     _set_manifest(
         samples,
         [
-            {"key": "clips/a-0001.wav", "slug": "a", "source_path": "/s/a.wav"},
-            {"key": "clips/a-0002.wav", "slug": "a", "source_path": "/s/a.wav"},
-            {
-                "key": "clips/a-0002.wav",
-                "source_path": "/s/b.wav",
-            },  # corrupt: b names it
+            {"key": "clips/a-0001.wav", "slug": "a", "source_path": a},
+            {"key": "clips/a-0002.wav", "slug": "a", "source_path": a},
+            {"key": "clips/a-0002.wav", "source_path": b},  # corrupt: b names it
         ],
     )
-    assert refprep.forget(samples, "/s/a.wav") == []
+    assert refprep.forget(samples, a) == []
     assert len(_keys(samples, "clips/")) == 2 and "conditioned/a.wav" in samples
-    assert [e["source_path"] for e in refprep.load_manifest(samples)] == ["/s/b.wav"]
+    assert [e["source_path"] for e in refprep.load_manifest(samples)] == [b]
 
 
 def test_forget_matches_old_entries_only_by_absolute_real_path():
