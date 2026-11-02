@@ -220,6 +220,43 @@ def test_worker_pool_makes_each_worker_once_across_threads():
     assert len(made) == 3  # a fresh worker after close
 
 
+def test_transcription_from_threads_starts_one_asr_worker(monkeypatch):
+    """The real wiring: refprep's pool, four threads transcribing at once (#78)."""
+    import threading
+    import time
+
+    made = []
+
+    class FakeASR:
+        def call(self, op, **request):
+            return {"segments": []}
+
+        def close(self):
+            pass
+
+    def make(spec, adapter, **key):
+        made.append((adapter, key["rootdir"]))
+        time.sleep(0.05)
+        return FakeASR()
+
+    monkeypatch.setattr(refprep._ASR_POOL, "_make", make)
+    refprep.close_asr()
+    try:
+        threads = [
+            threading.Thread(
+                target=refprep.transcribe, args=("a.wav",), kwargs={"rootdir": r}
+            )
+            for r in (None, "", None, "")
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert made == [("asr", None)]  # "" is the default data root, like None
+    finally:
+        refprep.close_asr()
+
+
 def test_ensure_env_builds_once_then_reuses(tmp_path):
     spec = EnvSpec("demo", ("numpy",))
     commands = []

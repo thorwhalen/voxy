@@ -21,8 +21,12 @@ import tempfile
 import threading
 from collections.abc import Mapping
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from voxy.workers import SERVE_SCRIPT
+
+if TYPE_CHECKING:
+    from voxy.envs import EnvSpec
 
 LOG_TAIL_CHARS = 2000
 
@@ -155,7 +159,7 @@ class Worker:
 
 
 def env_worker(
-    spec,
+    spec: "EnvSpec",
     adapter: str,
     *,
     model: str,
@@ -189,7 +193,7 @@ class WorkerPool:
             ``env_worker``.
     """
 
-    def __init__(self, spec, adapter: str, *, make=env_worker):
+    def __init__(self, spec: "EnvSpec", adapter: str, *, make=env_worker):
         self.spec, self.adapter, self._make = spec, adapter, make
         self._workers: dict[tuple, Worker] = {}
         self._lock = threading.Lock()
@@ -201,7 +205,12 @@ class WorkerPool:
         rootdir: str | os.PathLike | None = None,
     ) -> "Worker":
         """The worker for this model, threads and data root (made on first use)."""
+        rootdir = rootdir or None  # "" is the default data root, like None
         key = (model, threads, None if rootdir is None else str(rootdir))
+        if (worker := self._workers.get(key)) is not None:
+            return worker
+        # One lock for the whole pool, not one per key: every key builds into the
+        # same environment folder, and two uv installs there at once would clash.
         with self._lock:
             if key not in self._workers:
                 self._workers[key] = self._make(
@@ -218,4 +227,7 @@ class WorkerPool:
         with self._lock:
             workers, self._workers = list(self._workers.values()), {}
         for worker in workers:
-            worker.close()
+            try:
+                worker.close()
+            except Exception:  # noqa: BLE001 - one stuck worker must not keep the rest
+                pass
