@@ -1,36 +1,52 @@
 """
-French heteronyms from Lexique: every spelling with more than one pronunciation.
+French heteronyms derived from Lexique, to merge under voxy's hand-made table.
 
 Lexique (New, Pallier et al., http://www.lexique.org) lists about 140 000 French
-word forms with their pronunciation, part of speech and frequency. Its homographs
-that are not homophones (*est* /ɛ/ or /ɛst/, *couvent* /kuv/ or /kuvɑ̃/,
-*président*...) are the words a speech model can misread. voxy ships only a short
-hand-made table (``voxy.pronounce.heteronym_readings``) and no Lexique data, so
-derive the full table from your own copy:
+word forms with their pronunciation, lemma, part of speech and frequency. Its
+homographs that are not homophones (*est* /ɛ/ or /ɛst/, *couvent* /kuv/ or /kuvɑ̃/,
+*président*...) are words a speech model can misread. voxy ships a short hand-made
+table (``voxy.pronounce.heteronym_readings``) and no Lexique data, so derive more
+from your own copy and let the hand-made readings win:
 
     >>> from voxy.lexique import lexique_heteronyms                     # doctest: +SKIP
-    >>> table = lexique_heteronyms("Lexique383.tsv", min_frequency=1)   # doctest: +SKIP
-    >>> table["couvent"]                                                # doctest: +SKIP
+    >>> from voxy.pronounce import heteronym_readings                   # doctest: +SKIP
+    >>> derived = lexique_heteronyms("Lexique383.tsv", min_frequency=1) # doctest: +SKIP
+    >>> table = {**derived, **heteronym_readings("fr")}                 # doctest: +SKIP
+    >>> derived["couvent"]                                              # doctest: +SKIP
     {'noun': 'kuvɑ̃', 'verb': 'kuv'}
 
+The derived table is not complete. Lexique stores one pronunciation per spelling,
+part of speech and lemma, and no liaison or variant readings, so heteronyms that
+differ only there are missing from it: *tous*, *os*, *six*, *dix*, *christ*,
+*lacs*, *fait*. It extends the hand-made table; it does not replace it.
+
 The result has the shape ``voxy.pronounce`` takes (``{word: {reading name: IPA}}``,
-IPA in the espeak symbols of its phoneme model), so it merges with the shipped
-table: ``{**lexique_heteronyms(path), **heteronym_readings("fr")}``.
+IPA in the symbols of its phoneme model). Pronunciations that differ only by
+Lexique's transcription noise are one reading and its variants (``verb~e``); a
+reading is named by its part of speech, with the names of
+``voxy.speechtext.FRENCH_READING_NAMES``, or by its lemma when two readings share a
+part of speech:
 
 >>> rows = [
-...     {"ortho": "est", "phon": "e", "cgram": "VER", "freqfilms2": "100", "freqlivres": "90"},
-...     {"ortho": "est", "phon": "Est", "cgram": "NOM", "freqfilms2": "20", "freqlivres": "30"},
-...     {"ortho": "chat", "phon": "Sa", "cgram": "NOM", "freqfilms2": "40", "freqlivres": "30"},
+...     {"ortho": "est", "phon": "E", "lemme": "être", "cgram": "AUX", "freqfilms2": "100", "freqlivres": "90"},
+...     {"ortho": "est", "phon": "e", "lemme": "être", "cgram": "VER", "freqfilms2": "9", "freqlivres": "9"},
+...     {"ortho": "est", "phon": "Est", "lemme": "est", "cgram": "NOM", "freqfilms2": "20", "freqlivres": "30"},
+...     {"ortho": "chat", "phon": "Sa", "lemme": "chat", "cgram": "NOM", "freqfilms2": "40", "freqlivres": "30"},
 ... ]
 >>> heteronyms_from_rows(rows)
-{'est': {'verb': 'e', 'noun': 'ɛst'}}
+{'est': {'verb': 'ɛ', 'verb~e': 'e', 'noun': 'ɛst'}}
 """
 
 import csv
 import os
+from collections import defaultdict
 from collections.abc import Iterable, Mapping
 
-#: Lexique's phonetic code -> the espeak IPA of voxy's phoneme model.
+from voxy.pronounce import VARIANT_SEPARATOR
+from voxy.speechtext import FRENCH_READING_NAMES
+
+#: Lexique's phonetic code -> IPA in the vocabulary of voxy's phoneme model
+#: (``facebook/wav2vec2-lv-60-espeak-cv-ft``); Lexique's other letters are that IPA.
 LEXIQUE_TO_IPA = {
     "E": "ɛ",
     "O": "ɔ",
@@ -41,29 +57,50 @@ LEXIQUE_TO_IPA = {
     "1": "œ̃",
     "@": "ɑ̃",
     "§": "ɔ̃",
-    "8": "ɥ",
+    # /ɥ/ (*huit*, *lui*) is not in the model's vocabulary, which could never hear it;
+    # /y/, the vowel it is the glide of, is the nearest symbol that is.
+    "8": "y",
     "R": "ʁ",
     "S": "ʃ",
     "Z": "ʒ",
     "N": "ɲ",
     "G": "ŋ",
+    "g": "ɡ",  # IPA's script g (U+0261), the model's symbol, not the ASCII letter
 }
-#: Lexique's part of speech (``cgram``, before any ``:``) -> a reading name.
+#: Lexique letters it writes inconsistently -> the letter they are compared as: two
+#: pronunciations equal after this are one reading (open/closed vowels, schwa).
+TRANSCRIPTION_NOISE = {"E": "e", "O": "o", "9": "2", "°": ""}
+#: Lexique's part of speech (``cgram``, whole or before its ``:``) -> universal POS.
+LEXIQUE_TO_UPOS = {
+    "NOM": "NOUN",
+    "VER": "VERB",
+    "AUX": "AUX",
+    "ADJ": "ADJ",
+    "ADJ:num": "NUM",
+    "ADJ:dem": "DET",
+    "ADJ:ind": "DET",
+    "ADJ:int": "DET",
+    "ADJ:pos": "DET",
+    "ADV": "ADV",
+    "PRE": "ADP",
+    "CON": "CCONJ",
+    "PRO": "PRON",
+    "ART": "DET",
+    "ONO": "INTJ",
+}
+#: Lexique's part of speech -> a reading name (``voxy.speechtext.FRENCH_READING_NAMES``).
 LEXIQUE_POS_NAMES = {
-    "NOM": "noun",
-    "VER": "verb",
-    "AUX": "verb",
-    "ADJ": "adj",
-    "ADV": "adv",
-    "PRE": "prep",
-    "CON": "conj",
-    "PRO": "pron",
-    "ART": "art",
-    "ONO": "interj",
+    tag: FRENCH_READING_NAMES[upos] for tag, upos in LEXIQUE_TO_UPOS.items()
 }
+#: The reading name that wins over every other part of speech of a pronunciation:
+#: Lexique tags some verb forms as nouns too (*violent*, *insolent*).
+VERB_NAME = FRENCH_READING_NAMES["VERB"]
+#: The name of a reading whose part of speech Lexique leaves empty.
+UNTAGGED_NAME = "word"
 #: Columns read from a Lexique 3 file.
-ORTHO, PHON, CGRAM = "ortho", "phon", "cgram"
+ORTHO, PHON, LEMMA, CGRAM = "ortho", "phon", "lemme", "cgram"
 FREQUENCY_COLUMNS = ("freqfilms2", "freqlivres")
+REQUIRED_COLUMNS = (ORTHO, PHON, LEMMA, CGRAM, *FREQUENCY_COLUMNS)
 
 
 def lexique_to_ipa(phon: str, *, symbols: Mapping[str, str] = LEXIQUE_TO_IPA) -> str:
@@ -75,14 +112,62 @@ def lexique_to_ipa(phon: str, *, symbols: Mapping[str, str] = LEXIQUE_TO_IPA) ->
     return "".join(symbols.get(c, c) for c in phon)
 
 
+def phon_key(phon: str, *, noise: Mapping[str, str] = TRANSCRIPTION_NOISE) -> str:
+    """What a Lexique pronunciation is compared as, transcription noise removed.
+
+    >>> phon_key("vjOl°"), phon_key("vjol")
+    ('vjol', 'vjol')
+    """
+    return "".join(noise.get(c, c) for c in phon)
+
+
 def _frequency(row: Mapping) -> float:
     """Occurrences per million (films and books, the larger)."""
-    return max(float(row.get(c) or 0) for c in FREQUENCY_COLUMNS)
+    return max(float(row[c] or 0) for c in FREQUENCY_COLUMNS)
 
 
 def _pos_name(cgram: str, names: Mapping[str, str]) -> str:
     tag = cgram.split(":")[0]
-    return names.get(tag, tag.lower() or "word")
+    return names.get(cgram) or names.get(tag) or tag.lower() or UNTAGGED_NAME
+
+
+def _heaviest(weighted: Iterable[tuple[str, float]]) -> list[str]:
+    """Keys by their summed weight, heaviest first (ties in first-seen order)."""
+    totals: dict[str, float] = defaultdict(float)
+    for key, weight in weighted:
+        totals[key] += weight
+    return sorted(totals, key=lambda k: -totals[k])
+
+
+def _reading(rows: list[Mapping], pos_names: Mapping[str, str]) -> dict:
+    """One reading of a spelling, from the rows of its pronunciations: its weight (the
+    sum of the rows' frequencies), part of speech, lemma, and pronunciations (heaviest
+    first)."""
+    weighted = [(row, _frequency(row)) for row in rows]
+    poses = _heaviest((_pos_name(r[CGRAM], pos_names), f) for r, f in weighted)
+    return {
+        "weight": sum(f for _, f in weighted),
+        "pos": VERB_NAME if VERB_NAME in poses else poses[0],
+        "lemma": _heaviest((r[LEMMA], f) for r, f in weighted)[0],
+        "phons": _heaviest((r[PHON], f) for r, f in weighted),
+    }
+
+
+def _reading_names(readings: list[dict], *, symbols: Mapping[str, str]) -> list[str]:
+    """A name per reading: its part of speech; readings sharing one are named by lemma,
+    or ``<pos>:<IPA>`` when their lemmas coincide too."""
+    poses = [r["pos"] for r in readings]
+    names = []
+    for r in readings:
+        sharing = [s for s in readings if s["pos"] == r["pos"]]
+        lemmas = [s["lemma"] for s in sharing]
+        if len(sharing) == 1:
+            names.append(r["pos"])
+        elif r["lemma"] and lemmas.count(r["lemma"]) == 1 and r["lemma"] not in poses:
+            names.append(r["lemma"])
+        else:
+            names.append(f"{r['pos']}:{lexique_to_ipa(r['phons'][0], symbols=symbols)}")
+    return names
 
 
 def heteronyms_from_rows(
@@ -91,42 +176,64 @@ def heteronyms_from_rows(
     min_frequency: float = 0.0,
     pos_names: Mapping[str, str] = LEXIQUE_POS_NAMES,
     symbols: Mapping[str, str] = LEXIQUE_TO_IPA,
+    noise: Mapping[str, str] = TRANSCRIPTION_NOISE,
 ) -> dict[str, dict[str, str]]:
-    """``{word: {reading name: IPA}}`` for every spelling read in more than one way.
+    """``{word: {reading name: IPA}}`` for the spellings Lexique reads in more than one way.
 
-    A reading is named after the part of speech of its most frequent row; when two
-    readings would share a name, both are named ``<pos>:<IPA>``. Words whose most
-    frequent form is under ``min_frequency`` (per million) are left out.
+    Pronunciations equal under :func:`phon_key` are one reading, its heaviest
+    pronunciation the reading and the others ``<name>~<IPA>`` variants. Readings come
+    heaviest first (weight: the sum of their rows' frequencies) and are named by their
+    heaviest part of speech (``verb`` if any row is a verb); readings that share one
+    are named by lemma, or ``<pos>:<IPA>`` when their lemmas coincide too. Words whose
+    heaviest reading is under ``min_frequency`` (per million) are left out.
     """
-    readings: dict[str, dict[str, tuple[float, str]]] = {}
+    by_word: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
     for row in rows:
-        word, phon = row[ORTHO], row[PHON]
-        if not word or not phon:
-            continue
-        frequency, pos = _frequency(row), _pos_name(row[CGRAM], pos_names)
-        best = readings.setdefault(word, {}).get(phon)
-        if best is None or frequency > best[0]:
-            readings[word][phon] = (frequency, pos)
+        if row[ORTHO] and row[PHON]:
+            by_word[row[ORTHO]][phon_key(row[PHON], noise=noise)].append(row)
     table = {}
-    for word, by_phon in readings.items():
-        if len(by_phon) < 2 or max(f for f, _ in by_phon.values()) < min_frequency:
+    for word, by_key in by_word.items():
+        readings = sorted(
+            (_reading(group, pos_names) for group in by_key.values()),
+            key=lambda r: -r["weight"],
+        )
+        if len(readings) < 2 or readings[0]["weight"] < min_frequency:
             continue
-        ordered = sorted(by_phon.items(), key=lambda kv: -kv[1][0])
-        named = [
-            (pos, lexique_to_ipa(phon, symbols=symbols)) for phon, (_, pos) in ordered
-        ]
-        poses = [pos for pos, _ in named]
+        names = _reading_names(readings, symbols=symbols)
         table[word] = {
-            (pos if poses.count(pos) == 1 else f"{pos}:{ipa}"): ipa
-            for pos, ipa in named
+            (name if i == 0 else f"{name}{VARIANT_SEPARATOR}{ipa}"): ipa
+            for name, r in zip(names, readings)
+            for i, ipa in enumerate(
+                lexique_to_ipa(p, symbols=symbols) for p in r["phons"]
+            )
         }
     return table
 
 
-def lexique_heteronyms(path: str | os.PathLike, **kwargs) -> dict[str, dict[str, str]]:
-    """The heteronyms of a Lexique 3 file (tab-separated, e.g. ``Lexique383.tsv``).
+def lexique_heteronyms(
+    path: str | os.PathLike,
+    *,
+    min_frequency: float = 0.0,
+    pos_names: Mapping[str, str] = LEXIQUE_POS_NAMES,
+    symbols: Mapping[str, str] = LEXIQUE_TO_IPA,
+    noise: Mapping[str, str] = TRANSCRIPTION_NOISE,
+) -> dict[str, dict[str, str]]:
+    """The heteronyms of a Lexique 3 file (tab-separated, e.g. ``Lexique383.tsv``), as
+    :func:`heteronyms_from_rows` derives them.
 
-    Keyword arguments go to ``heteronyms_from_rows`` (``min_frequency``, ...).
+    Raises ``ValueError`` if the file lacks one of :data:`REQUIRED_COLUMNS`.
     """
     with open(path, encoding="utf-8", newline="") as f:
-        return heteronyms_from_rows(csv.DictReader(f, delimiter="\t"), **kwargs)
+        reader = csv.DictReader(f, delimiter="\t")
+        missing = [c for c in REQUIRED_COLUMNS if c not in (reader.fieldnames or ())]
+        if missing:
+            raise ValueError(
+                f"{os.fspath(path)!r} is not a Lexique 3 file: no column {missing}"
+            )
+        return heteronyms_from_rows(
+            reader,
+            min_frequency=min_frequency,
+            pos_names=pos_names,
+            symbols=symbols,
+            noise=noise,
+        )
