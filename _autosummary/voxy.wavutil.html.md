@@ -16,27 +16,28 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 
 ### Module Attributes
 
-| [`WAVE_FORMAT_PCM`](#voxy.wavutil.WAVE_FORMAT_PCM)        | integer PCM, IEEE float, and the extensible wrapper.                       |
-|-------------------------------------------------------------------------|----------------------------------------------------------------------------|
-| [`WAVE_FORMAT_FLOAT`](#voxy.wavutil.WAVE_FORMAT_FLOAT)      | integer PCM, IEEE float, and the extensible wrapper.                       |
-| [`WAVE_FORMAT_EXTENSIBLE`](#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE) | integer PCM, IEEE float, and the extensible wrapper.                       |
-| [`TRAILING_CHUNK_IDS`](#voxy.wavutil.TRAILING_CHUNK_IDS)     | Chunks that can follow audio whose `data` size is a streaming placeholder. |
-| [`DFLT_LOWPASS_TAPS`](#voxy.wavutil.DFLT_LOWPASS_TAPS)      | Taps of the anti-aliasing filter applied before downsampling (odd).        |
-| [`DFLT_LOWPASS_SHARE`](#voxy.wavutil.DFLT_LOWPASS_SHARE)     | The filter's cutoff, as a share of the target rate's Nyquist frequency.    |
+| [`WAVE_FORMAT_PCM`](#voxy.wavutil.WAVE_FORMAT_PCM)        | integer PCM, IEEE float, and the extensible wrapper.                                                                                                   |
+|-------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`WAVE_FORMAT_FLOAT`](#voxy.wavutil.WAVE_FORMAT_FLOAT)      | integer PCM, IEEE float, and the extensible wrapper.                                                                                                   |
+| [`WAVE_FORMAT_EXTENSIBLE`](#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE) | integer PCM, IEEE float, and the extensible wrapper.                                                                                                   |
+| [`TRAILING_CHUNK_IDS`](#voxy.wavutil.TRAILING_CHUNK_IDS)     | Chunks that can follow audio whose `data` size is a streaming placeholder.                                                                             |
+| [`DFLT_LOWPASS_TAPS`](#voxy.wavutil.DFLT_LOWPASS_TAPS)      | Taps of the anti-aliasing filter applied before downsampling (odd).                                                                                    |
+| [`DFLT_LOWPASS_SHARE`](#voxy.wavutil.DFLT_LOWPASS_SHARE)     | The filter's cutoff, as a share of the target rate's Nyquist frequency.                                                                                |
+| [`UPSAMPLE_EDGE`](#voxy.wavutil.UPSAMPLE_EDGE)          | Samples mirrored at each edge before band-limited interpolation, so the FFT does not wrap the end of the signal onto its start (a click at both ends). |
 
 ### Functions
 
-| [`frame_db`](#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                                                                                                                                  |
-|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`lowpass`](#voxy.wavutil.lowpass)(samples, cutoff_hz, sample_rate, \*)     | `samples` with what lies above `cutoff_hz` removed (windowed-sinc FIR, Blackman window, zero phase: same length, no delay).                                                                                                         |
-| [`pcm_to_float`](#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1).                                                                                                              |
-| [`read_wav`](#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads what [`read_wav_channels()`](#voxy.wavutil.read_wav_channels) reads.                                                                        |
-| [`read_wav_channels`](#voxy.wavutil.read_wav_channels)(source)                        | `(samples (frames, channels), sample_rate)` of a WAV (path or bytes).                                                                                                                                                               |
-| [`resample`](#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below the target's Nyquist frequency first when downsampling (so a 24 kHz render put into an 8 kHz recording does not alias), then linear interpolation. |
-| [`silence`](#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                                                                                                                                       |
-| [`trim_silence`](#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                                                                                                                                   |
-| [`write_wav`](#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                                                                                                                                       |
-| [`write_wav_channels`](#voxy.wavutil.write_wav_channels)(samples, sample_rate)         | 32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono), lossless, for handing audio to another process.                                                                                                            |
+| [`frame_db`](#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                                                                                                                                                                                                           |
+|---------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`lowpass`](#voxy.wavutil.lowpass)(samples, cutoff_hz, sample_rate, \*)     | `samples` with what lies above `cutoff_hz` removed (windowed-sinc FIR, Blackman window, zero phase: same length, no delay).                                                                                                                                                                                  |
+| [`pcm_to_float`](#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1).                                                                                                                                                                                       |
+| [`read_wav`](#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads what [`read_wav_channels()`](#voxy.wavutil.read_wav_channels) reads.                                                                                                                                                 |
+| [`read_wav_channels`](#voxy.wavutil.read_wav_channels)(source)                        | `(samples (frames, channels), sample_rate)` of a WAV (path or bytes).                                                                                                                                                                                                                                        |
+| [`resample`](#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no images above 12 kHz); when downsampling, low-passed below the target's Nyquist frequency (so it does not alias), then linearly interpolated. |
+| [`silence`](#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                                                                                                                                                                                                                |
+| [`trim_silence`](#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                                                                                                                                                                                                            |
+| [`write_wav`](#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                                                                                                                                                                                                                |
+| [`write_wav_channels`](#voxy.wavutil.write_wav_channels)(samples, sample_rate)         | 32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono), lossless, for handing audio to another process.                                                                                                                                                                                     |
 
 ### voxy.wavutil.DFLT_LOWPASS_SHARE *= 0.95*
 
@@ -49,6 +50,11 @@ Taps of the anti-aliasing filter applied before downsampling (odd).
 ### voxy.wavutil.TRAILING_CHUNK_IDS *= re.compile(b'LIST|id3 |ID3 |fact|cue |smpl|bext|JUNK|PAD |iXML|_PMX|acid|inst|plst')*
 
 Chunks that can follow audio whose `data` size is a streaming placeholder.
+
+### voxy.wavutil.UPSAMPLE_EDGE *= 1024*
+
+Samples mirrored at each edge before band-limited interpolation, so the FFT does not
+wrap the end of the signal onto its start (a click at both ends).
 
 ### voxy.wavutil.WAVE_FORMAT_EXTENSIBLE *= 65534*
 
@@ -136,13 +142,16 @@ at a trailing chunk such as `LIST`, or at the end of the file).
 
 ### voxy.wavutil.resample(samples, from_rate, to_rate)
 
-Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below
-the target’s Nyquist frequency first when downsampling (so a 24 kHz render put into
-an 8 kHz recording does not alias), then linear interpolation.
+Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited
+interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no
+images above 12 kHz); when downsampling, low-passed below the target’s Nyquist
+frequency (so it does not alias), then linearly interpolated. The whole clip is
+held in memory (about 1 GB to take 10 minutes from 24 to 48 kHz): fine for
+rendered words and lines; use ffmpeg or soxr for long recordings.
 
 ```pycon
->>> len(resample(np.zeros(100), 8000, 16000))
-200
+>>> len(resample(np.zeros(100), 8000, 16000)), len(resample(np.zeros(100), 16000, 8000))
+(200, 50)
 ```
 
 * **Return type:**

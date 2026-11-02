@@ -1,4 +1,4 @@
-> built 2026-11-02 11:10 UTC from 6525fe4 (main) · voxy 0.0.58. Details: build_info.json
+> built 2026-11-02 11:20 UTC from 0a9d196 (main) · voxy 0.0.59. Details: build_info.json
 
 # index.html.md
 
@@ -5570,27 +5570,28 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 
 ### Module Attributes
 
-| [`WAVE_FORMAT_PCM`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_PCM)        | integer PCM, IEEE float, and the extensible wrapper.                       |
-|-------------------------------------------------------------------------|----------------------------------------------------------------------------|
-| [`WAVE_FORMAT_FLOAT`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_FLOAT)      | integer PCM, IEEE float, and the extensible wrapper.                       |
-| [`WAVE_FORMAT_EXTENSIBLE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE) | integer PCM, IEEE float, and the extensible wrapper.                       |
-| [`TRAILING_CHUNK_IDS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.TRAILING_CHUNK_IDS)     | Chunks that can follow audio whose `data` size is a streaming placeholder. |
-| [`DFLT_LOWPASS_TAPS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.DFLT_LOWPASS_TAPS)      | Taps of the anti-aliasing filter applied before downsampling (odd).        |
-| [`DFLT_LOWPASS_SHARE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.DFLT_LOWPASS_SHARE)     | The filter's cutoff, as a share of the target rate's Nyquist frequency.    |
+| [`WAVE_FORMAT_PCM`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_PCM)        | integer PCM, IEEE float, and the extensible wrapper.                                                                                                   |
+|-------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`WAVE_FORMAT_FLOAT`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_FLOAT)      | integer PCM, IEEE float, and the extensible wrapper.                                                                                                   |
+| [`WAVE_FORMAT_EXTENSIBLE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE) | integer PCM, IEEE float, and the extensible wrapper.                                                                                                   |
+| [`TRAILING_CHUNK_IDS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.TRAILING_CHUNK_IDS)     | Chunks that can follow audio whose `data` size is a streaming placeholder.                                                                             |
+| [`DFLT_LOWPASS_TAPS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.DFLT_LOWPASS_TAPS)      | Taps of the anti-aliasing filter applied before downsampling (odd).                                                                                    |
+| [`DFLT_LOWPASS_SHARE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.DFLT_LOWPASS_SHARE)     | The filter's cutoff, as a share of the target rate's Nyquist frequency.                                                                                |
+| [`UPSAMPLE_EDGE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.UPSAMPLE_EDGE)          | Samples mirrored at each edge before band-limited interpolation, so the FFT does not wrap the end of the signal onto its start (a click at both ends). |
 
 ### Functions
 
-| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                                                                                                                                  |
-|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`lowpass`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.lowpass)(samples, cutoff_hz, sample_rate, \*)     | `samples` with what lies above `cutoff_hz` removed (windowed-sinc FIR, Blackman window, zero phase: same length, no delay).                                                                                                         |
-| [`pcm_to_float`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1).                                                                                                              |
-| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads what [`read_wav_channels()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels) reads.                                                                        |
-| [`read_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels)(source)                        | `(samples (frames, channels), sample_rate)` of a WAV (path or bytes).                                                                                                                                                               |
-| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below the target's Nyquist frequency first when downsampling (so a 24 kHz render put into an 8 kHz recording does not alias), then linear interpolation. |
-| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                                                                                                                                       |
-| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                                                                                                                                   |
-| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                                                                                                                                       |
-| [`write_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav_channels)(samples, sample_rate)         | 32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono), lossless, for handing audio to another process.                                                                                                            |
+| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                                                                                                                                                                                                           |
+|---------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`lowpass`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.lowpass)(samples, cutoff_hz, sample_rate, \*)     | `samples` with what lies above `cutoff_hz` removed (windowed-sinc FIR, Blackman window, zero phase: same length, no delay).                                                                                                                                                                                  |
+| [`pcm_to_float`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1).                                                                                                                                                                                       |
+| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads what [`read_wav_channels()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels) reads.                                                                                                                                                 |
+| [`read_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels)(source)                        | `(samples (frames, channels), sample_rate)` of a WAV (path or bytes).                                                                                                                                                                                                                                        |
+| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no images above 12 kHz); when downsampling, low-passed below the target's Nyquist frequency (so it does not alias), then linearly interpolated. |
+| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                                                                                                                                                                                                                |
+| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                                                                                                                                                                                                            |
+| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                                                                                                                                                                                                                |
+| [`write_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav_channels)(samples, sample_rate)         | 32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono), lossless, for handing audio to another process.                                                                                                                                                                                     |
 
 ### voxy.wavutil.DFLT_LOWPASS_SHARE *= 0.95*
 
@@ -5603,6 +5604,11 @@ Taps of the anti-aliasing filter applied before downsampling (odd).
 ### voxy.wavutil.TRAILING_CHUNK_IDS *= re.compile(b'LIST|id3 |ID3 |fact|cue |smpl|bext|JUNK|PAD |iXML|_PMX|acid|inst|plst')*
 
 Chunks that can follow audio whose `data` size is a streaming placeholder.
+
+### voxy.wavutil.UPSAMPLE_EDGE *= 1024*
+
+Samples mirrored at each edge before band-limited interpolation, so the FFT does not
+wrap the end of the signal onto its start (a click at both ends).
 
 ### voxy.wavutil.WAVE_FORMAT_EXTENSIBLE *= 65534*
 
@@ -5690,13 +5696,16 @@ at a trailing chunk such as `LIST`, or at the end of the file).
 
 ### voxy.wavutil.resample(samples, from_rate, to_rate)
 
-Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below
-the target’s Nyquist frequency first when downsampling (so a 24 kHz render put into
-an 8 kHz recording does not alias), then linear interpolation.
+Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited
+interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no
+images above 12 kHz); when downsampling, low-passed below the target’s Nyquist
+frequency (so it does not alias), then linearly interpolated. The whole clip is
+held in memory (about 1 GB to take 10 minutes from 24 to 48 kHz): fine for
+rendered words and lines; use ffmpeg or soxr for long recordings.
 
 ```pycon
->>> len(resample(np.zeros(100), 8000, 16000))
-200
+>>> len(resample(np.zeros(100), 8000, 16000)), len(resample(np.zeros(100), 16000, 8000))
+(200, 50)
 ```
 
 * **Return type:**
@@ -6162,18 +6171,16 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 11:10 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/6525fe448b4d03765bfeac16feccaf8a203ad821"><code>6525fe4</code></a> on branch <code>main</code>, for **voxy 0.0.58** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 11:20 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/0a9d196e58d1242774fe7cea6e56228978d2b0c3"><code>0a9d196</code></a> on branch <code>main</code>, for **voxy 0.0.59** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.58) is behind the latest release on PyPI (0.0.59): `pip install voxy` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/6525fe448b4d03765bfeac16feccaf8a203ad821"><code>6525fe448b4d03765bfeac16feccaf8a203ad821</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/0a9d196e58d1242774fe7cea6e56228978d2b0c3"><code>0a9d196e58d1242774fe7cea6e56228978d2b0c3</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6184,9 +6191,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41434286689">41434286689</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41435650543">41435650543</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>6525fe448b4d03765bfeac16feccaf8a203ad821</code> (in the history of the built commit) |
+| Event commit | <code>0a9d196e58d1242774fe7cea6e56228978d2b0c3</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6211,13 +6218,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.59/">0.0.59</a>, newer than the documented version (0.0.58).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.59/">0.0.59</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 6525fe448b4d03765bfeac16feccaf8a203ad821
+git checkout 0a9d196e58d1242774fe7cea6e56228978d2b0c3
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

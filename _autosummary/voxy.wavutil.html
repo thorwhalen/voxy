@@ -174,6 +174,9 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.DFLT_LOWPASS_SHARE" title="voxy.wavutil.DFLT_LOWPASS_SHARE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_LOWPASS_SHARE</span></code></a></p></td>
 <td><p>The filter's cutoff, as a share of the target rate's Nyquist frequency.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.UPSAMPLE_EDGE" title="voxy.wavutil.UPSAMPLE_EDGE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">UPSAMPLE_EDGE</span></code></a></p></td>
+<td><p>Samples mirrored at each edge before band-limited interpolation, so the FFT does not wrap the end of the signal onto its start (a click at both ends).</p></td>
+</tr>
 </tbody>
 </table>
 <p class="rubric">Functions</p>
@@ -195,7 +198,7 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 <td><p><code class="docutils literal notranslate"><span class="pre">(samples</span> <span class="pre">(frames,</span> <span class="pre">channels),</span> <span class="pre">sample_rate)</span></code> of a WAV (path or bytes).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.resample" title="voxy.wavutil.resample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resample</span></code></a>(samples, from_rate, to_rate)</p></td>
-<td><p>Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below the target's Nyquist frequency first when downsampling (so a 24 kHz render put into an 8 kHz recording does not alias), then linear interpolation.</p></td>
+<td><p>Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no images above 12 kHz); when downsampling, low-passed below the target's Nyquist frequency (so it does not alias), then linearly interpolated.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.silence" title="voxy.wavutil.silence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">silence</span></code></a>(ms, sample_rate)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ms</span></code> milliseconds of silence.</p></td>
@@ -225,6 +228,12 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 <dt class="sig sig-object py" id="voxy.wavutil.TRAILING_CHUNK_IDS">
 <span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">TRAILING_CHUNK_IDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">re.compile(b'LIST|id3</span> <span class="pre">|ID3</span> <span class="pre">|fact|cue</span> <span class="pre">|smpl|bext|JUNK|PAD</span> <span class="pre">|iXML|_PMX|acid|inst|plst')</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.TRAILING_CHUNK_IDS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.TRAILING_CHUNK_IDS'">¶</a></dt>
 <dd><p>Chunks that can follow audio whose <code class="docutils literal notranslate"><span class="pre">data</span></code> size is a streaming placeholder.</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.wavutil.UPSAMPLE_EDGE">
+<span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">UPSAMPLE_EDGE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1024</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.UPSAMPLE_EDGE" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.UPSAMPLE_EDGE'">¶</a></dt>
+<dd><p>Samples mirrored at each edge before band-limited interpolation, so the FFT does not
+wrap the end of the signal onto its start (a click at both ends).</p>
 </dd></dl>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.wavutil.WAVE_FORMAT_EXTENSIBLE">
@@ -332,11 +341,14 @@ at a trailing chunk such as <code class="docutils literal notranslate"><span cla
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.wavutil.resample">
 <span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">resample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/wavutil.html#resample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.resample" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.resample'">¶</a></dt>
-<dd><p>Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below
-the target’s Nyquist frequency first when downsampling (so a 24 kHz render put into
-an 8 kHz recording does not alias), then linear interpolation.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="mi">8000</span><span class="p">,</span> <span class="mi">16000</span><span class="p">))</span>
-</span><span id="line-2"><span class="go">200</span>
+<dd><p>Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited
+interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no
+images above 12 kHz); when downsampling, low-passed below the target’s Nyquist
+frequency (so it does not alias), then linearly interpolated. The whole clip is
+held in memory (about 1 GB to take 10 minutes from 24 to 48 kHz): fine for
+rendered words and lines; use ffmpeg or soxr for long recordings.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="nb">len</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="mi">8000</span><span class="p">,</span> <span class="mi">16000</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">resample</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="mi">16000</span><span class="p">,</span> <span class="mi">8000</span><span class="p">))</span>
+</span><span id="line-2"><span class="go">(200, 50)</span>
 </span></code></pre></div>
 </div>
 <dl class="field-list simple">
@@ -409,6 +421,7 @@ lossless, for handing audio to another process.</p>
 <li><a :data-current="activeSection === '#voxy.wavutil.DFLT_LOWPASS_SHARE'" class="reference internal" href="#voxy.wavutil.DFLT_LOWPASS_SHARE"><code class="docutils literal notranslate"><span class="pre">DFLT_LOWPASS_SHARE</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.DFLT_LOWPASS_TAPS'" class="reference internal" href="#voxy.wavutil.DFLT_LOWPASS_TAPS"><code class="docutils literal notranslate"><span class="pre">DFLT_LOWPASS_TAPS</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.TRAILING_CHUNK_IDS'" class="reference internal" href="#voxy.wavutil.TRAILING_CHUNK_IDS"><code class="docutils literal notranslate"><span class="pre">TRAILING_CHUNK_IDS</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.wavutil.UPSAMPLE_EDGE'" class="reference internal" href="#voxy.wavutil.UPSAMPLE_EDGE"><code class="docutils literal notranslate"><span class="pre">UPSAMPLE_EDGE</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE'" class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE"><code class="docutils literal notranslate"><span class="pre">WAVE_FORMAT_EXTENSIBLE</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.WAVE_FORMAT_FLOAT'" class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_FLOAT"><code class="docutils literal notranslate"><span class="pre">WAVE_FORMAT_FLOAT</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.WAVE_FORMAT_PCM'" class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_PCM"><code class="docutils literal notranslate"><span class="pre">WAVE_FORMAT_PCM</span></code></a></li>
@@ -435,7 +448,7 @@ lossless, for handing audio to another process.</p>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=c3e19674"></script>
+<script src="../_static/documentation_options.js?v=6799126d"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
