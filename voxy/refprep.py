@@ -25,7 +25,8 @@ The steps, each a function you can call alone or replace:
 ``prepare_reference`` runs them all and saves the clips plus ``manifest.jsonl`` in
 the voice's samples store (``voxy.stores.samples_store``), so any backend (a
 reference clip) and fine-tuning (``voxy.finetune``, the whole set) read the same data.
-It only ever adds to the store; ``forget`` is the one function that deletes clips.
+It only ever adds to the store, keeping every run; ``latest_runs`` gives each source's
+latest run, and ``forget`` is the one function that deletes clips.
 """
 
 import json
@@ -35,9 +36,9 @@ import re
 import shutil
 import subprocess
 import tempfile
-import time
 import uuid
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
+from datetime import datetime, timezone
 from functools import partial
 from pathlib import Path
 
@@ -69,9 +70,13 @@ CLIP_KEY_PATTERN = re.compile(
 CONDITIONED_KEY_PATTERN = re.compile(
     rf"{re.escape(CONDITIONED_PREFIX)}(?P<slug>{SLUG_PATTERN.pattern})\.wav"
 )
-#: A run id (``run`` in each manifest entry): its start time plus random hex characters.
-RUN_ID_TIME_FORMAT = "%Y%m%dT%H%M%S"
+#: A run id (``run`` in each manifest entry): its UTC start time to the microsecond, plus
+#: random hex characters, so ids sort by time and two runs never share one.
+RUN_ID_TIME_FORMAT = "%Y%m%dT%H%M%S.%fZ"
 RUN_ID_SUFFIX_LEN = 6
+#: ``forget(..., run=LEGACY_RUN)`` selects entries written before runs were recorded
+#: (no ``run`` field), matching even a relative ``source`` exactly as it was typed.
+LEGACY_RUN = "legacy"
 
 #: ffmpeg filters for each ``denoise`` strategy (None: no denoising).
 DENOISE_FILTERS = {
@@ -586,12 +591,30 @@ def _source_id(source: str | os.PathLike) -> str:
     return os.path.realpath(source)
 
 
+def _entry_source_id(entry: Mapping) -> str | None:
+    """The real path of the file a manifest entry came from, or None if it cannot be
+    known: ``source_path`` if recorded; else ``source`` if it is an absolute path.
+    Older voxy recorded ``source`` as typed, and a relative one names whatever file had
+    that name in the folder the run happened to start in, so it identifies nothing.
+
+    >>> _entry_source_id({"source_path": "/s/a.wav", "source": "a.wav"})
+    '/s/a.wav'
+    >>> _entry_source_id({"source": "vocals.wav"}) is None
+    True
+    """
+    if isinstance(path := entry.get("source_path"), str):
+        return path
+    src = entry.get("source")
+    if isinstance(src, str) and os.path.isabs(src):
+        return _source_id(src)
+    return None
+
+
 def _is_from(entry: Mapping, source: str | os.PathLike) -> bool:
-    """Whether a manifest entry came from ``source``: by real path, or, for entries
-    written before ``source_path`` was recorded, by ``source`` as it was given."""
-    if "source_path" in entry:
-        return entry["source_path"] == _source_id(source)
-    return entry.get("source") == str(source)
+    """Whether a manifest entry came from ``source``, by real path (see
+    ``_entry_source_id``). An entry whose source cannot be known never matches."""
+    entry_id = _entry_source_id(entry)
+    return entry_id is not None and entry_id == _source_id(source)
 
 
 def _distinct_sources(sources: Iterable[str | os.PathLike]) -> list:
@@ -621,6 +644,11 @@ def _put_new(samples: MutableMapping, key: str, data: bytes) -> None:
     samples[key] = data
 
 
+def _number(x) -> float | None:
+    """``x`` if it is a real number (not a bool), else None."""
+    return x if isinstance(x, (int, float)) and not isinstance(x, bool) else None
+
+
 def _score_order(entry: Mapping) -> float:
     """Sort key putting the best ``score`` first and entries without one last."""
     score = entry.get("score")
@@ -628,8 +656,50 @@ def _score_order(entry: Mapping) -> float:
 
 
 def _new_run_id() -> str:
-    """A run id: when it started, plus a few random characters so runs never share one."""
-    return f"{time.strftime(RUN_ID_TIME_FORMAT)}-{uuid.uuid4().hex[:RUN_ID_SUFFIX_LEN]}"
+    """A run id: when it started (UTC, to the microsecond, so ids sort by time), plus a
+    few random characters so two runs never share one.
+
+    >>> a, b = _new_run_id(), _new_run_id()
+    >>> a != b and len(a) == len(b) and a[15:16] == "." and a[22:24] == "Z-"
+    True
+    """
+    stamp = datetime.now(timezone.utc).strftime(RUN_ID_TIME_FORMAT)
+    return f"{stamp}-{uuid.uuid4().hex[:RUN_ID_SUFFIX_LEN]}"
+
+
+def latest_runs(manifest: Iterable[Mapping]) -> list[Mapping]:
+    """``manifest`` with, per source, only the entries of its most recent run.
+
+    ``prepare_reference`` keeps every run, so a source processed twice is in the
+    manifest twice (the same audio, cut again); consumers that want one copy of each
+    recording (training sets, reference picks, summaries) read this. Sources are told
+    apart by real path (``source_path``, or an absolute ``source``); entries with no
+    ``run`` count as one run older than any recorded one; entries whose source cannot
+    be known (none, or a relative path from an older voxy) are all kept. Order is kept.
+
+    >>> m = [{"key": "a1", "source_path": "/a", "run": "20260101T000000.000000Z-x"},
+    ...      {"key": "a2", "source_path": "/a", "run": "20261101T000000.000000Z-y"},
+    ...      {"key": "a0", "source": "/a"},
+    ...      {"key": "b1", "source_path": "/b"},
+    ...      {"key": "t", "source": "tape.wav"}]
+    >>> [e["key"] for e in latest_runs(m)]
+    ['a2', 'b1', 't']
+    """
+    manifest = list(manifest)
+
+    def run_rank(entry):  # no run (or a non-string one) ranks below every real id
+        run = entry.get("run")
+        return (1, run) if isinstance(run, str) else (0, "")
+
+    latest = {}
+    for entry in manifest:
+        if (sid := _entry_source_id(entry)) is not None:
+            latest[sid] = max(latest.get(sid, (0, "")), run_rank(entry))
+    return [
+        e
+        for e in manifest
+        if (sid := _entry_source_id(e)) is None or run_rank(e) == latest[sid]
+    ]
 
 
 def _dump_manifest(entries: Iterable[Mapping]) -> bytes:
@@ -678,8 +748,10 @@ def prepare_reference(
     that no manifest entry and no clip or conditioned key in the store already uses, so
     every earlier clip keeps its key and its bytes, and saved reference profiles
     (``ref_audio`` + ``ref_text``) stay valid. The manifest keeps every earlier entry and
-    adds the new ones. Re-processing a source therefore adds clips beside its earlier
-    ones; ``forget(samples, source, run=...)`` removes those explicitly. A file given
+    adds the new ones (re-read just before writing, so a ``forget`` or another run that
+    finished meanwhile is not undone). Re-processing a source therefore adds clips beside
+    its earlier ones; consumers read ``latest_runs(manifest)`` to see one run per source,
+    and ``forget(samples, source, run=...)`` removes the others explicitly. A file given
     twice in one call (by real path) is processed once.
     """
     if samples is None:
@@ -742,14 +814,15 @@ def prepare_reference(
                 }
                 manifest.append(entry)
     new = len(manifest)
-    manifest = sorted(manifest + earlier, key=_score_order)
+    current = _checked_manifest(samples)  # again: it may have changed while we ran
+    manifest = sorted(manifest + current, key=_score_order)
     root = getattr(samples, "rootdir", None)
     if root:
         for entry in manifest:
             if isinstance(entry.get("key"), str):
                 entry["path"] = os.path.join(root, entry["key"])
     samples[MANIFEST_KEY] = _dump_manifest(manifest)
-    log(f"voxy.refprep: {new} clips saved (run {run}), {len(earlier)} earlier kept")
+    log(f"voxy.refprep: {new} clips saved (run {run}), {len(current)} earlier kept")
     return manifest
 
 
@@ -765,22 +838,33 @@ def _log_earlier_runs(sources: Iterable, earlier: list[Mapping], log) -> None:
 
 
 def forget(
-    samples: MutableMapping, source: str | os.PathLike, *, run: str | None = None
+    samples: MutableMapping,
+    source: str | os.PathLike,
+    *,
+    run: str | None = None,
+    dry_run: bool = False,
+    log=print,
 ) -> list[str]:
     """Remove ``source``'s clips (only those of one ``run``, if given) from a samples
     store: its manifest entries, their clip keys and the source's conditioned key.
-    Returns the deleted keys.
+    Returns the deleted keys (with ``dry_run=True``: the keys it would delete, changing
+    nothing).
 
     The only function in voxy that deletes voice samples (``prepare_reference`` never
     does), so it is careful about what it deletes:
 
-    - entries match ``source`` by real path (``source_path``), or, for entries written
-      before that was recorded, by ``source`` exactly as it was given;
+    - entries match ``source`` by real path: their ``source_path``, or, for entries an
+      older voxy wrote without one, their ``source`` only if it is absolute. A relative
+      ``source`` names whatever file had that name where that run started, so such
+      entries never match; they are logged, and ``run=LEGACY_RUN`` removes them
+      deliberately (matching ``source`` exactly as recorded, as in
+      ``forget(samples, "vocals.wav", run=LEGACY_RUN)``);
     - only keys of the form this module writes (``clips/<slug>-NNNN.wav``,
-      ``conditioned/<slug>.wav``) are deleted, never a top-level sample;
+      ``conditioned/<slug>.wav``), with a slug taken from a matched entry's clip key, are
+      deleted, never a top-level sample;
     - a key a remaining entry names, or whose slug a remaining entry uses, is kept;
-    - the manifest is written first, so an interruption leaves unlisted files, never a
-      manifest naming deleted ones.
+    - the manifest is read just before it is written, and written first, so an
+      interruption leaves unlisted files, never a manifest naming deleted ones.
 
     >>> store = {"clips/a-0001.wav": b"A", "conditioned/a.wav": b"C",
     ...          "clips/b-0001.wav": b"B", "tape1.wav": b"T"}
@@ -788,32 +872,65 @@ def forget(
     ...     {"key": "clips/a-0001.wav", "slug": "a", "source": "/s/a.wav"},
     ...     {"key": "clips/b-0001.wav", "slug": "b", "source": "/s/b.wav"},
     ...     {"key": "tape1.wav", "source": "/s/a.wav"}])
+    >>> forget(store, "/s/a.wav", dry_run=True)
+    ['clips/a-0001.wav', 'conditioned/a.wav']
+    >>> len(load_manifest(store)), len(store)
+    (3, 5)
     >>> forget(store, "/s/a.wav")
     ['clips/a-0001.wav', 'conditioned/a.wav']
     >>> [e["key"] for e in load_manifest(store)], sorted(store)
     (['clips/b-0001.wav'], ['clips/b-0001.wav', 'manifest.jsonl', 'tape1.wav'])
     """
-    entries = _checked_manifest(samples)
 
-    def doomed(entry):
+    def matches(entry):
+        if run == LEGACY_RUN:
+            if "run" in entry:
+                return False
+            if _entry_source_id(entry) is None:  # asked for: as recorded
+                return entry.get("source") == str(source)
+            return _is_from(entry, source)
         return _is_from(entry, source) and (run is None or entry.get("run") == run)
 
     def str_keys(entries):
         return [k for e in entries if isinstance(k := e.get("key"), str)]
 
-    gone = [e for e in entries if doomed(e)]
-    if not gone:
-        return []
-    remaining = [e for e in entries if not doomed(e)]
+    entries = _checked_manifest(samples)
+    if run != LEGACY_RUN:
+        _log_unmatched_legacy(entries, source, log)
+    gone = [e for e in entries if matches(e)]
+    remaining = [e for e in entries if not matches(e)]
     named = set(str_keys(remaining))
     used = {s for e in remaining for s in _entry_slugs(e)}
-    slugs = {s for e in gone for s in _entry_slugs(e)} - used
+    slugs = {_key_slug(k) for k in str_keys(gone)} - {None} - used
     candidates = str_keys(gone) + sorted(map(_conditioned_key, slugs))
     keys = [
         k for k in dict.fromkeys(candidates) if _key_slug(k) in slugs and k not in named
     ]
+    if dry_run:
+        return [k for k in keys if k in samples]
+    if not gone:
+        return []
     samples[MANIFEST_KEY] = _dump_manifest(remaining)
     return [k for k in keys if samples.pop(k, None) is not None]
+
+
+def _log_unmatched_legacy(entries: Iterable[Mapping], source, log) -> None:
+    """Tell about entries an older voxy wrote with a relative ``source`` that may be
+    ``source`` (same file name): ``forget`` cannot know, so it keeps them."""
+    name = os.path.basename(os.fspath(source))
+    counts = {}
+    for e in entries:
+        src = e.get("source")
+        if _entry_source_id(e) is None and isinstance(src, str):
+            if os.path.basename(src) == name:
+                counts[src] = counts.get(src, 0) + 1
+    for src, n in counts.items():
+        log(
+            f"voxy.refprep: {n} manifest entries record their source as the relative "
+            f"path {src!r} (an older voxy), so which file they came from is unknown; "
+            f"kept. To remove them: forget(samples, {src!r}, run=refprep.LEGACY_RUN) "
+            f"(with dry_run=True first to see what it deletes), or edit {MANIFEST_KEY}."
+        )
 
 
 def partial_transcribe(rootdir=None) -> Callable[..., list[dict]]:
@@ -837,19 +954,29 @@ def best_references(
     min_seconds: float = 5.0,
     max_seconds: float = 12.0,
     min_score: float = 0.0,
+    latest_only: bool = True,
 ) -> list[dict]:
     """The ``n`` best clips for zero-shot reference (length in range, best score first).
+
+    With ``latest_only`` (the default) it picks from ``latest_runs(manifest)``: an older
+    run of a source is the same audio cut again, so its clips would come back as
+    near-duplicates of the newer ones, and the newer run is the one made with the
+    current settings. A reference saved from an older run stays valid either way (its
+    key and bytes are kept); pass ``latest_only=False`` to choose among every run.
 
     >>> m = [{"duration": 8, "score": 0.7}, {"duration": 2, "score": 0.9},
     ...      {"duration": 10, "score": 0.8}]
     >>> [c["score"] for c in best_references(m, n=2)]
     [0.8, 0.7]
     """
+    if latest_only:
+        manifest = latest_runs(manifest)
     fits = [
         dict(c)
         for c in manifest
-        if min_seconds <= c.get("duration", 0) <= max_seconds
-        and c.get("score", 0) >= min_score
+        if _number(c.get("duration")) is not None
+        and min_seconds <= c["duration"] <= max_seconds
+        and (_number(c.get("score")) or 0) >= min_score
     ]
     return sorted(fits, key=_score_order)[:n]
 

@@ -662,15 +662,177 @@ def test_forget_keeps_files_a_remaining_entry_names_or_shares_a_slug_with():
     assert [e["source_path"] for e in refprep.load_manifest(samples)] == ["/s/b.wav"]
 
 
-def test_forget_matches_old_entries_by_source_as_given():
-    samples = {"clips/talk-0001.wav": b"T", "conditioned/talk.wav": b"C"}
-    _set_manifest(samples, [{"key": "clips/talk-0001.wav", "source": "talk.m4a"}])
-    assert refprep.forget(samples, "other.m4a") == []
-    assert refprep.forget(samples, "talk.m4a") == [
+def test_forget_matches_old_entries_only_by_absolute_real_path():
+    samples = {k: b"x" for k in ("clips/talk-0001.wav", "conditioned/talk.wav")}
+    samples["clips/abs-0001.wav"] = b"A"
+    entries = [
+        {"key": "clips/talk-0001.wav", "source": "talk.m4a"},  # relative: unknown file
+        {"key": "clips/abs-0001.wav", "source": "/s/abs.m4a"},
+    ]
+    _set_manifest(samples, entries)
+    logged = []
+    assert refprep.forget(samples, "talk.m4a", log=logged.append) == []
+    assert refprep.forget(samples, "/elsewhere/talk.m4a", log=logged.append) == []
+    assert all("LEGACY_RUN" in line and "'talk.m4a'" in line for line in logged)
+    assert len(logged) == 2 and refprep.load_manifest(samples) == entries
+    assert refprep.forget(samples, "abs.m4a", log=logged.append) == []  # not /s/
+    assert refprep.forget(samples, "/s/abs.m4a") == ["clips/abs-0001.wav"]
+    # deliberately, by the string as recorded
+    legacy = refprep.LEGACY_RUN
+    assert refprep.forget(samples, "talk.m4a", run=legacy) == [
         "clips/talk-0001.wav",
         "conditioned/talk.wav",
     ]
     assert set(samples) == {refprep.MANIFEST_KEY}
+
+
+def test_forget_of_a_relative_name_never_deletes_another_folders_old_clips(
+    tmp_path, monkeypatch
+):
+    """Review repro: an older voxy stored ``vocals.wav`` (relative) for a stem in X;
+    a new run of Y's ``vocals.wav``; ``forget("vocals.wav")`` from Y kept X's clips."""
+    rng = np.random.default_rng(20)
+    x, y = _stem("x", tmp_path, rng), _stem("y", tmp_path, rng, 0.5)
+    samples = {}
+    monkeypatch.chdir(x.parent)
+    _rerun(samples, n_clips=2)("vocals.wav")
+    old = refprep.load_manifest(samples)
+    for e in old:  # as the older voxy wrote it
+        del e["slug"], e["source_path"], e["run"]
+    _set_manifest(samples, old)
+    x_files = _snapshot(samples)
+    monkeypatch.chdir(y.parent)
+    _rerun(samples)("vocals.wav")
+    logged = []
+    deleted = refprep.forget(samples, "vocals.wav", log=logged.append)
+    assert deleted == ["clips/vocals-2-0001.wav", "conditioned/vocals-2.wav"]
+    _assert_untouched(x_files, samples)
+    assert [e["key"] for e in refprep.load_manifest(samples)] == [e["key"] for e in old]
+    assert any("run=refprep.LEGACY_RUN" in line for line in logged)
+    legacy = refprep.LEGACY_RUN
+    would = refprep.forget(samples, "vocals.wav", run=legacy, dry_run=True)
+    assert sorted(would) == sorted(x_files)
+    _assert_untouched(x_files, samples)
+    assert sorted(refprep.forget(samples, "vocals.wav", run=legacy)) == sorted(would)
+
+
+def test_forget_dry_run_lists_what_it_would_delete_and_changes_nothing(tmp_path):
+    rng = np.random.default_rng(21)
+    a, b = _stem("song-a", tmp_path, rng), _stem("song-b", tmp_path, rng)
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    _rerun(samples, n_clips=2)(a, b)
+    before, manifest = _snapshot(samples), samples[refprep.MANIFEST_KEY]
+    would = refprep.forget(samples, a, dry_run=True)
+    assert _snapshot(samples) == before and samples[refprep.MANIFEST_KEY] == manifest
+    assert refprep.forget(samples, tmp_path / "nope.wav", dry_run=True) == []
+    assert refprep.forget(samples, a) == would and len(would) == 3
+
+
+def test_forget_takes_conditioned_keys_only_from_clip_key_slugs(tmp_path):
+    """A hand-edited ``slug`` on a top-level entry must not doom another source's
+    conditioned file."""
+    a = _stem("song-a", tmp_path, np.random.default_rng(22))
+    samples = {"conditioned/zz.wav": b"another source's"}
+    _rerun(samples)(a)
+    hand = {"key": "tape1.wav", "slug": "zz", "source_path": os.path.realpath(a)}
+    _set_manifest(samples, refprep.load_manifest(samples) + [hand])
+    assert refprep.forget(samples, a) == [
+        "clips/vocals-0001.wav",
+        "conditioned/vocals.wav",
+    ]
+    assert samples["conditioned/zz.wav"] == b"another source's"
+
+
+def _prep_with_hook(samples, hook, *sources):
+    """``prepare_reference`` whose transcriber first calls ``hook`` (another process
+    changing the store while this run is in flight)."""
+
+    def transcriber(path, language=None):
+        hook()
+        return [{"start": 0, "end": 6, "text": "", "words": [_word(0.2, 1.8, "Hi.")]}]
+
+    return refprep.prepare_reference(
+        list(sources),
+        samples=samples,
+        conditioner=lambda src, dst, **kw: dst.write_bytes(open(src, "rb").read()),
+        transcriber=transcriber,
+        min_seconds=1,
+        log=lambda *a: None,
+    )
+
+
+def test_prepare_reference_rereads_the_manifest_before_writing_it(tmp_path):
+    """A ``forget`` or another run finishing meanwhile is not undone."""
+    rng = np.random.default_rng(23)
+    a, b, c = (_stem(f"s{i}", tmp_path, rng) for i in range(3))
+    samples = {}
+    _rerun(samples, n_clips=2)(a)
+    once = []
+
+    def meanwhile():
+        if not once:
+            once.append(refprep.forget(samples, a))
+            once.append(_rerun(samples)(c))
+
+    manifest = _prep_with_hook(samples, meanwhile, b)
+    assert len(once[0]) == 3  # a's 2 clips + conditioned
+    assert {e["source_path"] for e in manifest} == {os.path.realpath(p) for p in (b, c)}
+    assert all(e["key"] in samples for e in refprep.load_manifest(samples))
+
+
+def test_run_ids_are_utc_sortable_and_unique():
+    ids = [refprep._new_run_id() for _ in range(200)]
+    assert len(set(ids)) == len(ids)
+    stamps = [i.split("-")[0] for i in ids]
+    assert stamps == sorted(stamps) and all(s.endswith("Z") for s in stamps)
+
+
+def test_consumers_read_each_sources_latest_run(tmp_path):
+    from voxy import finetune
+
+    rng = np.random.default_rng(24)
+    a, b = _stem("song-a", tmp_path, rng), _stem("song-b", tmp_path, rng)
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    _rerun(samples, n_clips=3)(a, b)
+    manifest = _rerun(samples, n_clips=3)(a)  # a again
+    assert len(manifest) == 9
+    latest = refprep.latest_runs(manifest)
+    a_runs = {e["run"] for e in latest if e["source_path"] == os.path.realpath(a)}
+    assert len(latest) == 6 and a_runs == {max(e["run"] for e in manifest)}
+
+    out = tmp_path / "ft"
+    report = finetune.export_dataset(manifest, samples, out, min_score=0)
+    rows = (out / "metadata.csv").read_text().splitlines()
+    assert report["clips"] == len(rows) == 6  # each clip of each source once
+    assert len({r.split("|", 1)[1] for r in rows}) == 3  # a's and b's texts, no dupes
+    assert sorted(p.name for p in (out / "wavs").iterdir()) == sorted(
+        Path(e["key"]).name for e in latest
+    )
+    every = finetune.select_clips(manifest, min_score=0, latest_only=False)
+    assert len(every) == 9
+
+    refs = refprep.best_references(manifest, n=10, min_seconds=1)
+    assert {r["key"] for r in refs} <= {e["key"] for e in latest}
+    assert (
+        len(refprep.best_references(manifest, n=10, min_seconds=1, latest_only=False))
+        == 9
+    )
+
+
+def test_finetune_skips_entries_without_score_or_duration(tmp_path):
+    from voxy import finetune
+
+    a = _stem("song-a", tmp_path, np.random.default_rng(25))
+    samples = {"tape1.wav": b"T"}
+    _set_manifest(
+        samples,
+        [{"key": "tape1.wav", "text": "x"}, {"score": 0.9, "duration": 2}, {"key": 3}],
+    )
+    manifest = _rerun(samples)(a)
+    report = finetune.export_dataset(manifest, samples, tmp_path / "ft", min_score=0)
+    assert report["clips"] == 1
+    refs = refprep.best_references(manifest, n=10, min_seconds=1)
+    assert all(isinstance(r.get("score"), float | int) for r in refs)  # no crash
 
 
 def test_plan_clips_respects_max_length():
@@ -1011,11 +1173,16 @@ def test_one_registry_holds_every_local_backend_kokoro_included():
     )
 
     backends = local_backends()
-    assert {"f5tts", "chatterbox", "xtts", "voxcpm", "qwen3tts", "kokoro"} <= set(backends)
+    assert {"f5tts", "chatterbox", "xtts", "voxcpm", "qwen3tts", "kokoro"} <= set(
+        backends
+    )
     assert backends["kokoro"].clones is False and backends["f5tts"].clones is True
     assert "kokoro" not in LOCAL_CLONE_BACKENDS and "f5tts" in LOCAL_CLONE_BACKENDS
     assert diagnosis._defaults("kokoro")["speed"] == 1.0  # its params reach diagnosis
-    assert LocalSpeechModel("kokoro", generate=lambda *a, **k: None).backend.name == "kokoro"
+    assert (
+        LocalSpeechModel("kokoro", generate=lambda *a, **k: None).backend.name
+        == "kokoro"
+    )
     assert LocalCloneBackend is LocalBackend  # the old name still works
 
 
@@ -1023,20 +1190,28 @@ def test_setup_builds_every_local_backends_environment(monkeypatch, capsys):
     from voxy import __main__ as cli
 
     built = []
-    monkeypatch.setattr("voxy.envs.ensure_env", lambda spec, **kw: built.append(spec.name) or "py")
+    monkeypatch.setattr(
+        "voxy.envs.ensure_env", lambda spec, **kw: built.append(spec.name) or "py"
+    )
     cli.main(["setup"])
     assert {"kokoro", "f5tts", "asr", "speaker", "phonemes"} <= set(built)
 
 
-
-def test_the_diagnosis_grid_does_not_cross_a_stock_voice_backend_with_references(tmp_path):
+def test_the_diagnosis_grid_does_not_cross_a_stock_voice_backend_with_references(
+    tmp_path,
+):
     variants = diagnosis.expand_grid(
-        [{"backend": "kokoro", "params": {"voice": ["af_heart", "bf_emma"]}},
-         {"backend": "f5tts"}],
+        [
+            {"backend": "kokoro", "params": {"voice": ["af_heart", "bf_emma"]}},
+            {"backend": "f5tts"},
+        ],
         references=["r1", "r2"],
     )
     assert [(v.backend, v.reference) for v in variants] == [
-        ("kokoro", ""), ("kokoro", ""), ("f5tts", "r1"), ("f5tts", "r2"),
+        ("kokoro", ""),
+        ("kokoro", ""),
+        ("f5tts", "r1"),
+        ("f5tts", "r2"),
     ]
     voices = []
 
@@ -1047,9 +1222,19 @@ def test_the_diagnosis_grid_does_not_cross_a_stock_voice_backend_with_references
 
             return Speech(write_wav(np.zeros(80, dtype=np.float32), SR), format="wav")
 
-    diagnosis.render_grid("Hi.", {}, variants[:2], tmp_path, audio_format="wav",
-                          model_factory=lambda backend, **init: Stock(), log=lambda *a: None)
-    assert voices == [("af_heart", {}), ("bf_emma", {})]  # the swept voice, as the voice
+    diagnosis.render_grid(
+        "Hi.",
+        {},
+        variants[:2],
+        tmp_path,
+        audio_format="wav",
+        model_factory=lambda backend, **init: Stock(),
+        log=lambda *a: None,
+    )
+    assert voices == [
+        ("af_heart", {}),
+        ("bf_emma", {}),
+    ]  # the swept voice, as the voice
 
 
 def test_a_builtin_registration_never_replaces_one_already_there():

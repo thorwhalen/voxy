@@ -97,7 +97,8 @@ def main(argv=None) -> int:
             denoise=None if args.denoise == "none" else args.denoise,
             speaker=speaker,
         )
-        print(json.dumps(refprep.summarize(manifest)))
+        # Every run is kept; report the latest run of each source (what consumers use).
+        print(json.dumps(refprep.summarize(refprep.latest_runs(manifest))))
         for clip in refprep.best_references(manifest):
             print(f"{clip['key']}\t{clip['duration']}\t{clip['score']}\t{clip['text']}")
         return 0
