@@ -39,6 +39,7 @@ Seams (keyword arguments of every model):
 """
 
 import os
+import threading
 import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -283,6 +284,7 @@ class WorkerGenerate:
         self.env_vars = dict(env_vars or {})
         self.auto_setup = auto_setup
         self._worker = None
+        self._lock = threading.Lock()  # one worker even when called from threads
 
     def _make_worker(self) -> Worker:
         from voxy.envs import env_python, is_env_ready
@@ -309,13 +311,12 @@ class WorkerGenerate:
 
     def _run(self, op: str, **request):
         """One worker operation that writes a WAV: ``(samples, sample_rate)``."""
-        if self._worker is None:
-            self._worker = self._make_worker()
+        worker = self.worker
         scratch = voxy_cache_dir("tmp")
         scratch.mkdir(parents=True, exist_ok=True)
         out_path = scratch / f"{self.backend.name}-{uuid.uuid4().hex}.wav"
         try:
-            self._worker.call(op, out_path=str(out_path), **request)
+            worker.call(op, out_path=str(out_path), **request)
             return read_wav(out_path)
         finally:
             out_path.unlink(missing_ok=True)
@@ -328,11 +329,20 @@ class WorkerGenerate:
         """The adapter's ``design`` operation (backends that can design voices)."""
         return self._run("design", text=text, instruct=instruct, **params)
 
+    @property
+    def worker(self) -> Worker:
+        """The worker, made (and its environment built) once, on first use."""
+        with self._lock:
+            if self._worker is None:
+                self._worker = self._make_worker()
+            return self._worker
+
     def close(self) -> None:
         """Stop the worker and free its memory."""
-        if self._worker is not None:
-            self._worker.close()
-            self._worker = None
+        with self._lock:
+            worker, self._worker = self._worker, None
+        if worker is not None:
+            worker.close()
 
 
 class LocalSpeechModel(SpeechModel):

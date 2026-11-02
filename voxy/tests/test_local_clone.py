@@ -540,3 +540,40 @@ def test_design_voice_without_preview_takes_the_first_generated(tmp_path):
         model.design_voice(
             "x", name="n", preview=model.design_voice_previews("x")[0], seeds=[1]
         )
+
+
+def test_worker_generate_makes_one_worker_across_threads(monkeypatch):
+    """Two threads calling a fresh model at once must not start two workers (#65)."""
+    import threading
+    import time
+
+    from voxy.local_clone import WorkerGenerate
+
+    made = []
+
+    class SlowWorker:
+        def call(self, op, **request):
+            return {}
+
+        def close(self):
+            pass
+
+    def make_worker(self):
+        made.append(1)
+        time.sleep(0.05)  # widen the window two unguarded threads would both enter
+        return SlowWorker()
+
+    monkeypatch.setattr(WorkerGenerate, "_make_worker", make_worker)
+    generate = WorkerGenerate(LOCAL_CLONE_BACKENDS["f5tts"])
+    workers = []
+    threads = [
+        threading.Thread(target=lambda: workers.append(generate.worker))
+        for _ in range(4)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(made) == 1 and len({id(w) for w in workers}) == 1
+    generate.close()
+    assert generate._worker is None
