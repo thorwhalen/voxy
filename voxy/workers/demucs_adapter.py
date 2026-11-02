@@ -1,9 +1,20 @@
 """Demucs (Meta, MIT): split a recording into a voice stem and the rest (music, noise).
 
-Audio is read and written with soundfile, and resampled with torchaudio's
-functional resampler, so the result does not depend on torchaudio's I/O backends.
-``TORCH_HOME`` (set by voxy) keeps the weights under voxy's models folder.
+Audio is read and written with soundfile; channels are matched and the rate converted
+with Demucs's own ``convert_audio`` (``julius.resample_frac``), so torchaudio's I/O
+backends play no part. ``TORCH_HOME`` (set by voxy) keeps the weights under voxy's
+models folder.
+
+``rest`` is the input minus the voice, so the two stems add back up to the input; a
+model's other stems never enter it. When the model is a bag in which one sub-model
+alone makes the wanted stem (``htdemucs_ft``: one fine-tuned model per stem), only that
+sub-model runs.
 """
+
+REST_STEM = "rest"
+WAV_SUBTYPE = "PCM_16"
+#: Demucs's guard against clipping: divide every stem by one common factor.
+CLIP_MODE = "rescale"
 
 
 def load(*, model="htdemucs_ft", device="cpu"):
@@ -11,51 +22,82 @@ def load(*, model="htdemucs_ft", device="cpu"):
 
     separator = get_model(model)
     separator.to(device).eval()
-    return {"model": separator, "device": device}
+    return {"model": separator, "model_name": model, "device": device}
 
 
-def separate(state, *, audio, out_dir, stem="vocals", shifts=1, overlap=0.25):
-    """Write ``<stem>.wav`` and ``rest.wav`` (everything else) into ``out_dir``."""
+def stem_model(model, index):
+    """The one sub-model of a bag that alone makes source ``index``, else ``model``.
+
+    A bag weighs each sub-model's estimate of each source; when a single sub-model
+    has a non-zero weight for a source, the bag's estimate of it is that sub-model's.
+    """
+    weights = getattr(model, "weights", None)
+    if weights is None:
+        return model
+    makers = [sub for sub, w in zip(model.models, weights) if w[index]]
+    return makers[0] if len(makers) == 1 else model
+
+
+def separate(
+    state,
+    *,
+    audio,
+    out_dir,
+    stem="vocals",
+    sample_rate=None,
+    shifts=1,
+    overlap=0.25,
+):
+    """Write ``<stem>.wav`` and ``rest.wav`` (the input minus the voice) into ``out_dir``.
+
+    Both are 16-bit PCM WAV with the model's channels, at ``sample_rate`` (default: the
+    model's rate). If either stem would clip, both are scaled by one common factor, so
+    ``voice + rest`` is the input times that factor.
+    """
     import os
 
+    import julius
     import numpy as np
     import soundfile
     import torch
-    import torchaudio.functional as F
     from demucs.apply import apply_model
+    from demucs.audio import convert_audio, prevent_clip
 
     model = state["model"]
-    samples, sample_rate = soundfile.read(audio, dtype="float32", always_2d=True)
-    wav = torch.from_numpy(samples.T.copy())  # (channels, frames)
-    if wav.shape[0] == 1:
-        wav = wav.repeat(model.audio_channels, 1)
-    wav = F.resample(wav, sample_rate, model.samplerate)
-    ref = wav.mean(0)
-    scale = ref.std() + 1e-8
+    if stem not in model.sources:
+        raise ValueError(
+            f"{stem!r} is not a stem of {state['model_name']}: {list(model.sources)}"
+        )
+    index = model.sources.index(stem)
+    samples, in_rate = soundfile.read(audio, dtype="float32", always_2d=True)
+    mix = convert_audio(
+        torch.from_numpy(samples.T.copy()),  # (channels, frames)
+        in_rate,
+        model.samplerate,
+        model.audio_channels,
+    )
+    # Demucs's own normalisation (demucs.separate): zero mean, unit std of the mono ref
+    ref = mix.mean(0)
+    offset, scale = ref.mean(), ref.std() + 1e-8
     with torch.no_grad():
         sources = apply_model(
-            model,
-            ((wav - ref.mean()) / scale)[None],
+            stem_model(model, index),
+            ((mix - offset) / scale)[None],
             device=state["device"],
             shifts=shifts,
             overlap=overlap,
         )[0]
-    sources = sources * scale + ref.mean()
-    index = model.sources.index(stem)
-    voice = sources[index]
-    rest = sources.sum(0) - voice
+    voice = sources[index] * scale + offset
+    stems = torch.stack([voice, mix - voice])
+    out_rate = sample_rate or model.samplerate
+    if out_rate != model.samplerate:
+        stems = julius.resample_frac(stems, model.samplerate, out_rate)
+    stems = prevent_clip(stems, mode=CLIP_MODE)
     paths = {}
-    for name, track in ((stem, voice), ("rest", rest)):
+    for name, track in zip((stem, REST_STEM), stems):
         path = os.path.join(out_dir, f"{name}.wav")
         soundfile.write(
-            path,
-            np.ascontiguousarray(track.numpy().T),
-            model.samplerate,
-            subtype="PCM_16",
+            path, np.ascontiguousarray(track.numpy().T), out_rate, subtype=WAV_SUBTYPE
         )
         paths[name] = path
-    return {
-        "paths": paths,
-        "sample_rate": model.samplerate,
-        "sources": list(model.sources),
-    }
+    return {"paths": paths, "sample_rate": out_rate, "sources": list(model.sources)}

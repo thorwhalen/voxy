@@ -207,7 +207,7 @@ voxy.list_voices("kokoro")
 
 ### Separating the voice from music
 
-`voxy.separate.separate("song.mp3")` returns `{"vocals": wav_bytes, "rest": wav_bytes}`: Demucs (`htdemucs_ft` by default, MIT) in its own environment, built on first use (or `python -m voxy setup demucs`), weights under `$VOXY_DATA_DIR/models/demucs`. Use it before cloning, transcribing or editing a voice recorded over music.
+`voxy.separate.separate("song.mp3")` returns `{"vocals": wav_bytes, "rest": wav_bytes}`: Demucs (`htdemucs_ft` by default, MIT) in its own environment, built on first use (or `python -m voxy setup demucs`), weights under `$VOXY_DATA_DIR/models/demucs`. Use it before cloning, transcribing or editing a voice recorded over music. `rest` is the input minus the voice, so the two add back up to it. Both are 16-bit stereo WAV at 44.1 kHz whatever the input (`sample_rate=` to change the rate); loud input is scaled down, both stems by the same factor, rather than clipped. The whole file is held in memory, and it takes about 24 s per minute of audio on CPU.
 
 ### Correcting words in a recording
 
