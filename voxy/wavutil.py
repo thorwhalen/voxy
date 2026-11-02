@@ -245,14 +245,48 @@ def silence(ms: float, sample_rate: int) -> np.ndarray:
     return np.zeros(int(sample_rate * ms / 1000), dtype=np.float32)
 
 
+#: Taps of the anti-aliasing filter applied before downsampling (odd).
+DFLT_LOWPASS_TAPS = 255
+#: The filter's cutoff, as a share of the target rate's Nyquist frequency.
+DFLT_LOWPASS_SHARE = 0.95
+
+
+def lowpass(
+    samples: np.ndarray,
+    cutoff_hz: float,
+    sample_rate: int,
+    *,
+    taps: int = DFLT_LOWPASS_TAPS,
+) -> np.ndarray:
+    """``samples`` with what lies above ``cutoff_hz`` removed (windowed-sinc FIR,
+    Blackman window, zero phase: same length, no delay).
+
+    >>> sr = 48000; t = np.arange(sr) / sr
+    >>> hiss = lowpass(np.sin(2 * np.pi * 12000 * t), 4000, sr)
+    >>> bool(np.abs(hiss[1000:-1000]).max() < 0.01)
+    True
+    """
+    taps = taps + 1 - taps % 2  # odd: a centred, delay-free kernel
+    n = np.arange(taps) - taps // 2
+    kernel = np.sinc(2 * cutoff_hz / sample_rate * n) * np.blackman(taps)
+    kernel /= kernel.sum()
+    return np.convolve(np.asarray(samples, np.float64), kernel, mode="same").astype(
+        np.float32
+    )
+
+
 def resample(samples: np.ndarray, from_rate: int, to_rate: int) -> np.ndarray:
-    """Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).
+    """Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below
+    the target's Nyquist frequency first when downsampling (so a 24 kHz render put into
+    an 8 kHz recording does not alias), then linear interpolation.
 
     >>> len(resample(np.zeros(100), 8000, 16000))
     200
     """
     if from_rate == to_rate:
         return samples
+    if to_rate < from_rate:
+        samples = lowpass(samples, DFLT_LOWPASS_SHARE * to_rate / 2, from_rate)
     n = int(round(len(samples) * to_rate / from_rate))
     positions = np.linspace(0, len(samples) - 1, n)
     return np.interp(positions, np.arange(len(samples)), samples).astype(np.float32)

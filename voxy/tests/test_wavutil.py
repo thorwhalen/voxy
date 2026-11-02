@@ -142,3 +142,14 @@ def test_digital_silence_after_a_stray_chunk_id_is_still_audio():
     frames[100:102] = np.frombuffer(b"LIST", "<i2")
     samples, _ = read_wav(wav(frames.tobytes(), data_size=0))
     assert len(samples) == 1000
+
+
+def test_downsampling_does_not_alias():
+    from voxy.wavutil import resample
+
+    sr = 48000
+    t = np.arange(sr) / sr
+    above = resample(np.sin(2 * np.pi * 10000 * t), sr, 8000)  # above 8 kHz's Nyquist
+    kept = resample(np.sin(2 * np.pi * 1000 * t), sr, 8000)
+    rms = lambda y: float(np.sqrt(np.mean(y[500:-500] ** 2)))
+    assert rms(above) < 0.01 and abs(rms(kept) - 0.707) < 0.02
