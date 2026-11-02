@@ -554,3 +554,22 @@ def test_keep_pauses_off_gives_the_old_tighter_splice():
         keep_pauses=False,
     )
     assert len(read_wav(tight.audio)[0]) < len(read_wav(kept.audio)[0])
+
+
+
+def test_the_old_words_soft_onset_is_not_carried_back_in_as_pause():
+    """A fricative 30 dB below the vowel is speech, not pause (#75 re-review)."""
+    rng = np.random.default_rng(1)
+    floor = 0.001 * rng.standard_normal(int(2.5 * SR))
+    x = floor.copy()
+    hiss = 0.3 * 10 ** (-30 / 20) * rng.standard_normal(int(0.12 * SR))  # /f/ of "four"
+    start = int(1.0 * SR)
+    x[start : start + len(hiss)] += hiss
+    x[start + len(hiss) : start + len(hiss) + int(0.5 * SR)] += tone(0.5, 300, 0.3)
+    words = [{"text": "four", "start": 1.12, "end": 1.62}]  # ASR starts at the vowel
+    fixed = replace_words(x.astype(np.float32), "four", "five", words=words, sample_rate=SR,
+                          render=_clean_render, verify=(), background=None)
+    out, _ = read_wav(fixed.audio)
+    before = out[: int(fixed.start * SR)]
+    tail_of_before = before[-int(0.1 * SR):]
+    assert float(np.sqrt(np.mean(tail_of_before**2))) < 0.003  # floor, not the old hiss
