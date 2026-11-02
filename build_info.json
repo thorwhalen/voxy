@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-02T09:57:43Z",
+  "built_at": "2026-11-02T10:07:12Z",
   "package": {
     "name": "voxy",
-    "version": "0.0.50",
+    "version": "0.0.51",
     "display_name": "voxy",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "28ccbe077d22d3528e9799648aff6c322b5f5155",
-    "short_commit": "28ccbe0",
+    "commit": "f356ff4509ff2f4fe072458c262426e70eec2ddc",
+    "short_commit": "f356ff4",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/thorwhalen/voxy",
-    "commit_url": "https://github.com/thorwhalen/voxy/commit/28ccbe077d22d3528e9799648aff6c322b5f5155",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/f356ff4509ff2f4fe072458c262426e70eec2ddc",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "thorwhalen/voxy",
-    "sha": "320ab600726e686246999d1bca93091a96980604",
+    "sha": "f356ff4509ff2f4fe072458c262426e70eec2ddc",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41424528094",
-    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41424528094",
+    "run_id": "41425796740",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41425796740",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -60,16 +60,14 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.49",
-    "relation": "ahead",
+    "latest": "0.0.51",
+    "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 28ccbe077d22d3528e9799648aff6c322b5f5155\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout f356ff4509ff2f4fe072458c262426e70eec2ddc\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": false,
-    "notes": [
-      "The documented version (0.0.50) is ahead of the latest release on PyPI (0.0.49): these docs describe unreleased code."
-    ]
+    "aligned": true,
+    "notes": []
   }
 }
