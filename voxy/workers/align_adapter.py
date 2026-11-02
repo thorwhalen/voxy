@@ -95,3 +95,39 @@ def align(state, *, audio, words, max_seconds=30.0):
             }
         )
     return {"words": out}
+
+
+def score(state, *, audio, texts, start=None, end=None):
+    """``{"scores": [...]}``: for each of ``texts``, the log-likelihood the aligner
+    gives it over ``audio`` (cropped to ``start``-``end`` seconds when given), i.e.
+    minus the CTC loss. Higher is more likely; compare texts on the same crop only."""
+    import soundfile
+    import torch
+    import torchaudio.functional as F
+
+    bundle, index = state["bundle"], state["index"]
+    samples, rate = soundfile.read(audio, dtype="float32", always_2d=True)
+    mono = samples.mean(axis=1)
+    lo = int((start or 0) * rate)
+    hi = len(mono) if end is None else int(end * rate)
+    wav = F.resample(
+        torch.from_numpy(mono[lo:hi].copy())[None], rate, bundle.sample_rate
+    )
+    with torch.inference_mode():
+        emission, _ = state["model"](wav.to(state["device"]))
+    log_probs = emission[0].cpu().log_softmax(-1)[:, None]
+    scores = []
+    for text in texts:
+        letters = "".join(_letters(w, index) for w in text.split())
+        tokens = torch.tensor([[index[c] for c in letters]], dtype=torch.long)
+        loss = torch.nn.functional.ctc_loss(
+            log_probs,
+            tokens,
+            [log_probs.shape[0]],
+            [tokens.shape[1]],
+            blank=0,
+            reduction="sum",
+            zero_infinity=True,
+        )
+        scores.append(round(-float(loss), 4))
+    return {"scores": scores}

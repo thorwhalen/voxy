@@ -103,3 +103,68 @@ def force_align(
         )
     empty = {"start": None, "end": None, "score": None, "chars": []}
     return [{"word": w, **(span or empty)} for w, span in zip(words, spans)]
+
+
+ScoreRun = Callable[..., Sequence[float]]
+
+
+def worker_score(
+    *,
+    model: str = DFLT_ALIGNER,
+    threads: int | None = None,
+    rootdir: str | os.PathLike | None = None,
+) -> ScoreRun:
+    """The default scorer for ``which_said``: the aligner adapter's ``score``."""
+
+    def run(audio: str, texts: Sequence[str], *, start=None, end=None):
+        worker = _ALIGN_POOL.get(model, threads, rootdir)
+        reply = worker.call(
+            "score",
+            audio=str(Path(audio).resolve()),
+            texts=list(texts),
+            start=start,
+            end=end,
+        )
+        return reply["scores"]
+
+    return run
+
+
+def which_said(
+    audio: str | os.PathLike | bytes,
+    candidates: Sequence[str],
+    *,
+    start: float | None = None,
+    end: float | None = None,
+    run: ScoreRun | None = None,
+) -> list[dict]:
+    """The ``candidates`` (texts) ranked by how well the audio supports each, best first:
+    ``[{"text", "score", "margin"}]``, ``score`` the aligner's log-likelihood (minus
+    its CTC loss) and ``margin`` the lead over the next candidate.
+
+    A forced choice, so it cannot hallucinate as transcribing a short crop can: use it
+    to check an edit ("witch" or the old word?) on a crop around it (``start``/``end``,
+    s; include the neighbouring words for context). Compare scores on one crop only.
+
+    >>> fake = lambda audio, texts, start=None, end=None: [-5.0, -2.0]
+    >>> [(c["text"], c["margin"]) for c in which_said(b"RIFF", ["bitch", "witch"], run=fake)]
+    [('witch', 3.0), ('bitch', None)]
+    """
+    run = run or worker_score()
+    with tempfile.TemporaryDirectory() as tmp:
+        if isinstance(audio, bytes):
+            path = Path(tmp) / "audio.wav"
+            path.write_bytes(audio)
+            audio = path
+        scores = run(str(audio), list(candidates), start=start, end=end)
+    ranked = sorted(zip(candidates, scores), key=lambda ts: -ts[1])
+    return [
+        {
+            "text": text,
+            "score": score,
+            "margin": round(score - ranked[i + 1][1], 4)
+            if i + 1 < len(ranked)
+            else None,
+        }
+        for i, (text, score) in enumerate(ranked)
+    ]
