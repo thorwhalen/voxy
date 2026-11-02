@@ -5,21 +5,31 @@ Voxy: A flexible speech synthesis and voice cloning module.
 This module provides a plugin architecture for working with different speech synthesis
 models, with initial support for the CSM-1B model.
 
+torch, torchaudio and whisper are imported only where a local model needs them
+(`voxy[local]`, `voxy[transcription]`), so a cloud backend runs without them.
+Annotations are postponed and torch is imported only for type checking, so
+`typing.get_type_hints` on these functions needs torch importable and in scope
+(an accepted trade-off).
+
 ### Module Attributes
 
-| [`speech_model_factories`](#voxy.base.speech_model_factories)   | Backend name -> factory (keys lowercase).                                     |
-|---------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`backend_aliases`](#voxy.base.backend_aliases)          | Other names for a backend -> its registry name (one model, one profile type). |
+| [`OPTIONAL_MODULE_EXTRAS`](#voxy.base.OPTIONAL_MODULE_EXTRAS)   | The extra that installs each optional module (for the error raised without it).   |
+|---------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`speech_model_factories`](#voxy.base.speech_model_factories)   | Backend name -> factory (keys lowercase).                                         |
+| [`backend_aliases`](#voxy.base.backend_aliases)          | Other names for a backend -> its registry name (one model, one profile type).     |
 
 ### Functions
 
-| [`audio_to_text`](#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                |
-|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`canonical_backend`](#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).    |
-| [`cleanup_audio`](#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.             |
-| [`create_speech_model`](#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                           |
-| [`register_speech_model`](#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).    |
-| [`tensor_to_wav_bytes`](#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV. |
+| [`audio_to_text`](#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                          |
+|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`canonical_backend`](#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).              |
+| [`cleanup_audio`](#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.                       |
+| [`create_speech_model`](#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                                     |
+| [`dflt_voxy_device`](#voxy.base.dflt_voxy_device)()                              | `$DFLT_VOXY_DEVICE`, else 'cuda' if torch is installed and sees one, else 'cpu'. |
+| [`is_tensor`](#voxy.base.is_tensor)(obj)                                  | True if `obj` is a torch tensor (without importing torch to find out).           |
+| [`optional_import`](#voxy.base.optional_import)(module)                         | Import `module`, or raise an ImportError naming the voxy extra that has it.      |
+| [`register_speech_model`](#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).              |
+| [`tensor_to_wav_bytes`](#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.              |
 
 ### Classes
 
@@ -30,7 +40,7 @@ models, with initial support for the CSM-1B model.
 | [`VoiceInfo`](#voxy.base.VoiceInfo)(voice_id, name, backend[, ...])     | A voice a backend offers (stock, designed, or cloned).     |
 | [`VoiceProfile`](#voxy.base.VoiceProfile)(segment, speaker_id, ...[, ...]) | Data class to store voice cloning information.             |
 
-### *class* voxy.base.CSMSpeechModel(model_path=None, device='cpu')
+### *class* voxy.base.CSMSpeechModel(model_path=None, device=None)
 
 Bases: [`SpeechModel`](#voxy.base.SpeechModel)
 
@@ -41,7 +51,7 @@ Speech model implementation using Sesame’s CSM-1B model.
 Create a voice profile from an audio sample and its transcript.
 
 * **Parameters:**
-  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **audio_input** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`]) – Audio in various formats
   * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Text transcription of the audio (if None, auto-transcribed)
   * **speaker_id** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Unique ID for this voice
   * **cleanup_audio_fn** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Function to clean up audio (None to skip)
@@ -74,6 +84,10 @@ Registry name of the backend (also each profile’s `model_type`).
 
 Sample rate of the generated audio (loads the model).
 
+### voxy.base.OPTIONAL_MODULE_EXTRAS *= {'huggingface_hub': 'local', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'}*
+
+The extra that installs each optional module (for the error raised without it).
+
 ### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -95,7 +109,7 @@ Write the audio to `path` (folders created) and return the path.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### *class* voxy.base.SpeechModel(device='cpu')
+### *class* voxy.base.SpeechModel(device=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -116,7 +130,7 @@ A backend implements whichever capabilities it has; the rest raise
 Create a voice profile from an audio sample and its transcript.
 
 * **Parameters:**
-  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **audio_input** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`]) – Audio in various formats
   * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Text transcription of the audio (if None, auto-transcribed)
   * **speaker_id** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Unique ID for this voice
   * **cleanup_audio_fn** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Function to clean up audio (None to skip)
@@ -131,6 +145,10 @@ Create a new voice from a text description.
 
 * **Return type:**
   [`VoiceProfile`](#voxy.base.VoiceProfile)
+
+#### *property* device *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
+
+The inference device (resolved on first use).
 
 #### dflt_voice *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
 
@@ -192,7 +210,7 @@ Data class to store voice cloning information.
 Transcribe audio to text using Whisper.
 
 * **Parameters:**
-  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **audio_input** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`]) – Audio in various formats
   * **model_size** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Whisper model size (‘tiny’, ‘base’, ‘small’, ‘medium’, ‘large’)
   * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Sample rate of `audio_input` when it is a raw tensor or
     numpy array. Required for correct transcription of raw audio that
@@ -241,6 +259,7 @@ A 1-D input is given a channel dimension, and the loudest sample is
 normalized to 1.0:
 
 ```pycon
+>>> import torch
 >>> audio = torch.tensor([0.0, 0.5, 0.0, 0.0])
 >>> processed = cleanup_audio(audio, sample_rate=8000)
 >>> tuple(processed.shape)
@@ -287,6 +306,37 @@ Traceback (most recent call last):
 ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, ...)
 ```
 
+### voxy.base.dflt_voxy_device()
+
+`$DFLT_VOXY_DEVICE`, else ‘cuda’ if torch is installed and sees one, else ‘cpu’.
+
+MPS is skipped even when available: CSM fails on it (“Output channels > 65536
+not supported at the MPS device”).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.base.is_tensor(obj)
+
+True if `obj` is a torch tensor (without importing torch to find out).
+
+```pycon
+>>> is_tensor([0.0])
+False
+```
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### voxy.base.optional_import(module)
+
+Import `module`, or raise an ImportError naming the voxy extra that has it.
+
+```pycon
+>>> optional_import("numpy").__name__
+'numpy'
+```
+
 ### voxy.base.register_speech_model(name, factory, , overwrite=False)
 
 Register a backend (a class or `**kwargs -> SpeechModel` callable).
@@ -315,16 +365,22 @@ Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
 ### voxy.base.tensor_to_wav_bytes(audio, sample_rate)
 
-Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
+Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.
 
-Integer tensors are taken as PCM and scaled to [-1, 1] first.
+`audio` is a numpy array or a torch tensor (torch is not needed for arrays).
+Integer audio is taken as PCM and scaled to [-1, 1] first; channels are
+averaged, and `voxy.wavutil.write_wav` does the encoding.
 
 ```pycon
->>> data = tensor_to_wav_bytes(torch.zeros(160), 16000)
+>>> data = tensor_to_wav_bytes(np.zeros(160), 16000)
 >>> data[:4], len(data)
 (b'RIFF', 364)
->>> tensor_to_wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]
+>>> tensor_to_wav_bytes(np.array([[0, 32767]], dtype=np.int16), 8000)[-2:]
 b'\xff\x7f'
+>>> tensor_to_wav_bytes(np.zeros((1, 2, 3)), 8000)
+Traceback (most recent call last):
+  ...
+ValueError: Audio must be [samples] or [channels, samples], not 3-D
 ```
 
 * **Return type:**

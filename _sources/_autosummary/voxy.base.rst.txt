@@ -8,6 +8,7 @@ voxy.base
 
    .. autosummary::
    
+      OPTIONAL_MODULE_EXTRAS
       speech_model_factories
       backend_aliases
    
@@ -19,6 +20,9 @@ voxy.base
       canonical_backend
       cleanup_audio
       create_speech_model
+      dflt_voxy_device
+      is_tensor
+      optional_import
       register_speech_model
       tensor_to_wav_bytes
    

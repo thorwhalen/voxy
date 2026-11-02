@@ -34,7 +34,7 @@ the voice’s owner (or their guardian) to do so.
 |------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
 | [`VoiceDesignPreview`](#voxy.elevenlabs_model.VoiceDesignPreview)(generated_voice_id, audio) | One candidate voice from `design_voice_previews`: listen, then pick.       |
 
-### *class* voxy.elevenlabs_model.ElevenLabsSpeechModel(, api_key=None, model_id='eleven_multilingual_v2', output_format='pcm_24000', client_factory=None, device='cpu')
+### *class* voxy.elevenlabs_model.ElevenLabsSpeechModel(, api_key=None, model_id='eleven_multilingual_v2', output_format='pcm_24000', client_factory=None, device=None)
 
 Bases: [`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel)
 
@@ -47,7 +47,7 @@ Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).
     decode to a tensor with no extra dependency.
   * **client_factory** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `api_key -> client`. Defaults to the official SDK; tests
     inject a fake so nothing reaches the API.
-  * **device** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Device the returned tensors are placed on.
+  * **device** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Device the returned tensors are placed on.
 
 #### *property* client
 
@@ -62,7 +62,7 @@ total (at least 1, at most about 3); how it is split across files does
 not matter.
 
 * **Parameters:**
-  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray` | [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`] | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`, [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – One audio input, or an iterable of them (paths, bytes,
+  * **audio_input** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`, [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`]], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`], [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]]) – One audio input, or an iterable of them (paths, bytes,
     file-likes, tensors, arrays).
   * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Ignored: IVC needs no transcript. Kept so every voxy
     backend shares one `clone_voice` signature.

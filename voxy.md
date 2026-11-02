@@ -1,4 +1,4 @@
-> built 2026-11-02 08:19 UTC from d86cd25 (main) · voxy 0.0.38. Details: build_info.json
+> built 2026-11-02 08:43 UTC from 30d39ef (main) · voxy 0.0.39. Details: build_info.json
 
 # index.html.md
 
@@ -8,7 +8,7 @@
 
 Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designing voices.
 
-To install:	`pip install voxy` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'voxy[fal]'` for those services) The part-of-speech heteronym detector (`voxy.speechtext.pos_detector`) needs `'voxy[pos]'` plus `python -m spacy download fr_core_news_sm`. The LLM proposer (`voxy.speechtext.llm_detector`) uses `'voxy[aix]'` unless you pass `chat=`.
+To install:	`pip install voxy` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'voxy[fal]'` for those services). torch is not installed by default: the local CSM model and tensor helpers (`cleanup_audio`, `generate_speech`) need `'voxy[local]'`, and Whisper transcription `'voxy[transcription]'`; the local backends that run in their own environments (kokoro, f5tts, …) need neither. The part-of-speech heteronym detector (`voxy.speechtext.pos_detector`) needs `'voxy[pos]'` plus `python -m spacy download fr_core_news_sm`. The LLM proposer (`voxy.speechtext.llm_detector`) uses `'voxy[aix]'` unless you pass `chat=`.
 
 ```python
 import voxy
@@ -427,21 +427,31 @@ Voxy: A flexible speech synthesis and voice cloning module.
 This module provides a plugin architecture for working with different speech synthesis
 models, with initial support for the CSM-1B model.
 
+torch, torchaudio and whisper are imported only where a local model needs them
+(`voxy[local]`, `voxy[transcription]`), so a cloud backend runs without them.
+Annotations are postponed and torch is imported only for type checking, so
+`typing.get_type_hints` on these functions needs torch importable and in scope
+(an accepted trade-off).
+
 ### Module Attributes
 
-| [`speech_model_factories`](_autosummary/voxy.base.html.md#voxy.base.speech_model_factories)   | Backend name -> factory (keys lowercase).                                     |
-|---------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`backend_aliases`](_autosummary/voxy.base.html.md#voxy.base.backend_aliases)          | Other names for a backend -> its registry name (one model, one profile type). |
+| [`OPTIONAL_MODULE_EXTRAS`](_autosummary/voxy.base.html.md#voxy.base.OPTIONAL_MODULE_EXTRAS)   | The extra that installs each optional module (for the error raised without it).   |
+|---------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`speech_model_factories`](_autosummary/voxy.base.html.md#voxy.base.speech_model_factories)   | Backend name -> factory (keys lowercase).                                         |
+| [`backend_aliases`](_autosummary/voxy.base.html.md#voxy.base.backend_aliases)          | Other names for a backend -> its registry name (one model, one profile type).     |
 
 ### Functions
 
-| [`audio_to_text`](_autosummary/voxy.base.html.md#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                |
-|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`canonical_backend`](_autosummary/voxy.base.html.md#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).    |
-| [`cleanup_audio`](_autosummary/voxy.base.html.md#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.             |
-| [`create_speech_model`](_autosummary/voxy.base.html.md#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                           |
-| [`register_speech_model`](_autosummary/voxy.base.html.md#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).    |
-| [`tensor_to_wav_bytes`](_autosummary/voxy.base.html.md#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV. |
+| [`audio_to_text`](_autosummary/voxy.base.html.md#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                          |
+|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`canonical_backend`](_autosummary/voxy.base.html.md#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).              |
+| [`cleanup_audio`](_autosummary/voxy.base.html.md#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.                       |
+| [`create_speech_model`](_autosummary/voxy.base.html.md#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                                     |
+| [`dflt_voxy_device`](_autosummary/voxy.base.html.md#voxy.base.dflt_voxy_device)()                              | `$DFLT_VOXY_DEVICE`, else 'cuda' if torch is installed and sees one, else 'cpu'. |
+| [`is_tensor`](_autosummary/voxy.base.html.md#voxy.base.is_tensor)(obj)                                  | True if `obj` is a torch tensor (without importing torch to find out).           |
+| [`optional_import`](_autosummary/voxy.base.html.md#voxy.base.optional_import)(module)                         | Import `module`, or raise an ImportError naming the voxy extra that has it.      |
+| [`register_speech_model`](_autosummary/voxy.base.html.md#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).              |
+| [`tensor_to_wav_bytes`](_autosummary/voxy.base.html.md#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.              |
 
 ### Classes
 
@@ -452,7 +462,7 @@ models, with initial support for the CSM-1B model.
 | [`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)(voice_id, name, backend[, ...])     | A voice a backend offers (stock, designed, or cloned).     |
 | [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)(segment, speaker_id, ...[, ...]) | Data class to store voice cloning information.             |
 
-### *class* voxy.base.CSMSpeechModel(model_path=None, device='cpu')
+### *class* voxy.base.CSMSpeechModel(model_path=None, device=None)
 
 Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
 
@@ -463,7 +473,7 @@ Speech model implementation using Sesame’s CSM-1B model.
 Create a voice profile from an audio sample and its transcript.
 
 * **Parameters:**
-  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **audio_input** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`]) – Audio in various formats
   * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Text transcription of the audio (if None, auto-transcribed)
   * **speaker_id** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Unique ID for this voice
   * **cleanup_audio_fn** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Function to clean up audio (None to skip)
@@ -496,6 +506,10 @@ Registry name of the backend (also each profile’s `model_type`).
 
 Sample rate of the generated audio (loads the model).
 
+### voxy.base.OPTIONAL_MODULE_EXTRAS *= {'huggingface_hub': 'local', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'}*
+
+The extra that installs each optional module (for the error raised without it).
+
 ### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
@@ -517,7 +531,7 @@ Write the audio to `path` (folders created) and return the path.
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
-### *class* voxy.base.SpeechModel(device='cpu')
+### *class* voxy.base.SpeechModel(device=None)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -538,7 +552,7 @@ A backend implements whichever capabilities it has; the rest raise
 Create a voice profile from an audio sample and its transcript.
 
 * **Parameters:**
-  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **audio_input** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`]) – Audio in various formats
   * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Text transcription of the audio (if None, auto-transcribed)
   * **speaker_id** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Unique ID for this voice
   * **cleanup_audio_fn** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Function to clean up audio (None to skip)
@@ -553,6 +567,10 @@ Create a new voice from a text description.
 
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+#### *property* device *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)*
+
+The inference device (resolved on first use).
 
 #### dflt_voice *: [str](https://docs.python.org/3/builtins/stdtypes.html#str) | [None](https://docs.python.org/3/builtins/constants.html#None)* *= None*
 
@@ -614,7 +632,7 @@ Data class to store voice cloning information.
 Transcribe audio to text using Whisper.
 
 * **Parameters:**
-  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`) – Audio in various formats
+  * **audio_input** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`]) – Audio in various formats
   * **model_size** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Whisper model size (‘tiny’, ‘base’, ‘small’, ‘medium’, ‘large’)
   * **sample_rate** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Sample rate of `audio_input` when it is a raw tensor or
     numpy array. Required for correct transcription of raw audio that
@@ -663,6 +681,7 @@ A 1-D input is given a channel dimension, and the loudest sample is
 normalized to 1.0:
 
 ```pycon
+>>> import torch
 >>> audio = torch.tensor([0.0, 0.5, 0.0, 0.0])
 >>> processed = cleanup_audio(audio, sample_rate=8000)
 >>> tuple(processed.shape)
@@ -709,6 +728,37 @@ Traceback (most recent call last):
 ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, ...)
 ```
 
+### voxy.base.dflt_voxy_device()
+
+`$DFLT_VOXY_DEVICE`, else ‘cuda’ if torch is installed and sees one, else ‘cpu’.
+
+MPS is skipped even when available: CSM fails on it (“Output channels > 65536
+not supported at the MPS device”).
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.base.is_tensor(obj)
+
+True if `obj` is a torch tensor (without importing torch to find out).
+
+```pycon
+>>> is_tensor([0.0])
+False
+```
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### voxy.base.optional_import(module)
+
+Import `module`, or raise an ImportError naming the voxy extra that has it.
+
+```pycon
+>>> optional_import("numpy").__name__
+'numpy'
+```
+
 ### voxy.base.register_speech_model(name, factory, , overwrite=False)
 
 Register a backend (a class or `**kwargs -> SpeechModel` callable).
@@ -737,16 +787,22 @@ Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
 ### voxy.base.tensor_to_wav_bytes(audio, sample_rate)
 
-Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
+Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.
 
-Integer tensors are taken as PCM and scaled to [-1, 1] first.
+`audio` is a numpy array or a torch tensor (torch is not needed for arrays).
+Integer audio is taken as PCM and scaled to [-1, 1] first; channels are
+averaged, and `voxy.wavutil.write_wav` does the encoding.
 
 ```pycon
->>> data = tensor_to_wav_bytes(torch.zeros(160), 16000)
+>>> data = tensor_to_wav_bytes(np.zeros(160), 16000)
 >>> data[:4], len(data)
 (b'RIFF', 364)
->>> tensor_to_wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]
+>>> tensor_to_wav_bytes(np.array([[0, 32767]], dtype=np.int16), 8000)[-2:]
 b'\xff\x7f'
+>>> tensor_to_wav_bytes(np.zeros((1, 2, 3)), 8000)
+Traceback (most recent call last):
+  ...
+ValueError: Audio must be [samples] or [channels, samples], not 3-D
 ```
 
 * **Return type:**
@@ -1098,7 +1154,7 @@ the voice’s owner (or their guardian) to do so.
 |------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
 | [`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview)(generated_voice_id, audio) | One candidate voice from `design_voice_previews`: listen, then pick.       |
 
-### *class* voxy.elevenlabs_model.ElevenLabsSpeechModel(, api_key=None, model_id='eleven_multilingual_v2', output_format='pcm_24000', client_factory=None, device='cpu')
+### *class* voxy.elevenlabs_model.ElevenLabsSpeechModel(, api_key=None, model_id='eleven_multilingual_v2', output_format='pcm_24000', client_factory=None, device=None)
 
 Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
 
@@ -1111,7 +1167,7 @@ Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).
     decode to a tensor with no extra dependency.
   * **client_factory** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`Any`](https://docs.python.org/3/library/typing.html#typing.Any)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `api_key -> client`. Defaults to the official SDK; tests
     inject a fake so nothing reaches the API.
-  * **device** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Device the returned tensors are placed on.
+  * **device** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Device the returned tensors are placed on.
 
 #### *property* client
 
@@ -1126,7 +1182,7 @@ total (at least 1, at most about 3); how it is split across files does
 not matter.
 
 * **Parameters:**
-  * **audio_input** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray` | [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`] | [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes) | [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO) | `Tensor` | `ndarray`, [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – One audio input, or an iterable of them (paths, bytes,
+  * **audio_input** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`, [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`]], [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike), [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes), [`BinaryIO`](https://docs.python.org/3/library/typing.html#typing.BinaryIO), `Tensor`, `ndarray`], [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]]) – One audio input, or an iterable of them (paths, bytes,
     file-likes, tensors, arrays).
   * **transcript** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Ignored: IVC needs no transcript. Kept so every voxy
     backend shares one `clone_voice` signature.
@@ -4727,18 +4783,16 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 08:19 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/d86cd257b127866c56b81bef6b69f212c576f81b"><code>d86cd25</code></a> on branch <code>main</code>, for **voxy 0.0.38** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 08:43 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/30d39ef69aef36a58cfc7a8e0b6899562634adf4"><code>30d39ef</code></a> on branch <code>main</code>, for **voxy 0.0.39** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.38) is behind the latest release on PyPI (0.0.39): `pip install voxy` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/d86cd257b127866c56b81bef6b69f212c576f81b"><code>d86cd257b127866c56b81bef6b69f212c576f81b</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/30d39ef69aef36a58cfc7a8e0b6899562634adf4"><code>30d39ef69aef36a58cfc7a8e0b6899562634adf4</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -4749,9 +4803,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41411704134">41411704134</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41414790731">41414790731</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>d86cd257b127866c56b81bef6b69f212c576f81b</code> (in the history of the built commit) |
+| Event commit | <code>30d39ef69aef36a58cfc7a8e0b6899562634adf4</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4776,13 +4830,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.39/">0.0.39</a>, newer than the documented version (0.0.38).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.39/">0.0.39</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout d86cd257b127866c56b81bef6b69f212c576f81b
+git checkout 30d39ef69aef36a58cfc7a8e0b6899562634adf4
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
