@@ -94,6 +94,7 @@
 <li class="toctree-l3"><a class="reference internal" href="voxy.fal_model.html">voxy.fal_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.finetune.html">voxy.finetune</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.kokoro_model.html">voxy.kokoro_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.lexique.html">voxy.lexique</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.local_clone.html">voxy.local_clone</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.pronounce.html">voxy.pronounce</a></li>
@@ -178,49 +179,52 @@
 <tr class="row-even"><td><p><a class="reference internal" href="voxy.kokoro_model.html#module-voxy.kokoro_model" title="voxy.kokoro_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kokoro_model</span></code></a></p></td>
 <td><p>Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.library.html#module-voxy.library" title="voxy.library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">library</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.lexique.html#module-voxy.lexique" title="voxy.lexique"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lexique</span></code></a></p></td>
+<td><p>French heteronyms derived from Lexique, to merge under voxy's hand-made table.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.library.html#module-voxy.library" title="voxy.library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">library</span></code></a></p></td>
 <td><p>A persistent voice library: clone a voice once, then use it by name.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.local_clone.html#module-voxy.local_clone" title="voxy.local_clone"><code class="xref py py-obj docutils literal notranslate"><span class="pre">local_clone</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.local_clone.html#module-voxy.local_clone" title="voxy.local_clone"><code class="xref py py-obj docutils literal notranslate"><span class="pre">local_clone</span></code></a></p></td>
 <td><p>Local voice cloning: speak any text in a voice learned from a short reference clip.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.pronounce.html#module-voxy.pronounce" title="voxy.pronounce"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pronounce</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.pronounce.html#module-voxy.pronounce" title="voxy.pronounce"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pronounce</span></code></a></p></td>
 <td><p>Checking, in the audio, which reading of a flagged word a render used.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.refprep.html#module-voxy.refprep" title="voxy.refprep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">refprep</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.refprep.html#module-voxy.refprep" title="voxy.refprep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">refprep</span></code></a></p></td>
 <td><p>Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.say_model.html#module-voxy.say_model" title="voxy.say_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">say_model</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.say_model.html#module-voxy.say_model" title="voxy.say_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">say_model</span></code></a></p></td>
 <td><p>Local speech with the macOS <code class="docutils literal notranslate"><span class="pre">say</span></code> command: free, offline, no API key, no deps.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.script.html#module-voxy.script" title="voxy.script"><code class="xref py py-obj docutils literal notranslate"><span class="pre">script</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.script.html#module-voxy.script" title="voxy.script"><code class="xref py py-obj docutils literal notranslate"><span class="pre">script</span></code></a></p></td>
 <td><p>Render a cast script: text segments, each read by its own voice, one audio file per section.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.speakers.html#module-voxy.speakers" title="voxy.speakers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speakers</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.speakers.html#module-voxy.speakers" title="voxy.speakers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speakers</span></code></a></p></td>
 <td><p>Keep one speaker: find their voice in a recording and mark everyone else's words.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.speechtext.html#module-voxy.speechtext" title="voxy.speechtext"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speechtext</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.speechtext.html#module-voxy.speechtext" title="voxy.speechtext"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speechtext</span></code></a></p></td>
 <td><p>Display text vs speech text, and spotting words a model may misread.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.splice.html#module-voxy.splice" title="voxy.splice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">splice</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.splice.html#module-voxy.splice" title="voxy.splice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">splice</span></code></a></p></td>
 <td><p>Correct words in a recording, in the speaker's voice: find, render, splice, check.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.stores.html#module-voxy.stores" title="voxy.stores"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stores</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.stores.html#module-voxy.stores" title="voxy.stores"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stores</span></code></a></p></td>
 <td><p>Where voxy keeps its data: voice records and audio, as <code class="docutils literal notranslate"><span class="pre">MutableMapping</span></code> stores.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.textsplit.html#module-voxy.textsplit" title="voxy.textsplit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">textsplit</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.textsplit.html#module-voxy.textsplit" title="voxy.textsplit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">textsplit</span></code></a></p></td>
 <td><p>Split long text (a chapter) into chunks a speech model can say in one breath.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.voicestudio_model.html#module-voxy.voicestudio_model" title="voxy.voicestudio_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voicestudio_model</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.voicestudio_model.html#module-voxy.voicestudio_model" title="voxy.voicestudio_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voicestudio_model</span></code></a></p></td>
 <td><p>Local description-prompted speech through VoiceStudio (Parler-TTS and friends).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.wavutil.html#module-voxy.wavutil" title="voxy.wavutil"><code class="xref py py-obj docutils literal notranslate"><span class="pre">wavutil</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.wavutil.html#module-voxy.wavutil" title="voxy.wavutil"><code class="xref py py-obj docutils literal notranslate"><span class="pre">wavutil</span></code></a></p></td>
 <td><p>Mono PCM WAV in and out as float arrays, plus the few edits narration needs.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.worker.html#module-voxy.worker" title="voxy.worker"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.worker.html#module-voxy.worker" title="voxy.worker"><code class="xref py py-obj docutils literal notranslate"><span class="pre">worker</span></code></a></p></td>
 <td><p>Talk to a model running in another Python environment, as if it were local.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.html#module-voxy.workers" title="voxy.workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">workers</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.html#module-voxy.workers" title="voxy.workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">workers</span></code></a></p></td>
 <td><p>Backend adapters run by <code class="docutils literal notranslate"><span class="pre">voxy.worker</span></code> inside each backend's own environment.</p></td>
 </tr>
 </tbody>
@@ -237,7 +241,7 @@
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=20c5f126"></script>
+<script src="../_static/documentation_options.js?v=173d7b4c"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

@@ -13,6 +13,7 @@ voxy.speechtext
       NOUN_CLITICS
       Tagger
       DFLT_SPACY_MODEL
+      FRENCH_READING_NAMES
       LLM_RISK_PROMPT
    
    .. rubric:: Functions

@@ -16,6 +16,7 @@
 - [voxy.fal_model](voxy.fal_model.html.md): Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.
 - [voxy.finetune](voxy.finetune.html.md): Fine-tuning datasets from prepared clips: one export per training recipe.
 - [voxy.kokoro_model](voxy.kokoro_model.html.md): Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.
+- [voxy.lexique](voxy.lexique.html.md): French heteronyms derived from Lexique, to merge under voxy’s hand-made table.
 - [voxy.library](voxy.library.html.md): A persistent voice library: clone a voice once, then use it by name.
 - [voxy.local_clone](voxy.local_clone.html.md): Local voice cloning: speak any text in a voice learned from a short reference clip.
 - [voxy.pronounce](voxy.pronounce.html.md): Checking, in the audio, which reading of a flagged word a render used.

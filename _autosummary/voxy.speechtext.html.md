@@ -35,13 +35,14 @@ True
 
 ### Module Attributes
 
-| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)     | the next line's capital then starts a new one.                                                                                                                      |
-|-------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`ELISIONS`](#voxy.speechtext.ELISIONS)         | a phonemizer reads one left standalone (`l'` split by ASR from `Est`) as a letter name (espeak: `l'` /ɛl/, `d'` /de/, `j'` /ʒi/), a vowel that is not in the audio. |
-| [`NOUN_CLITICS`](#voxy.speechtext.NOUN_CLITICS)     | those that can come before its noun reading ("l'Est", "vent d'est").                                                                                                |
-| [`Tagger`](#voxy.speechtext.Tagger)           | `text -> (char offset, token, universal POS tag)` for every token.                                                                                                  |
-| [`DFLT_SPACY_MODEL`](#voxy.speechtext.DFLT_SPACY_MODEL) | The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).                                                          |
-| [`LLM_RISK_PROMPT`](#voxy.speechtext.LLM_RISK_PROMPT)  | The prompt [`llm_detector()`](#voxy.speechtext.llm_detector) sends; `$language` and `$text` are filled in.                                            |
+| [`SENTENCE_END`](#voxy.speechtext.SENTENCE_END)         | the next line's capital then starts a new one.                                                                                                                      |
+|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`ELISIONS`](#voxy.speechtext.ELISIONS)             | a phonemizer reads one left standalone (`l'` split by ASR from `Est`) as a letter name (espeak: `l'` /ɛl/, `d'` /de/, `j'` /ʒi/), a vowel that is not in the audio. |
+| [`NOUN_CLITICS`](#voxy.speechtext.NOUN_CLITICS)         | those that can come before its noun reading ("l'Est", "vent d'est").                                                                                                |
+| [`Tagger`](#voxy.speechtext.Tagger)               | `text -> (char offset, token, universal POS tag)` for every token.                                                                                                  |
+| [`DFLT_SPACY_MODEL`](#voxy.speechtext.DFLT_SPACY_MODEL)     | The spaCy model [`spacy_tagger()`](#voxy.speechtext.spacy_tagger) loads by default (French).                                                          |
+| [`FRENCH_READING_NAMES`](#voxy.speechtext.FRENCH_READING_NAMES) | the names of voxy's French table (`voxy.pronounce.heteronym_readings`), of `FRENCH_POS_HETERONYMS` and of the readings `voxy.lexique` derives.                      |
+| [`LLM_RISK_PROMPT`](#voxy.speechtext.LLM_RISK_PROMPT)      | The prompt [`llm_detector()`](#voxy.speechtext.llm_detector) sends; `$language` and `$text` are filled in.                                            |
 
 ### Functions
 
@@ -79,6 +80,15 @@ standalone (`l'` split by ASR from `Est`) as a letter name (espeak: `l'` /ɛl/,
 
 * **Type:**
   Elided clitics as said before a vowel, by language
+
+### voxy.speechtext.FRENCH_READING_NAMES *: [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [str](https://docs.python.org/3/builtins/stdtypes.html#str)]* *= {'ADJ': 'adjective', 'ADP': 'preposition', 'ADV': 'adverb', 'AUX': 'verb', 'CCONJ': 'conjunction', 'DET': 'det', 'INTJ': 'interjection', 'NOUN': 'noun', 'NUM': 'numeral', 'PRON': 'pronoun', 'PROPN': 'noun', 'SCONJ': 'conjunction', 'VERB': 'verb'}*
+
+the names
+of voxy’s French table (`voxy.pronounce.heteronym_readings`), of
+`FRENCH_POS_HETERONYMS` and of the readings `voxy.lexique` derives.
+
+* **Type:**
+  French reading names by universal POS tag, the one place they are spelled
 
 ### voxy.speechtext.LLM_RISK_PROMPT *= 'You help a text-to-speech system avoid misreadings. Below is a $language text, its lines numbered. List the words a speech model may misread: heteronyms (words with more than one pronunciation, such as French "est" as a verb or as a noun), names, abbreviations. For each, give the line, the word exactly as written, short names of its possible readings, and the reading this context needs.\\n\\nAnswer with a JSON list only, one object per word:\\n[{"line": 2, "word": "est", "readings": ["verb", "noun"], "expected": "verb", "why": "..."}]\\nUse "expected": null when the context does not decide. Answer [] if nothing is risky.\\n\\n$text\\n'*
 

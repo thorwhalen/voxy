@@ -477,7 +477,8 @@ The verdicts whose word was decidedly read the wrong way (`ok is False`).
 voxy’s own heteronym table for `language`: `{word: {reading name: IPA}}`.
 
 A short, hand-made list (French: *est*, *fils*, *plus*, *tous*, the  *-ent* verbs…);
-merge a fuller one (e.g. derived from Lexique) read with [`load_readings()`](#voxy.pronounce.load_readings).
+merge a fuller one: `{**voxy.lexique.lexique_heteronyms(path), **heteronym_readings()}`
+(Lexique-derived, the hand-made readings winning), or one read with [`load_readings()`](#voxy.pronounce.load_readings).
 
 ```pycon
 >>> heteronym_readings("fr")["est"]["noun"]
@@ -506,7 +507,8 @@ Heteronym readings `{word: {reading name: IPA}}` from a caller’s file.
 
 A `.json` file holds that mapping; any other file is tab-separated
 `word<TAB>reading name<TAB>IPA`, one reading per line (`#` lines and blank
-lines skipped), e.g. a list derived from Lexique, which voxy does not ship.
+lines skipped), e.g. a list derived from Lexique (`voxy.lexique.lexique_heteronyms`
+builds one from your copy; voxy ships no Lexique data).
 
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]

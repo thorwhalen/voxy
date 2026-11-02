@@ -20,6 +20,7 @@
    fal_model
    finetune
    kokoro_model
+   lexique
    library
    local_clone
    pronounce

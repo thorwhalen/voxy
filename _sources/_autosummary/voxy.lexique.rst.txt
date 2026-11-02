@@ -1,0 +1,30 @@
+voxy.lexique
+============
+
+.. automodule:: voxy.lexique
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      LEXIQUE_TO_IPA
+      TRANSCRIPTION_NOISE
+      LEXIQUE_TO_UPOS
+      LEXIQUE_POS_NAMES
+      VERB_NAME
+      UNTAGGED_NAME
+      ORTHO
+      PHON
+      LEMMA
+      CGRAM
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      heteronyms_from_rows
+      lexique_heteronyms
+      lexique_to_ipa
+      phon_key
+   

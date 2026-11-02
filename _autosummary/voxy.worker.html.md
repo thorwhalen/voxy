@@ -52,6 +52,9 @@ Run `op` in the worker (starting it, and loading the model, on first use).
 
 Stop the process (its memory goes back to the machine).
 
+From another thread, this waits for a call in flight to finish first, so it
+cannot abort a hung call (a separate `kill` would be needed for that).
+
 * **Return type:**
   [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
