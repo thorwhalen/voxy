@@ -174,6 +174,38 @@ def test_prepare_reference_cuts_scores_and_saves_a_manifest(tmp_path):
     assert "conditioned/tape.wav" in samples
 
 
+def test_prepare_reference_keeps_same_named_sources_apart(tmp_path):
+    """Demucs stems are all ``<track>/vocals.wav``: no clip may overwrite another's."""
+    rng = np.random.default_rng(2)
+    sources = {}
+    for folder, gain in [("song-a", 0.1), ("song-b", 0.4)]:
+        (tmp_path / folder).mkdir()
+        sources[folder] = tmp_path / folder / "vocals.wav"
+        sources[folder].write_bytes(
+            write_wav(gain * rng.standard_normal(SR * 4).astype(np.float32), SR)
+        )
+
+    def conditioner(src, dst, **kwargs):
+        dst.write_bytes(open(src, "rb").read())
+        return dst
+
+    def transcriber(path, language=None):
+        return [{"start": 0, "end": 4, "text": "", "words": [_word(0.2, 3.8, "Hello.")]}]
+
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    manifest = refprep.prepare_reference(
+        list(sources.values()), samples=samples, conditioner=conditioner,
+        transcriber=transcriber, min_seconds=2, log=lambda *a: None,
+    )
+    assert len({c["key"] for c in manifest}) == len(manifest) == 2
+    for clip in manifest:
+        folder = Path(clip["source"]).parent.name
+        assert folder in clip["key"]
+        rms = np.sqrt(np.mean(read_wav(samples[clip["key"]])[0] ** 2))
+        assert (rms > 0.2) == (folder == "song-b")  # the bytes are this source's
+    assert {"conditioned/song-a-vocals.wav", "conditioned/song-b-vocals.wav"} <= set(samples)
+
+
 def test_plan_clips_respects_max_length():
     words = [_word(i, i + 0.9, f"w{i}") for i in range(30)]
     clips = refprep.plan_clips([{"words": words, "start": 0, "end": 30, "text": ""}],

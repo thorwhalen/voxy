@@ -421,13 +421,48 @@ def score_clip(
 # the pipeline -----------------------------------------------------------------
 
 
-def _slug(path: str | os.PathLike) -> str:
-    """A key-safe stem for a source file.
+def _slug(path: str | os.PathLike, *, parents: int = 0) -> str:
+    """A key-safe stem for a source file, prefixed with its last ``parents`` folders.
 
     >>> _slug("/x/My Tape (1).m4a")
     'my-tape-1'
+    >>> _slug("/songs/Track A/vocals.wav", parents=1)
+    'track-a-vocals'
     """
-    return re.sub(r"[^a-z0-9]+", "-", Path(path).stem.lower()).strip("-") or "source"
+    path = Path(path)
+    folders = path.parent.parts[len(path.parent.parts) - parents :] if parents else ()
+    text = "-".join([*folders, path.stem]).lower()
+    return re.sub(r"[^a-z0-9]+", "-", text).strip("-") or "source"
+
+
+def unique_slugs(sources: Iterable[str | os.PathLike]) -> list[str]:
+    """One distinct slug per source: the file's stem, plus parent folders only where
+    stems collide (stem tracks: every one is ``vocals.wav``), numbered as a last resort.
+
+    >>> unique_slugs(["/s/one/vocals.wav", "/s/two/vocals.wav", "/s/talk.m4a"])
+    ['one-vocals', 'two-vocals', 'talk']
+    >>> unique_slugs(["a.wav", "a.wav", "a-2.wav"])
+    ['a', 'a-2', 'a-2-2']
+    """
+    paths = [Path(s) for s in sources]
+    depth = [0] * len(paths)
+    while True:
+        slugs = [_slug(p, parents=d) for p, d in zip(paths, depth)]
+        clashing = [i for i, s in enumerate(slugs) if slugs.count(s) > 1]
+        deeper = [i for i in clashing if depth[i] < len(paths[i].parent.parts)]
+        if not deeper:
+            break
+        for i in deeper:
+            depth[i] += 1
+    taken: set[str] = set()
+    for i, slug in enumerate(slugs):
+        n, candidate = 1, slug
+        while candidate in taken:
+            n += 1
+            candidate = f"{slug}-{n}"
+        taken.add(candidate)
+        slugs[i] = candidate
+    return slugs
 
 
 def prepare_reference(
@@ -476,10 +511,10 @@ def prepare_reference(
     if denoise == DEEPFILTERNET:
         conditioner = with_deepfilternet(conditioner, rootdir=rootdir)
     filters = conditioning_filters(denoise=denoise, loudness_lufs=loudness_lufs)
+    sources = list(sources)
     manifest = []
     with tempfile.TemporaryDirectory() as tmp:
-        for src in sources:
-            slug = _slug(src)
+        for src, slug in zip(sources, unique_slugs(sources)):
             wav_path = Path(tmp) / f"{slug}.wav"
             log(f"voxy.refprep: conditioning {src}")
             conditioner(src, wav_path, sample_rate=sample_rate, filters=filters)
