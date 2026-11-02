@@ -60,7 +60,9 @@ class Worker:
         self.log_path = Path(log_path or tempfile.mkstemp(suffix=".log")[1])
         self.cwd = str(cwd or tempfile.gettempdir())
         self._process = None
-        self._lock = threading.Lock()
+        # re-entrant: close() runs inside call() when the process died or failed to
+        # load; from another thread it waits for the call in flight to finish
+        self._lock = threading.RLock()
 
     def _start(self):
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -90,11 +92,12 @@ class Worker:
 
     def _request(self, request: Mapping) -> dict:
         process = self._process
+        payload = json.dumps(request) + "\n"  # a bad request is the caller's error
         try:
-            process.stdin.write(json.dumps(request) + "\n")
+            process.stdin.write(payload)
             process.stdin.flush()
             line = process.stdout.readline()
-        except BrokenPipeError:
+        except (OSError, ValueError):  # a broken pipe, or a stream already closed
             line = ""
         if not line:
             self.close()
@@ -122,8 +125,13 @@ class Worker:
             return self._request({"op": op, **request})
 
     def close(self) -> None:
-        """Stop the process (its memory goes back to the machine)."""
-        process, self._process = self._process, None
+        """Stop the process (its memory goes back to the machine).
+
+        From another thread, this waits for a call in flight to finish first, so it
+        cannot abort a hung call (a separate ``kill`` would be needed for that).
+        """
+        with self._lock:
+            process, self._process = self._process, None
         if process is None:
             return
         try:
