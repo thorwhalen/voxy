@@ -192,6 +192,7 @@ def clone_from_samples(
     voices: MutableMapping | None = None,
     record_fields: Mapping[str, Any] | None = None,
     overwrite: bool = False,
+    display_name: str | None = None,
     **clone_kwargs: Any,
 ) -> VoiceProfile:
     """Clone the voice ``name`` from its stored samples and save the profile.
@@ -206,8 +207,9 @@ def clone_from_samples(
         record_fields: Extra fields for the voice record (aliases, consent...).
         overwrite: Replace an existing profile of this backend for ``name``
             (otherwise refused before anything is uploaded).
+        display_name: The voice's name in the backend (default ``name``).
         **clone_kwargs: Passed to ``model.clone_voice`` (e.g. ``labels=``,
-            ``remove_background_noise=``). ``name=`` defaults to ``name``.
+            ``remove_background_noise=``).
     """
     _refuse_existing(
         name, voices, model_type if model is None else model.name, overwrite
@@ -218,8 +220,7 @@ def clone_from_samples(
         raise ValueError(f"No audio samples stored for voice {name!r}")
     files = [_named_file(k, samples[k]) for k in keys]
     model = model or create_speech_model(model_type)
-    clone_kwargs.setdefault("name", name)
-    profile = model.clone_voice(files, **clone_kwargs)
+    profile = model.clone_voice(files, name=display_name or name, **clone_kwargs)
     save_voice(name, profile, voices=voices, **dict(record_fields or {}))
     return profile
 

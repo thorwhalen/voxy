@@ -87,7 +87,7 @@ def test_clone_uploads_every_sample_and_returns_profile(model, client, tmp_path)
     (op, kwargs), = client.calls
     assert op == "ivc.create"
     assert kwargs["name"] == "ada"
-    assert kwargs["labels"] == {"language": "en"}  # the SDK JSON-encodes labels itself
+    assert kwargs["labels"] == {"language": "en"}  # a dict, unless the SDK refuses one
     assert "description" not in kwargs  # unset options are not sent
     names = [n for n, _ in kwargs["files"]]
     contents = [c for _, c in kwargs["files"]]
@@ -237,3 +237,58 @@ def test_streamed_wav_with_placeholder_size_decodes(model, client):
     client._convert = lambda voice_id, **kw: iter([bytes(wav)])
     client.text_to_speech.convert = client._convert
     assert model.generate_speech("Hi", "vid", output_format="wav_22050").shape == (6,)
+
+
+class StrictMultipartClient(FakeClient):
+    """Like SDK 2.45: a labels dict is refused by httpx before anything is sent."""
+
+    def _ivc_create(self, **kwargs):
+        if isinstance(kwargs.get("labels"), dict):
+            raise TypeError("Invalid type for value. Expected primitive type, got <class 'dict'>: {}")
+        return super()._ivc_create(**kwargs)
+
+
+@pytest.mark.parametrize("labels", [None, {"accent": "irish"}])
+def test_clone_sends_json_labels_when_the_sdk_refuses_a_dict(labels):
+    client = StrictMultipartClient()
+    m = ElevenLabsSpeechModel(api_key="k", client_factory=lambda key: client)
+    profile = m.clone_voice(b"raw", name="kyle", labels=labels)
+    ((op, kwargs),) = client.calls
+    assert json.loads(kwargs["labels"]) == (labels or {})
+    assert profile.segment == "new-voice-id"
+
+
+def test_clone_does_not_swallow_other_type_errors():
+    class Broken(FakeClient):
+        def _ivc_create(self, **kwargs):
+            raise TypeError("unexpected keyword argument 'nme'")
+
+    m = ElevenLabsSpeechModel(api_key="k", client_factory=lambda key: Broken())
+    with pytest.raises(TypeError, match="nme"):
+        m.clone_voice(b"raw", name="kyle")
+
+
+@pytest.mark.parametrize("labels", [None, {"accent": "irish"}])
+def test_clone_builds_a_valid_request_with_the_installed_sdk(labels):
+    """The real SDK, offline: the multipart request is built and carries the labels."""
+    elevenlabs = pytest.importorskip("elevenlabs")
+    httpx = pytest.importorskip("httpx")
+    sent = []
+
+    def handler(request):
+        sent.append(request)
+        return httpx.Response(200, json={"voice_id": "vid", "requires_verification": False})
+
+    def factory(key):
+        transport = httpx.Client(transport=httpx.MockTransport(handler))
+        return elevenlabs.ElevenLabs(api_key="test-key", httpx_client=transport)
+
+    m = ElevenLabsSpeechModel(api_key="test-key", client_factory=factory)
+    profile = m.clone_voice(b"raw-audio", name="kyle", labels=labels)
+    assert profile.segment == "vid"
+    (request,) = sent
+    body = request.read()
+    assert request.url.path.endswith("/v1/voices/add")
+    assert b'name="labels"' in body and b"raw-audio" in body
+    if labels:
+        assert b'"accent": "irish"' in body or b'"accent":"irish"' in body
