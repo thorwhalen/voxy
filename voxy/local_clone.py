@@ -49,6 +49,7 @@ import numpy as np
 
 from voxy.base import Speech, SpeechModel, VoiceProfile, _resolve_text_input
 from voxy.envs import EnvSpec
+
 # VOXY_CACHE_DIR_ENVVAR is re-exported for compatibility (it moved to voxy.stores);
 # remove it after the next release.
 from voxy.stores import VOXY_CACHE_DIR_ENVVAR, voxy_cache_dir  # noqa: F401
