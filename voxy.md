@@ -1,4 +1,4 @@
-> built 2026-11-02 12:04 UTC from 752814e (main) · voxy 0.0.62. Details: build_info.json
+> built 2026-11-02 12:19 UTC from ca1539d (main) · voxy 0.0.63. Details: build_info.json
 
 # index.html.md
 
@@ -459,11 +459,11 @@ setup align`). Its weights are non-commercial (see `workers/align_adapter.py`).
 Align short stretches (a line, a word and its neighbours, under about 30 s): one pass
 over a long recording drifts, sung audio most.
 
-`run` is the seam: `(audio_path, words) -> [span or None, ...]`.
+`run` is the seam: `(audio_path, words, *, start, end) -> [span or None, ...]`.
 
 ```pycon
->>> fake = lambda audio, words: [{"start": i, "end": i + 0.5, "score": 0.9, "chars": []}
-...                              for i, _ in enumerate(words)]
+>>> fake = lambda audio, words, **crop: [{"start": i, "end": i + 0.5, "score": 0.9, "chars": []}
+...                                      for i, _ in enumerate(words)]
 >>> [s["word"] for s in force_align(b"RIFF....", "Bonjour  le monde", run=fake)]
 ['Bonjour', 'le', 'monde']
 ```
@@ -472,13 +472,14 @@ over a long recording drifts, sung audio most.
 
 | [`ALIGN_ENV`](_autosummary/voxy.align.html.md#voxy.align.ALIGN_ENV)            | torch and torchaudio bounded to releases that still ship `forced_align`.   |
 |-----------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`Run`](_autosummary/voxy.align.html.md#voxy.align.Run)                  | `(audio_path, words, *, start, end) -> [span or None, ...]`                |
 | [`DFLT_DECISIVE_MARGIN`](_autosummary/voxy.align.html.md#voxy.align.DFLT_DECISIVE_MARGIN) | tight crops can favour a slightly shorter text by fractions of a point.    |
 
 ### Functions
 
 | [`close_alignment`](_autosummary/voxy.align.html.md#voxy.align.close_alignment)()                               | Stop the aligner workers (free their memory).                                                                                                                                                                                                                                                                                            |
 |--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`force_align`](_autosummary/voxy.align.html.md#voxy.align.force_align)(audio, text, \*[, run])             | Each word of `text`, in order, with its `start`, `end` (s), `score` (mean character confidence) and `chars` (`char`, `start`, `end`, `score`).                                                                                                                                                                                           |
+| [`force_align`](_autosummary/voxy.align.html.md#voxy.align.force_align)(audio, text, \*[, start, end, run]) | Each word of `text`, in order, with its `start`, `end` (s), `score` (mean character confidence) and `chars` (`char`, `start`, `end`, `score`).                                                                                                                                                                                           |
 | [`which_said`](_autosummary/voxy.align.html.md#voxy.align.which_said)(audio, candidates, \*[, start, ...]) | The `candidates` (texts) ranked by how well the audio supports each, best first: `[{"text", "score", "margin", "decisive"}]`: `score` the aligner's log-likelihood (minus its CTC loss; `-inf` for a text too long for the crop), `margin` the lead over the next candidate, `decisive` whether that lead is at least `decisive_margin`. |
 | [`worker_run`](_autosummary/voxy.align.html.md#voxy.align.worker_run)(\*[, model, threads, rootdir])       | The default `run`: the aligner adapter in its own environment.                                                                                                                                                                                                                                                                           |
 | [`worker_score`](_autosummary/voxy.align.html.md#voxy.align.worker_score)(\*[, model, threads, rootdir])     | The default scorer for `which_said`: the aligner adapter's `score`.                                                                                                                                                                                                                                                                      |
@@ -495,6 +496,12 @@ shorter text by fractions of a point.
 * **Type:**
   A lead (in log-likelihood) under this is a tie
 
+### voxy.align.Run
+
+`(audio_path, words, *, start, end) -> [span or None, ...]`
+
+alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[…], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[dict | None]]
+
 ### voxy.align.close_alignment()
 
 Stop the aligner workers (free their memory).
@@ -502,7 +509,7 @@ Stop the aligner workers (free their memory).
 * **Return type:**
   [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
-### voxy.align.force_align(audio, text, , run=None)
+### voxy.align.force_align(audio, text, , start=None, end=None, run=None)
 
 Each word of `text`, in order, with its `start`, `end` (s), `score` (mean
 character confidence) and `chars` (`char`, `start`, `end`, `score`).
@@ -510,7 +517,12 @@ character confidence) and `chars` (`char`, `start`, `end`, `score`).
 * **Parameters:**
   * **audio** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)) – A WAV (or any format soundfile reads) path, or WAV bytes.
   * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – The words spoken, as a string (split on whitespace) or a list.
-  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words) -> [span or None, ...]`; default `worker_run()`.
+  * **start** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The stretch of `audio` (s) the words are in (default: all of
+    it); times stay on the recording’s clock.
+  * **end** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The stretch of `audio` (s) the words are in (default: all of
+    it); times stay on the recording’s clock.
+  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words, *, start, end) -> [span or None, ...]`; default
+    `worker_run()`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
@@ -548,7 +560,7 @@ which `decisive` flags. Candidates are spelled in letters (numbers spelled out).
 The default `run`: the aligner adapter in its own environment.
 
 * **Return type:**
-  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]
 
 ### voxy.align.worker_score(, model='MMS_FA', threads=None, rootdir=None)
 
@@ -2755,6 +2767,8 @@ without torch.
 | [`Check`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Check)                | one word to check.                                                                                                                                                                                                                                      |
 | [`Verifier`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Verifier)             | what the audio of one line says about its words.                                                                                                                                                                                                        |
 | [`HETERONYMS_DIR`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.HETERONYMS_DIR)       | The heteronym tables voxy ships, one `<language>.json` per language.                                                                                                                                                                                    |
+| [`GAP_ANCHORS`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.GAP_ANCHORS)          | Words ASR placed, on each side of a missing one, that bound its aligned stretch.                                                                                                                                                                        |
+| [`GAP_MARGIN_S`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.GAP_MARGIN_S)         | Audio added on each side of that stretch (s).                                                                                                                                                                                                           |
 
 ### Functions
 
@@ -2901,6 +2915,14 @@ alignment of the text, `audit(align_missing=...)`), or None (not found).
 #### *property* ok *: [bool](https://docs.python.org/3/builtins/functions.html#bool) | [None](https://docs.python.org/3/builtins/constants.html#None)*
 
 As [`Verdict.ok`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Verdict.ok); None when unchecked or undecided.
+
+### voxy.pronounce.GAP_ANCHORS *= 2*
+
+Words ASR placed, on each side of a missing one, that bound its aligned stretch.
+
+### voxy.pronounce.GAP_MARGIN_S *= 0.15*
+
+Audio added on each side of that stretch (s).
 
 ### voxy.pronounce.HETERONYMS_DIR *= PosixPath('/home/runner/work/voxy/voxy/voxy/data/heteronyms')*
 
@@ -3073,15 +3095,15 @@ readings with the phoneme recogniser.
   * **context** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Words kept on each side of the flagged one.
   * **margin** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`Verdict.decided`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Verdict.decided); default `scorer.margin`.
   * **scorer** ([`Scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Scorer) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready [`Scorer`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Scorer); wins over `scoring` and its options.
-  * **align_missing** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words) -> [{"start", "end", ...}, ...]`, e.g.
-    `voxy.align.force_align`: when ASR heard a flagged word as something
-    else (a misread can change the word: “de l’est” heard “de lait”), the
-    text’s own words are aligned in the audio and the word is scored where
-    the text puts it (`Finding.located == "text"`). Default None: such a
-    word is reported, not checked. The aligner takes one pass over the whole
-    `audio` (`force_align`: up to 30 s), so it serves per-line audits
-    (`audit_verifier`/`render_verified` pass it through); a longer
-    recording warns and leaves such words unchecked.
+  * **align_missing** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words, *, start, end) -> [{"start", "end",
+    ...}, ...]`, e.g. `voxy.align.force_align`: when ASR heard a flagged
+    word as something else (a misread can change the word: “de l’est” heard
+    “de lait”), the text between the nearest words ASR did place (those
+    included) is aligned in the audio between them, and the word is scored
+    where the text puts it (`Finding.located == "text"`). So it works on
+    long recordings as long as such a gap fits the aligner (`force_align`:
+    30 s); a gap that does not warns and leaves the word unchecked. Default
+    None: such a word is reported, not checked.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Finding`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.Finding)]
 
@@ -6041,14 +6063,14 @@ aligner’s weights come from Meta’s MMS release, under a non-commercial licen
 | [`LIGATURES`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.LIGATURES)        | Letters NFKD leaves whole, spelled with the aligner's letters (French œ, ...).   |
 |-------------------------------------------------------------------|----------------------------------------------------------------------------------|
 | [`STAR`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.STAR)             | The aligner's token for a word it has no letters for (a number, a symbol).       |
-| [`MIN_CROP_SECONDS`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.MIN_CROP_SECONDS) | The shortest crop the aligner's convolutions take.                               |
+| [`MIN_CROP_SECONDS`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.MIN_CROP_SECONDS) | The shortest stretch the aligner's convolutions take.                            |
 
 ### Functions
 
-| [`align`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.align)(state, \*, audio, words[, max_seconds])     | `{"words": [{"start", "end", "score", "chars": [...]}, ...]}` for `words` (in order) in `audio`; a word with no letter (a number) is placed as the star token.                                                  |
-|----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `load`(\*[, model, device])                                                                        |                                                                                                                                                                                                                 |
-| [`score`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.score)(state, \*, audio, texts[, start, end, ...]) | `{"scores": [...]}`: for each of `texts`, the log-likelihood the aligner gives it over `audio` (cropped to `start`-`end` seconds when given), i.e. minus the CTC loss; `-inf` for a text too long for the crop. |
+| [`align`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.align)(state, \*, audio, words[, start, end, ...])   | `{"words": [{"start", "end", "score", "chars": [...]}, ...]}` for `words` (in order) in `audio`, or in its `start`-`end` stretch (s; times stay on the recording's clock); a word with no letter (a number) is placed as the star token.   |
+|------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `load`(\*[, model, device])                                                                          |                                                                                                                                                                                                                                            |
+| [`score`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.score)(state, \*, audio, texts[, start, end, ...])   | `{"scores": [...]}`: for each of `texts`, the log-likelihood the aligner gives it over `audio` (cropped to `start`-`end` seconds when given), i.e. minus the CTC loss; `-inf` for a text too long for the crop.                            |
 
 ### voxy.workers.align_adapter.LIGATURES *= {'ß': 'ss', 'æ': 'ae', 'ø': 'o', 'ł': 'l', 'œ': 'oe', 'ʼ': "'", '’': "'"}*
 
@@ -6056,17 +6078,18 @@ Letters NFKD leaves whole, spelled with the aligner’s letters (French œ, …)
 
 ### voxy.workers.align_adapter.MIN_CROP_SECONDS *= 0.1*
 
-The shortest crop the aligner’s convolutions take.
+The shortest stretch the aligner’s convolutions take.
 
 ### voxy.workers.align_adapter.STAR *= '\*'*
 
 The aligner’s token for a word it has no letters for (a number, a symbol).
 
-### voxy.workers.align_adapter.align(state, , audio, words, max_seconds=30.0)
+### voxy.workers.align_adapter.align(state, , audio, words, start=None, end=None, max_seconds=30.0)
 
 `{"words": [{"start", "end", "score", "chars": [...]}, ...]}` for `words`
-(in order) in `audio`; a word with no letter (a number) is placed as the star
-token. Audio longer than `max_seconds` is refused (memory grows fast: 150 s
+(in order) in `audio`, or in its `start`-`end` stretch (s; times stay on the
+recording’s clock); a word with no letter (a number) is placed as the star
+token. A stretch longer than `max_seconds` is refused (memory grows fast: 150 s
 took about 6 GB): align it in stretches.
 
 ### voxy.workers.align_adapter.score(state, , audio, texts, start=None, end=None, max_seconds=30.0)
@@ -6367,16 +6390,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 12:04 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/752814ebe41b6b5f988fbc8c6a50a981a4208244"><code>752814e</code></a> on branch <code>main</code>, for **voxy 0.0.62** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 12:19 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/ca1539d39bf52a37de4c32cf4666dc312fc59137"><code>ca1539d</code></a> on branch <code>main</code>, for **voxy 0.0.63** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.63) is behind the latest release on PyPI (0.0.64): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/752814ebe41b6b5f988fbc8c6a50a981a4208244"><code>752814ebe41b6b5f988fbc8c6a50a981a4208244</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/ca1539d39bf52a37de4c32cf4666dc312fc59137"><code>ca1539d39bf52a37de4c32cf4666dc312fc59137</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6387,9 +6412,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41441472286">41441472286</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41443423111">41443423111</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>752814ebe41b6b5f988fbc8c6a50a981a4208244</code> (in the history of the built commit) |
+| Event commit | <code>ca1539d39bf52a37de4c32cf4666dc312fc59137</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6414,13 +6439,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.62/">0.0.62</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.64/">0.0.64</a>, newer than the documented version (0.0.63).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 752814ebe41b6b5f988fbc8c6a50a981a4208244
+git checkout ca1539d39bf52a37de4c32cf4666dc312fc59137
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

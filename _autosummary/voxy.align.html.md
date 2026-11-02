@@ -19,11 +19,11 @@ setup align`). Its weights are non-commercial (see `workers/align_adapter.py`).
 Align short stretches (a line, a word and its neighbours, under about 30 s): one pass
 over a long recording drifts, sung audio most.
 
-`run` is the seam: `(audio_path, words) -> [span or None, ...]`.
+`run` is the seam: `(audio_path, words, *, start, end) -> [span or None, ...]`.
 
 ```pycon
->>> fake = lambda audio, words: [{"start": i, "end": i + 0.5, "score": 0.9, "chars": []}
-...                              for i, _ in enumerate(words)]
+>>> fake = lambda audio, words, **crop: [{"start": i, "end": i + 0.5, "score": 0.9, "chars": []}
+...                                      for i, _ in enumerate(words)]
 >>> [s["word"] for s in force_align(b"RIFF....", "Bonjour  le monde", run=fake)]
 ['Bonjour', 'le', 'monde']
 ```
@@ -32,13 +32,14 @@ over a long recording drifts, sung audio most.
 
 | [`ALIGN_ENV`](#voxy.align.ALIGN_ENV)            | torch and torchaudio bounded to releases that still ship `forced_align`.   |
 |-----------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`Run`](#voxy.align.Run)                  | `(audio_path, words, *, start, end) -> [span or None, ...]`                |
 | [`DFLT_DECISIVE_MARGIN`](#voxy.align.DFLT_DECISIVE_MARGIN) | tight crops can favour a slightly shorter text by fractions of a point.    |
 
 ### Functions
 
 | [`close_alignment`](#voxy.align.close_alignment)()                               | Stop the aligner workers (free their memory).                                                                                                                                                                                                                                                                                            |
 |--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`force_align`](#voxy.align.force_align)(audio, text, \*[, run])             | Each word of `text`, in order, with its `start`, `end` (s), `score` (mean character confidence) and `chars` (`char`, `start`, `end`, `score`).                                                                                                                                                                                           |
+| [`force_align`](#voxy.align.force_align)(audio, text, \*[, start, end, run]) | Each word of `text`, in order, with its `start`, `end` (s), `score` (mean character confidence) and `chars` (`char`, `start`, `end`, `score`).                                                                                                                                                                                           |
 | [`which_said`](#voxy.align.which_said)(audio, candidates, \*[, start, ...]) | The `candidates` (texts) ranked by how well the audio supports each, best first: `[{"text", "score", "margin", "decisive"}]`: `score` the aligner's log-likelihood (minus its CTC loss; `-inf` for a text too long for the crop), `margin` the lead over the next candidate, `decisive` whether that lead is at least `decisive_margin`. |
 | [`worker_run`](#voxy.align.worker_run)(\*[, model, threads, rootdir])       | The default `run`: the aligner adapter in its own environment.                                                                                                                                                                                                                                                                           |
 | [`worker_score`](#voxy.align.worker_score)(\*[, model, threads, rootdir])     | The default scorer for `which_said`: the aligner adapter's `score`.                                                                                                                                                                                                                                                                      |
@@ -55,6 +56,12 @@ shorter text by fractions of a point.
 * **Type:**
   A lead (in log-likelihood) under this is a tie
 
+### voxy.align.Run
+
+`(audio_path, words, *, start, end) -> [span or None, ...]`
+
+alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[…], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[dict | None]]
+
 ### voxy.align.close_alignment()
 
 Stop the aligner workers (free their memory).
@@ -62,7 +69,7 @@ Stop the aligner workers (free their memory).
 * **Return type:**
   [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
-### voxy.align.force_align(audio, text, , run=None)
+### voxy.align.force_align(audio, text, , start=None, end=None, run=None)
 
 Each word of `text`, in order, with its `start`, `end` (s), `score` (mean
 character confidence) and `chars` (`char`, `start`, `end`, `score`).
@@ -70,7 +77,12 @@ character confidence) and `chars` (`char`, `start`, `end`, `score`).
 * **Parameters:**
   * **audio** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)) – A WAV (or any format soundfile reads) path, or WAV bytes.
   * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – The words spoken, as a string (split on whitespace) or a list.
-  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words) -> [span or None, ...]`; default `worker_run()`.
+  * **start** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The stretch of `audio` (s) the words are in (default: all of
+    it); times stay on the recording’s clock.
+  * **end** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The stretch of `audio` (s) the words are in (default: all of
+    it); times stay on the recording’s clock.
+  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words, *, start, end) -> [span or None, ...]`; default
+    `worker_run()`.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
@@ -108,7 +120,7 @@ which `decisive` flags. Candidates are spelled in letters (numbers spelled out).
 The default `run`: the aligner adapter in its own environment.
 
 * **Return type:**
-  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]
 
 ### voxy.align.worker_score(, model='MMS_FA', threads=None, rootdir=None)
 

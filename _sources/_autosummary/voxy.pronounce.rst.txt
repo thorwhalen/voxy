@@ -29,6 +29,8 @@ voxy.pronounce
       Check
       Verifier
       HETERONYMS_DIR
+      GAP_ANCHORS
+      GAP_MARGIN_S
    
    .. rubric:: Functions
 

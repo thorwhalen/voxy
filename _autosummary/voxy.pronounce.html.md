@@ -56,6 +56,8 @@ without torch.
 | [`Check`](#voxy.pronounce.Check)                | one word to check.                                                                                                                                                                                                                                      |
 | [`Verifier`](#voxy.pronounce.Verifier)             | what the audio of one line says about its words.                                                                                                                                                                                                        |
 | [`HETERONYMS_DIR`](#voxy.pronounce.HETERONYMS_DIR)       | The heteronym tables voxy ships, one `<language>.json` per language.                                                                                                                                                                                    |
+| [`GAP_ANCHORS`](#voxy.pronounce.GAP_ANCHORS)          | Words ASR placed, on each side of a missing one, that bound its aligned stretch.                                                                                                                                                                        |
+| [`GAP_MARGIN_S`](#voxy.pronounce.GAP_MARGIN_S)         | Audio added on each side of that stretch (s).                                                                                                                                                                                                           |
 
 ### Functions
 
@@ -202,6 +204,14 @@ alignment of the text, `audit(align_missing=...)`), or None (not found).
 #### *property* ok *: [bool](https://docs.python.org/3/builtins/functions.html#bool) | [None](https://docs.python.org/3/builtins/constants.html#None)*
 
 As [`Verdict.ok`](#voxy.pronounce.Verdict.ok); None when unchecked or undecided.
+
+### voxy.pronounce.GAP_ANCHORS *= 2*
+
+Words ASR placed, on each side of a missing one, that bound its aligned stretch.
+
+### voxy.pronounce.GAP_MARGIN_S *= 0.15*
+
+Audio added on each side of that stretch (s).
 
 ### voxy.pronounce.HETERONYMS_DIR *= PosixPath('/home/runner/work/voxy/voxy/voxy/data/heteronyms')*
 
@@ -374,15 +384,15 @@ readings with the phoneme recogniser.
   * **context** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – Words kept on each side of the flagged one.
   * **margin** ([`float`](https://docs.python.org/3/builtins/functions.html#float) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – See [`Verdict.decided`](#voxy.pronounce.Verdict.decided); default `scorer.margin`.
   * **scorer** ([`Scorer`](#voxy.pronounce.Scorer) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready [`Scorer`](#voxy.pronounce.Scorer); wins over `scoring` and its options.
-  * **align_missing** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words) -> [{"start", "end", ...}, ...]`, e.g.
-    `voxy.align.force_align`: when ASR heard a flagged word as something
-    else (a misread can change the word: “de l’est” heard “de lait”), the
-    text’s own words are aligned in the audio and the word is scored where
-    the text puts it (`Finding.located == "text"`). Default None: such a
-    word is reported, not checked. The aligner takes one pass over the whole
-    `audio` (`force_align`: up to 30 s), so it serves per-line audits
-    (`audit_verifier`/`render_verified` pass it through); a longer
-    recording warns and leaves such words unchecked.
+  * **align_missing** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words, *, start, end) -> [{"start", "end",
+    ...}, ...]`, e.g. `voxy.align.force_align`: when ASR heard a flagged
+    word as something else (a misread can change the word: “de l’est” heard
+    “de lait”), the text between the nearest words ASR did place (those
+    included) is aligned in the audio between them, and the word is scored
+    where the text puts it (`Finding.located == "text"`). So it works on
+    long recordings as long as such a gap fits the aligner (`force_align`:
+    30 s); a gap that does not warns and leaves the word unchecked. Default
+    None: such a word is reported, not checked.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Finding`](#voxy.pronounce.Finding)]
 

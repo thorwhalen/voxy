@@ -9,6 +9,7 @@ voxy.align
    .. autosummary::
    
       ALIGN_ENV
+      Run
       DFLT_DECISIVE_MARGIN
    
    .. rubric:: Functions
