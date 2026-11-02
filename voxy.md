@@ -1,4 +1,4 @@
-> built 2026-11-02 09:09 UTC from 29987b2 (main) · voxy 0.0.42. Details: build_info.json
+> built 2026-11-02 09:10 UTC from bb06286 (main) · voxy 0.0.43. Details: build_info.json
 
 # index.html.md
 
@@ -456,16 +456,16 @@ Annotations are postponed and torch is imported only for type checking, so
 
 ### Functions
 
-| [`audio_to_text`](_autosummary/voxy.base.html.md#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                          |
-|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| [`canonical_backend`](_autosummary/voxy.base.html.md#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).              |
-| [`cleanup_audio`](_autosummary/voxy.base.html.md#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.                       |
-| [`create_speech_model`](_autosummary/voxy.base.html.md#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                                     |
-| [`dflt_voxy_device`](_autosummary/voxy.base.html.md#voxy.base.dflt_voxy_device)()                              | `$DFLT_VOXY_DEVICE`, else 'cuda' if torch is installed and sees one, else 'cpu'. |
-| [`is_tensor`](_autosummary/voxy.base.html.md#voxy.base.is_tensor)(obj)                                  | True if `obj` is a torch tensor (without importing torch to find out).           |
-| [`optional_import`](_autosummary/voxy.base.html.md#voxy.base.optional_import)(module)                         | Import `module`, or raise an ImportError naming the voxy extra that has it.      |
-| [`register_speech_model`](_autosummary/voxy.base.html.md#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).              |
-| [`tensor_to_wav_bytes`](_autosummary/voxy.base.html.md#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.              |
+| [`audio_to_text`](_autosummary/voxy.base.html.md#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                                  |
+|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| [`canonical_backend`](_autosummary/voxy.base.html.md#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).                      |
+| [`cleanup_audio`](_autosummary/voxy.base.html.md#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.                               |
+| [`create_speech_model`](_autosummary/voxy.base.html.md#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                                             |
+| [`dflt_voxy_device`](_autosummary/voxy.base.html.md#voxy.base.dflt_voxy_device)()                              | `$DFLT_VOXY_DEVICE`, else 'cuda' if torch is installed and sees one, else 'cpu'.         |
+| [`is_tensor`](_autosummary/voxy.base.html.md#voxy.base.is_tensor)(obj)                                  | True if `obj` is a torch tensor (without importing torch to find out).                   |
+| [`optional_import`](_autosummary/voxy.base.html.md#voxy.base.optional_import)(module)                         | Import `module`, or raise an ImportError naming the voxy extra that has it.              |
+| [`register_speech_model`](_autosummary/voxy.base.html.md#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).                      |
+| [`tensor_to_wav_bytes`](_autosummary/voxy.base.html.md#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode audio ([samples], [channels, samples] or [samples, channels]) as mono 16-bit WAV. |
 
 ### Classes
 
@@ -801,11 +801,15 @@ Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
 ### voxy.base.tensor_to_wav_bytes(audio, sample_rate)
 
-Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.
+Encode audio ([samples], [channels, samples] or [samples, channels]) as mono
+16-bit WAV.
 
 `audio` is a numpy array or a torch tensor (torch is not needed for arrays).
-Integer audio is taken as PCM and scaled to [-1, 1] first; channels are
-averaged, and `voxy.wavutil.write_wav` does the encoding.
+Integer audio is taken as PCM and scaled to [-1, 1] first (8-bit PCM is
+unsigned). A 2-D input is `[channels, samples]` unless it has more rows than
+columns, which only `[samples, channels]` (soundfile’s layout) can have (a
+square input is read channels-first); channels are averaged, and
+`voxy.wavutil.write_wav` does the encoding.
 
 ```pycon
 >>> data = tensor_to_wav_bytes(np.zeros(160), 16000)
@@ -813,10 +817,12 @@ averaged, and `voxy.wavutil.write_wav` does the encoding.
 (b'RIFF', 364)
 >>> tensor_to_wav_bytes(np.array([[0, 32767]], dtype=np.int16), 8000)[-2:]
 b'\xff\x7f'
+>>> tensor_to_wav_bytes(np.full((5, 2), 128, dtype=np.uint8), 8000)[-4:]  # silence
+b'\x00\x00\x00\x00'
 >>> tensor_to_wav_bytes(np.zeros((1, 2, 3)), 8000)
 Traceback (most recent call last):
   ...
-ValueError: Audio must be [samples] or [channels, samples], not 3-D
+ValueError: Audio must be 1-D or 2-D (channels and samples), not 3-D
 ```
 
 * **Return type:**
@@ -4901,15 +4907,49 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 (8000, [0.0, 0.5, -0.5])
 ```
 
+### Module Attributes
+
+| [`WAVE_FORMAT_PCM`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_PCM)        | integer PCM, IEEE float, and the extensible wrapper.                       |
+|-------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`WAVE_FORMAT_FLOAT`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_FLOAT)      | integer PCM, IEEE float, and the extensible wrapper.                       |
+| [`WAVE_FORMAT_EXTENSIBLE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE) | integer PCM, IEEE float, and the extensible wrapper.                       |
+| [`TRAILING_CHUNK_IDS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.TRAILING_CHUNK_IDS)     | Chunks that can follow audio whose `data` size is a streaming placeholder. |
+
 ### Functions
 
-| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                |
-|---------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a PCM WAV (path or bytes), channels averaged.         |
-| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).  |
-| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                     |
-| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`). |
-| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                     |
+| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                     |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| [`pcm_to_float`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1). |
+| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged.                                                  |
+| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).                                       |
+| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                          |
+| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                      |
+| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                          |
+
+### voxy.wavutil.TRAILING_CHUNK_IDS *= re.compile(b'LIST|id3 |ID3 |fact|cue |smpl|bext|JUNK|PAD |iXML|_PMX|acid|inst|plst')*
+
+Chunks that can follow audio whose `data` size is a streaming placeholder.
+
+### voxy.wavutil.WAVE_FORMAT_EXTENSIBLE *= 65534*
+
+integer PCM, IEEE float, and the extensible wrapper.
+
+* **Type:**
+  WAV `fmt` format tags
+
+### voxy.wavutil.WAVE_FORMAT_FLOAT *= 3*
+
+integer PCM, IEEE float, and the extensible wrapper.
+
+* **Type:**
+  WAV `fmt` format tags
+
+### voxy.wavutil.WAVE_FORMAT_PCM *= 1*
+
+integer PCM, IEEE float, and the extensible wrapper.
+
+* **Type:**
+  WAV `fmt` format tags
 
 ### voxy.wavutil.frame_db(samples, sample_rate, , frame_ms=10)
 
@@ -4920,9 +4960,33 @@ RMS level (dBFS) of consecutive `frame_ms` frames.
 [-100.0, -100.0]
 ```
 
+### voxy.wavutil.pcm_to_float(raw, width=2)
+
+Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]`
+(the most negative sample is a hair below -1).
+
+8-bit PCM is unsigned (silence is 128); a trailing partial sample (a stream cut
+mid-sample) is dropped.
+
+```pycon
+>>> pcm_to_float(b"\x00\x00\xff\x7f\x01").tolist()
+[0.0, 1.0]
+>>> pcm_to_float(bytes([0, 128, 255]), 1).tolist()
+[-1.0, 0.0, 0.9921875]
+>>> pcm_to_float(bytes([0xFF, 0xFF, 0x7F, 0x00, 0x00, 0x80]), 3).tolist()
+[1.0, -1.0000001192092896]
+```
+
+* **Return type:**
+  `ndarray`
+
 ### voxy.wavutil.read_wav(source)
 
-`(samples, sample_rate)` of a PCM WAV (path or bytes), channels averaged.
+`(samples, sample_rate)` of a WAV (path or bytes), channels averaged.
+
+Integer PCM (8, 16, 24, 32 bit) and 32-bit float, plain or extensible headers,
+and streamed files whose header carries a placeholder size (the audio then ends
+at a trailing chunk such as `LIST`, or at the end of the file).
 
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)]
@@ -5277,16 +5341,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 09:09 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/29987b2a1f2f4b09bdffbfeac5a3266714119e5a"><code>29987b2</code></a> on branch <code>main</code>, for **voxy 0.0.42** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 09:10 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/bb062863af5697016575e903919aa587189383f2"><code>bb06286</code></a> on branch <code>main</code>, for **voxy 0.0.43** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.43) is ahead of the latest release on PyPI (0.0.42): these docs describe unreleased code.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/29987b2a1f2f4b09bdffbfeac5a3266714119e5a"><code>29987b2a1f2f4b09bdffbfeac5a3266714119e5a</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/bb062863af5697016575e903919aa587189383f2"><code>bb062863af5697016575e903919aa587189383f2</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -5297,9 +5363,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41418091456">41418091456</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41418212773">41418212773</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>b5fc90c45f427a53e28701341f6325ceac24b3c8</code> (in the history of the built commit) |
+| Event commit | <code>29987b2a1f2f4b09bdffbfeac5a3266714119e5a</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5324,13 +5390,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.42/">0.0.42</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.42/">0.0.42</a>, older than the documented version (0.0.43).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 29987b2a1f2f4b09bdffbfeac5a3266714119e5a
+git checkout bb062863af5697016575e903919aa587189383f2
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

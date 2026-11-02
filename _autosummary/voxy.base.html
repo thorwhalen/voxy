@@ -191,7 +191,7 @@ Annotations are postponed and torch is imported only for type checking, so
 <td><p>Register a backend (a class or <code class="docutils literal notranslate"><span class="pre">**kwargs</span> <span class="pre">-&gt;</span> <span class="pre">SpeechModel</span></code> callable).</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.base.tensor_to_wav_bytes" title="voxy.base.tensor_to_wav_bytes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tensor_to_wav_bytes</span></code></a>(audio, sample_rate)</p></td>
-<td><p>Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.</p></td>
+<td><p>Encode audio ([samples], [channels, samples] or [samples, channels]) as mono 16-bit WAV.</p></td>
 </tr>
 </tbody>
 </table>
@@ -625,19 +625,25 @@ not supported at the MPS device”).</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.base.tensor_to_wav_bytes">
 <span class="sig-prename descclassname"><span class="pre">voxy.base.</span></span><span class="sig-name descname"><span class="pre">tensor_to_wav_bytes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">audio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/base.html#tensor_to_wav_bytes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.base.tensor_to_wav_bytes" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.base.tensor_to_wav_bytes'">¶</a></dt>
-<dd><p>Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.</p>
+<dd><p>Encode audio ([samples], [channels, samples] or [samples, channels]) as mono
+16-bit WAV.</p>
 <p><code class="docutils literal notranslate"><span class="pre">audio</span></code> is a numpy array or a torch tensor (torch is not needed for arrays).
-Integer audio is taken as PCM and scaled to [-1, 1] first; channels are
-averaged, and <code class="docutils literal notranslate"><span class="pre">voxy.wavutil.write_wav</span></code> does the encoding.</p>
+Integer audio is taken as PCM and scaled to [-1, 1] first (8-bit PCM is
+unsigned). A 2-D input is <code class="docutils literal notranslate"><span class="pre">[channels,</span> <span class="pre">samples]</span></code> unless it has more rows than
+columns, which only <code class="docutils literal notranslate"><span class="pre">[samples,</span> <span class="pre">channels]</span></code> (soundfile’s layout) can have (a
+square input is read channels-first); channels are averaged, and
+<code class="docutils literal notranslate"><span class="pre">voxy.wavutil.write_wav</span></code> does the encoding.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">tensor_to_wav_bytes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">160</span><span class="p">),</span> <span class="mi">16000</span><span class="p">)</span>
 </span><span id="line-2"><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="p">[:</span><span class="mi">4</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 </span><span id="line-3"><span class="go">(b'RIFF', 364)</span>
 </span><span id="line-4"><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_to_wav_bytes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">32767</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">),</span> <span class="mi">8000</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span>
 </span><span id="line-5"><span class="go">b'\xff\x7f'</span>
-</span><span id="line-6"><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_to_wav_bytes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)),</span> <span class="mi">8000</span><span class="p">)</span>
-</span><span id="line-7"><span class="gt">Traceback (most recent call last):</span>
-</span><span id="line-8"><span class="w">  </span><span class="c">...</span>
-</span><span id="line-9"><span class="gr">ValueError</span>: <span class="n">Audio must be [samples] or [channels, samples], not 3-D</span>
+</span><span id="line-6"><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_to_wav_bytes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">128</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span> <span class="mi">8000</span><span class="p">)[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span>  <span class="c1"># silence</span>
+</span><span id="line-7"><span class="go">b'\x00\x00\x00\x00'</span>
+</span><span id="line-8"><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor_to_wav_bytes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)),</span> <span class="mi">8000</span><span class="p">)</span>
+</span><span id="line-9"><span class="gt">Traceback (most recent call last):</span>
+</span><span id="line-10"><span class="w">  </span><span class="c">...</span>
+</span><span id="line-11"><span class="gr">ValueError</span>: <span class="n">Audio must be 1-D or 2-D (channels and samples), not 3-D</span>
 </span></code></pre></div>
 </div>
 <dl class="field-list simple">
@@ -699,7 +705,7 @@ averaged, and <code class="docutils literal notranslate"><span class="pre">voxy.
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=173d7b4c"></script>
+<script src="../_static/documentation_options.js?v=b345ff55"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

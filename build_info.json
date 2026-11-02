@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-02T09:09:43Z",
+  "built_at": "2026-11-02T09:10:48Z",
   "package": {
     "name": "voxy",
-    "version": "0.0.42",
+    "version": "0.0.43",
     "display_name": "voxy",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "29987b2a1f2f4b09bdffbfeac5a3266714119e5a",
-    "short_commit": "29987b2",
+    "commit": "bb062863af5697016575e903919aa587189383f2",
+    "short_commit": "bb06286",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/thorwhalen/voxy",
-    "commit_url": "https://github.com/thorwhalen/voxy/commit/29987b2a1f2f4b09bdffbfeac5a3266714119e5a",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/bb062863af5697016575e903919aa587189383f2",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "thorwhalen/voxy",
-    "sha": "b5fc90c45f427a53e28701341f6325ceac24b3c8",
+    "sha": "29987b2a1f2f4b09bdffbfeac5a3266714119e5a",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41418091456",
-    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41418091456",
+    "run_id": "41418212773",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41418212773",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -56,18 +56,20 @@
   },
   "site": {
     "modules_documented": 37,
-    "objects_documented": 343
+    "objects_documented": 348
   },
   "pypi": {
     "checked": true,
     "latest": "0.0.42",
-    "relation": "same",
+    "relation": "ahead",
     "error": null
   },
-  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 29987b2a1f2f4b09bdffbfeac5a3266714119e5a\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout bb062863af5697016575e903919aa587189383f2\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": true,
-    "notes": []
+    "aligned": false,
+    "notes": [
+      "The documented version (0.0.43) is ahead of the latest release on PyPI (0.0.42): these docs describe unreleased code."
+    ]
   }
 }

@@ -4,11 +4,21 @@ voxy.wavutil
 .. automodule:: voxy.wavutil
 
    
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      WAVE_FORMAT_PCM
+      WAVE_FORMAT_FLOAT
+      WAVE_FORMAT_EXTENSIBLE
+      TRAILING_CHUNK_IDS
+   
    .. rubric:: Functions
 
    .. autosummary::
    
       frame_db
+      pcm_to_float
       read_wav
       resample
       silence

@@ -152,29 +152,84 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 </span><span id="line-5"><span class="go">(8000, [0.0, 0.5, -0.5])</span>
 </span></code></pre></div>
 </div>
+<p class="rubric">Module Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_PCM" title="voxy.wavutil.WAVE_FORMAT_PCM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WAVE_FORMAT_PCM</span></code></a></p></td>
+<td><p>integer PCM, IEEE float, and the extensible wrapper.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_FLOAT" title="voxy.wavutil.WAVE_FORMAT_FLOAT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WAVE_FORMAT_FLOAT</span></code></a></p></td>
+<td><p>integer PCM, IEEE float, and the extensible wrapper.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE" title="voxy.wavutil.WAVE_FORMAT_EXTENSIBLE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WAVE_FORMAT_EXTENSIBLE</span></code></a></p></td>
+<td><p>integer PCM, IEEE float, and the extensible wrapper.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.TRAILING_CHUNK_IDS" title="voxy.wavutil.TRAILING_CHUNK_IDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TRAILING_CHUNK_IDS</span></code></a></p></td>
+<td><p>Chunks that can follow audio whose <code class="docutils literal notranslate"><span class="pre">data</span></code> size is a streaming placeholder.</p></td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Functions</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.frame_db" title="voxy.wavutil.frame_db"><code class="xref py py-obj docutils literal notranslate"><span class="pre">frame_db</span></code></a>(samples, sample_rate, *[, frame_ms])</p></td>
 <td><p>RMS level (dBFS) of consecutive <code class="docutils literal notranslate"><span class="pre">frame_ms</span></code> frames.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.read_wav" title="voxy.wavutil.read_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_wav</span></code></a>(source)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">(samples,</span> <span class="pre">sample_rate)</span></code> of a PCM WAV (path or bytes), channels averaged.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.pcm_to_float" title="voxy.wavutil.pcm_to_float"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pcm_to_float</span></code></a>(raw[, width])</p></td>
+<td><p>Little-endian PCM samples of <code class="docutils literal notranslate"><span class="pre">width</span></code> bytes as floats in about <code class="docutils literal notranslate"><span class="pre">[-1,</span> <span class="pre">1]</span></code> (the most negative sample is a hair below -1).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.resample" title="voxy.wavutil.resample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resample</span></code></a>(samples, from_rate, to_rate)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.read_wav" title="voxy.wavutil.read_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_wav</span></code></a>(source)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">(samples,</span> <span class="pre">sample_rate)</span></code> of a WAV (path or bytes), channels averaged.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.resample" title="voxy.wavutil.resample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resample</span></code></a>(samples, from_rate, to_rate)</p></td>
 <td><p>Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.silence" title="voxy.wavutil.silence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">silence</span></code></a>(ms, sample_rate)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.silence" title="voxy.wavutil.silence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">silence</span></code></a>(ms, sample_rate)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ms</span></code> milliseconds of silence.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.trim_silence" title="voxy.wavutil.trim_silence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trim_silence</span></code></a>(samples, sample_rate, *[, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.trim_silence" title="voxy.wavutil.trim_silence"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trim_silence</span></code></a>(samples, sample_rate, *[, ...])</p></td>
 <td><p>Drop leading and trailing frames quieter than <code class="docutils literal notranslate"><span class="pre">threshold_db</span></code> (keeping <code class="docutils literal notranslate"><span class="pre">keep_ms</span></code>).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.wavutil.write_wav" title="voxy.wavutil.write_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_wav</span></code></a>(samples, sample_rate)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.wavutil.write_wav" title="voxy.wavutil.write_wav"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_wav</span></code></a>(samples, sample_rate)</p></td>
 <td><p>Mono 16-bit PCM WAV bytes from floats in <code class="docutils literal notranslate"><span class="pre">[-1,</span> <span class="pre">1]</span></code> (clipped).</p></td>
 </tr>
 </tbody>
 </table>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.wavutil.TRAILING_CHUNK_IDS">
+<span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">TRAILING_CHUNK_IDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">re.compile(b'LIST|id3</span> <span class="pre">|ID3</span> <span class="pre">|fact|cue</span> <span class="pre">|smpl|bext|JUNK|PAD</span> <span class="pre">|iXML|_PMX|acid|inst|plst')</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.TRAILING_CHUNK_IDS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.TRAILING_CHUNK_IDS'">¶</a></dt>
+<dd><p>Chunks that can follow audio whose <code class="docutils literal notranslate"><span class="pre">data</span></code> size is a streaming placeholder.</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.wavutil.WAVE_FORMAT_EXTENSIBLE">
+<span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">WAVE_FORMAT_EXTENSIBLE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">65534</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE'">¶</a></dt>
+<dd><p>integer PCM, IEEE float, and the extensible wrapper.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>WAV <code class="docutils literal notranslate"><span class="pre">fmt</span></code> format tags</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.wavutil.WAVE_FORMAT_FLOAT">
+<span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">WAVE_FORMAT_FLOAT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.WAVE_FORMAT_FLOAT" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.WAVE_FORMAT_FLOAT'">¶</a></dt>
+<dd><p>integer PCM, IEEE float, and the extensible wrapper.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>WAV <code class="docutils literal notranslate"><span class="pre">fmt</span></code> format tags</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.wavutil.WAVE_FORMAT_PCM">
+<span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">WAVE_FORMAT_PCM</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.WAVE_FORMAT_PCM" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.WAVE_FORMAT_PCM'">¶</a></dt>
+<dd><p>integer PCM, IEEE float, and the extensible wrapper.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>WAV <code class="docutils literal notranslate"><span class="pre">fmt</span></code> format tags</p>
+</dd>
+</dl>
+</dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.wavutil.frame_db">
 <span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">frame_db</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_rate</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_ms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/wavutil.html#frame_db"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.frame_db" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.frame_db'">¶</a></dt>
@@ -187,9 +242,33 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 </dl>
 </dd></dl>
 <dl class="py function">
+<dt class="sig sig-object py" id="voxy.wavutil.pcm_to_float">
+<span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">pcm_to_float</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/wavutil.html#pcm_to_float"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.pcm_to_float" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.pcm_to_float'">¶</a></dt>
+<dd><p>Little-endian PCM samples of <code class="docutils literal notranslate"><span class="pre">width</span></code> bytes as floats in about <code class="docutils literal notranslate"><span class="pre">[-1,</span> <span class="pre">1]</span></code>
+(the most negative sample is a hair below -1).</p>
+<p>8-bit PCM is unsigned (silence is 128); a trailing partial sample (a stream cut
+mid-sample) is dropped.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">pcm_to_float</span><span class="p">(</span><span class="sa">b</span><span class="s2">"</span><span class="se">\x00\x00\xff\x7f\x01</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+</span><span id="line-2"><span class="go">[0.0, 1.0]</span>
+</span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="n">pcm_to_float</span><span class="p">(</span><span class="nb">bytes</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">255</span><span class="p">]),</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+</span><span id="line-4"><span class="go">[-1.0, 0.0, 0.9921875]</span>
+</span><span id="line-5"><span class="gp">&gt;&gt;&gt; </span><span class="n">pcm_to_float</span><span class="p">(</span><span class="nb">bytes</span><span class="p">([</span><span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0xFF</span><span class="p">,</span> <span class="mh">0x7F</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x00</span><span class="p">,</span> <span class="mh">0x80</span><span class="p">]),</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+</span><span id="line-6"><span class="go">[1.0, -1.0000001192092896]</span>
+</span></code></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="voxy.wavutil.read_wav">
 <span class="sig-prename descclassname"><span class="pre">voxy.wavutil.</span></span><span class="sig-name descname"><span class="pre">read_wav</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/wavutil.html#read_wav"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.wavutil.read_wav" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.wavutil.read_wav'">¶</a></dt>
-<dd><p><code class="docutils literal notranslate"><span class="pre">(samples,</span> <span class="pre">sample_rate)</span></code> of a PCM WAV (path or bytes), channels averaged.</p>
+<dd><p><code class="docutils literal notranslate"><span class="pre">(samples,</span> <span class="pre">sample_rate)</span></code> of a WAV (path or bytes), channels averaged.</p>
+<p>Integer PCM (8, 16, 24, 32 bit) and 32-bit float, plain or extensible headers,
+and streamed files whose header carries a placeholder size (the audio then ends
+at a trailing chunk such as <code class="docutils literal notranslate"><span class="pre">LIST</span></code>, or at the end of the file).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>, <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>]</span></p>
@@ -253,7 +332,12 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
+<li><a :data-current="activeSection === '#voxy.wavutil.TRAILING_CHUNK_IDS'" class="reference internal" href="#voxy.wavutil.TRAILING_CHUNK_IDS"><code class="docutils literal notranslate"><span class="pre">TRAILING_CHUNK_IDS</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE'" class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE"><code class="docutils literal notranslate"><span class="pre">WAVE_FORMAT_EXTENSIBLE</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.wavutil.WAVE_FORMAT_FLOAT'" class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_FLOAT"><code class="docutils literal notranslate"><span class="pre">WAVE_FORMAT_FLOAT</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.wavutil.WAVE_FORMAT_PCM'" class="reference internal" href="#voxy.wavutil.WAVE_FORMAT_PCM"><code class="docutils literal notranslate"><span class="pre">WAVE_FORMAT_PCM</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.frame_db'" class="reference internal" href="#voxy.wavutil.frame_db"><code class="docutils literal notranslate"><span class="pre">frame_db()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.wavutil.pcm_to_float'" class="reference internal" href="#voxy.wavutil.pcm_to_float"><code class="docutils literal notranslate"><span class="pre">pcm_to_float()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.read_wav'" class="reference internal" href="#voxy.wavutil.read_wav"><code class="docutils literal notranslate"><span class="pre">read_wav()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.resample'" class="reference internal" href="#voxy.wavutil.resample"><code class="docutils literal notranslate"><span class="pre">resample()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.wavutil.silence'" class="reference internal" href="#voxy.wavutil.silence"><code class="docutils literal notranslate"><span class="pre">silence()</span></code></a></li>
@@ -272,7 +356,7 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=173d7b4c"></script>
+<script src="../_static/documentation_options.js?v=b345ff55"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

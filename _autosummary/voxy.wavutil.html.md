@@ -14,15 +14,49 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 (8000, [0.0, 0.5, -0.5])
 ```
 
+### Module Attributes
+
+| [`WAVE_FORMAT_PCM`](#voxy.wavutil.WAVE_FORMAT_PCM)        | integer PCM, IEEE float, and the extensible wrapper.                       |
+|-------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`WAVE_FORMAT_FLOAT`](#voxy.wavutil.WAVE_FORMAT_FLOAT)      | integer PCM, IEEE float, and the extensible wrapper.                       |
+| [`WAVE_FORMAT_EXTENSIBLE`](#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE) | integer PCM, IEEE float, and the extensible wrapper.                       |
+| [`TRAILING_CHUNK_IDS`](#voxy.wavutil.TRAILING_CHUNK_IDS)     | Chunks that can follow audio whose `data` size is a streaming placeholder. |
+
 ### Functions
 
-| [`frame_db`](#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                |
-|---------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`read_wav`](#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a PCM WAV (path or bytes), channels averaged.         |
-| [`resample`](#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).  |
-| [`silence`](#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                     |
-| [`trim_silence`](#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`). |
-| [`write_wav`](#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                     |
+| [`frame_db`](#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                     |
+|---------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| [`pcm_to_float`](#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1). |
+| [`read_wav`](#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged.                                                  |
+| [`resample`](#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Linear-interpolation resampling (enough to join pieces; use ffmpeg for masters).                                       |
+| [`silence`](#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                          |
+| [`trim_silence`](#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                      |
+| [`write_wav`](#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                          |
+
+### voxy.wavutil.TRAILING_CHUNK_IDS *= re.compile(b'LIST|id3 |ID3 |fact|cue |smpl|bext|JUNK|PAD |iXML|_PMX|acid|inst|plst')*
+
+Chunks that can follow audio whose `data` size is a streaming placeholder.
+
+### voxy.wavutil.WAVE_FORMAT_EXTENSIBLE *= 65534*
+
+integer PCM, IEEE float, and the extensible wrapper.
+
+* **Type:**
+  WAV `fmt` format tags
+
+### voxy.wavutil.WAVE_FORMAT_FLOAT *= 3*
+
+integer PCM, IEEE float, and the extensible wrapper.
+
+* **Type:**
+  WAV `fmt` format tags
+
+### voxy.wavutil.WAVE_FORMAT_PCM *= 1*
+
+integer PCM, IEEE float, and the extensible wrapper.
+
+* **Type:**
+  WAV `fmt` format tags
 
 ### voxy.wavutil.frame_db(samples, sample_rate, , frame_ms=10)
 
@@ -33,9 +67,33 @@ RMS level (dBFS) of consecutive `frame_ms` frames.
 [-100.0, -100.0]
 ```
 
+### voxy.wavutil.pcm_to_float(raw, width=2)
+
+Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]`
+(the most negative sample is a hair below -1).
+
+8-bit PCM is unsigned (silence is 128); a trailing partial sample (a stream cut
+mid-sample) is dropped.
+
+```pycon
+>>> pcm_to_float(b"\x00\x00\xff\x7f\x01").tolist()
+[0.0, 1.0]
+>>> pcm_to_float(bytes([0, 128, 255]), 1).tolist()
+[-1.0, 0.0, 0.9921875]
+>>> pcm_to_float(bytes([0xFF, 0xFF, 0x7F, 0x00, 0x00, 0x80]), 3).tolist()
+[1.0, -1.0000001192092896]
+```
+
+* **Return type:**
+  `ndarray`
+
 ### voxy.wavutil.read_wav(source)
 
-`(samples, sample_rate)` of a PCM WAV (path or bytes), channels averaged.
+`(samples, sample_rate)` of a WAV (path or bytes), channels averaged.
+
+Integer PCM (8, 16, 24, 32 bit) and 32-bit float, plain or extensible headers,
+and streamed files whose header carries a placeholder size (the audio then ends
+at a trailing chunk such as `LIST`, or at the end of the file).
 
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)]

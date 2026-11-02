@@ -20,16 +20,16 @@ Annotations are postponed and torch is imported only for type checking, so
 
 ### Functions
 
-| [`audio_to_text`](#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                          |
-|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| [`canonical_backend`](#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).              |
-| [`cleanup_audio`](#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.                       |
-| [`create_speech_model`](#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                                     |
-| [`dflt_voxy_device`](#voxy.base.dflt_voxy_device)()                              | `$DFLT_VOXY_DEVICE`, else 'cuda' if torch is installed and sees one, else 'cpu'. |
-| [`is_tensor`](#voxy.base.is_tensor)(obj)                                  | True if `obj` is a torch tensor (without importing torch to find out).           |
-| [`optional_import`](#voxy.base.optional_import)(module)                         | Import `module`, or raise an ImportError naming the voxy extra that has it.      |
-| [`register_speech_model`](#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).              |
-| [`tensor_to_wav_bytes`](#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.              |
+| [`audio_to_text`](#voxy.base.audio_to_text)(audio_input[, model_size, ...])   | Transcribe audio to text using Whisper.                                                  |
+|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| [`canonical_backend`](#voxy.base.canonical_backend)(name)                         | The registry name of backend `name` (lowercased, aliases resolved).                      |
+| [`cleanup_audio`](#voxy.base.cleanup_audio)(audio, sample_rate[, ...])        | Clean up audio by normalizing volume and removing silence.                               |
+| [`create_speech_model`](#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                                             |
+| [`dflt_voxy_device`](#voxy.base.dflt_voxy_device)()                              | `$DFLT_VOXY_DEVICE`, else 'cuda' if torch is installed and sees one, else 'cpu'.         |
+| [`is_tensor`](#voxy.base.is_tensor)(obj)                                  | True if `obj` is a torch tensor (without importing torch to find out).                   |
+| [`optional_import`](#voxy.base.optional_import)(module)                         | Import `module`, or raise an ImportError naming the voxy extra that has it.              |
+| [`register_speech_model`](#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).                      |
+| [`tensor_to_wav_bytes`](#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode audio ([samples], [channels, samples] or [samples, channels]) as mono 16-bit WAV. |
 
 ### Classes
 
@@ -365,11 +365,15 @@ Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
 ### voxy.base.tensor_to_wav_bytes(audio, sample_rate)
 
-Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.
+Encode audio ([samples], [channels, samples] or [samples, channels]) as mono
+16-bit WAV.
 
 `audio` is a numpy array or a torch tensor (torch is not needed for arrays).
-Integer audio is taken as PCM and scaled to [-1, 1] first; channels are
-averaged, and `voxy.wavutil.write_wav` does the encoding.
+Integer audio is taken as PCM and scaled to [-1, 1] first (8-bit PCM is
+unsigned). A 2-D input is `[channels, samples]` unless it has more rows than
+columns, which only `[samples, channels]` (soundfile’s layout) can have (a
+square input is read channels-first); channels are averaged, and
+`voxy.wavutil.write_wav` does the encoding.
 
 ```pycon
 >>> data = tensor_to_wav_bytes(np.zeros(160), 16000)
@@ -377,10 +381,12 @@ averaged, and `voxy.wavutil.write_wav` does the encoding.
 (b'RIFF', 364)
 >>> tensor_to_wav_bytes(np.array([[0, 32767]], dtype=np.int16), 8000)[-2:]
 b'\xff\x7f'
+>>> tensor_to_wav_bytes(np.full((5, 2), 128, dtype=np.uint8), 8000)[-4:]  # silence
+b'\x00\x00\x00\x00'
 >>> tensor_to_wav_bytes(np.zeros((1, 2, 3)), 8000)
 Traceback (most recent call last):
   ...
-ValueError: Audio must be [samples] or [channels, samples], not 3-D
+ValueError: Audio must be 1-D or 2-D (channels and samples), not 3-D
 ```
 
 * **Return type:**
