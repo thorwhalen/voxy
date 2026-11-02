@@ -5,6 +5,7 @@ Command line for voxy: voices, speech, local model setup, reference prep, diagno
     python -m voxy voices --backend say         # a backend's voices
     python -m voxy speak "Hello" --voice ada -o hello.mp3
     python -m voxy setup f5tts chatterbox       # build local models' environments
+    python -m voxy speak "Hi" --backend kokoro --voice bf_emma -o hi.wav  # local, no key
     python -m voxy prep ada tape1.m4a tape2.mp3 # clean, cut, transcribe, score clips
     python -m voxy prep ada interview.m4a --speaker dominant  # drop the other voices
     python -m voxy diagnose spec.json --out DIR --publish
@@ -66,11 +67,13 @@ def main(argv=None) -> int:
 
     if args.command == "setup":
         from voxy.envs import ensure_env
+        from voxy.kokoro_model import KOKORO
         from voxy.local_clone import LOCAL_CLONE_BACKENDS
         from voxy.refprep import ASR_ENV
         from voxy.speakers import SPEAKER_ENV
 
         envs = {name: b.env for name, b in LOCAL_CLONE_BACKENDS.items()}
+        envs[KOKORO.name] = KOKORO.env
         envs["asr"] = ASR_ENV
         envs["speaker"] = SPEAKER_ENV
         for name in args.backends or list(envs):
