@@ -26,7 +26,9 @@ The steps, each a function you can call alone or replace:
 the voice's samples store (``voxy.stores.samples_store``), so any backend (a
 reference clip) and fine-tuning (``voxy.finetune``, the whole set) read the same data.
 It only ever adds to the store, keeping every run; ``latest_runs`` gives each source's
-latest run, and ``forget`` is the one function that deletes clips.
+latest run. ``forget`` (a source's clips) and ``forget_orphans`` (keys no manifest entry
+claims, listed by ``orphans``) are the only functions that delete clips; edit the
+manifest by hand and the clips of the entries you removed become orphans.
 """
 
 import json
@@ -36,10 +38,11 @@ import re
 import shutil
 import subprocess
 import tempfile
+import unicodedata
 import uuid
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from datetime import datetime, timezone
-from functools import partial
+from functools import cache, partial
 from pathlib import Path
 
 import numpy as np
@@ -79,6 +82,19 @@ RUN_ID_SUFFIX_LEN = 6
 #: Older voxy rewrote the whole manifest on every call, so such entries all come from
 #: one call, in one folder: a relative string among them names one file.
 LEGACY_RUN = "legacy"
+#: A running ``prepare_reference`` keeps a marker at ``pending/<run>.json`` (its run id,
+#: UTC start time and the slugs it reserved) until it finishes, so ``orphans`` does not
+#: take its keys, not yet in the manifest, for orphans. A crashed run leaves its marker;
+#: one older than ``PENDING_STALE_S`` seconds is stale and claims nothing.
+PENDING_PREFIX = "pending/"
+PENDING_KEY_PATTERN = re.compile(rf"{re.escape(PENDING_PREFIX)}(?P<run>[^/]+)\.json")
+PENDING_STALE_S = 6 * 3600
+#: Names are compared in this Unicode normal form (APFS stores either; users type NFC).
+UNICODE_FORM = "NFC"
+#: Suffix of the temporary file an atomic write goes through (its name starts with ``.``).
+ATOMIC_TMP_SUFFIX = ".tmp"
+#: File mode of a file written atomically (``mkstemp`` would leave it 0600).
+ATOMIC_FILE_MODE = 0o644
 
 #: ffmpeg filters for each ``denoise`` strategy (None: no denoising).
 DENOISE_FILTERS = {
@@ -576,54 +592,169 @@ def _entry_slugs(entry: Mapping) -> set[str]:
 
 
 def _used_slugs(samples: Mapping, entries: Iterable[Mapping]) -> set[str]:
-    """Slugs a new run must not use: those any manifest entry claims, and those in the
-    store's own clip and conditioned keys (orphans in no manifest included).
+    """Slugs a new run must not use: those any manifest entry claims, those in the
+    store's own clip and conditioned keys (orphans in no manifest included), and those a
+    pending marker (a running or crashed run's, see ``PENDING_PREFIX``) reserved.
 
-    >>> store = {"clips/old-0001.wav": b"", "conditioned/lost.wav": b"", "a.wav": b""}
+    >>> store = {"clips/old-0001.wav": b"", "conditioned/lost.wav": b"", "a.wav": b"",
+    ...          "pending/r.json": _pending_marker("r", ["next"])}
     >>> sorted(_used_slugs(store, [{"key": "clips/talk-0002.wav"}]))
-    ['lost', 'old', 'talk']
+    ['lost', 'next', 'old', 'talk']
     """
     from_entries = {s for e in entries for s in _entry_slugs(e)}
-    return from_entries | ({_key_slug(k) for k in samples} - {None})
+    from_markers = {s for m in _pending_markers(samples).values() for s in m["slugs"]}
+    return from_entries | from_markers | ({_key_slug(k) for k in samples} - {None})
 
 
-def _source_id(source: str | os.PathLike) -> str:
-    """What tells sources apart: the real path, so a relative and an absolute path (or a
-    symlink) to one file are one source."""
-    return os.path.realpath(source)
+def _pending_key(run: str) -> str:
+    return f"{PENDING_PREFIX}{run}.json"
 
 
-def _entry_source_id(entry: Mapping) -> str | None:
-    """The real path of the file a manifest entry came from, or None if it cannot be
-    known: ``source_path`` if recorded; else ``source`` if it is an absolute path.
-    Older voxy recorded ``source`` as typed, and a relative one names whatever file had
-    that name in the folder the run happened to start in, so it identifies nothing.
+def _pending_marker(run: str, slugs: Iterable[str]) -> bytes:
+    """The marker a run keeps while it works: its id, start time (UTC), reserved slugs."""
+    started = datetime.now(timezone.utc).isoformat()
+    return json.dumps({"run": run, "started": started, "slugs": sorted(slugs)}).encode()
 
-    >>> _entry_source_id({"source_path": "/s/a.wav", "source": "a.wav"})
-    '/s/a.wav'
+
+def _read_marker(key: str, data: bytes) -> dict:
+    """A pending marker's ``started`` (an aware datetime) and ``slugs`` (a set), refusing
+    one it cannot read: whatever run wrote it may still be using its slugs.
+
+    >>> m = _read_marker("pending/r.json", _pending_marker("r", ["a"]))
+    >>> m["slugs"], m["started"].tzinfo is not None
+    ({'a'}, True)
+    """
+    try:
+        marker = json.loads(data)
+        started = datetime.fromisoformat(marker["started"])
+        slugs = marker["slugs"]
+        if started.tzinfo is None or not isinstance(slugs, list):
+            raise TypeError("no time zone, or slugs that are not a list")
+        if not all(isinstance(s, str) for s in slugs):
+            raise TypeError("a slug that is not a string")
+    except (ValueError, KeyError, TypeError) as error:
+        raise ValueError(
+            f"voxy.refprep: cannot read the pending marker {key} ({error}); a run may "
+            f"still be using its slugs. Delete {key} by hand once no run is going."
+        ) from error
+    return {"started": started, "slugs": set(slugs)}
+
+
+def _pending_markers(samples: Mapping) -> dict[str, dict]:
+    """Every pending marker in the store (see ``_read_marker``), by key."""
+    keys = [k for k in samples if isinstance(k, str)]
+    return {
+        k: _read_marker(k, samples[k])
+        for k in keys
+        if PENDING_KEY_PATTERN.fullmatch(k.replace("\\", "/"))
+    }
+
+
+def _is_stale(marker: Mapping, *, stale_after: float, now: datetime) -> bool:
+    return (now - marker["started"]).total_seconds() >= stale_after
+
+
+def _nfc(name: str) -> str:
+    return unicodedata.normalize(UNICODE_FORM, name)
+
+
+def _listed_name(folder: str, name: str) -> str:
+    """``name`` as ``folder`` lists it: the exact entry if there is one, else the entry
+    equal to it in Unicode normal form (``UNICODE_FORM``), else the one equal to it
+    ignoring case too (a case- or normalisation-insensitive filesystem opened it under
+    another spelling), else ``name`` itself (nothing matches, or the folder cannot be
+    read)."""
+    try:
+        with os.scandir(folder) as listing:
+            names = [e.name for e in listing]
+    except OSError:
+        return name
+    if name in names:
+        return name
+    normal = _nfc(name)
+    folded = normal.casefold()
+    same = (n for n in names if _nfc(n) == normal)
+    same_ignoring_case = (n for n in names if _nfc(n).casefold() == folded)
+    return next(same, None) or next(same_ignoring_case, name)
+
+
+def _on_disk_case(path: str) -> str:
+    """The absolute ``path`` with every component spelled as its folder lists it."""
+    parts = Path(path).parts
+    spelled = parts[0]  # the root (or drive) has no folder to list it
+    for name in parts[1:]:
+        spelled = os.path.join(spelled, _listed_name(spelled, name))
+    return spelled
+
+
+def source_identity(source: str | os.PathLike) -> str:
+    """What tells sources apart: the real path (so a relative and an absolute path, or
+    a symlink, to one file are one source), spelled as the filesystem stores it when
+    the file exists (so ``Talk.wav`` and ``talk.wav`` typed for one file on a
+    case-insensitive filesystem are one source), then in Unicode normal form
+    ``UNICODE_FORM`` (so an NFC and an NFD spelling of ``Café.wav`` are one source), then
+    ``os.path.normcase``. A file that does not exist (any more) falls back to its real
+    path as typed.
+
+    >>> source_identity("/no/such/Dir/a.wav") == os.path.normcase(
+    ...     os.path.realpath("/no/such/Dir/a.wav"))
+    True
+    >>> source_identity("/no/Cafe\\u0301.wav") == source_identity("/no/Caf\\u00e9.wav")
+    True
+    """
+    real = os.path.realpath(source)
+    if os.path.exists(real):
+        real = _on_disk_case(real)
+    return os.path.normcase(_nfc(real))
+
+
+def _entry_source_id(
+    entry: Mapping, *, identity: Callable[[str], str] = source_identity
+) -> str | None:
+    """The ``identity`` of the file a manifest entry came from, or None if it cannot
+    be known: from ``source_path`` if recorded; else from ``source`` if it is an
+    absolute path. Older voxy recorded ``source`` as typed, and a relative one names
+    whatever file had that name in the folder the run happened to start in, so it
+    identifies nothing. A recorded ``source_path`` goes through ``identity`` too, since
+    an older voxy recorded it in the case it was typed.
+
+    >>> e = {"source_path": "/s/a.wav", "source": "a.wav"}
+    >>> _entry_source_id(e) == source_identity("/s/a.wav")
+    True
     >>> _entry_source_id({"source": "vocals.wav"}) is None
     True
     """
-    if isinstance(path := entry.get("source_path"), str):
-        return path
-    src = entry.get("source")
-    if isinstance(src, str) and os.path.isabs(src):
-        return _source_id(src)
-    return None
+    path = entry.get("source_path")
+    if not isinstance(path, str):
+        path = entry.get("source")
+        if not (isinstance(path, str) and os.path.isabs(path)):
+            return None
+    return identity(path)
 
 
-def _is_from(entry: Mapping, source: str | os.PathLike) -> bool:
-    """Whether a manifest entry came from ``source``, by real path (see
+def _cached_identity() -> Callable[[str], str]:
+    """``source_identity`` memoised for one call over a manifest (it lists folders, and
+    many entries share a source); never kept longer, since files move."""
+    return cache(source_identity)
+
+
+def _is_from(
+    entry: Mapping,
+    source: str | os.PathLike,
+    *,
+    identity: Callable[[str], str] = source_identity,
+) -> bool:
+    """Whether a manifest entry came from ``source``, by ``source_identity`` (see
     ``_entry_source_id``). An entry whose source cannot be known never matches."""
-    entry_id = _entry_source_id(entry)
-    return entry_id is not None and entry_id == _source_id(source)
+    entry_id = _entry_source_id(entry, identity=identity)
+    return entry_id is not None and entry_id == identity(source)
 
 
 def _distinct_sources(sources: Iterable[str | os.PathLike]) -> list:
-    """``sources`` with later repeats of one file (by ``_source_id``) dropped."""
+    """``sources`` with later repeats of one file (by ``source_identity``) dropped."""
     first = {}
     for src in sources:
-        first.setdefault(_source_id(src), src)
+        first.setdefault(source_identity(src), src)
     return list(first.values())
 
 
@@ -675,10 +806,12 @@ def latest_runs(manifest: Iterable[Mapping]) -> list[Mapping]:
     ``prepare_reference`` keeps every run, so a source processed twice is in the
     manifest twice (the same audio, cut again); consumers that want one copy of each
     recording (training sets, reference picks, summaries) read this. Sources are told
-    apart by real path (``source_path``, or an absolute ``source``); entries with no
-    ``run`` count as one run older than any recorded one; entries whose source cannot
-    be known (none, or a relative path from an older voxy) are all kept. Order is kept.
-    A source whose newest run gave no clips keeps its older run's entries.
+    apart by ``source_identity`` (of ``source_path``, or an absolute ``source``), so one
+    file recorded in two spellings on a case-insensitive filesystem is one source;
+    entries with no ``run`` count as one run older than any recorded one; entries whose
+    source cannot be known (none, or a relative path from an older voxy) are all kept.
+    Order is kept. A source whose newest run gave no clips keeps its older run's
+    entries.
 
     >>> m = [{"key": "a1", "source_path": "/a", "run": "20260101T000000.000000Z-x"},
     ...      {"key": "a2", "source_path": "/a", "run": "20261101T000000.000000Z-y"},
@@ -694,14 +827,14 @@ def latest_runs(manifest: Iterable[Mapping]) -> list[Mapping]:
         run = entry.get("run")
         return (1, run) if isinstance(run, str) else (0, "")
 
+    identity = _cached_identity()
+    ids = [_entry_source_id(e, identity=identity) for e in manifest]
     latest = {}
-    for entry in manifest:
-        if (sid := _entry_source_id(entry)) is not None:
+    for entry, sid in zip(manifest, ids):
+        if sid is not None:
             latest[sid] = max(latest.get(sid, (0, "")), run_rank(entry))
     return [
-        e
-        for e in manifest
-        if (sid := _entry_source_id(e)) is None or run_rank(e) == latest[sid]
+        e for e, sid in zip(manifest, ids) if sid is None or run_rank(e) == latest[sid]
     ]
 
 
@@ -742,20 +875,27 @@ def prepare_reference(
 
     Returns:
         The manifest: one dict per clip (``key``, ``path`` if on disk, ``text``,
-        ``source`` as given, ``source_path`` (its real path), ``slug``, ``run`` (one id
-        per call), ``start``, ``end``, and the ``score_clip`` measures), best first,
-        earlier runs' entries included.
+        ``source`` as given, ``source_path`` (its ``source_identity``), ``slug``,
+        ``run`` (one id per call), ``start``, ``end``, and the ``score_clip``
+        measures), best first, earlier runs' entries included.
 
     It never deletes or overwrites anything in the store. Run again into the same store
     (another recording, or the same file again), it gives this run's sources fresh slugs
     that no manifest entry and no clip or conditioned key in the store already uses, so
     every earlier clip keeps its key and its bytes, and saved reference profiles
     (``ref_audio`` + ``ref_text``) stay valid. The manifest keeps every earlier entry and
-    adds the new ones (re-read just before writing, so a ``forget`` or another run that
-    finished meanwhile is not undone). Re-processing a source therefore adds clips beside
-    its earlier ones; consumers read ``latest_runs(manifest)`` to see one run per source,
-    and ``forget(samples, source, run=...)`` removes the others explicitly. A file given
-    twice in one call (by real path) is processed once.
+    gets each source's new ones as soon as that source is done (re-read just before
+    each write, so a ``forget`` or another run that finished meanwhile is not undone):
+    a run that fails part-way leaves its finished sources recorded, and only the
+    failing source's keys (its conditioned file, any clips already cut) in no manifest,
+    which ``orphans`` lists and ``forget_orphans`` removes. Re-processing a source
+    therefore adds clips beside its earlier ones; consumers read
+    ``latest_runs(manifest)`` to see one run per source, and
+    ``forget(samples, source, run=...)`` removes the others explicitly. A file given
+    twice in one call (by ``source_identity``) is processed once. While it runs, a
+    pending marker (``pending/<run>.json``: run id, start time, reserved slugs) keeps
+    ``forget_orphans`` off its keys; it is removed when the run finishes, and a crashed
+    run's marker stays (showing the crash) until it is stale (``PENDING_STALE_S``).
     """
     if samples is None:
         if voice is None:
@@ -773,9 +913,14 @@ def prepare_reference(
     _log_earlier_runs(sources, earlier, log)
     slugs = unique_slugs(sources, reserved=_used_slugs(samples, earlier))
     run = _new_run_id()
-    manifest = []
+    _write_atomically(samples, _pending_key(run), _pending_marker(run, slugs))
+    manifest, new = earlier, 0
     with tempfile.TemporaryDirectory() as tmp:
         for src, slug in zip(sources, slugs):
+            # a fresh start time per source: a long batch never outlives its marker
+            _write_atomically(samples, _pending_key(run), _pending_marker(run, slugs))
+            source_entries = []
+            source_path = source_identity(src)
             wav_path = Path(tmp) / f"{slug}.wav"
             log(f"voxy.refprep: conditioning {src}")
             conditioner(src, wav_path, sample_rate=sample_rate, filters=filters)
@@ -802,7 +947,7 @@ def prepare_reference(
                     "run": run,
                     "text": clip["text"],
                     "source": str(src),
-                    "source_path": _source_id(src),
+                    "source_path": source_path,
                     "start": clip["start"],
                     "end": clip["end"],
                     "sample_rate": sr,
@@ -815,24 +960,69 @@ def prepare_reference(
                         max_seconds=max_seconds,
                     ),
                 }
-                manifest.append(entry)
-    new = len(manifest)
-    current = _checked_manifest(samples)  # again: it may have changed while we ran
-    manifest = sorted(manifest + current, key=_score_order)
+                source_entries.append(entry)
+            manifest = _add_to_manifest(samples, source_entries)
+            new += len(source_entries)
+    samples.pop(_pending_key(run), None)  # a crashed run keeps it, until it is stale
+    log(
+        f"voxy.refprep: {new} clips saved (run {run}), {len(manifest) - new} earlier kept"
+    )
+    return manifest
+
+
+def _add_to_manifest(samples: MutableMapping, entries: list[dict]) -> list[dict]:
+    """Write the store's manifest plus ``entries``, best first, and return it. The
+    manifest is re-read just before writing, as a ``forget`` or another run may have
+    changed it meanwhile. Entries get a ``path`` when the store is on disk."""
+    manifest = sorted(entries + _checked_manifest(samples), key=_score_order)
     root = getattr(samples, "rootdir", None)
     if root:
         for entry in manifest:
             if isinstance(entry.get("key"), str):
                 entry["path"] = os.path.join(root, entry["key"])
-    samples[MANIFEST_KEY] = _dump_manifest(manifest)
-    log(f"voxy.refprep: {new} clips saved (run {run}), {len(current)} earlier kept")
+    _write_manifest(samples, manifest)
     return manifest
+
+
+def _write_atomically(samples: MutableMapping, key: str, data: bytes) -> None:
+    """``samples[key] = data``; for a local filesystem store (one with a ``rootdir``),
+    through a temporary file in the same folder moved into place with ``os.replace``, so
+    an interrupted write leaves the old file or the new one, never a truncated one."""
+    root = getattr(samples, "rootdir", None)
+    if not root:
+        samples[key] = data
+        return
+    path = os.path.join(root, key)
+    folder = os.path.dirname(path)
+    os.makedirs(folder, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(
+        dir=folder, prefix=f".{os.path.basename(path)}.", suffix=ATOMIC_TMP_SUFFIX
+    )
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(
+            tmp, ATOMIC_FILE_MODE
+        )  # mkstemp makes it 0600; keep the store's usual mode
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
+def _write_manifest(samples: MutableMapping, entries: Iterable[Mapping]) -> None:
+    """The one way this module writes the manifest (atomically where the store allows)."""
+    _write_atomically(samples, MANIFEST_KEY, _dump_manifest(entries))
 
 
 def _log_earlier_runs(sources: Iterable, earlier: list[Mapping], log) -> None:
     """Tell, per source already in the manifest, that its earlier clips stay."""
+    identity = _cached_identity()
     for src in sources:
-        n = sum(_is_from(e, src) for e in earlier)
+        n = sum(_is_from(e, src, identity=identity) for e in earlier)
         if n:
             log(
                 f"voxy.refprep: {src} already has {n} clips from earlier runs; they are "
@@ -853,11 +1043,12 @@ def forget(
     Returns the deleted keys (with ``dry_run=True``: the keys it would delete, changing
     nothing).
 
-    The only function in voxy that deletes voice samples (``prepare_reference`` never
-    does), so it is careful about what it deletes:
+    With ``forget_orphans``, one of the only two functions in voxy that delete voice
+    samples (``prepare_reference`` never does), so it is careful about what it deletes:
 
-    - entries match ``source`` by real path: their ``source_path``, or, for entries an
-      older voxy wrote without one, their ``source`` only if it is absolute. A relative
+    - entries match ``source`` by ``source_identity`` (real path, in the case the
+      filesystem stores it): of their ``source_path``, or, for entries an older voxy
+      wrote without one, of their ``source`` only if it is absolute. A relative
       ``source`` names whatever file had that name where that run started, so such
       entries never match; they are logged, and ``run=LEGACY_RUN`` removes them
       deliberately (matching ``source`` exactly as recorded, as in
@@ -887,21 +1078,24 @@ def forget(
     (['clips/b-0001.wav'], ['clips/b-0001.wav', 'manifest.jsonl', 'tape1.wav'])
     """
 
+    identity = _cached_identity()
+
     def matches(entry):
+        is_from = _is_from(entry, source, identity=identity)
         if run == LEGACY_RUN:
             if "run" in entry:
                 return False
-            if _entry_source_id(entry) is None:  # asked for: as recorded
+            if _entry_source_id(entry, identity=identity) is None:  # as recorded
                 return entry.get("source") == str(source)
-            return _is_from(entry, source)
-        return _is_from(entry, source) and (run is None or entry.get("run") == run)
+            return is_from
+        return is_from and (run is None or entry.get("run") == run)
 
     def str_keys(entries):
         return [k for e in entries if isinstance(k := e.get("key"), str)]
 
     entries = _checked_manifest(samples)
     if run != LEGACY_RUN:
-        _log_unmatched_legacy(entries, source, log)
+        _log_unmatched_legacy(entries, source, log, identity=identity)
     gone = [e for e in entries if matches(e)]
     remaining = [e for e in entries if not matches(e)]
     named = set(str_keys(remaining))
@@ -915,18 +1109,20 @@ def forget(
         return [k for k in keys if k in samples]
     if not gone:
         return []
-    samples[MANIFEST_KEY] = _dump_manifest(remaining)
+    _write_manifest(samples, remaining)
     return [k for k in keys if samples.pop(k, None) is not None]
 
 
-def _log_unmatched_legacy(entries: Iterable[Mapping], source, log) -> None:
+def _log_unmatched_legacy(
+    entries: Iterable[Mapping], source, log, *, identity=source_identity
+) -> None:
     """Tell about entries an older voxy wrote with a relative ``source`` that may be
     ``source`` (same file name): ``forget`` cannot know, so it keeps them."""
     name = os.path.basename(os.fspath(source))
     counts = {}
     for e in entries:
         src = e.get("source")
-        if _entry_source_id(e) is None and isinstance(src, str):
+        if _entry_source_id(e, identity=identity) is None and isinstance(src, str):
             if os.path.basename(src) == name:
                 counts[src] = counts.get(src, 0) + 1
     for src, n in counts.items():
@@ -936,6 +1132,101 @@ def _log_unmatched_legacy(entries: Iterable[Mapping], source, log) -> None:
             f"kept. To remove them: forget(samples, {src!r}, run=refprep.LEGACY_RUN) "
             f"(with dry_run=True first to see what it deletes), or edit {MANIFEST_KEY}."
         )
+
+
+def _orphans_and_stale_markers(
+    samples: Mapping, *, stale_after: float
+) -> tuple[list[str], list[str]]:
+    """The ``orphans`` and the stale pending markers' keys, from one read of the store."""
+    entries = _checked_manifest(samples)
+    markers = _pending_markers(samples)
+    now = datetime.now(timezone.utc)
+    stale = {
+        k for k, m in markers.items() if _is_stale(m, stale_after=stale_after, now=now)
+    }
+    claimed = {None} | {s for e in entries for s in _entry_slugs(e)}
+    claimed |= {s for k, m in markers.items() if k not in stale for s in m["slugs"]}
+    keys = sorted(k for k in samples if _key_slug(k) not in claimed)
+    if keys and not any(_entry_slugs(e) for e in entries):
+        raise ValueError(
+            f"voxy.refprep: {MANIFEST_KEY} is missing, empty or claims no clip, yet the store holds "
+            f"{len(keys)} unclaimed clip or conditioned keys ({keys[0]}, ...): refusing "
+            f"to call them orphans, as a lost manifest would make every clip one. "
+            f"Restore the manifest, or delete the keys by hand if you mean to."
+        )
+    return keys, sorted(stale)
+
+
+def orphans(samples: Mapping, *, stale_after: float = PENDING_STALE_S) -> list[str]:
+    """The keys of this module's own form (``clips/<slug>-NNNN.wav``,
+    ``conditioned/<slug>.wav``) whose slug no manifest entry and no live pending marker
+    uses, sorted.
+
+    **Removing entries from the manifest by hand makes their clips orphans**, which
+    ``forget_orphans`` then deletes, even if a saved voice profile's ``ref_audio`` still
+    points at one. To drop a source's clips, use ``forget`` (it lists, with
+    ``dry_run=True``, exactly what it removes), never a hand edit of the manifest.
+
+    Where they come from: a run that failed part-way (the failing source's conditioned
+    file and any clips it had cut), a source that gave no clips (its conditioned file),
+    a manifest edited by hand. ``prepare_reference`` never reuses their slugs and
+    ``forget`` never deletes them, since no entry names them. A key an entry names is
+    never an orphan (its slug is that entry's), nor is any other key (a top-level
+    sample, the manifest). A running ``prepare_reference`` claims its slugs with a
+    pending marker (``PENDING_PREFIX``), so its keys not in the manifest yet are not
+    orphans; a marker older than ``stale_after`` seconds (a crashed run's) claims
+    nothing.
+
+    It raises, rather than guess, when the manifest has a line that is not an object,
+    when a pending marker cannot be read, and when the manifest is missing or empty
+    while keys of this module's form are unclaimed (a lost or truncated manifest would
+    otherwise make every clip an orphan).
+
+    >>> store = {"clips/a-0001.wav": b"", "clips/x-0001.wav": b"", "conditioned/a.wav": b"",
+    ...          "conditioned/z.wav": b"", "tape1.wav": b""}
+    >>> store[MANIFEST_KEY] = _dump_manifest([{"key": "clips/a-0001.wav", "slug": "a"}])
+    >>> orphans(store)
+    ['clips/x-0001.wav', 'conditioned/z.wav']
+    >>> store["pending/r.json"] = _pending_marker("r", ["x"])  # a run is cutting x
+    >>> orphans(store), orphans(store, stale_after=0)
+    (['conditioned/z.wav'], ['clips/x-0001.wav', 'conditioned/z.wav'])
+    """
+    return _orphans_and_stale_markers(samples, stale_after=stale_after)[0]
+
+
+def forget_orphans(
+    samples: MutableMapping,
+    *,
+    dry_run: bool = True,
+    stale_after: float = PENDING_STALE_S,
+) -> list[str]:
+    """Delete the ``orphans`` of a samples store, and the stale pending markers (those
+    older than ``stale_after`` seconds); return their keys. A dry run by default: it
+    returns what it would delete and changes nothing, so look first, then pass
+    ``dry_run=False``.
+
+    **Removing entries from the manifest by hand makes their clips orphans**, which
+    ``forget_orphans`` then deletes, even if a saved voice profile's ``ref_audio`` still
+    points at one. To drop a source's clips, use ``forget`` (it lists, with
+    ``dry_run=True``, exactly what it removes), never a hand edit of the manifest.
+
+    With ``forget``, one of the only two functions in voxy that delete voice samples.
+    It refuses (raises, deleting nothing) where ``orphans`` does: a missing or empty
+    manifest beside unclaimed clip or conditioned keys, a manifest or pending marker it
+    cannot read. Keys a running ``prepare_reference`` reserved (its live marker) are
+    kept, but a run that is still going after ``stale_after`` seconds loses that claim.
+
+    >>> store = {"conditioned/z.wav": b"", "clips/a-0001.wav": b"", "tape1.wav": b""}
+    >>> store[MANIFEST_KEY] = _dump_manifest([{"key": "clips/a-0001.wav"}])
+    >>> forget_orphans(store), sorted(store)
+    (['conditioned/z.wav'], ['clips/a-0001.wav', 'conditioned/z.wav', 'manifest.jsonl', 'tape1.wav'])
+    >>> forget_orphans(store, dry_run=False), sorted(store)
+    (['conditioned/z.wav'], ['clips/a-0001.wav', 'manifest.jsonl', 'tape1.wav'])
+    """
+    keys, stale = _orphans_and_stale_markers(samples, stale_after=stale_after)
+    if dry_run:
+        return keys + stale
+    return [k for k in keys + stale if samples.pop(k, None) is not None]
 
 
 def partial_transcribe(rootdir=None) -> Callable[..., list[dict]]:
