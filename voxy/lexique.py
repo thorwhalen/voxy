@@ -38,9 +38,12 @@ part of speech:
 """
 
 import csv
+import hashlib
+import json
 import os
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, MutableMapping
+from pathlib import Path
 
 from voxy.pronounce import VARIANT_SEPARATOR
 from voxy.speechtext import FRENCH_READING_NAMES
@@ -241,3 +244,74 @@ def lexique_heteronyms(
             symbols=symbols,
             noise=noise,
         )
+
+
+#: Folder (under voxy's cache) of derived tables, one JSON file per file and arguments.
+LEXIQUE_CACHE_KIND = "lexique"
+#: Hex characters of a cache key (64 bits: no collision among a user's tables).
+CACHE_KEY_CHARS = 16
+#: Bump when the derivation's rules change, so cached tables are derived afresh.
+LEXIQUE_DERIVATION_VERSION = 1
+
+
+def lexique_cache(*, cache_dir: str | os.PathLike | None = None) -> MutableMapping:
+    """Derived tables as JSON files, ``<key>.json`` under ``cache_dir`` (default:
+    ``voxy_cache_dir("lexique")``): derived from your Lexique copy, so never in a repo."""
+    from dol import JsonFiles, mk_dirs_if_missing
+
+    from voxy.stores import voxy_cache_dir
+
+    folder = Path(cache_dir) if cache_dir else voxy_cache_dir(LEXIQUE_CACHE_KIND)
+    return mk_dirs_if_missing(JsonFiles(str(folder) + os.sep))
+
+
+def _cache_key(path: str | os.PathLike, arguments: Mapping) -> str:
+    """The file's identity (real path, size, modification time) and the derivation's
+    arguments, hashed: a changed file or changed arguments make a new key."""
+    stat = os.stat(path)
+    identity = {
+        "path": os.path.realpath(path),
+        "size": stat.st_size,
+        "mtime_ns": stat.st_mtime_ns,
+        "arguments": arguments,
+        "derivation": LEXIQUE_DERIVATION_VERSION,
+    }
+    text = json.dumps(identity, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(text.encode()).hexdigest()[:CACHE_KEY_CHARS] + ".json"
+
+
+def cached_lexique_heteronyms(
+    path: str | os.PathLike,
+    *,
+    cache: MutableMapping | None = None,
+    min_frequency: float = 0.0,
+    pos_names: Mapping[str, str] = LEXIQUE_POS_NAMES,
+    symbols: Mapping[str, str] = LEXIQUE_TO_IPA,
+    noise: Mapping[str, str] = TRANSCRIPTION_NOISE,
+) -> dict[str, dict[str, str]]:
+    """:func:`lexique_heteronyms`, derived once and kept in ``cache`` (default
+    :func:`lexique_cache`), rebuilt when the file, the arguments or the derivation
+    rules (``LEXIQUE_DERIVATION_VERSION``) change, or when the entry is unreadable.
+    Returns a copy, so changing it never changes what later calls get.
+
+    >>> import tempfile, pathlib
+    >>> tsv = pathlib.Path(tempfile.mkdtemp()) / "Lexique383.tsv"
+    >>> _ = tsv.write_text("ortho\\tphon\\tlemme\\tcgram\\tfreqfilms2\\tfreqlivres\\n"
+    ...                    "est\\te\\têtre\\tVER\\t9\\t9\\nest\\tEst\\test\\tNOM\\t1\\t1\\n")
+    >>> cache = {}
+    >>> cached_lexique_heteronyms(tsv, cache=cache) == lexique_heteronyms(tsv), len(cache)
+    (True, 1)
+    """
+    arguments = {
+        "min_frequency": min_frequency,
+        "pos_names": dict(pos_names),
+        "symbols": dict(symbols),
+        "noise": dict(noise),
+    }
+    cache = lexique_cache() if cache is None else cache
+    key = _cache_key(path, arguments)
+    try:
+        table = cache[key]
+    except (KeyError, ValueError):  # not derived yet, or a write cut short
+        table = cache[key] = lexique_heteronyms(path, **arguments)
+    return {word: dict(readings) for word, readings in table.items()}
