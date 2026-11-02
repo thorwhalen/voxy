@@ -23,8 +23,8 @@ Steps, each a seam (keyword argument of ``replace_words``):
   was heard as "Smith's"). The render is trimmed, resampled, loudness-matched to
   what it replaces, and crossfaded.
 - ``verify``: checks of the result (default ``heard_check``: the new words are
-  transcribed where they were put). A voice-print comparison (``voxy.speakers``)
-  is another check with the same signature.
+  transcribed where they were put; ``voice_check`` compares the new phrase's voice
+  print with the rest of the recording's, ``voxy.speakers``).
 
 >>> import numpy as np
 >>> sr = 8000
@@ -277,6 +277,49 @@ def heard_check(
             for i in range(len(heard) - len(wanted) + 1)
         )
         return {"check": "heard", "passed": found, "heard": " ".join(heard)}
+
+    return check
+
+
+def voice_check(
+    *,
+    embed: Callable | None = None,
+    min_similarity: float | None = None,
+    window: float | None = None,
+) -> Check:
+    """A check: does the new phrase sound like the rest of the recording's speaker?
+
+    Cosine similarity of the voice print of the new phrase and of the rest
+    (``voxy.speakers.voice_print``, ECAPA in its own environment unless ``embed``
+    is given). ``min_similarity`` defaults to ``speakers.DFLT_MATCH_SIMILARITY``
+    (below it, a window counts as someone else); ``window`` (s) defaults to the
+    speakers' window, shortened to the phrase.
+    """
+
+    def check(samples: np.ndarray, sample_rate: int, replacement) -> dict:
+        from voxy import speakers
+
+        threshold = (
+            speakers.DFLT_MATCH_SIMILARITY if min_similarity is None else min_similarity
+        )
+        start, end = replacement.start, replacement.end
+        size = window or min(speakers.DFLT_WINDOW_SECONDS, end - start)
+        total = len(samples) / sample_rate
+        rest = [(a, b) for a, b in ((0.0, start), (end, total)) if b - a >= size]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "result.wav")
+            with open(path, "wb") as f:
+                f.write(write_wav(samples, sample_rate))
+            new, old = (
+                speakers.voice_print(path, spans=spans, embed=embed, window=size)
+                for spans in ([(start, end)], rest)
+            )
+        similarity = round(float(new @ old), 3)
+        return {
+            "check": "voice",
+            "passed": similarity >= threshold,
+            "similarity": similarity,
+        }
 
     return check
 

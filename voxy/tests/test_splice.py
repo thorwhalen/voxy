@@ -164,6 +164,33 @@ def test_the_cut_snaps_past_an_early_asr_boundary():
     assert 1.06 <= end <= 1.07  # in the 10 ms of silence, not at ASR's 1.0
 
 
+def test_voice_check_compares_the_new_phrase_with_the_rest():
+    from voxy.speakers import Windows
+
+    def fake_embed(voice_of_new):
+        def embed(path, *, spans, window, **kwargs):
+            (start, _), *_ = spans
+            inside = start > 0  # the new phrase's span; the rest starts at 0
+            v = np.array(voice_of_new if inside else [1.0, 0.0])
+            return Windows(np.array([[0.0, window]]), np.array([v / np.linalg.norm(v)]))
+
+        return embed
+
+    same = splice.voice_check(embed=fake_embed([1.0, 0.1]))
+    other = splice.voice_check(embed=fake_embed([0.0, 1.0]))
+    fixed = replace_words(
+        SPEECH,
+        "Smyth",
+        "Smith",
+        words=WORDS,
+        sample_rate=SR,
+        render=fake_render([]),
+        verify=[same, other],
+    )
+    assert [c["passed"] for c in fixed.checks] == [True, False]
+    assert fixed.checks[0]["similarity"] == pytest.approx(0.995, abs=1e-3)
+
+
 def test_find_phrase_names_what_it_found():
     assert find_phrase(WORDS, "SMYTH") == (2, 2)
     with pytest.raises(ValueError, match="not found"):
