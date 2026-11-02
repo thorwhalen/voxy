@@ -287,6 +287,8 @@ def _upsample(samples: np.ndarray, from_rate: int, to_rate: int) -> np.ndarray:
     x = np.asarray(samples, np.float64)
     edge = min(UPSAMPLE_EDGE, len(x) - 1)
     padded = np.pad(x, edge, mode="reflect") if edge > 0 else x
+    if len(padded) % 2:  # an even length keeps the source's Nyquist bin
+        padded = np.append(padded, padded[-1])
     n_in, n_out = len(padded), int(round(len(padded) * to_rate / from_rate))
     spectrum = np.zeros(n_out // 2 + 1, np.complex128)
     source = np.fft.rfft(padded)
@@ -303,7 +305,9 @@ def resample(samples: np.ndarray, from_rate: int, to_rate: int) -> np.ndarray:
     """Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited
     interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no
     images above 12 kHz); when downsampling, low-passed below the target's Nyquist
-    frequency (so it does not alias), then linearly interpolated.
+    frequency (so it does not alias), then linearly interpolated. The whole clip is
+    held in memory (about 1 GB to take 10 minutes from 24 to 48 kHz): fine for
+    rendered words and lines; use ffmpeg or soxr for long recordings.
 
     >>> len(resample(np.zeros(100), 8000, 16000)), len(resample(np.zeros(100), 16000, 8000))
     (200, 50)
