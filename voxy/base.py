@@ -6,6 +6,9 @@ models, with initial support for the CSM-1B model.
 
 torch, torchaudio and whisper are imported only where a local model needs them
 (``voxy[local]``, ``voxy[transcription]``), so a cloud backend runs without them.
+Annotations are postponed and torch is imported only for type checking, so
+``typing.get_type_hints`` on these functions needs torch importable and in scope
+(an accepted trade-off).
 """
 
 from __future__ import annotations
@@ -20,6 +23,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
+
+from voxy.wavutil import write_wav
 
 if TYPE_CHECKING:
     import torch
@@ -57,10 +62,7 @@ def optional_import(module: str):
         return importlib.import_module(module)
     except ImportError as e:
         extra = OPTIONAL_MODULE_EXTRAS.get(module, module)
-        raise ImportError(
-            f"This needs {module}, which cloud backends don't: "
-            f"pip install 'voxy[{extra}]'"
-        ) from e
+        raise ImportError(f"This needs {module}: pip install 'voxy[{extra}]'") from e
 
 
 def is_tensor(obj) -> bool:
@@ -462,32 +464,40 @@ def tensor_to_wav_bytes(audio: torch.Tensor | np.ndarray, sample_rate: int) -> b
     """Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.
 
     ``audio`` is a numpy array or a torch tensor (torch is not needed for arrays).
-    Integer audio is taken as PCM and scaled to [-1, 1] first.
+    Integer audio is taken as PCM and scaled to [-1, 1] first; channels are
+    averaged, and ``voxy.wavutil.write_wav`` does the encoding.
 
     >>> data = tensor_to_wav_bytes(np.zeros(160), 16000)
     >>> data[:4], len(data)
     (b'RIFF', 364)
     >>> tensor_to_wav_bytes(np.array([[0, 32767]], dtype=np.int16), 8000)[-2:]
     b'\\xff\\x7f'
+    >>> tensor_to_wav_bytes(np.zeros((1, 2, 3)), 8000)
+    Traceback (most recent call last):
+      ...
+    ValueError: Audio must be [samples] or [channels, samples], not 3-D
     """
-    import wave
 
-    if is_tensor(audio):
-        audio = audio.detach().cpu().numpy()
-    audio = np.asarray(audio)
+    def as_array(audio) -> np.ndarray:
+        # numpy has no bfloat16: widen sub-32-bit float tensors (wider ones keep
+        # their precision, integer ones their dtype for the PCM scaling below)
+        if is_tensor(audio):
+            audio = audio.detach().cpu()
+            if audio.is_floating_point() and audio.element_size() < 4:
+                audio = audio.float()
+            audio = audio.numpy()
+        return np.asarray(audio)
+
+    audio = as_array(audio)
+    if audio.ndim > 2:
+        raise ValueError(
+            f"Audio must be [samples] or [channels, samples], not {audio.ndim}-D"
+        )
     if not np.issubdtype(audio.dtype, np.floating):
         audio = audio.astype(np.float64) / np.iinfo(audio.dtype).max
     if audio.ndim == 2:
         audio = audio.mean(axis=0)
-    samples = np.clip(audio.astype(np.float32), -1.0, 1.0)
-    pcm = (samples * 32767).astype("<i2").tobytes()
-    buffer = io.BytesIO()
-    with wave.open(buffer, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(int(sample_rate))
-        w.writeframes(pcm)
-    return buffer.getvalue()
+    return write_wav(audio, sample_rate)
 
 
 class SpeechModel:

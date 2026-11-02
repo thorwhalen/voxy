@@ -41,7 +41,6 @@ authors = [
 # them) import them, and a service-only host should not install several GB.
 dependencies = [
     "numpy",
-    "huggingface-hub",
     # voxy.stores: the voice library and its audio, as MutableMappings
     "dol",
     "config2py",
@@ -54,18 +53,21 @@ Documentation = "https://thorwhalen.github.io/voxy"
 Issues = "https://github.com/thorwhalen/voxy/issues"
 
 [project.optional-dependencies]
-# Local models in this process (CSM-1B), audio decoding/cleanup as tensors, and
-# ``generate_speech`` tensors. The isolated local backends (f5tts, kokoro, ...)
-# build their own environments and don't need it.
+# Local models in this process (CSM-1B, downloaded with huggingface-hub), audio
+# decoding/cleanup as tensors, and ``generate_speech`` tensors. The isolated
+# local backends (f5tts, kokoro, ...) build their own environments and don't
+# need it.
 local = [
     "torch",
     "torchaudio",
+    "huggingface-hub",
 ]
-# `voxy.base` imports whisper behind a try/except; installing this extra
-# enables the automatic-transcription features (audio_to_text, and voice
-# cloning without an explicit transcript).
+# Automatic transcription (audio_to_text, and voice cloning without an explicit
+# transcript): whisper, imported when first needed, plus the torch/torchaudio it
+# decodes audio with.
 transcription = [
     "openai-whisper",
+    "voxy[local]",
 ]
 # The ElevenLabs backend (create_speech_model("elevenlabs")); imported lazily.
 elevenlabs = [

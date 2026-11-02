@@ -1,12 +1,14 @@
 """A cloud voice must not need torch: importing voxy and speaking through a
 service leaves torch, torchaudio and whisper unimported (issue #60)."""
 
+import os
 import subprocess
 import sys
 
+import numpy as np
 import pytest
 
-from voxy.base import SpeechModel, optional_import
+from voxy.base import optional_import, tensor_to_wav_bytes
 
 HEAVY = ("torch", "torchaudio", "whisper")
 
@@ -46,11 +48,39 @@ def test_a_missing_optional_module_names_its_extra(monkeypatch):
         optional_import("torch")
 
 
-def test_the_device_is_resolved_on_first_use_only():
-    class Service(SpeechModel):
-        name = "service"
+NO_TORCH_DEVICE = """
+import sys
+sys.modules["torch"] = None  # import torch -> ImportError
+from voxy.base import SpeechModel
 
-    model = Service()
-    assert model._device is None
-    model.device = "cpu"
-    assert model.device == "cpu"
+class Service(SpeechModel):
+    name = "service"
+
+model = Service()
+assert model._device is None, "resolved before first use"
+print(model.device)
+"""
+
+
+def test_the_device_is_resolved_on_first_use_and_falls_back_to_cpu():
+    done = subprocess.run(
+        [sys.executable, "-c", NO_TORCH_DEVICE],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={k: v for k, v in os.environ.items() if k != "DFLT_VOXY_DEVICE"},
+    )
+    assert done.stdout.strip() == "cpu"
+
+
+def test_a_bfloat16_tensor_encodes():
+    torch = pytest.importorskip("torch")
+    audio = torch.tensor([0.0, 0.5, -0.5], dtype=torch.bfloat16)
+    assert tensor_to_wav_bytes(audio, 8000) == tensor_to_wav_bytes(
+        audio.float().numpy(), 8000
+    )
+
+
+def test_3d_audio_is_refused():
+    with pytest.raises(ValueError, match="3-D"):
+        tensor_to_wav_bytes(np.zeros((1, 2, 3)), 8000)
