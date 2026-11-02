@@ -84,8 +84,10 @@ def force_align(
         text: The words spoken, as a string (split on whitespace) or a list.
         run: ``(audio_path, words) -> [span or None, ...]``; default ``worker_run()``.
 
-    A word with no letter the aligner knows (a number, a symbol) comes back with
-    ``start``/``end`` None.
+    A word with no letter the aligner knows (a number, a symbol) is placed as one
+    "any sound" token. Low scores (under about 0.5) mean the text is not what is said
+    there. Audio over 30 s is refused by the default aligner: align in stretches. A
+    run that returns None for a word gives ``start``/``end`` None.
     """
     words = text.split() if isinstance(text, str) else list(text)
     run = run or worker_run()
