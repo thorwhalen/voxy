@@ -29,13 +29,18 @@ import tempfile
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
+import numpy as np
+
 from voxy.envs import EnvSpec
+from voxy.wavutil import read_wav_channels, write_wav_channels
 from voxy.worker import WorkerPool
 
 DFLT_SEPARATION_MODEL = "htdemucs_ft"
 #: The stem kept as "the voice"; Demucs also has drums, bass and other.
 DFLT_STEM = "vocals"
 REST_STEM = "rest"
+#: What ``speech_separator`` asks the worker to write: float, so no level is lost.
+FLOAT_SUBTYPE = "FLOAT"
 _FOUR_SOURCES = ("drums", "bass", "other", "vocals")
 #: The stems of the pretrained models whose sources are known before loading them.
 MODEL_SOURCES = {
@@ -145,3 +150,66 @@ def separate(
             audio = path
         paths = run(str(audio), tmp, stem=stem, sample_rate=sample_rate, **options)
         return {name: Path(paths[name]).read_bytes() for name in (stem, REST_STEM)}
+
+
+def speech_separator(
+    *,
+    stem: str = DFLT_STEM,
+    run: Callable[..., Mapping[str, str]] | None = None,
+    **options,
+) -> Callable[[np.ndarray, int], tuple[np.ndarray, np.ndarray]]:
+    """``separate`` as a ``(samples (frames, channels), sample_rate) -> (speech, music)``
+    callable, the separator seam of reeleehq/mixing
+    (``mixing.audio.separation.separate_speech(audio, separator=speech_separator())``),
+    so mixing can run Demucs out of process, in voxy's environment.
+
+    Mono or stereo in; the stems come back at the input's rate, channels and length,
+    at the input's level (no clip rescaling, float WAV in between: ``speech + music``
+    is the input). Keyword arguments are ``separate``'s. For mixing's ``remove_talk``,
+    give it htdemucs's context: ``SeparationStrategy(..., context_s=3.0)`` around this
+    callable (a bare callable gets mixing's 1 s default).
+
+    >>> def fake(audio, out_dir, *, stem, sample_rate, **options):
+    ...     samples, sr = read_wav_channels(audio)
+    ...     paths = {}
+    ...     for name, part in ((stem, samples * 0.75), ("rest", samples * 0.25)):
+    ...         paths[name] = f"{out_dir}/{name}.wav"
+    ...         open(paths[name], "wb").write(write_wav_channels(part, sr))
+    ...     return paths
+    >>> speech, music = speech_separator(run=fake)(np.ones((4, 2)), 8000)
+    >>> speech.shape, float(speech[0, 0]), float(music[0, 1])
+    ((4, 2), 0.75, 0.25)
+    """
+
+    def separator(samples: np.ndarray, sample_rate: int):
+        samples = np.asarray(samples, dtype=np.float32)
+        frames_by_channels = samples if samples.ndim == 2 else samples[:, None]
+        frames, channels = frames_by_channels.shape
+        if not np.isfinite(frames_by_channels).all():
+            raise ValueError("speech_separator needs finite samples (no NaN or inf)")
+        if channels not in (1, 2):
+            raise ValueError(
+                f"speech_separator takes mono or stereo, not {channels} channels"
+            )
+        stems = separate(
+            write_wav_channels(frames_by_channels, sample_rate),
+            stem=stem,
+            run=run,
+            sample_rate=sample_rate,
+            **{"clip_mode": None, "subtype": FLOAT_SUBTYPE, **options},
+        )
+        return tuple(
+            _shaped(read_wav_channels(stems[name])[0], frames, channels)
+            for name in (stem, REST_STEM)
+        )
+
+    return separator
+
+
+def _shaped(stem: np.ndarray, frames: int, channels: int) -> np.ndarray:
+    """``stem`` as ``(frames, channels)``: stereo mixed down for a mono input, cut or
+    zero-padded to ``frames`` (resampling can be a few frames off)."""
+    if channels == 1 and stem.shape[1] > 1:
+        stem = stem.mean(axis=1, keepdims=True)
+    stem = stem[:frames]
+    return np.pad(stem, ((0, frames - len(stem)), (0, 0)))
