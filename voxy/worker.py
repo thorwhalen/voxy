@@ -92,8 +92,9 @@ class Worker:
 
     def _request(self, request: Mapping) -> dict:
         process = self._process
+        payload = json.dumps(request) + "\n"  # a bad request is the caller's error
         try:
-            process.stdin.write(json.dumps(request) + "\n")
+            process.stdin.write(payload)
             process.stdin.flush()
             line = process.stdout.readline()
         except (OSError, ValueError):  # a broken pipe, or a stream already closed
@@ -126,7 +127,8 @@ class Worker:
     def close(self) -> None:
         """Stop the process (its memory goes back to the machine).
 
-        From another thread, this waits for a call in flight to finish first.
+        From another thread, this waits for a call in flight to finish first, so it
+        cannot abort a hung call (a separate ``kill`` would be needed for that).
         """
         with self._lock:
             process, self._process = self._process, None

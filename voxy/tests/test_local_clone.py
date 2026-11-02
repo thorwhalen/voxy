@@ -168,6 +168,19 @@ def test_a_closed_pipe_is_reported_as_the_worker_exiting(tmp_path):
         worker._request({"op": "ping"})
 
 
+def test_a_request_that_cannot_be_serialised_leaves_the_worker_alive(tmp_path):
+    adapter = tmp_path / "g_adapter.py"
+    adapter.write_text("def load(**kw): return kw\ndef ping(state, **kw): return {}\n")
+    worker = Worker(sys.executable, adapter, log_path=tmp_path / "w.log")
+    worker.call("ping")
+    circular = {}
+    circular["self"] = circular
+    with pytest.raises(ValueError, match="[Cc]ircular"):
+        worker.call("ping", x=circular)
+    assert worker.running
+    worker.close()
+
+
 def test_ensure_env_builds_once_then_reuses(tmp_path):
     spec = EnvSpec("demo", ("numpy",))
     commands = []
