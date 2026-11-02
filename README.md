@@ -207,11 +207,11 @@ voxy.list_voices("kokoro")
 
 ### Correcting words in a recording
 
-`voxy.replace_words` replaces a spoken phrase with a new one in the speaker's voice: it finds the phrase in the recording's ASR words, renders the new phrase (TTS in `voice=` by default, or any `render=`), cuts at the quietest moment near each end, matches loudness, crossfades, and checks that the new words are heard there.
+`voxy.replace_words` replaces a spoken phrase with a new one in the speaker's voice: it finds the phrase in the recording's ASR words, renders the new phrase (TTS in `voice=` by default, or any `render=`), cuts at the quietest moment near each end, matches the loudness of the speech it replaces (pauses excluded), crossfades, and checks that the new words are heard there and the old ones are gone. Pass `voice=` (the speaker's voice) or `render=`.
 
 ```python
 fixed = voxy.replace_words("narration.wav", "Anna Jones", "Anna Smith", voice="ada")
-fixed.heard, fixed.checks       # True, [{'check': 'heard', 'passed': True, ...}]
+fixed.passed, fixed.checks      # True, [{'check': 'heard', 'passed': True, ...}]
 fixed.save("narration-fixed.wav")
 ```
 

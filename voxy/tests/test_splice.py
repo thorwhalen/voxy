@@ -76,21 +76,37 @@ def test_the_phrase_is_replaced_and_the_rest_kept():
     assert abs(np.argmax(spectrum) * SR / (b - a) - 1000) < 20  # the render is there
 
 
-def test_the_render_is_matched_to_the_loudness_it_replaces():
+def rms(x):
+    return float(np.sqrt(np.mean(x**2)))
+
+
+def test_the_render_is_matched_to_the_loudness_of_the_speech_it_replaces():
+    """The silence around the phrase in the cut does not lower the level matched."""
+    long_gap = np.zeros(SR, dtype=np.float32)
+    x = np.concatenate(
+        [tone(0.5, 200), long_gap, tone(0.5, 300), long_gap, tone(0.5, 500)]
+    )
+    ws = [
+        {"text": "Hello", "start": 0.0, "end": 0.5},
+        {"text": "Smyth", "start": 1.5, "end": 2.0},
+        {"text": "there", "start": 3.0, "end": 3.5},
+    ]
     fixed = replace_words(
-        SPEECH,
+        x,
         "Smyth",
         "Smith",
-        words=WORDS,
+        words=ws,
         sample_rate=SR,
-        render=fake_render([], amp=0.9),
+        render=lambda text: (tone(0.6, 1000, 0.9), SR),
         verify=(),
     )
+    cut = x[int(fixed.replaced[0] * SR) : int(fixed.replaced[1] * SR)]
+    assert len(cut) >= 1.5 * int(0.5 * SR)  # a third of the cut is silence
     out, _ = read_wav(fixed.audio)
-    a, b = int(fixed.start * SR), int(fixed.end * SR)
-    cut = SPEECH[int(fixed.replaced[0] * SR) : int(fixed.replaced[1] * SR)]
-    rms = lambda x: float(np.sqrt(np.mean(x**2)))
-    assert rms(out[a:b]) == pytest.approx(rms(cut), rel=0.15)
+    middle = (fixed.start + fixed.end) / 2
+    inserted = out[int((middle - 0.2) * SR) : int((middle + 0.2) * SR)]  # all tone
+    phrase = x[int(1.5 * SR) : int(2.0 * SR)]
+    assert rms(inserted) == pytest.approx(rms(phrase), rel=0.05)
 
 
 def test_words_come_from_the_transcriber_when_not_given():
@@ -119,7 +135,7 @@ def test_heard_check_reports_whether_the_new_words_are_transcribed():
     )
     assert [c["passed"] for c in fixed.checks] == [True, False]
     assert fixed.checks[1]["heard"] == "anna smyth there"
-    assert not fixed.heard
+    assert not fixed.passed
 
 
 def test_heard_check_takes_the_phrase_as_asr_writes_it():
@@ -148,7 +164,7 @@ def test_the_default_check_uses_the_same_transcriber():
         transcriber=fake_transcriber(["Anna", "Smith"]),
         render=fake_render([]),
     )
-    assert fixed.heard and fixed.checks[0]["check"] == "heard"
+    assert fixed.passed and fixed.checks[0]["check"] == "heard"
 
 
 def test_the_cut_snaps_past_an_early_asr_boundary():
@@ -214,11 +230,31 @@ def test_tts_render_asks_elevenlabs_for_pcm_and_decodes(monkeypatch):
     monkeypatch.setattr(voxy.facade, "text_to_speech", fake_tts)
     samples, sr = tts_render("v1", backend="elevenlabs", voices={})("Smith")
     assert sr == SR and len(samples) == int(0.2 * SR)
+    resolved = {"model": None, "use_library": False}
     assert seen == [
-        ("Smith", "v1", "elevenlabs", {"output_format": "pcm_24000", "voices": {}})
+        ("Smith", "v1", "elevenlabs", {**resolved, "output_format": "pcm_24000"})
     ]
     tts_render("Daniel", backend="say", voices={})("Smith")
-    assert seen[-1][3] == {"voices": {}}
+    assert seen[-1][3] == resolved
+
+
+def test_tts_render_resolves_the_voice_once_with_the_library_settings(monkeypatch):
+    calls = []
+
+    def fake_resolve(voice, *, backend=None, voices=None, use_library=True):
+        calls.append((voice, backend, use_library))
+        return "say", "Daniel"
+
+    monkeypatch.setattr(voxy.facade, "resolve_voice", fake_resolve)
+    monkeypatch.setattr(
+        voxy.facade,
+        "text_to_speech",
+        lambda *a, **k: Speech(write_wav(tone(0.2, 300), SR), format="wav"),
+    )
+    render = tts_render("ada", use_library=False, voices={})
+    render("one")
+    render("two")
+    assert calls == [("ada", None, False)]
 
 
 def test_tts_render_refuses_a_compressed_render(monkeypatch):
@@ -229,6 +265,149 @@ def test_tts_render_refuses_a_compressed_render(monkeypatch):
     )
     with pytest.raises(ValueError, match="output_format"):
         tts_render("v1", backend="say", voices={})("Smith")
+
+
+def test_the_last_word_is_cut_at_the_end_of_the_audio():
+    """Whisper ends the final word at (or past) the end of the clip."""
+    fixed = replace_words(
+        SPEECH,
+        "there",
+        "here",
+        words=WORDS,
+        sample_rate=SR,
+        render=fake_render([]),
+        verify=(),
+    )
+    total = len(SPEECH) / SR
+    assert fixed.replaced[1] == total
+    assert fixed.end == pytest.approx(len(read_wav(fixed.audio)[0]) / SR)
+    late = [*WORDS[:-1], {**WORDS[-1], "end": total + 0.2}]
+    start, end = splice.cut_points(SPEECH, SR, late, 3, 3)
+    assert end == total
+
+
+def test_the_first_word_is_cut_at_the_start_of_the_audio():
+    fixed = replace_words(
+        SPEECH,
+        "Hello",
+        "Hi",
+        words=WORDS,
+        sample_rate=SR,
+        render=fake_render([]),
+        verify=(),
+    )
+    assert fixed.replaced[0] == 0.0 and fixed.start == 0.0
+
+
+def test_a_silent_render_is_refused():
+    with pytest.raises(ValueError, match="silent"):
+        replace_words(
+            SPEECH,
+            "Smyth",
+            "Smith",
+            words=WORDS,
+            sample_rate=SR,
+            render=lambda text: (np.zeros(SR, dtype=np.float32), SR),
+        )
+
+
+def test_a_voice_or_a_render_is_required():
+    with pytest.raises(ValueError, match="voice="):
+        replace_words(SPEECH, "Smyth", "Smith", words=WORDS, sample_rate=SR)
+
+
+def test_heard_check_fails_when_the_old_phrase_is_still_heard():
+    asr = fake_transcriber(["Anna", "Smith", "Anna", "Smyth"])
+    fixed = replace_words(
+        SPEECH,
+        "Anna Smyth",
+        "Anna Smith",
+        words=WORDS,
+        sample_rate=SR,
+        render=fake_render([]),
+        verify=heard_check(transcriber=asr),
+    )
+    (check,) = fixed.checks
+    assert check["new_heard"] and check["old_heard"] and not check["passed"]
+
+
+def test_heard_check_expects_the_old_phrase_when_the_new_one_contains_it():
+    fixed = replace_words(
+        SPEECH,
+        "Smyth",
+        "Smyth Jones",
+        words=WORDS,
+        sample_rate=SR,
+        render=fake_render([]),
+        verify=heard_check(transcriber=fake_transcriber(["Anna", "Smyth", "Jones"])),
+    )
+    assert fixed.passed and not fixed.checks[0]["old_heard"]
+
+
+def test_voice_check_passes_short_rest_spans_and_fails_without_rest():
+    from types import SimpleNamespace
+
+    from voxy.speakers import Windows
+
+    seen = []
+
+    def embed(path, *, spans, window, **kwargs):
+        seen.append(list(spans))
+        return Windows(np.array([[0.0, window]]), np.array([[1.0, 0.0]]))
+
+    check = splice.voice_check(embed=embed, window=1.0)
+    x = np.zeros(SR * 3, dtype=np.float32)
+    result = check(x, SR, SimpleNamespace(start=0.5, end=2.8))
+    assert seen[-1] == [(0.0, 0.5), (2.8, 3.0)]  # both shorter than the window
+    assert result["passed"]
+    whole = check(x, SR, SimpleNamespace(start=0.0, end=3.0))
+    assert not whole["passed"] and "reason" in whole
+    assert len(seen) == 2  # nothing embedded for the whole-file case
+
+
+def test_find_phrase_refuses_an_empty_phrase():
+    with pytest.raises(ValueError, match="no words"):
+        find_phrase(WORDS, " … ")
+
+
+def test_raw_samples_are_mono_floats():
+    pcm = (SPEECH * 32768).astype(np.int16)
+    fixed = replace_words(
+        pcm,
+        "Smyth",
+        "Smith",
+        words=WORDS,
+        sample_rate=SR,
+        render=fake_render([]),
+        verify=(),
+    )
+    out, _ = read_wav(fixed.audio)
+    head = int(1.2 * SR)
+    assert np.allclose(out[:head], SPEECH[:head], atol=1e-3)
+    with pytest.raises(ValueError, match="mono"):
+        replace_words(
+            np.stack([SPEECH, SPEECH], axis=1),
+            "Smyth",
+            "Smith",
+            words=WORDS,
+            sample_rate=SR,
+            render=fake_render([]),
+        )
+
+
+def test_the_replacement_is_a_speech():
+    fixed = replace_words(
+        SPEECH,
+        "Smyth",
+        "Smith",
+        words=WORDS,
+        sample_rate=SR,
+        render=fake_render([]),
+        verify=(),
+    )
+    assert isinstance(fixed.speech, Speech) and fixed.speech.format == "wav"
+    assert fixed.audio is fixed.speech.audio and fixed.sample_rate == SR
+    assert fixed.passed is None
 
 
 def test_it_is_on_the_package():
