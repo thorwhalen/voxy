@@ -1,4 +1,4 @@
-> built 2026-11-02 10:57 UTC from 809b715 (main) · voxy 0.0.56. Details: build_info.json
+> built 2026-11-02 11:02 UTC from c37f08a (main) · voxy 0.0.57. Details: build_info.json
 
 # index.html.md
 
@@ -6015,7 +6015,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 10:57 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/809b715abaa852b8c8f8e79cd671fb8aa06ca3aa"><code>809b715</code></a> on branch <code>main</code>, for **voxy 0.0.56** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 11:02 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/c37f08a391a8627645c3ae16aa64af60aef2f9f5"><code>c37f08a</code></a> on branch <code>main</code>, for **voxy 0.0.57** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6024,7 +6024,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/809b715abaa852b8c8f8e79cd671fb8aa06ca3aa"><code>809b715abaa852b8c8f8e79cd671fb8aa06ca3aa</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/c37f08a391a8627645c3ae16aa64af60aef2f9f5"><code>c37f08a391a8627645c3ae16aa64af60aef2f9f5</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6035,9 +6035,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41432596225">41432596225</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41433139015">41433139015</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>809b715abaa852b8c8f8e79cd671fb8aa06ca3aa</code> (in the history of the built commit) |
+| Event commit | <code>c37f08a391a8627645c3ae16aa64af60aef2f9f5</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6062,13 +6062,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.56/">0.0.56</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.57/">0.0.57</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 809b715abaa852b8c8f8e79cd671fb8aa06ca3aa
+git checkout c37f08a391a8627645c3ae16aa64af60aef2f9f5
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

@@ -1,32 +1,32 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-02T10:57:39Z",
+  "built_at": "2026-11-02T11:02:03Z",
   "package": {
     "name": "voxy",
-    "version": "0.0.56",
+    "version": "0.0.57",
     "display_name": "voxy",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "809b715abaa852b8c8f8e79cd671fb8aa06ca3aa",
-    "short_commit": "809b715",
+    "commit": "c37f08a391a8627645c3ae16aa64af60aef2f9f5",
+    "short_commit": "c37f08a",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/thorwhalen/voxy",
-    "commit_url": "https://github.com/thorwhalen/voxy/commit/809b715abaa852b8c8f8e79cd671fb8aa06ca3aa",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/c37f08a391a8627645c3ae16aa64af60aef2f9f5",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "thorwhalen/voxy",
-    "sha": "809b715abaa852b8c8f8e79cd671fb8aa06ca3aa",
+    "sha": "c37f08a391a8627645c3ae16aa64af60aef2f9f5",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "41432596225",
-    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41432596225",
+    "run_id": "41433139015",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/41433139015",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -60,11 +60,11 @@
   },
   "pypi": {
     "checked": true,
-    "latest": "0.0.56",
+    "latest": "0.0.57",
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout 809b715abaa852b8c8f8e79cd671fb8aa06ca3aa\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout c37f08a391a8627645c3ae16aa64af60aef2f9f5\npip install \"epythet==0.2.22\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

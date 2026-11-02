@@ -1366,181 +1366,196 @@
 </span><span id="line-1134">        <span class="p">)</span>
 </span><span id="line-1135">
 </span><span id="line-1136">
-</span><span id="line-1137"><span class="k">def</span><span class="w"> </span><span class="nf">_orphans_and_stale_markers</span><span class="p">(</span>
-</span><span id="line-1138">    <span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">stale_after</span><span class="p">:</span> <span class="nb">float</span>
-</span><span id="line-1139"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-</span><span id="line-1140"><span class="w">    </span><span class="sd">"""The ``orphans`` and the stale pending markers' keys, from one read of the store."""</span>
-</span><span id="line-1141">    <span class="n">entries</span> <span class="o">=</span> <span class="n">_checked_manifest</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
-</span><span id="line-1142">    <span class="n">markers</span> <span class="o">=</span> <span class="n">_pending_markers</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
-</span><span id="line-1143">    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span>
-</span><span id="line-1144">    <span class="n">stale</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-1145">        <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">markers</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">_is_stale</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">stale_after</span><span class="o">=</span><span class="n">stale_after</span><span class="p">,</span> <span class="n">now</span><span class="o">=</span><span class="n">now</span><span class="p">)</span>
-</span><span id="line-1146">    <span class="p">}</span>
-</span><span id="line-1147">    <span class="n">claimed</span> <span class="o">=</span> <span class="p">{</span><span class="kc">None</span><span class="p">}</span> <span class="o">|</span> <span class="p">{</span><span class="n">s</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">_entry_slugs</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span>
-</span><span id="line-1148">    <span class="n">claimed</span> <span class="o">|=</span> <span class="p">{</span><span class="n">s</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">markers</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stale</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">m</span><span class="p">[</span><span class="s2">"slugs"</span><span class="p">]}</span>
-</span><span id="line-1149">    <span class="n">keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">samples</span> <span class="k">if</span> <span class="n">_key_slug</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">claimed</span><span class="p">)</span>
-</span><span id="line-1150">    <span class="k">if</span> <span class="n">keys</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">_entry_slugs</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">):</span>
-</span><span id="line-1151">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-1152">            <span class="sa">f</span><span class="s2">"voxy.refprep: </span><span class="si">{</span><span class="n">MANIFEST_KEY</span><span class="si">}</span><span class="s2"> is missing, empty or claims no clip, yet the store holds "</span>
-</span><span id="line-1153">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span><span class="si">}</span><span class="s2"> unclaimed clip or conditioned keys (</span><span class="si">{</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, ...): refusing "</span>
-</span><span id="line-1154">            <span class="sa">f</span><span class="s2">"to call them orphans, as a lost manifest would make every clip one. "</span>
-</span><span id="line-1155">            <span class="sa">f</span><span class="s2">"Restore the manifest, or delete the keys by hand if you mean to."</span>
-</span><span id="line-1156">        <span class="p">)</span>
-</span><span id="line-1157">    <span class="k">return</span> <span class="n">keys</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">stale</span><span class="p">)</span>
-</span><span id="line-1158">
-</span><span id="line-1159">
+</span><span id="line-1137"><span class="k">def</span><span class="w"> </span><span class="nf">_posix_key</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-1138"><span class="w">    </span><span class="sd">"""``key`` with ``/`` separators.</span>
+</span><span id="line-1139">
+</span><span id="line-1140"><span class="sd">    &gt;&gt;&gt; _posix_key("conditioned\\\\a.wav")</span>
+</span><span id="line-1141"><span class="sd">    'conditioned/a.wav'</span>
+</span><span id="line-1142"><span class="sd">    """</span>
+</span><span id="line-1143">    <span class="k">return</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">)</span>
+</span><span id="line-1144">
+</span><span id="line-1145">
+</span><span id="line-1146"><span class="k">def</span><span class="w"> </span><span class="nf">_orphans_and_stale_markers</span><span class="p">(</span>
+</span><span id="line-1147">    <span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">stale_after</span><span class="p">:</span> <span class="nb">float</span>
+</span><span id="line-1148"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+</span><span id="line-1149"><span class="w">    </span><span class="sd">"""The ``orphans`` and the stale pending markers' keys, from one read of the store,</span>
+</span><span id="line-1150"><span class="sd">    written with ``/`` as voxy writes them (a store may list them with ``\\`` on</span>
+</span><span id="line-1151"><span class="sd">    Windows), so they match the manifest and ``forget``'s keys."""</span>
+</span><span id="line-1152">    <span class="n">entries</span> <span class="o">=</span> <span class="n">_checked_manifest</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+</span><span id="line-1153">    <span class="n">markers</span> <span class="o">=</span> <span class="n">_pending_markers</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+</span><span id="line-1154">    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span>
+</span><span id="line-1155">    <span class="n">stale</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-1156">        <span class="n">_posix_key</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+</span><span id="line-1157">        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">markers</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+</span><span id="line-1158">        <span class="k">if</span> <span class="n">_is_stale</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">stale_after</span><span class="o">=</span><span class="n">stale_after</span><span class="p">,</span> <span class="n">now</span><span class="o">=</span><span class="n">now</span><span class="p">)</span>
+</span><span id="line-1159">    <span class="p">}</span>
+</span><span id="line-1160">    <span class="n">claimed</span> <span class="o">=</span> <span class="p">{</span><span class="kc">None</span><span class="p">}</span> <span class="o">|</span> <span class="p">{</span><span class="n">s</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">_entry_slugs</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span>
+</span><span id="line-1161">    <span class="n">claimed</span> <span class="o">|=</span> <span class="p">{</span>
+</span><span id="line-1162">        <span class="n">s</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">markers</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">_posix_key</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stale</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">m</span><span class="p">[</span><span class="s2">"slugs"</span><span class="p">]</span>
+</span><span id="line-1163">    <span class="p">}</span>
+</span><span id="line-1164">    <span class="n">keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">_posix_key</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">samples</span> <span class="k">if</span> <span class="n">_key_slug</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">claimed</span><span class="p">)</span>
+</span><span id="line-1165">    <span class="k">if</span> <span class="n">keys</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">_entry_slugs</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">):</span>
+</span><span id="line-1166">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-1167">            <span class="sa">f</span><span class="s2">"voxy.refprep: </span><span class="si">{</span><span class="n">MANIFEST_KEY</span><span class="si">}</span><span class="s2"> is missing, empty or claims no clip, yet the store holds "</span>
+</span><span id="line-1168">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span><span class="si">}</span><span class="s2"> unclaimed clip or conditioned keys (</span><span class="si">{</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">, ...): refusing "</span>
+</span><span id="line-1169">            <span class="sa">f</span><span class="s2">"to call them orphans, as a lost manifest would make every clip one. "</span>
+</span><span id="line-1170">            <span class="sa">f</span><span class="s2">"Restore the manifest, or delete the keys by hand if you mean to."</span>
+</span><span id="line-1171">        <span class="p">)</span>
+</span><span id="line-1172">    <span class="k">return</span> <span class="n">keys</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">stale</span><span class="p">)</span>
+</span><span id="line-1173">
+</span><span id="line-1174">
 <div class="viewcode-block" id="orphans">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.orphans">[docs]</a>
-</span><span id="line-1160"><span class="k">def</span><span class="w"> </span><span class="nf">orphans</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">stale_after</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">PENDING_STALE_S</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-1161"><span class="w">    </span><span class="sd">"""The keys of this module's own form (``clips/&lt;slug&gt;-NNNN.wav``,</span>
-</span><span id="line-1162"><span class="sd">    ``conditioned/&lt;slug&gt;.wav``) whose slug no manifest entry and no live pending marker</span>
-</span><span id="line-1163"><span class="sd">    uses, sorted.</span>
-</span><span id="line-1164">
-</span><span id="line-1165"><span class="sd">    **Removing entries from the manifest by hand makes their clips orphans**, which</span>
-</span><span id="line-1166"><span class="sd">    ``forget_orphans`` then deletes, even if a saved voice profile's ``ref_audio`` still</span>
-</span><span id="line-1167"><span class="sd">    points at one. To drop a source's clips, use ``forget`` (it lists, with</span>
-</span><span id="line-1168"><span class="sd">    ``dry_run=True``, exactly what it removes), never a hand edit of the manifest.</span>
-</span><span id="line-1169">
-</span><span id="line-1170"><span class="sd">    Where they come from: a run that failed part-way (the failing source's conditioned</span>
-</span><span id="line-1171"><span class="sd">    file and any clips it had cut), a source that gave no clips (its conditioned file),</span>
-</span><span id="line-1172"><span class="sd">    a manifest edited by hand. ``prepare_reference`` never reuses their slugs and</span>
-</span><span id="line-1173"><span class="sd">    ``forget`` never deletes them, since no entry names them. A key an entry names is</span>
-</span><span id="line-1174"><span class="sd">    never an orphan (its slug is that entry's), nor is any other key (a top-level</span>
-</span><span id="line-1175"><span class="sd">    sample, the manifest). A running ``prepare_reference`` claims its slugs with a</span>
-</span><span id="line-1176"><span class="sd">    pending marker (``PENDING_PREFIX``), so its keys not in the manifest yet are not</span>
-</span><span id="line-1177"><span class="sd">    orphans; a marker older than ``stale_after`` seconds (a crashed run's) claims</span>
-</span><span id="line-1178"><span class="sd">    nothing.</span>
+</span><span id="line-1175"><span class="k">def</span><span class="w"> </span><span class="nf">orphans</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">stale_after</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">PENDING_STALE_S</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-1176"><span class="w">    </span><span class="sd">"""The keys of this module's own form (``clips/&lt;slug&gt;-NNNN.wav``,</span>
+</span><span id="line-1177"><span class="sd">    ``conditioned/&lt;slug&gt;.wav``) whose slug no manifest entry and no live pending marker</span>
+</span><span id="line-1178"><span class="sd">    uses, sorted.</span>
 </span><span id="line-1179">
-</span><span id="line-1180"><span class="sd">    It raises, rather than guess, when the manifest has a line that is not an object,</span>
-</span><span id="line-1181"><span class="sd">    when a pending marker cannot be read, and when the manifest is missing or empty</span>
-</span><span id="line-1182"><span class="sd">    while keys of this module's form are unclaimed (a lost or truncated manifest would</span>
-</span><span id="line-1183"><span class="sd">    otherwise make every clip an orphan).</span>
+</span><span id="line-1180"><span class="sd">    **Removing entries from the manifest by hand makes their clips orphans**, which</span>
+</span><span id="line-1181"><span class="sd">    ``forget_orphans`` then deletes, even if a saved voice profile's ``ref_audio`` still</span>
+</span><span id="line-1182"><span class="sd">    points at one. To drop a source's clips, use ``forget`` (it lists, with</span>
+</span><span id="line-1183"><span class="sd">    ``dry_run=True``, exactly what it removes), never a hand edit of the manifest.</span>
 </span><span id="line-1184">
-</span><span id="line-1185"><span class="sd">    &gt;&gt;&gt; store = {"clips/a-0001.wav": b"", "clips/x-0001.wav": b"", "conditioned/a.wav": b"",</span>
-</span><span id="line-1186"><span class="sd">    ...          "conditioned/z.wav": b"", "tape1.wav": b""}</span>
-</span><span id="line-1187"><span class="sd">    &gt;&gt;&gt; store[MANIFEST_KEY] = _dump_manifest([{"key": "clips/a-0001.wav", "slug": "a"}])</span>
-</span><span id="line-1188"><span class="sd">    &gt;&gt;&gt; orphans(store)</span>
-</span><span id="line-1189"><span class="sd">    ['clips/x-0001.wav', 'conditioned/z.wav']</span>
-</span><span id="line-1190"><span class="sd">    &gt;&gt;&gt; store["pending/r.json"] = _pending_marker("r", ["x"])  # a run is cutting x</span>
-</span><span id="line-1191"><span class="sd">    &gt;&gt;&gt; orphans(store), orphans(store, stale_after=0)</span>
-</span><span id="line-1192"><span class="sd">    (['conditioned/z.wav'], ['clips/x-0001.wav', 'conditioned/z.wav'])</span>
-</span><span id="line-1193"><span class="sd">    """</span>
-</span><span id="line-1194">    <span class="k">return</span> <span class="n">_orphans_and_stale_markers</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">stale_after</span><span class="o">=</span><span class="n">stale_after</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+</span><span id="line-1185"><span class="sd">    Where they come from: a run that failed part-way (the failing source's conditioned</span>
+</span><span id="line-1186"><span class="sd">    file and any clips it had cut), a source that gave no clips (its conditioned file),</span>
+</span><span id="line-1187"><span class="sd">    a manifest edited by hand. ``prepare_reference`` never reuses their slugs and</span>
+</span><span id="line-1188"><span class="sd">    ``forget`` never deletes them, since no entry names them. A key an entry names is</span>
+</span><span id="line-1189"><span class="sd">    never an orphan (its slug is that entry's), nor is any other key (a top-level</span>
+</span><span id="line-1190"><span class="sd">    sample, the manifest). A running ``prepare_reference`` claims its slugs with a</span>
+</span><span id="line-1191"><span class="sd">    pending marker (``PENDING_PREFIX``), so its keys not in the manifest yet are not</span>
+</span><span id="line-1192"><span class="sd">    orphans; a marker older than ``stale_after`` seconds (a crashed run's) claims</span>
+</span><span id="line-1193"><span class="sd">    nothing.</span>
+</span><span id="line-1194">
+</span><span id="line-1195"><span class="sd">    It raises, rather than guess, when the manifest has a line that is not an object,</span>
+</span><span id="line-1196"><span class="sd">    when a pending marker cannot be read, and when the manifest is missing or empty</span>
+</span><span id="line-1197"><span class="sd">    while keys of this module's form are unclaimed (a lost or truncated manifest would</span>
+</span><span id="line-1198"><span class="sd">    otherwise make every clip an orphan).</span>
+</span><span id="line-1199">
+</span><span id="line-1200"><span class="sd">    &gt;&gt;&gt; store = {"clips/a-0001.wav": b"", "clips/x-0001.wav": b"", "conditioned/a.wav": b"",</span>
+</span><span id="line-1201"><span class="sd">    ...          "conditioned/z.wav": b"", "tape1.wav": b""}</span>
+</span><span id="line-1202"><span class="sd">    &gt;&gt;&gt; store[MANIFEST_KEY] = _dump_manifest([{"key": "clips/a-0001.wav", "slug": "a"}])</span>
+</span><span id="line-1203"><span class="sd">    &gt;&gt;&gt; orphans(store)</span>
+</span><span id="line-1204"><span class="sd">    ['clips/x-0001.wav', 'conditioned/z.wav']</span>
+</span><span id="line-1205"><span class="sd">    &gt;&gt;&gt; store["pending/r.json"] = _pending_marker("r", ["x"])  # a run is cutting x</span>
+</span><span id="line-1206"><span class="sd">    &gt;&gt;&gt; orphans(store), orphans(store, stale_after=0)</span>
+</span><span id="line-1207"><span class="sd">    (['conditioned/z.wav'], ['clips/x-0001.wav', 'conditioned/z.wav'])</span>
+</span><span id="line-1208"><span class="sd">    """</span>
+</span><span id="line-1209">    <span class="k">return</span> <span class="n">_orphans_and_stale_markers</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">stale_after</span><span class="o">=</span><span class="n">stale_after</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
 
-</span><span id="line-1195">
-</span><span id="line-1196">
+</span><span id="line-1210">
+</span><span id="line-1211">
 <div class="viewcode-block" id="forget_orphans">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.forget_orphans">[docs]</a>
-</span><span id="line-1197"><span class="k">def</span><span class="w"> </span><span class="nf">forget_orphans</span><span class="p">(</span>
-</span><span id="line-1198">    <span class="n">samples</span><span class="p">:</span> <span class="n">MutableMapping</span><span class="p">,</span>
-</span><span id="line-1199">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-1200">    <span class="n">dry_run</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="line-1201">    <span class="n">stale_after</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">PENDING_STALE_S</span><span class="p">,</span>
-</span><span id="line-1202"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-1203"><span class="w">    </span><span class="sd">"""Delete the ``orphans`` of a samples store, and the stale pending markers (those</span>
-</span><span id="line-1204"><span class="sd">    older than ``stale_after`` seconds); return their keys. A dry run by default: it</span>
-</span><span id="line-1205"><span class="sd">    returns what it would delete and changes nothing, so look first, then pass</span>
-</span><span id="line-1206"><span class="sd">    ``dry_run=False``.</span>
-</span><span id="line-1207">
-</span><span id="line-1208"><span class="sd">    **Removing entries from the manifest by hand makes their clips orphans**, which</span>
-</span><span id="line-1209"><span class="sd">    ``forget_orphans`` then deletes, even if a saved voice profile's ``ref_audio`` still</span>
-</span><span id="line-1210"><span class="sd">    points at one. To drop a source's clips, use ``forget`` (it lists, with</span>
-</span><span id="line-1211"><span class="sd">    ``dry_run=True``, exactly what it removes), never a hand edit of the manifest.</span>
-</span><span id="line-1212">
-</span><span id="line-1213"><span class="sd">    With ``forget``, one of the only two functions in voxy that delete voice samples.</span>
-</span><span id="line-1214"><span class="sd">    It refuses (raises, deleting nothing) where ``orphans`` does: a missing or empty</span>
-</span><span id="line-1215"><span class="sd">    manifest beside unclaimed clip or conditioned keys, a manifest or pending marker it</span>
-</span><span id="line-1216"><span class="sd">    cannot read. Keys a running ``prepare_reference`` reserved (its live marker) are</span>
-</span><span id="line-1217"><span class="sd">    kept, but a run that is still going after ``stale_after`` seconds loses that claim.</span>
-</span><span id="line-1218">
-</span><span id="line-1219"><span class="sd">    &gt;&gt;&gt; store = {"conditioned/z.wav": b"", "clips/a-0001.wav": b"", "tape1.wav": b""}</span>
-</span><span id="line-1220"><span class="sd">    &gt;&gt;&gt; store[MANIFEST_KEY] = _dump_manifest([{"key": "clips/a-0001.wav"}])</span>
-</span><span id="line-1221"><span class="sd">    &gt;&gt;&gt; forget_orphans(store), sorted(store)</span>
-</span><span id="line-1222"><span class="sd">    (['conditioned/z.wav'], ['clips/a-0001.wav', 'conditioned/z.wav', 'manifest.jsonl', 'tape1.wav'])</span>
-</span><span id="line-1223"><span class="sd">    &gt;&gt;&gt; forget_orphans(store, dry_run=False), sorted(store)</span>
-</span><span id="line-1224"><span class="sd">    (['conditioned/z.wav'], ['clips/a-0001.wav', 'manifest.jsonl', 'tape1.wav'])</span>
-</span><span id="line-1225"><span class="sd">    """</span>
-</span><span id="line-1226">    <span class="n">keys</span><span class="p">,</span> <span class="n">stale</span> <span class="o">=</span> <span class="n">_orphans_and_stale_markers</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">stale_after</span><span class="o">=</span><span class="n">stale_after</span><span class="p">)</span>
-</span><span id="line-1227">    <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
-</span><span id="line-1228">        <span class="k">return</span> <span class="n">keys</span> <span class="o">+</span> <span class="n">stale</span>
-</span><span id="line-1229">    <span class="k">return</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span> <span class="o">+</span> <span class="n">stale</span> <span class="k">if</span> <span class="n">samples</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span></div>
+</span><span id="line-1212"><span class="k">def</span><span class="w"> </span><span class="nf">forget_orphans</span><span class="p">(</span>
+</span><span id="line-1213">    <span class="n">samples</span><span class="p">:</span> <span class="n">MutableMapping</span><span class="p">,</span>
+</span><span id="line-1214">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-1215">    <span class="n">dry_run</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="line-1216">    <span class="n">stale_after</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">PENDING_STALE_S</span><span class="p">,</span>
+</span><span id="line-1217"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-1218"><span class="w">    </span><span class="sd">"""Delete the ``orphans`` of a samples store, and the stale pending markers (those</span>
+</span><span id="line-1219"><span class="sd">    older than ``stale_after`` seconds); return their keys. A dry run by default: it</span>
+</span><span id="line-1220"><span class="sd">    returns what it would delete and changes nothing, so look first, then pass</span>
+</span><span id="line-1221"><span class="sd">    ``dry_run=False``.</span>
+</span><span id="line-1222">
+</span><span id="line-1223"><span class="sd">    **Removing entries from the manifest by hand makes their clips orphans**, which</span>
+</span><span id="line-1224"><span class="sd">    ``forget_orphans`` then deletes, even if a saved voice profile's ``ref_audio`` still</span>
+</span><span id="line-1225"><span class="sd">    points at one. To drop a source's clips, use ``forget`` (it lists, with</span>
+</span><span id="line-1226"><span class="sd">    ``dry_run=True``, exactly what it removes), never a hand edit of the manifest.</span>
+</span><span id="line-1227">
+</span><span id="line-1228"><span class="sd">    With ``forget``, one of the only two functions in voxy that delete voice samples.</span>
+</span><span id="line-1229"><span class="sd">    It refuses (raises, deleting nothing) where ``orphans`` does: a missing or empty</span>
+</span><span id="line-1230"><span class="sd">    manifest beside unclaimed clip or conditioned keys, a manifest or pending marker it</span>
+</span><span id="line-1231"><span class="sd">    cannot read. Keys a running ``prepare_reference`` reserved (its live marker) are</span>
+</span><span id="line-1232"><span class="sd">    kept, but a run that is still going after ``stale_after`` seconds loses that claim.</span>
+</span><span id="line-1233">
+</span><span id="line-1234"><span class="sd">    &gt;&gt;&gt; store = {"conditioned/z.wav": b"", "clips/a-0001.wav": b"", "tape1.wav": b""}</span>
+</span><span id="line-1235"><span class="sd">    &gt;&gt;&gt; store[MANIFEST_KEY] = _dump_manifest([{"key": "clips/a-0001.wav"}])</span>
+</span><span id="line-1236"><span class="sd">    &gt;&gt;&gt; forget_orphans(store), sorted(store)</span>
+</span><span id="line-1237"><span class="sd">    (['conditioned/z.wav'], ['clips/a-0001.wav', 'conditioned/z.wav', 'manifest.jsonl', 'tape1.wav'])</span>
+</span><span id="line-1238"><span class="sd">    &gt;&gt;&gt; forget_orphans(store, dry_run=False), sorted(store)</span>
+</span><span id="line-1239"><span class="sd">    (['conditioned/z.wav'], ['clips/a-0001.wav', 'manifest.jsonl', 'tape1.wav'])</span>
+</span><span id="line-1240"><span class="sd">    """</span>
+</span><span id="line-1241">    <span class="n">keys</span><span class="p">,</span> <span class="n">stale</span> <span class="o">=</span> <span class="n">_orphans_and_stale_markers</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">stale_after</span><span class="o">=</span><span class="n">stale_after</span><span class="p">)</span>
+</span><span id="line-1242">    <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
+</span><span id="line-1243">        <span class="k">return</span> <span class="n">keys</span> <span class="o">+</span> <span class="n">stale</span>
+</span><span id="line-1244">    <span class="k">return</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span> <span class="o">+</span> <span class="n">stale</span> <span class="k">if</span> <span class="n">samples</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span></div>
 
-</span><span id="line-1230">
-</span><span id="line-1231">
+</span><span id="line-1245">
+</span><span id="line-1246">
 <div class="viewcode-block" id="partial_transcribe">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.partial_transcribe">[docs]</a>
-</span><span id="line-1232"><span class="k">def</span><span class="w"> </span><span class="nf">partial_transcribe</span><span class="p">(</span><span class="n">rootdir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]:</span>
-</span><span id="line-1233"><span class="w">    </span><span class="sd">"""The default transcriber, bound to a data root."""</span>
-</span><span id="line-1234">
-</span><span id="line-1235">    <span class="k">def</span><span class="w"> </span><span class="nf">transcriber</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="line-1236">        <span class="k">return</span> <span class="n">transcribe</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-1237">
-</span><span id="line-1238">    <span class="k">return</span> <span class="n">transcriber</span></div>
+</span><span id="line-1247"><span class="k">def</span><span class="w"> </span><span class="nf">partial_transcribe</span><span class="p">(</span><span class="n">rootdir</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]:</span>
+</span><span id="line-1248"><span class="w">    </span><span class="sd">"""The default transcriber, bound to a data root."""</span>
+</span><span id="line-1249">
+</span><span id="line-1250">    <span class="k">def</span><span class="w"> </span><span class="nf">transcriber</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+</span><span id="line-1251">        <span class="k">return</span> <span class="n">transcribe</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-1252">
+</span><span id="line-1253">    <span class="k">return</span> <span class="n">transcriber</span></div>
 
-</span><span id="line-1239">
-</span><span id="line-1240">
+</span><span id="line-1254">
+</span><span id="line-1255">
 <div class="viewcode-block" id="load_manifest">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.load_manifest">[docs]</a>
-</span><span id="line-1241"><span class="k">def</span><span class="w"> </span><span class="nf">load_manifest</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-1242"><span class="w">    </span><span class="sd">"""The manifest saved by ``prepare_reference`` in a samples store."""</span>
-</span><span id="line-1243">    <span class="k">return</span> <span class="p">[</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">samples</span><span class="p">[</span><span class="n">MANIFEST_KEY</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()]</span></div>
+</span><span id="line-1256"><span class="k">def</span><span class="w"> </span><span class="nf">load_manifest</span><span class="p">(</span><span class="n">samples</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-1257"><span class="w">    </span><span class="sd">"""The manifest saved by ``prepare_reference`` in a samples store."""</span>
+</span><span id="line-1258">    <span class="k">return</span> <span class="p">[</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">samples</span><span class="p">[</span><span class="n">MANIFEST_KEY</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()]</span></div>
 
-</span><span id="line-1244">
-</span><span id="line-1245">
+</span><span id="line-1259">
+</span><span id="line-1260">
 <div class="viewcode-block" id="best_references">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.best_references">[docs]</a>
-</span><span id="line-1246"><span class="k">def</span><span class="w"> </span><span class="nf">best_references</span><span class="p">(</span>
-</span><span id="line-1247">    <span class="n">manifest</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
-</span><span id="line-1248">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-1249">    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-</span><span id="line-1250">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
-</span><span id="line-1251">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">12.0</span><span class="p">,</span>
-</span><span id="line-1252">    <span class="n">min_score</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-</span><span id="line-1253">    <span class="n">latest_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="line-1254"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-1255"><span class="w">    </span><span class="sd">"""The ``n`` best clips for zero-shot reference (length in range, best score first).</span>
-</span><span id="line-1256">
-</span><span id="line-1257"><span class="sd">    With ``latest_only`` (the default) it picks from ``latest_runs(manifest)``: an older</span>
-</span><span id="line-1258"><span class="sd">    run of a source is the same audio cut again, so its clips would come back as</span>
-</span><span id="line-1259"><span class="sd">    near-duplicates of the newer ones, and the newer run is the one made with the</span>
-</span><span id="line-1260"><span class="sd">    current settings. A reference saved from an older run stays valid either way (its</span>
-</span><span id="line-1261"><span class="sd">    key and bytes are kept); pass ``latest_only=False`` to choose among every run.</span>
-</span><span id="line-1262">
-</span><span id="line-1263"><span class="sd">    &gt;&gt;&gt; m = [{"duration": 8, "score": 0.7}, {"duration": 2, "score": 0.9},</span>
-</span><span id="line-1264"><span class="sd">    ...      {"duration": 10, "score": 0.8}]</span>
-</span><span id="line-1265"><span class="sd">    &gt;&gt;&gt; [c["score"] for c in best_references(m, n=2)]</span>
-</span><span id="line-1266"><span class="sd">    [0.8, 0.7]</span>
-</span><span id="line-1267"><span class="sd">    """</span>
-</span><span id="line-1268">    <span class="k">if</span> <span class="n">latest_only</span><span class="p">:</span>
-</span><span id="line-1269">        <span class="n">manifest</span> <span class="o">=</span> <span class="n">latest_runs</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
-</span><span id="line-1270">    <span class="n">fits</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="line-1271">        <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
-</span><span id="line-1272">        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span>
-</span><span id="line-1273">        <span class="k">if</span> <span class="n">_number</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-</span><span id="line-1274">        <span class="ow">and</span> <span class="n">min_seconds</span> <span class="o">&lt;=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_seconds</span>
-</span><span id="line-1275">        <span class="ow">and</span> <span class="p">(</span><span class="n">_number</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"score"</span><span class="p">))</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">min_score</span>
-</span><span id="line-1276">    <span class="p">]</span>
-</span><span id="line-1277">    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">fits</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">_score_order</span><span class="p">)[:</span><span class="n">n</span><span class="p">]</span></div>
+</span><span id="line-1261"><span class="k">def</span><span class="w"> </span><span class="nf">best_references</span><span class="p">(</span>
+</span><span id="line-1262">    <span class="n">manifest</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
+</span><span id="line-1263">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-1264">    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+</span><span id="line-1265">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+</span><span id="line-1266">    <span class="n">max_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">12.0</span><span class="p">,</span>
+</span><span id="line-1267">    <span class="n">min_score</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-1268">    <span class="n">latest_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="line-1269"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-1270"><span class="w">    </span><span class="sd">"""The ``n`` best clips for zero-shot reference (length in range, best score first).</span>
+</span><span id="line-1271">
+</span><span id="line-1272"><span class="sd">    With ``latest_only`` (the default) it picks from ``latest_runs(manifest)``: an older</span>
+</span><span id="line-1273"><span class="sd">    run of a source is the same audio cut again, so its clips would come back as</span>
+</span><span id="line-1274"><span class="sd">    near-duplicates of the newer ones, and the newer run is the one made with the</span>
+</span><span id="line-1275"><span class="sd">    current settings. A reference saved from an older run stays valid either way (its</span>
+</span><span id="line-1276"><span class="sd">    key and bytes are kept); pass ``latest_only=False`` to choose among every run.</span>
+</span><span id="line-1277">
+</span><span id="line-1278"><span class="sd">    &gt;&gt;&gt; m = [{"duration": 8, "score": 0.7}, {"duration": 2, "score": 0.9},</span>
+</span><span id="line-1279"><span class="sd">    ...      {"duration": 10, "score": 0.8}]</span>
+</span><span id="line-1280"><span class="sd">    &gt;&gt;&gt; [c["score"] for c in best_references(m, n=2)]</span>
+</span><span id="line-1281"><span class="sd">    [0.8, 0.7]</span>
+</span><span id="line-1282"><span class="sd">    """</span>
+</span><span id="line-1283">    <span class="k">if</span> <span class="n">latest_only</span><span class="p">:</span>
+</span><span id="line-1284">        <span class="n">manifest</span> <span class="o">=</span> <span class="n">latest_runs</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+</span><span id="line-1285">    <span class="n">fits</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="line-1286">        <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+</span><span id="line-1287">        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span>
+</span><span id="line-1288">        <span class="k">if</span> <span class="n">_number</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">))</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</span><span id="line-1289">        <span class="ow">and</span> <span class="n">min_seconds</span> <span class="o">&lt;=</span> <span class="n">c</span><span class="p">[</span><span class="s2">"duration"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_seconds</span>
+</span><span id="line-1290">        <span class="ow">and</span> <span class="p">(</span><span class="n">_number</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"score"</span><span class="p">))</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">min_score</span>
+</span><span id="line-1291">    <span class="p">]</span>
+</span><span id="line-1292">    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">fits</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">_score_order</span><span class="p">)[:</span><span class="n">n</span><span class="p">]</span></div>
 
-</span><span id="line-1278">
-</span><span id="line-1279">
+</span><span id="line-1293">
+</span><span id="line-1294">
 <div class="viewcode-block" id="summarize">
 <a class="viewcode-back" href="../../_autosummary/voxy.refprep.html#voxy.refprep.summarize">[docs]</a>
-</span><span id="line-1280"><span class="k">def</span><span class="w"> </span><span class="nf">summarize</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-</span><span id="line-1281"><span class="w">    </span><span class="sd">"""Totals for a manifest: clips, minutes, minutes above score thresholds.</span>
-</span><span id="line-1282">
-</span><span id="line-1283"><span class="sd">    &gt;&gt;&gt; summarize([{"duration": 60, "score": 0.9}, {"duration": 30, "score": 0.4}])</span>
-</span><span id="line-1284"><span class="sd">    {'clips': 2, 'minutes': 1.5, 'minutes_score_0.5+': 1.0, 'minutes_score_0.7+': 1.0}</span>
-</span><span id="line-1285"><span class="sd">    """</span>
-</span><span id="line-1286">    <span class="n">manifest</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
-</span><span id="line-1287">    <span class="n">minutes</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">cs</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cs</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># noqa: E731</span>
-</span><span id="line-1288">    <span class="n">scored</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"score"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">t</span><span class="p">]</span>  <span class="c1"># noqa: E731</span>
-</span><span id="line-1289">    <span class="k">return</span> <span class="p">{</span>
-</span><span id="line-1290">        <span class="s2">"clips"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
-</span><span id="line-1291">        <span class="s2">"minutes"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
-</span><span id="line-1292">        <span class="s2">"minutes_score_0.5+"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">(</span><span class="n">scored</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)),</span>
-</span><span id="line-1293">        <span class="s2">"minutes_score_0.7+"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">(</span><span class="n">scored</span><span class="p">(</span><span class="mf">0.7</span><span class="p">)),</span>
-</span><span id="line-1294">    <span class="p">}</span></div>
+</span><span id="line-1295"><span class="k">def</span><span class="w"> </span><span class="nf">summarize</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-1296"><span class="w">    </span><span class="sd">"""Totals for a manifest: clips, minutes, minutes above score thresholds.</span>
+</span><span id="line-1297">
+</span><span id="line-1298"><span class="sd">    &gt;&gt;&gt; summarize([{"duration": 60, "score": 0.9}, {"duration": 30, "score": 0.4}])</span>
+</span><span id="line-1299"><span class="sd">    {'clips': 2, 'minutes': 1.5, 'minutes_score_0.5+': 1.0, 'minutes_score_0.7+': 1.0}</span>
+</span><span id="line-1300"><span class="sd">    """</span>
+</span><span id="line-1301">    <span class="n">manifest</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+</span><span id="line-1302">    <span class="n">minutes</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">cs</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"duration"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cs</span><span class="p">)</span> <span class="o">/</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># noqa: E731</span>
+</span><span id="line-1303">    <span class="n">scored</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"score"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">t</span><span class="p">]</span>  <span class="c1"># noqa: E731</span>
+</span><span id="line-1304">    <span class="k">return</span> <span class="p">{</span>
+</span><span id="line-1305">        <span class="s2">"clips"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
+</span><span id="line-1306">        <span class="s2">"minutes"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">(</span><span class="n">manifest</span><span class="p">),</span>
+</span><span id="line-1307">        <span class="s2">"minutes_score_0.5+"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">(</span><span class="n">scored</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)),</span>
+</span><span id="line-1308">        <span class="s2">"minutes_score_0.7+"</span><span class="p">:</span> <span class="n">minutes</span><span class="p">(</span><span class="n">scored</span><span class="p">(</span><span class="mf">0.7</span><span class="p">)),</span>
+</span><span id="line-1309">    <span class="p">}</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -1555,7 +1570,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=8f83b1af"></script>
+    <script src="../../_static/documentation_options.js?v=2bfb35b6"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
