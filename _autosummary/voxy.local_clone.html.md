@@ -19,10 +19,15 @@ Long text is split into paragraphs and sentence-packed chunks (`voxy.textsplit`)
 each chunk is synthesized, trimmed of edge silence, and joined with `gap_ms` of
 pause (`paragraph_gap_ms` between paragraphs).
 
+`LocalSpeechModel` holds what every local model shares (chunking, joining, the
+worker); `LocalCloneSpeechModel` adds reference voices. A local model with stock
+voices (`voxy.kokoro_model`) subclasses `LocalSpeechModel` directly.
+
 Seams (keyword arguments of every model):
 
-- `generate(text, *, ref_audio, ref_text, **params) -> (samples, sample_rate)`: the
-  model call. Default: a `voxy.worker.Worker` running the backend’s adapter in its
+- `generate(text, **voice_request, **params) -> (samples, sample_rate)`: the
+  model call (`voice_request` is `ref_audio`/`ref_text` for a cloner, `voice`
+  for kokoro). Default: a `voxy.worker.Worker` running the backend’s adapter in its
   own environment (built on first use under `$VOXY_DATA_DIR/envs`). Tests inject a fake.
 - `chunker(text) -> [[chunk, ...], ...]`: default `split_text` at the backend’s
   `max_chars`.
@@ -50,8 +55,9 @@ Seams (keyword arguments of every model):
 |----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
 | [`DesignPreview`](#voxy.local_clone.DesignPreview)(seed, audio, text, ...)             | One candidate voice from `design_voice_previews`: listen, then pick.                      |
 | [`F5TTSSpeechModel`](#voxy.local_clone.F5TTSSpeechModel)([backend, generate, ...])        | F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed...).     |
-| [`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend)(name, env[, init, params, ...]) | What voxy knows about one local cloning model.                                            |
-| [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)([backend, generate, ...])   | A local voice-cloning model as a voxy backend.                                            |
+| [`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend)(name, env[, init, params, ...]) | What voxy knows about one local model (a cloner, or one with stock voices).               |
+| [`LocalCloneSpeechModel`](#voxy.local_clone.LocalCloneSpeechModel)([backend, generate, ...])   | A local voice-cloning model: its voices are reference clips (`clone_voice`).              |
+| [`LocalSpeechModel`](#voxy.local_clone.LocalSpeechModel)([backend, generate, ...])        | A model running on this machine, in its own environment, as a voxy backend.               |
 | [`Qwen3TTSSpeechModel`](#voxy.local_clone.Qwen3TTSSpeechModel)(\*args[, design])             | Qwen3-TTS: stable cloning (`init`: model_id 1.7B or 0.6B) and local voice design.         |
 | [`VoxCPMSpeechModel`](#voxy.local_clone.VoxCPMSpeechModel)([backend, generate, ...])       | VoxCPM2: high-similarity cloning (`params`: cfg_value, inference_timesteps, prompt_mode). |
 | [`WorkerGenerate`](#voxy.local_clone.WorkerGenerate)(backend, \*[, init, threads, ...]) | The default `generate`: the backend's adapter in its own environment.                     |
@@ -86,7 +92,7 @@ F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
-What voxy knows about one local cloning model.
+What voxy knows about one local model (a cloner, or one with stock voices).
 
 * **Parameters:**
   * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Registry name (also the adapter’s name, `workers/{name}_adapter.py`).
@@ -101,24 +107,9 @@ What voxy knows about one local cloning model.
 
 ### *class* voxy.local_clone.LocalCloneSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
-Bases: [`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel)
+Bases: [`LocalSpeechModel`](#voxy.local_clone.LocalSpeechModel)
 
-A local voice-cloning model as a voxy backend.
-
-* **Parameters:**
-  * **backend** ([`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalCloneBackend` or its name (subclasses fix it).
-  * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (see the module docstring); default: worker.
-  * **chunker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> [[chunk, ...], ...]`; default `split_text`.
-  * **text_prep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> text` applied before chunking (e.g.
-    `lambda t: prepare_speech_text(t, ...).speech`, see `voxy.speechtext`).
-  * **gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between chunks of a paragraph.
-  * **paragraph_gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between paragraphs.
-  * **trim** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Trim each chunk’s leading and trailing silence before joining.
-  * **threads** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Torch threads of the worker (default `$VOXY_NUM_THREADS` or 8).
-  * **rootdir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Data root for environments and weights (default `$VOXY_DATA_DIR`).
-  * **auto_setup** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Build the environment on first use (else raise if missing).
-  * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra environment variables for the worker.
-  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments of the model’s loader (e.g. `variant='turbo'`).
+A local voice-cloning model: its voices are reference clips (`clone_voice`).
 
 #### clone_voice(audio_input, transcript=None, speaker_id=0, \*\*metadata)
 
@@ -129,6 +120,31 @@ Without `transcript` the clip is transcribed locally (`voxy.refprep`).
 * **Return type:**
   [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
 
+### *class* voxy.local_clone.LocalSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+
+Bases: [`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel)
+
+A model running on this machine, in its own environment, as a voxy backend.
+
+Speaks text of any length: chunks it, calls `generate` per chunk, trims and
+joins the pieces. Subclasses say what a voice is with `_voice_request`.
+
+* **Parameters:**
+  * **backend** ([`LocalCloneBackend`](#voxy.local_clone.LocalCloneBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalCloneBackend`, or the name of a registered cloner
+    (subclasses fix it).
+  * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (see the module docstring); default: worker.
+  * **chunker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> [[chunk, ...], ...]`; default `split_text`.
+  * **text_prep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> text` applied before chunking (e.g.
+    `lambda t: prepare_speech_text(t, ...).speech`, see `voxy.speechtext`).
+  * **gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between chunks of a paragraph.
+  * **paragraph_gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between paragraphs.
+  * **trim** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Trim each chunk’s leading and trailing silence before joining.
+  * **threads** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Threads of the worker’s model (default `$VOXY_NUM_THREADS` or 8).
+  * **rootdir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Data root for environments and weights (default `$VOXY_DATA_DIR`).
+  * **auto_setup** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Build the environment on first use (else raise if missing).
+  * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra environment variables for the worker.
+  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments of the model’s loader (e.g. `variant='turbo'`).
+
 #### close()
 
 Free the model’s memory (the next call reloads it).
@@ -138,9 +154,10 @@ Free the model’s memory (the next call reloads it).
 
 #### synthesize(text, voice=None, \*\*params)
 
-Speak `text` (any length) in the reference `voice`.
+Speak `text` (any length) in `voice`.
 
-`params` go to the model (see `self.backend.params` for the knobs).
+`params` go to the model (see `self.backend.params` for the knobs); they
+can’t override the voice’s own keywords (e.g. a cloner’s `ref_audio`).
 
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)

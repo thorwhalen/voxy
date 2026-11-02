@@ -1,4 +1,4 @@
-> built 2026-11-02 07:59 UTC from cd03791 (main) · voxy 0.0.36. Details: build_info.json
+> built 2026-11-02 08:14 UTC from e8b36b9 (main) · voxy 0.0.37. Details: build_info.json
 
 # index.html.md
 
@@ -23,7 +23,7 @@ voxy.list_voices()  # our named voices
 voxy.list_voices("elevenlabs")  # a service's voices
 ```
 
-Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
+Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `kokoro` (local stock voices, CPU, no key; see below), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
 
 Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice ada -o out.mp3`.
 
@@ -201,6 +201,15 @@ profile = model.voice_profile("<voice_id>")
 `generate_speech` returns a tensor for `pcm_*`/`wav_*` output formats (default `pcm_24000`); `synthesize_bytes` returns the raw payload in any format (e.g. `mp3_44100_128`). `delete_voice` removes a clone from the account. ElevenLabs requires that you have the right, and the voice owner’s consent, to clone a voice.
 
 Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `VOXY_LIVE_ELEVENLABS_SAMPLE=<audio you may clone>` also clones, speaks and deletes.
+
+### A local stock voice (no service, no clip, no torch)
+
+`kokoro` speaks in one of 54 stock voices (`af_heart`, `am_michael`, `bf_emma`, …) with Kokoro-82M (Apache-2.0) through kokoro-onnx, faster than realtime on a CPU. It runs in its own small environment, which `python -m voxy setup kokoro` builds (or the first call does); the model files (about 354 MB) are fetched from the Hugging Face hub on first use into `$VOXY_DATA_DIR/models/hf`, like every other local backend’s weights. Listing its voices needs neither. A voice’s first letter is its language (`a` American, `b` British, `f` French, `e` Spanish, `i` Italian, `p` Portuguese, `h` Hindi, `j` Japanese, `z` Chinese). It is meant for Linux hosts without a cloud key; on macOS the espeak-ng that kokoro-onnx bundles currently fails to find its data (thorwhalen/voxy#61), and `say` is the local voice there.
+
+```python
+voxy.text_to_speech("Hello.", "bf_emma", backend="kokoro", speed=1.1).save("hi.wav")
+voxy.list_voices("kokoro")
+```
 
 ### Local voice cloning (no service, CPU works)
 
@@ -697,7 +706,7 @@ The returned model loads its (large) weights lazily, on first use:
 >>> create_speech_model("no-such-model")
 Traceback (most recent call last):
   ...
-ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, aix, fal, say, voicestudio, f5tts, chatterbox, xtts, voxcpm, qwen3tts)
+ValueError: Unsupported model type: no-such-model (supported: csm, elevenlabs, ...)
 ```
 
 ### voxy.base.register_speech_model(name, factory, , overwrite=False)
@@ -722,7 +731,7 @@ ValueError: A speech backend named 'echo' is already registered (pass overwrite=
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]
 
-### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[..., [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'chatterbox': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'f5tts': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'qwen3tts': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>, 'voicestudio': <function \_lazy_factory.<locals>.factory>, 'voxcpm': <function \_lazy_factory.<locals>.factory>, 'xtts': <function \_lazy_factory.<locals>.factory>}*
+### voxy.base.speech_model_factories *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Callable](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[..., [SpeechModel](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)]]* *= {'aix': <function \_lazy_factory.<locals>.factory>, 'chatterbox': <function \_lazy_factory.<locals>.factory>, 'csm': <class 'voxy.base.CSMSpeechModel'>, 'elevenlabs': <function \_lazy_factory.<locals>.factory>, 'f5tts': <function \_lazy_factory.<locals>.factory>, 'fal': <function \_lazy_factory.<locals>.factory>, 'kokoro': <function \_lazy_factory.<locals>.factory>, 'qwen3tts': <function \_lazy_factory.<locals>.factory>, 'say': <function \_lazy_factory.<locals>.factory>, 'voicestudio': <function \_lazy_factory.<locals>.factory>, 'voxcpm': <function \_lazy_factory.<locals>.factory>, 'xtts': <function \_lazy_factory.<locals>.factory>}*
 
 Backend name -> factory (keys lowercase). Add one with `register_speech_model`.
 
@@ -1701,6 +1710,7 @@ True
 | [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                       | Voice generation in one call, whatever the service behind it.                                 |
 | [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)                 | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.             |
 | [`finetune`](_autosummary/voxy.finetune.html.md#module-voxy.finetune)                   | Fine-tuning datasets from prepared clips: one export per training recipe.                     |
+| [`kokoro_model`](_autosummary/voxy.kokoro_model.html.md#module-voxy.kokoro_model)           | Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.                |
 | [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                          |
 | [`local_clone`](_autosummary/voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.           |
 | [`pronounce`](_autosummary/voxy.pronounce.html.md#module-voxy.pronounce)                 | Checking, in the audio, which reading of a flagged word a render used.                        |
@@ -1715,6 +1725,125 @@ True
 | [`wavutil`](_autosummary/voxy.wavutil.html.md#module-voxy.wavutil)                     | Mono PCM WAV in and out as float arrays, plus the few edits narration needs.                  |
 | [`worker`](_autosummary/voxy.worker.html.md#module-voxy.worker)                       | Talk to a model running in another Python environment, as if it were local.                   |
 | [`workers`](_autosummary/voxy.workers.html.md#module-voxy.workers)                     | Backend adapters run by `voxy.worker` inside each backend's own environment.                  |
+
+
+# _autosummary/voxy.kokoro_model.html.md
+
+# voxy.kokoro_model
+
+Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.
+
+Kokoro-82M (weights Apache-2.0) through `kokoro-onnx` (MIT) speaks in 54 stock
+voices (`af_heart`, `am_michael`, `bf_emma`, …) and runs faster than
+realtime on a CPU. It runs in its own small environment, like the local cloners
+(`voxy.local_clone`): `python -m voxy setup kokoro` builds it, and the model
+files (about 354 MB) are fetched from the Hugging Face hub on first use into
+`$VOXY_DATA_DIR/models/hf`, like every other local backend’s weights.
+
+```pycon
+>>> import voxy
+>>> voxy.text_to_speech("Hello.", "bf_emma", backend="kokoro").save("hi.wav")
+```
+
+A voice’s first letter is its language (`a` American English, `b` British,
+`f` French, …) and its second its gender; `lang` follows the voice unless
+you pass one. The voice list is static (`KOKORO_VOICES`), so listing voices
+needs no model.
+
+On macOS the espeak-ng bundled with kokoro-onnx (espeakng-loader) has its data
+folder compiled in and cannot find it, so the first synthesis fails; use `say`
+there (thorwhalen/voxy#61).
+
+```pycon
+>>> import numpy as np
+>>> fake = lambda text, **kw: (np.full(800, 0.1, dtype=np.float32), 24000)
+>>> speech = KokoroSpeechModel(generate=fake).synthesize("One. Two.", "bm_george")
+>>> speech.backend, speech.voice, speech.sample_rate
+('kokoro', 'bm_george', 24000)
+```
+
+### Module Attributes
+
+| [`KOKORO_VOICES`](_autosummary/voxy.kokoro_model.html.md#voxy.kokoro_model.KOKORO_VOICES)    | The voices in `voices-v1.0.bin`.                                       |
+|-------------------------------------------------------------------|------------------------------------------------------------------------|
+| [`KOKORO_LANGUAGES`](_autosummary/voxy.kokoro_model.html.md#voxy.kokoro_model.KOKORO_LANGUAGES) | A voice name's first letter -> the language kokoro-onnx phonemizes in. |
+| [`KOKORO_GENDERS`](_autosummary/voxy.kokoro_model.html.md#voxy.kokoro_model.KOKORO_GENDERS)   | A voice name's second letter -> the voice's gender.                    |
+
+### Functions
+
+| [`parse_voice`](_autosummary/voxy.kokoro_model.html.md#voxy.kokoro_model.parse_voice)(voice)   | `(language, gender)` of a stock voice, from its name's first two letters.   |
+|-----------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [`voice_info`](_autosummary/voxy.kokoro_model.html.md#voxy.kokoro_model.voice_info)(voice)    | What a stock voice's name says about it.                                    |
+
+### Classes
+
+| [`KokoroSpeechModel`](_autosummary/voxy.kokoro_model.html.md#voxy.kokoro_model.KokoroSpeechModel)(\*[, voice, voices, ...])   | Kokoro-82M as a voxy backend (`params`: speed; lang, else the voice's).   |
+|------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+
+### voxy.kokoro_model.KOKORO_GENDERS *= {'f': 'female', 'm': 'male'}*
+
+A voice name’s second letter -> the voice’s gender.
+
+### voxy.kokoro_model.KOKORO_LANGUAGES *= {'a': 'en-us', 'b': 'en-gb', 'e': 'es', 'f': 'fr-fr', 'h': 'hi', 'i': 'it', 'j': 'ja', 'p': 'pt-br', 'z': 'cmn'}*
+
+A voice name’s first letter -> the language kokoro-onnx phonemizes in.
+
+### voxy.kokoro_model.KOKORO_VOICES *= ('af_alloy', 'af_aoede', 'af_bella', 'af_heart', 'af_jessica', 'af_kore', 'af_nicole', 'af_nova', 'af_river', 'af_sarah', 'af_sky', 'am_adam', 'am_echo', 'am_eric', 'am_fenrir', 'am_liam', 'am_michael', 'am_onyx', 'am_puck', 'am_santa', 'bf_alice', 'bf_emma', 'bf_isabella', 'bf_lily', 'bm_daniel', 'bm_fable', 'bm_george', 'bm_lewis', 'ef_dora', 'em_alex', 'em_santa', 'ff_siwis', 'hf_alpha', 'hf_beta', 'hm_omega', 'hm_psi', 'if_sara', 'im_nicola', 'jf_alpha', 'jf_gongitsune', 'jf_nezumi', 'jf_tebukuro', 'jm_kumo', 'pf_dora', 'pm_alex', 'pm_santa', 'zf_xiaobei', 'zf_xiaoni', 'zf_xiaoxiao', 'zf_xiaoyi', 'zm_yunjian', 'zm_yunxi', 'zm_yunxia', 'zm_yunyang')*
+
+The voices in `voices-v1.0.bin`.
+
+### *class* voxy.kokoro_model.KokoroSpeechModel(, voice=None, voices=('af_alloy', 'af_aoede', 'af_bella', 'af_heart', 'af_jessica', 'af_kore', 'af_nicole', 'af_nova', 'af_river', 'af_sarah', 'af_sky', 'am_adam', 'am_echo', 'am_eric', 'am_fenrir', 'am_liam', 'am_michael', 'am_onyx', 'am_puck', 'am_santa', 'bf_alice', 'bf_emma', 'bf_isabella', 'bf_lily', 'bm_daniel', 'bm_fable', 'bm_george', 'bm_lewis', 'ef_dora', 'em_alex', 'em_santa', 'ff_siwis', 'hf_alpha', 'hf_beta', 'hm_omega', 'hm_psi', 'if_sara', 'im_nicola', 'jf_alpha', 'jf_gongitsune', 'jf_nezumi', 'jf_tebukuro', 'jm_kumo', 'pf_dora', 'pm_alex', 'pm_santa', 'zf_xiaobei', 'zf_xiaoni', 'zf_xiaoxiao', 'zf_xiaoyi', 'zm_yunjian', 'zm_yunxi', 'zm_yunxia', 'zm_yunyang'), generate=None, device='cpu', \*\*kwargs)
+
+Bases: [`LocalSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalSpeechModel)
+
+Kokoro-82M as a voxy backend (`params`: speed; lang, else the voice’s).
+
+* **Parameters:**
+  * **voice** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Default stock voice (else `$VOXY_KOKORO_VOICE`, else ‘af_heart’).
+  * **voices** ([`Iterable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – The voices the model accepts (default `KOKORO_VOICES`). For a
+    newer voices file, also pass `init={'voices_file': ..., 'revision': ...}`;
+    names must start with a known language letter (`KOKORO_LANGUAGES`).
+  * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (default: the worker, see `LocalSpeechModel`).
+  * **device** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Only ‘cpu’ (kokoro-onnx runs on onnxruntime’s CPU provider).
+  * **\*\*kwargs** – The other `LocalSpeechModel` options (threads, rootdir, …).
+
+#### list_voices()
+
+The stock voices (no model needed).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+#### synthesize(text, voice=None, , lang=None, \*\*params)
+
+Speak `text` in a stock `voice`, in `lang` (default: the voice’s).
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### voxy.kokoro_model.parse_voice(voice)
+
+`(language, gender)` of a stock voice, from its name’s first two letters.
+
+```pycon
+>>> parse_voice("bf_emma")
+('en-gb', 'female')
+```
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### voxy.kokoro_model.voice_info(voice)
+
+What a stock voice’s name says about it.
+
+```pycon
+>>> voice_info("am_michael").labels
+{'language': 'en-us', 'gender': 'male'}
+```
+
+* **Return type:**
+  [`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)
 
 
 # _autosummary/voxy.library.html.md
@@ -1865,10 +1994,15 @@ Long text is split into paragraphs and sentence-packed chunks (`voxy.textsplit`)
 each chunk is synthesized, trimmed of edge silence, and joined with `gap_ms` of
 pause (`paragraph_gap_ms` between paragraphs).
 
+`LocalSpeechModel` holds what every local model shares (chunking, joining, the
+worker); `LocalCloneSpeechModel` adds reference voices. A local model with stock
+voices (`voxy.kokoro_model`) subclasses `LocalSpeechModel` directly.
+
 Seams (keyword arguments of every model):
 
-- `generate(text, *, ref_audio, ref_text, **params) -> (samples, sample_rate)`: the
-  model call. Default: a `voxy.worker.Worker` running the backend’s adapter in its
+- `generate(text, **voice_request, **params) -> (samples, sample_rate)`: the
+  model call (`voice_request` is `ref_audio`/`ref_text` for a cloner, `voice`
+  for kokoro). Default: a `voxy.worker.Worker` running the backend’s adapter in its
   own environment (built on first use under `$VOXY_DATA_DIR/envs`). Tests inject a fake.
 - `chunker(text) -> [[chunk, ...], ...]`: default `split_text` at the backend’s
   `max_chars`.
@@ -1896,8 +2030,9 @@ Seams (keyword arguments of every model):
 |----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
 | [`DesignPreview`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.DesignPreview)(seed, audio, text, ...)             | One candidate voice from `design_voice_previews`: listen, then pick.                      |
 | [`F5TTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.F5TTSSpeechModel)([backend, generate, ...])        | F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed...).     |
-| [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)(name, env[, init, params, ...]) | What voxy knows about one local cloning model.                                            |
-| [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)([backend, generate, ...])   | A local voice-cloning model as a voxy backend.                                            |
+| [`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend)(name, env[, init, params, ...]) | What voxy knows about one local model (a cloner, or one with stock voices).               |
+| [`LocalCloneSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneSpeechModel)([backend, generate, ...])   | A local voice-cloning model: its voices are reference clips (`clone_voice`).              |
+| [`LocalSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalSpeechModel)([backend, generate, ...])        | A model running on this machine, in its own environment, as a voxy backend.               |
 | [`Qwen3TTSSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.Qwen3TTSSpeechModel)(\*args[, design])             | Qwen3-TTS: stable cloning (`init`: model_id 1.7B or 0.6B) and local voice design.         |
 | [`VoxCPMSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.VoxCPMSpeechModel)([backend, generate, ...])       | VoxCPM2: high-similarity cloning (`params`: cfg_value, inference_timesteps, prompt_mode). |
 | [`WorkerGenerate`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.WorkerGenerate)(backend, \*[, init, threads, ...]) | The default `generate`: the backend's adapter in its own environment.                     |
@@ -1932,7 +2067,7 @@ F5-TTS: flow-matching zero-shot cloning (`params`: nfe_step, cfg_strength, speed
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
-What voxy knows about one local cloning model.
+What voxy knows about one local model (a cloner, or one with stock voices).
 
 * **Parameters:**
   * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Registry name (also the adapter’s name, `workers/{name}_adapter.py`).
@@ -1947,24 +2082,9 @@ What voxy knows about one local cloning model.
 
 ### *class* voxy.local_clone.LocalCloneSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
 
-Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
+Bases: [`LocalSpeechModel`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalSpeechModel)
 
-A local voice-cloning model as a voxy backend.
-
-* **Parameters:**
-  * **backend** ([`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalCloneBackend` or its name (subclasses fix it).
-  * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (see the module docstring); default: worker.
-  * **chunker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> [[chunk, ...], ...]`; default `split_text`.
-  * **text_prep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> text` applied before chunking (e.g.
-    `lambda t: prepare_speech_text(t, ...).speech`, see `voxy.speechtext`).
-  * **gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between chunks of a paragraph.
-  * **paragraph_gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between paragraphs.
-  * **trim** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Trim each chunk’s leading and trailing silence before joining.
-  * **threads** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Torch threads of the worker (default `$VOXY_NUM_THREADS` or 8).
-  * **rootdir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Data root for environments and weights (default `$VOXY_DATA_DIR`).
-  * **auto_setup** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Build the environment on first use (else raise if missing).
-  * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra environment variables for the worker.
-  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments of the model’s loader (e.g. `variant='turbo'`).
+A local voice-cloning model: its voices are reference clips (`clone_voice`).
 
 #### clone_voice(audio_input, transcript=None, speaker_id=0, \*\*metadata)
 
@@ -1975,6 +2095,31 @@ Without `transcript` the clip is transcribed locally (`voxy.refprep`).
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
 
+### *class* voxy.local_clone.LocalSpeechModel(backend=None, , generate=None, chunker=None, text_prep=None, gap_ms=250, paragraph_gap_ms=700, trim=True, threads=None, rootdir=None, auto_setup=True, env_vars=None, device='cpu', init=None, \*\*init_kwargs)
+
+Bases: [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
+
+A model running on this machine, in its own environment, as a voxy backend.
+
+Speaks text of any length: chunks it, calls `generate` per chunk, trims and
+joins the pieces. Subclasses say what a voice is with `_voice_request`.
+
+* **Parameters:**
+  * **backend** ([`LocalCloneBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalCloneBackend) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A `LocalCloneBackend`, or the name of a registered cloner
+    (subclasses fix it).
+  * **generate** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The model call (see the module docstring); default: worker.
+  * **chunker** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> [[chunk, ...], ...]`; default `split_text`.
+  * **text_prep** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)], [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `text -> text` applied before chunking (e.g.
+    `lambda t: prepare_speech_text(t, ...).speech`, see `voxy.speechtext`).
+  * **gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between chunks of a paragraph.
+  * **paragraph_gap_ms** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Pause between paragraphs.
+  * **trim** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Trim each chunk’s leading and trailing silence before joining.
+  * **threads** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Threads of the worker’s model (default `$VOXY_NUM_THREADS` or 8).
+  * **rootdir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Data root for environments and weights (default `$VOXY_DATA_DIR`).
+  * **auto_setup** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Build the environment on first use (else raise if missing).
+  * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Extra environment variables for the worker.
+  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments of the model’s loader (e.g. `variant='turbo'`).
+
 #### close()
 
 Free the model’s memory (the next call reloads it).
@@ -1984,9 +2129,10 @@ Free the model’s memory (the next call reloads it).
 
 #### synthesize(text, voice=None, \*\*params)
 
-Speak `text` (any length) in the reference `voice`.
+Speak `text` (any length) in `voice`.
 
-`params` go to the model (see `self.backend.params` for the knobs).
+`params` go to the model (see `self.backend.params` for the knobs); they
+can’t override the voice’s own keywords (e.g. a cloner’s `ref_audio`).
 
 * **Return type:**
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
@@ -4403,12 +4549,31 @@ The adapter file for `name` (e.g. ‘f5tts’ -> `f5tts_adapter.py`).
 |------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
 | [`chatterbox_adapter`](_autosummary/voxy.workers.chatterbox_adapter.html.md#module-voxy.workers.chatterbox_adapter) | Chatterbox (Resemble AI): 'original' (emotion exaggeration, CFG), 'turbo' (faster), or 'multilingual' (23 languages; pass `language`, e.g. 'fr'). |
 | [`f5tts_adapter`](_autosummary/voxy.workers.f5tts_adapter.html.md#module-voxy.workers.f5tts_adapter)           | F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).                                                                     |
+| [`kokoro_adapter`](_autosummary/voxy.workers.kokoro_adapter.html.md#module-voxy.workers.kokoro_adapter)         | Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.                                                                 |
 | [`phonemes_adapter`](_autosummary/voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.                                      |
 | [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).                   |
 | [`serve`](_autosummary/voxy.workers.serve.html.md#module-voxy.workers.serve)                           | Worker entry point: run a backend adapter inside its own environment.                                                                             |
 | [`speaker_adapter`](_autosummary/voxy.workers.speaker_adapter.html.md#module-voxy.workers.speaker_adapter)       | Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.                                                            |
 | [`voxcpm_adapter`](_autosummary/voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.                                                                |
 | [`xtts_adapter`](_autosummary/voxy.workers.xtts_adapter.html.md#module-voxy.workers.xtts_adapter)             | XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.                                                           |
+
+
+# _autosummary/voxy.workers.kokoro_adapter.html.md
+
+# voxy.workers.kokoro_adapter
+
+Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.
+
+The model files come from the Hugging Face hub (`hf_hub_download`, cached under
+`$HF_HOME`, which voxy sets for every worker); which repo, revision and files is
+the caller’s `init` (`voxy.kokoro_model.KOKORO`). onnxruntime ignores
+`OMP_NUM_THREADS`, so its thread pool is capped here from `$VOXY_NUM_THREADS`.
+
+### Functions
+
+| `load`(\*, repo_id, revision, model_file, ...)       |    |
+|------------------------------------------------------|----|
+| `synthesize`(state, \*, text, voice, out_path, lang) |    |
 
 
 # _autosummary/voxy.workers.phonemes_adapter.html.md
@@ -4542,7 +4707,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 07:59 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/cd03791a4265831ba935e64ffd323e0960e041a2"><code>cd03791</code></a> on branch <code>main</code>, for **voxy 0.0.36** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 08:14 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/e8b36b9ca2298914f56d0bdc7611c46cc23a11d0"><code>e8b36b9</code></a> on branch <code>main</code>, for **voxy 0.0.37** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -4551,7 +4716,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/cd03791a4265831ba935e64ffd323e0960e041a2"><code>cd03791a4265831ba935e64ffd323e0960e041a2</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/e8b36b9ca2298914f56d0bdc7611c46cc23a11d0"><code>e8b36b9ca2298914f56d0bdc7611c46cc23a11d0</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -4562,9 +4727,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41409384557">41409384557</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41411164435">41411164435</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>cd03791a4265831ba935e64ffd323e0960e041a2</code> (in the history of the built commit) |
+| Event commit | <code>e8b36b9ca2298914f56d0bdc7611c46cc23a11d0</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -4589,13 +4754,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.36/">0.0.36</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.37/">0.0.37</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout cd03791a4265831ba935e64ffd323e0960e041a2
+git checkout e8b36b9ca2298914f56d0bdc7611c46cc23a11d0
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

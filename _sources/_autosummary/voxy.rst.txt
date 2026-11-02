@@ -19,6 +19,7 @@
    facade
    fal_model
    finetune
+   kokoro_model
    library
    local_clone
    pronounce

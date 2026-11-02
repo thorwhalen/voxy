@@ -93,6 +93,7 @@
 <li class="toctree-l3"><a class="reference internal" href="voxy.facade.html">voxy.facade</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.fal_model.html">voxy.fal_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.finetune.html">voxy.finetune</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.kokoro_model.html">voxy.kokoro_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.local_clone.html">voxy.local_clone</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.pronounce.html">voxy.pronounce</a></li>
@@ -177,22 +178,25 @@ import nothing from voxy.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.f5tts_adapter.html#module-voxy.workers.f5tts_adapter" title="voxy.workers.f5tts_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">f5tts_adapter</span></code></a></p></td>
 <td><p>F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.phonemes_adapter.html#module-voxy.workers.phonemes_adapter" title="voxy.workers.phonemes_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">phonemes_adapter</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.kokoro_adapter.html#module-voxy.workers.kokoro_adapter" title="voxy.workers.kokoro_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kokoro_adapter</span></code></a></p></td>
+<td><p>Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.phonemes_adapter.html#module-voxy.workers.phonemes_adapter" title="voxy.workers.phonemes_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">phonemes_adapter</span></code></a></p></td>
 <td><p>Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.qwen3tts_adapter.html#module-voxy.workers.qwen3tts_adapter" title="voxy.workers.qwen3tts_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qwen3tts_adapter</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.qwen3tts_adapter.html#module-voxy.workers.qwen3tts_adapter" title="voxy.workers.qwen3tts_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qwen3tts_adapter</span></code></a></p></td>
 <td><p>Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.serve.html#module-voxy.workers.serve" title="voxy.workers.serve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">serve</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.serve.html#module-voxy.workers.serve" title="voxy.workers.serve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">serve</span></code></a></p></td>
 <td><p>Worker entry point: run a backend adapter inside its own environment.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.speaker_adapter.html#module-voxy.workers.speaker_adapter" title="voxy.workers.speaker_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speaker_adapter</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.speaker_adapter.html#module-voxy.workers.speaker_adapter" title="voxy.workers.speaker_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speaker_adapter</span></code></a></p></td>
 <td><p>Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.voxcpm_adapter.html#module-voxy.workers.voxcpm_adapter" title="voxy.workers.voxcpm_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voxcpm_adapter</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.voxcpm_adapter.html#module-voxy.workers.voxcpm_adapter" title="voxy.workers.voxcpm_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voxcpm_adapter</span></code></a></p></td>
 <td><p>VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.xtts_adapter.html#module-voxy.workers.xtts_adapter" title="voxy.workers.xtts_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">xtts_adapter</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.xtts_adapter.html#module-voxy.workers.xtts_adapter" title="voxy.workers.xtts_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">xtts_adapter</span></code></a></p></td>
 <td><p>XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.</p></td>
 </tr>
 </tbody>
@@ -215,7 +219,7 @@ import nothing from voxy.</p>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=0e525676"></script>
+<script src="../_static/documentation_options.js?v=aa2ad26f"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

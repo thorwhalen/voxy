@@ -1,0 +1,13 @@
+voxy.workers.kokoro\_adapter
+============================
+
+.. automodule:: voxy.workers.kokoro_adapter
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      load
+      synthesize
+   

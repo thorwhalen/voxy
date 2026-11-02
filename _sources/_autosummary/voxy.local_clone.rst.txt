@@ -21,6 +21,7 @@ voxy.local\_clone
       F5TTSSpeechModel
       LocalCloneBackend
       LocalCloneSpeechModel
+      LocalSpeechModel
       Qwen3TTSSpeechModel
       VoxCPMSpeechModel
       WorkerGenerate

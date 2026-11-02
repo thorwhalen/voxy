@@ -1,0 +1,27 @@
+voxy.kokoro\_model
+==================
+
+.. automodule:: voxy.kokoro_model
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      KOKORO_VOICES
+      KOKORO_LANGUAGES
+      KOKORO_GENDERS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      parse_voice
+      voice_info
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      KokoroSpeechModel
+   
