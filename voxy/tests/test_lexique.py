@@ -229,3 +229,73 @@ def test_a_genuine_adverb_outweighing_its_verb_rows_keeps_its_name():
         row("plus", "plys", "NOM", 3, 3),
     ]
     assert heteronyms_from_rows(rows)["plus"] == {"adverb": "ply", "noun": "plys"}
+
+
+def _tsv(path, rows):
+    header = "ortho\tphon\tlemme\tcgram\tfreqfilms2\tfreqlivres\n"
+    lines = [
+        "\t".join(
+            [
+                r["ortho"],
+                r["phon"],
+                r.get("lemme", r["ortho"]),
+                r["cgram"],
+                r["freqfilms2"],
+                r["freqlivres"],
+            ]
+        )
+        for r in rows
+    ]
+    path.write_text(header + "\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def test_the_cached_table_is_derived_once_and_rebuilt_when_file_or_arguments_change(
+    tmp_path, monkeypatch
+):
+    import os
+
+    from voxy import lexique
+
+    tsv = _tsv(tmp_path / "Lexique383.tsv", ROWS)
+    cache = lexique.lexique_cache(cache_dir=tmp_path / "cache")
+    derived = []
+    real = lexique.lexique_heteronyms
+    monkeypatch.setattr(
+        lexique,
+        "lexique_heteronyms",
+        lambda *a, **k: derived.append(1) or real(*a, **k),
+    )
+
+    first = lexique.cached_lexique_heteronyms(tsv, cache=cache)
+    assert first == real(tsv) and len(derived) == 1
+    assert (
+        lexique.cached_lexique_heteronyms(tsv, cache=cache) == first
+        and len(derived) == 1
+    )
+    assert list(
+        (tmp_path / "cache").glob("*.json")
+    )  # kept on disk, in the cache folder
+
+    lexique.cached_lexique_heteronyms(
+        tsv, cache=cache, min_frequency=1
+    )  # other arguments
+    assert len(derived) == 2
+
+    _tsv(tsv, ROWS[:4])  # the file changed
+    stat = os.stat(tsv)
+    os.utime(tsv, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+    assert set(lexique.cached_lexique_heteronyms(tsv, cache=cache)) == {
+        "couvent",
+        "fils",
+    }
+    assert len(derived) == 3
+
+
+def test_the_default_cache_lives_under_voxys_cache_dir(tmp_path, monkeypatch):
+    from voxy import lexique
+
+    monkeypatch.setenv("VOXY_CACHE_DIR", str(tmp_path / "cache"))
+    tsv = _tsv(tmp_path / "Lexique383.tsv", ROWS)
+    lexique.cached_lexique_heteronyms(tsv)
+    assert len(list((tmp_path / "cache" / "lexique").glob("*.json"))) == 1
