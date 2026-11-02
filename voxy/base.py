@@ -49,6 +49,7 @@ OPTIONAL_MODULE_EXTRAS = {
     "torch": "local",
     "torchaudio": "local",
     "whisper": "transcription",
+    "huggingface_hub": "local",
 }
 
 
@@ -682,11 +683,12 @@ class CSMSpeechModel(SpeechModel):
                         print(f"Using cached CSM model from: {self.model_path}")
                     else:
                         # Download the model if not provided
+                        hf_hub_download = optional_import(
+                            "huggingface_hub"
+                        ).hf_hub_download
                         try:
                             # Create a consistent cache directory
                             os.makedirs(cache_dir, exist_ok=True)
-
-                            from huggingface_hub import hf_hub_download
 
                             print("Downloading CSM-1B model from Hugging Face Hub...")
                             self.model_path = hf_hub_download(
