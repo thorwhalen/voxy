@@ -1134,19 +1134,34 @@ def _log_unmatched_legacy(
         )
 
 
+def _posix_key(key: str) -> str:
+    """``key`` with ``/`` separators.
+
+    >>> _posix_key("conditioned\\\\a.wav")
+    'conditioned/a.wav'
+    """
+    return key.replace("\\", "/")
+
+
 def _orphans_and_stale_markers(
     samples: Mapping, *, stale_after: float
 ) -> tuple[list[str], list[str]]:
-    """The ``orphans`` and the stale pending markers' keys, from one read of the store."""
+    """The ``orphans`` and the stale pending markers' keys, from one read of the store,
+    written with ``/`` as voxy writes them (a store may list them with ``\\`` on
+    Windows), so they match the manifest and ``forget``'s keys."""
     entries = _checked_manifest(samples)
     markers = _pending_markers(samples)
     now = datetime.now(timezone.utc)
     stale = {
-        k for k, m in markers.items() if _is_stale(m, stale_after=stale_after, now=now)
+        _posix_key(k)
+        for k, m in markers.items()
+        if _is_stale(m, stale_after=stale_after, now=now)
     }
     claimed = {None} | {s for e in entries for s in _entry_slugs(e)}
-    claimed |= {s for k, m in markers.items() if k not in stale for s in m["slugs"]}
-    keys = sorted(k for k in samples if _key_slug(k) not in claimed)
+    claimed |= {
+        s for k, m in markers.items() if _posix_key(k) not in stale for s in m["slugs"]
+    }
+    keys = sorted(_posix_key(k) for k in samples if _key_slug(k) not in claimed)
     if keys and not any(_entry_slugs(e) for e in entries):
         raise ValueError(
             f"voxy.refprep: {MANIFEST_KEY} is missing, empty or claims no clip, yet the store holds "
