@@ -158,6 +158,9 @@ aligner’s weights come from Meta’s MMS release, under a non-commercial licen
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.workers.align_adapter.STAR" title="voxy.workers.align_adapter.STAR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">STAR</span></code></a></p></td>
 <td><p>The aligner's token for a word it has no letters for (a number, a symbol).</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.align_adapter.MIN_CROP_SECONDS" title="voxy.workers.align_adapter.MIN_CROP_SECONDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIN_CROP_SECONDS</span></code></a></p></td>
+<td><p>The shortest crop the aligner's convolutions take.</p></td>
+</tr>
 </tbody>
 </table>
 <p class="rubric">Functions</p>
@@ -169,12 +172,20 @@ aligner’s weights come from Meta’s MMS release, under a non-commercial licen
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(*[, model, device])</p></td>
 <td><p></p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.align_adapter.score" title="voxy.workers.align_adapter.score"><code class="xref py py-obj docutils literal notranslate"><span class="pre">score</span></code></a>(state, *, audio, texts[, start, end, ...])</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{"scores":</span> <span class="pre">[...]}</span></code>: for each of <code class="docutils literal notranslate"><span class="pre">texts</span></code>, the log-likelihood the aligner gives it over <code class="docutils literal notranslate"><span class="pre">audio</span></code> (cropped to <code class="docutils literal notranslate"><span class="pre">start</span></code>-<code class="docutils literal notranslate"><span class="pre">end</span></code> seconds when given), i.e. minus the CTC loss; <code class="docutils literal notranslate"><span class="pre">-inf</span></code> for a text too long for the crop.</p></td>
+</tr>
 </tbody>
 </table>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.workers.align_adapter.LIGATURES">
 <span class="sig-prename descclassname"><span class="pre">voxy.workers.align_adapter.</span></span><span class="sig-name descname"><span class="pre">LIGATURES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'ß':</span> <span class="pre">'ss',</span> <span class="pre">'æ':</span> <span class="pre">'ae',</span> <span class="pre">'ø':</span> <span class="pre">'o',</span> <span class="pre">'ł':</span> <span class="pre">'l',</span> <span class="pre">'œ':</span> <span class="pre">'oe',</span> <span class="pre">'ʼ':</span> <span class="pre">"'",</span> <span class="pre">'’':</span> <span class="pre">"'"}</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.align_adapter.LIGATURES" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.align_adapter.LIGATURES'">¶</a></dt>
 <dd><p>Letters NFKD leaves whole, spelled with the aligner’s letters (French œ, …).</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.workers.align_adapter.MIN_CROP_SECONDS">
+<span class="sig-prename descclassname"><span class="pre">voxy.workers.align_adapter.</span></span><span class="sig-name descname"><span class="pre">MIN_CROP_SECONDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.1</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.align_adapter.MIN_CROP_SECONDS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.align_adapter.MIN_CROP_SECONDS'">¶</a></dt>
+<dd><p>The shortest crop the aligner’s convolutions take.</p>
 </dd></dl>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.workers.align_adapter.STAR">
@@ -189,13 +200,25 @@ aligner’s weights come from Meta’s MMS release, under a non-commercial licen
 token. Audio longer than <code class="docutils literal notranslate"><span class="pre">max_seconds</span></code> is refused (memory grows fast: 150 s
 took about 6 GB): align it in stretches.</p>
 </dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.workers.align_adapter.score">
+<span class="sig-prename descclassname"><span class="pre">voxy.workers.align_adapter.</span></span><span class="sig-name descname"><span class="pre">score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">audio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">texts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/workers/align_adapter.html#score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.align_adapter.score" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.align_adapter.score'">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">{"scores":</span> <span class="pre">[...]}</span></code>: for each of <code class="docutils literal notranslate"><span class="pre">texts</span></code>, the log-likelihood the aligner
+gives it over <code class="docutils literal notranslate"><span class="pre">audio</span></code> (cropped to <code class="docutils literal notranslate"><span class="pre">start</span></code>-<code class="docutils literal notranslate"><span class="pre">end</span></code> seconds when given), i.e.
+minus the CTC loss; <code class="docutils literal notranslate"><span class="pre">-inf</span></code> for a text too long for the crop. Higher is more
+likely; compare texts on the same crop only.</p>
+<p>Every candidate must be spelled in letters: a number or a symbol would become the
+“any sound” token, which fits any audio and would always win.</p>
+</dd></dl>
 </section>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
 <li><a :data-current="activeSection === '#voxy.workers.align_adapter.LIGATURES'" class="reference internal" href="#voxy.workers.align_adapter.LIGATURES"><code class="docutils literal notranslate"><span class="pre">LIGATURES</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.workers.align_adapter.MIN_CROP_SECONDS'" class="reference internal" href="#voxy.workers.align_adapter.MIN_CROP_SECONDS"><code class="docutils literal notranslate"><span class="pre">MIN_CROP_SECONDS</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.workers.align_adapter.STAR'" class="reference internal" href="#voxy.workers.align_adapter.STAR"><code class="docutils literal notranslate"><span class="pre">STAR</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.workers.align_adapter.align'" class="reference internal" href="#voxy.workers.align_adapter.align"><code class="docutils literal notranslate"><span class="pre">align()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.workers.align_adapter.score'" class="reference internal" href="#voxy.workers.align_adapter.score"><code class="docutils literal notranslate"><span class="pre">score()</span></code></a></li>
 </ul>
 </div>
 </aside>
@@ -209,7 +232,7 @@ took about 6 GB): align it in stretches.</p>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=4d22d5b7"></script>
+<script src="../_static/documentation_options.js?v=e95a51ae"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

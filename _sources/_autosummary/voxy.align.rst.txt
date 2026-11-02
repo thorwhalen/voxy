@@ -9,6 +9,7 @@ voxy.align
    .. autosummary::
    
       ALIGN_ENV
+      DFLT_DECISIVE_MARGIN
    
    .. rubric:: Functions
 
@@ -16,5 +17,7 @@ voxy.align
    
       close_alignment
       force_align
+      which_said
       worker_run
+      worker_score
    

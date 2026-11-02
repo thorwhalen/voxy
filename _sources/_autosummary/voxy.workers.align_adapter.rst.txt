@@ -10,6 +10,7 @@ voxy.workers.align\_adapter
    
       LIGATURES
       STAR
+      MIN_CROP_SECONDS
    
    .. rubric:: Functions
 
@@ -17,4 +18,5 @@ voxy.workers.align\_adapter
    
       align
       load
+      score
    

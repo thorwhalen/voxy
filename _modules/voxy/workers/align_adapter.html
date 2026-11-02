@@ -292,6 +292,68 @@
 </span><span id="line-96">        <span class="p">)</span>
 </span><span id="line-97">    <span class="k">return</span> <span class="p">{</span><span class="s2">"words"</span><span class="p">:</span> <span class="n">out</span><span class="p">}</span></div>
 
+</span><span id="line-98">
+</span><span id="line-99">
+</span><span id="line-100"><span class="c1">#: The shortest crop the aligner's convolutions take.</span>
+</span><span id="line-101"><span class="n">MIN_CROP_SECONDS</span> <span class="o">=</span> <span class="mf">0.1</span>
+</span><span id="line-102">
+</span><span id="line-103">
+<div class="viewcode-block" id="score">
+<a class="viewcode-back" href="../../../_autosummary/voxy.workers.align_adapter.html#voxy.workers.align_adapter.score">[docs]</a>
+</span><span id="line-104"><span class="k">def</span><span class="w"> </span><span class="nf">score</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">audio</span><span class="p">,</span> <span class="n">texts</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_seconds</span><span class="o">=</span><span class="mf">30.0</span><span class="p">):</span>
+</span><span id="line-105"><span class="w">    </span><span class="sd">"""``{"scores": [...]}``: for each of ``texts``, the log-likelihood the aligner</span>
+</span><span id="line-106"><span class="sd">    gives it over ``audio`` (cropped to ``start``-``end`` seconds when given), i.e.</span>
+</span><span id="line-107"><span class="sd">    minus the CTC loss; ``-inf`` for a text too long for the crop. Higher is more</span>
+</span><span id="line-108"><span class="sd">    likely; compare texts on the same crop only.</span>
+</span><span id="line-109">
+</span><span id="line-110"><span class="sd">    Every candidate must be spelled in letters: a number or a symbol would become the</span>
+</span><span id="line-111"><span class="sd">    "any sound" token, which fits any audio and would always win.</span>
+</span><span id="line-112"><span class="sd">    """</span>
+</span><span id="line-113">    <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+</span><span id="line-114">
+</span><span id="line-115">    <span class="kn">import</span><span class="w"> </span><span class="nn">soundfile</span>
+</span><span id="line-116">    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+</span><span id="line-117">    <span class="kn">import</span><span class="w"> </span><span class="nn">torchaudio.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+</span><span id="line-118">
+</span><span id="line-119">    <span class="n">bundle</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"bundle"</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="s2">"index"</span><span class="p">]</span>
+</span><span id="line-120">    <span class="n">letters</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-121">    <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">:</span>
+</span><span id="line-122">        <span class="n">spelled</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_letters</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+</span><span id="line-123">        <span class="k">if</span> <span class="ow">not</span> <span class="n">spelled</span> <span class="ow">or</span> <span class="n">STAR</span> <span class="ow">in</span> <span class="n">spelled</span><span class="p">:</span>
+</span><span id="line-124">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-125">                <span class="sa">f</span><span class="s2">"candidate </span><span class="si">{</span><span class="n">text</span><span class="si">!r}</span><span class="s2"> needs letters only (spell numbers out; no empty text)"</span>
+</span><span id="line-126">            <span class="p">)</span>
+</span><span id="line-127">        <span class="n">letters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spelled</span><span class="p">)</span>
+</span><span id="line-128">    <span class="n">samples</span><span class="p">,</span> <span class="n">rate</span> <span class="o">=</span> <span class="n">soundfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"float32"</span><span class="p">,</span> <span class="n">always_2d</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-129">    <span class="n">mono</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="line-130">    <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mono</span><span class="p">)</span> <span class="o">/</span> <span class="n">rate</span>
+</span><span id="line-131">    <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">start</span> <span class="ow">or</span> <span class="mf">0.0</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">total</span> <span class="k">if</span> <span class="n">end</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">end</span><span class="p">)</span>
+</span><span id="line-132">    <span class="k">if</span> <span class="n">hi</span> <span class="o">-</span> <span class="n">lo</span> <span class="o">&lt;</span> <span class="n">MIN_CROP_SECONDS</span><span class="p">:</span>
+</span><span id="line-133">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"crop </span><span class="si">{</span><span class="n">lo</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">hi</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s of </span><span class="si">{</span><span class="n">total</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s is too short"</span><span class="p">)</span>
+</span><span id="line-134">    <span class="k">if</span> <span class="n">hi</span> <span class="o">-</span> <span class="n">lo</span> <span class="o">&gt;</span> <span class="n">max_seconds</span><span class="p">:</span>
+</span><span id="line-135">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"crop of </span><span class="si">{</span><span class="n">hi</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">lo</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> s is over max_seconds=</span><span class="si">{</span><span class="n">max_seconds</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-136">    <span class="n">crop</span> <span class="o">=</span> <span class="n">mono</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">lo</span> <span class="o">*</span> <span class="n">rate</span><span class="p">)</span> <span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">hi</span> <span class="o">*</span> <span class="n">rate</span><span class="p">)]</span>
+</span><span id="line-137">    <span class="n">wav</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">crop</span><span class="o">.</span><span class="n">copy</span><span class="p">())[</span><span class="kc">None</span><span class="p">],</span> <span class="n">rate</span><span class="p">,</span> <span class="n">bundle</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">)</span>
+</span><span id="line-138">    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">inference_mode</span><span class="p">():</span>
+</span><span id="line-139">        <span class="n">emission</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"model"</span><span class="p">](</span><span class="n">wav</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s2">"device"</span><span class="p">]))</span>
+</span><span id="line-140">    <span class="n">log_probs</span> <span class="o">=</span> <span class="n">emission</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span>
+</span><span id="line-141">    <span class="n">scores</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-142">    <span class="k">for</span> <span class="n">spelled</span> <span class="ow">in</span> <span class="n">letters</span><span class="p">:</span>
+</span><span id="line-143">        <span class="n">tokens</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([[</span><span class="n">index</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">spelled</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+</span><span id="line-144">        <span class="n">loss</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span>
+</span><span id="line-145">            <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">ctc_loss</span><span class="p">(</span>
+</span><span id="line-146">                <span class="n">log_probs</span><span class="p">,</span>
+</span><span id="line-147">                <span class="n">tokens</span><span class="p">,</span>
+</span><span id="line-148">                <span class="p">[</span><span class="n">log_probs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+</span><span id="line-149">                <span class="p">[</span><span class="n">tokens</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+</span><span id="line-150">                <span class="n">blank</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="line-151">                <span class="n">reduction</span><span class="o">=</span><span class="s2">"sum"</span><span class="p">,</span>
+</span><span id="line-152">                <span class="n">zero_infinity</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="line-153">            <span class="p">)</span>
+</span><span id="line-154">        <span class="p">)</span>
+</span><span id="line-155">        <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">inf</span> <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span> <span class="k">else</span> <span class="nb">round</span><span class="p">(</span><span class="o">-</span><span class="n">loss</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+</span><span id="line-156">    <span class="k">return</span> <span class="p">{</span><span class="s2">"scores"</span><span class="p">:</span> <span class="n">scores</span><span class="p">}</span></div>
+
 </span></code></pre></div>
     </div></div>
           </main>
@@ -305,7 +367,7 @@
 </footer>
     </div>
     
-    <script src="../../../_static/documentation_options.js?v=4d22d5b7"></script>
+    <script src="../../../_static/documentation_options.js?v=e95a51ae"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
