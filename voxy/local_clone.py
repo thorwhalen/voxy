@@ -311,7 +311,7 @@ class WorkerGenerate:
 
     def _run(self, op: str, **request):
         """One worker operation that writes a WAV: ``(samples, sample_rate)``."""
-        worker = self.worker
+        worker = self._get_worker()
         scratch = voxy_cache_dir("tmp")
         scratch.mkdir(parents=True, exist_ok=True)
         out_path = scratch / f"{self.backend.name}-{uuid.uuid4().hex}.wav"
@@ -329,9 +329,12 @@ class WorkerGenerate:
         """The adapter's ``design`` operation (backends that can design voices)."""
         return self._run("design", text=text, instruct=instruct, **params)
 
-    @property
-    def worker(self) -> Worker:
-        """The worker, made (and its environment built) once, on first use."""
+    def _get_worker(self) -> Worker:
+        """The worker, made (and its environment built) once, on first use.
+
+        The lock is held while the environment builds (minutes, the first time), so
+        a ``close()`` from another thread waits rather than leave a half-built worker.
+        """
         with self._lock:
             if self._worker is None:
                 self._worker = self._make_worker()

@@ -543,15 +543,15 @@ def test_design_voice_without_preview_takes_the_first_generated(tmp_path):
 
 
 def test_worker_generate_makes_one_worker_across_threads(monkeypatch):
-    """Two threads calling a fresh model at once must not start two workers (#65)."""
+    """Four threads calling a fresh model at once start one worker, not four (#65)."""
     import threading
     import time
 
-    from voxy.local_clone import WorkerGenerate
+    import voxy.local_clone as lc
 
     made = []
 
-    class SlowWorker:
+    class FakeWorker:
         def call(self, op, **request):
             return {}
 
@@ -561,19 +561,16 @@ def test_worker_generate_makes_one_worker_across_threads(monkeypatch):
     def make_worker(self):
         made.append(1)
         time.sleep(0.05)  # widen the window two unguarded threads would both enter
-        return SlowWorker()
+        return FakeWorker()
 
-    monkeypatch.setattr(WorkerGenerate, "_make_worker", make_worker)
-    generate = WorkerGenerate(LOCAL_CLONE_BACKENDS["f5tts"])
-    workers = []
-    threads = [
-        threading.Thread(target=lambda: workers.append(generate.worker))
-        for _ in range(4)
-    ]
+    monkeypatch.setattr(lc.WorkerGenerate, "_make_worker", make_worker)
+    monkeypatch.setattr(lc, "read_wav", lambda path: (np.zeros(1), SR))
+    generate = lc.WorkerGenerate(LOCAL_CLONE_BACKENDS["f5tts"])
+    threads = [threading.Thread(target=generate, args=("Hi.",)) for _ in range(4)]
     for t in threads:
         t.start()
     for t in threads:
         t.join()
-    assert len(made) == 1 and len({id(w) for w in workers}) == 1
+    assert len(made) == 1
     generate.close()
     assert generate._worker is None
