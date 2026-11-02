@@ -49,6 +49,7 @@ voxy.pronounce
       known_symbols
       load_readings
       log_probs_from_path
+      normal_word
       phoneme_emitter
       phrase_readings
       phrase_scorer

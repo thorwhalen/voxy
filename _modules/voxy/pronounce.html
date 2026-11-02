@@ -132,6 +132,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.script.html">voxy.script</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.speakers.html">voxy.speakers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.speechtext.html">voxy.speechtext</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.splice.html">voxy.splice</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.stores.html">voxy.stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.textsplit.html">voxy.textsplit</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.voicestudio_model.html">voxy.voicestudio_model</a></li>
@@ -602,8 +603,8 @@
 </span><span id="line-383"><span class="sd">    &gt;&gt;&gt; word_indices([{"text": " est…"}], "est")</span>
 </span><span id="line-384"><span class="sd">    [0]</span>
 </span><span id="line-385"><span class="sd">    """</span>
-</span><span id="line-386">    <span class="n">target</span> <span class="o">=</span> <span class="n">_normal_word</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
-</span><span id="line-387">    <span class="k">return</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">words</span><span class="p">)</span> <span class="k">if</span> <span class="n">_normal_word</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="s2">"text"</span><span class="p">])</span> <span class="o">==</span> <span class="n">target</span><span class="p">]</span></div>
+</span><span id="line-386">    <span class="n">target</span> <span class="o">=</span> <span class="n">normal_word</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+</span><span id="line-387">    <span class="k">return</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">words</span><span class="p">)</span> <span class="k">if</span> <span class="n">normal_word</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="s2">"text"</span><span class="p">])</span> <span class="o">==</span> <span class="n">target</span><span class="p">]</span></div>
 
 </span><span id="line-388">
 </span><span id="line-389">
@@ -1476,284 +1477,292 @@
 
 </span><span id="line-1188">
 </span><span id="line-1189">
-</span><span id="line-1190"><span class="k">def</span><span class="w"> </span><span class="nf">_normal_word</span><span class="p">(</span><span class="n">word</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-1191">    <span class="k">return</span> <span class="n">word</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="n">EDGE_PUNCTUATION</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"’"</span><span class="p">,</span> <span class="s2">"'"</span><span class="p">)</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
+<div class="viewcode-block" id="normal_word">
+<a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.normal_word">[docs]</a>
+</span><span id="line-1190"><span class="k">def</span><span class="w"> </span><span class="nf">normal_word</span><span class="p">(</span><span class="n">word</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-1191"><span class="w">    </span><span class="sd">"""``word`` as compared with ASR words: stripped, edge punctuation off, casefolded.</span>
 </span><span id="line-1192">
-</span><span id="line-1193">
-</span><span id="line-1194"><span class="k">def</span><span class="w"> </span><span class="nf">_clitic_key</span><span class="p">(</span><span class="n">clitic</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-1195">    <span class="k">return</span> <span class="n">clitic</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"’"</span><span class="p">,</span> <span class="s2">"'"</span><span class="p">)</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
-</span><span id="line-1196">
+</span><span id="line-1193"><span class="sd">    &gt;&gt;&gt; normal_word(" Smith’s,")</span>
+</span><span id="line-1194"><span class="sd">    "smith's"</span>
+</span><span id="line-1195"><span class="sd">    """</span>
+</span><span id="line-1196">    <span class="k">return</span> <span class="n">word</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="n">EDGE_PUNCTUATION</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"’"</span><span class="p">,</span> <span class="s2">"'"</span><span class="p">)</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span></div>
+
 </span><span id="line-1197">
-</span><span id="line-1198"><span class="k">def</span><span class="w"> </span><span class="nf">_text_words</span><span class="p">(</span>
-</span><span id="line-1199">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">elisions</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
-</span><span id="line-1200"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-</span><span id="line-1201"><span class="w">    </span><span class="sd">"""``(line, word, clitic)`` of every word of ``text``, in order (lines count from 1).</span>
+</span><span id="line-1198">
+</span><span id="line-1199"><span class="k">def</span><span class="w"> </span><span class="nf">_clitic_key</span><span class="p">(</span><span class="n">clitic</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-1200">    <span class="k">return</span> <span class="n">clitic</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"’"</span><span class="p">,</span> <span class="s2">"'"</span><span class="p">)</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
+</span><span id="line-1201">
 </span><span id="line-1202">
-</span><span id="line-1203"><span class="sd">    A word elided onto one of ``elisions`` is two words, as ASR's are once split</span>
-</span><span id="line-1204"><span class="sd">    (:func:`split_elisions`): "l'Est" is ``"l'"`` then ``"Est"`` (clitic ``"l'"``).</span>
-</span><span id="line-1205"><span class="sd">    """</span>
-</span><span id="line-1206">    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-1207">    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">),</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="line-1208">        <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">clitic</span> <span class="ow">in</span> <span class="n">elided_words</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">elisions</span><span class="p">):</span>
-</span><span id="line-1209">            <span class="k">if</span> <span class="n">clitic</span><span class="p">:</span>
-</span><span id="line-1210">                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">number</span><span class="p">,</span> <span class="n">clitic</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
-</span><span id="line-1211">            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">number</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="n">clitic</span><span class="p">))</span>
-</span><span id="line-1212">    <span class="k">return</span> <span class="n">out</span>
-</span><span id="line-1213">
-</span><span id="line-1214">
+</span><span id="line-1203"><span class="k">def</span><span class="w"> </span><span class="nf">_text_words</span><span class="p">(</span>
+</span><span id="line-1204">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">elisions</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+</span><span id="line-1205"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+</span><span id="line-1206"><span class="w">    </span><span class="sd">"""``(line, word, clitic)`` of every word of ``text``, in order (lines count from 1).</span>
+</span><span id="line-1207">
+</span><span id="line-1208"><span class="sd">    A word elided onto one of ``elisions`` is two words, as ASR's are once split</span>
+</span><span id="line-1209"><span class="sd">    (:func:`split_elisions`): "l'Est" is ``"l'"`` then ``"Est"`` (clitic ``"l'"``).</span>
+</span><span id="line-1210"><span class="sd">    """</span>
+</span><span id="line-1211">    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-1212">    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">),</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="line-1213">        <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">clitic</span> <span class="ow">in</span> <span class="n">elided_words</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">elisions</span><span class="p">):</span>
+</span><span id="line-1214">            <span class="k">if</span> <span class="n">clitic</span><span class="p">:</span>
+</span><span id="line-1215">                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">number</span><span class="p">,</span> <span class="n">clitic</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+</span><span id="line-1216">            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">number</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="n">clitic</span><span class="p">))</span>
+</span><span id="line-1217">    <span class="k">return</span> <span class="n">out</span>
+</span><span id="line-1218">
+</span><span id="line-1219">
 <div class="viewcode-block" id="split_elisions">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.split_elisions">[docs]</a>
-</span><span id="line-1215"><span class="k">def</span><span class="w"> </span><span class="nf">split_elisions</span><span class="p">(</span>
-</span><span id="line-1216">    <span class="n">words</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">elisions</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
-</span><span id="line-1217"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-1218"><span class="w">    </span><span class="sd">"""Timed words split at each elision of ``elisions``, as :func:`_text_words` splits</span>
-</span><span id="line-1219"><span class="sd">    the text, so :func:`align_words` can match them.</span>
-</span><span id="line-1220">
-</span><span id="line-1221"><span class="sd">    Whisper's ``" l" | "'est"`` becomes ``" l'" | "est"`` (the apostrophe moved back);</span>
-</span><span id="line-1222"><span class="sd">    a word heard whole, ``" l'est"``, becomes ``" l'"`` (empty, at its start) and</span>
-</span><span id="line-1223"><span class="sd">    ``"est"`` (its whole span). Other apostrophes (an English opening quote) are left</span>
-</span><span id="line-1224"><span class="sd">    alone.</span>
+</span><span id="line-1220"><span class="k">def</span><span class="w"> </span><span class="nf">split_elisions</span><span class="p">(</span>
+</span><span id="line-1221">    <span class="n">words</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">elisions</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+</span><span id="line-1222"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-1223"><span class="w">    </span><span class="sd">"""Timed words split at each elision of ``elisions``, as :func:`_text_words` splits</span>
+</span><span id="line-1224"><span class="sd">    the text, so :func:`align_words` can match them.</span>
 </span><span id="line-1225">
-</span><span id="line-1226"><span class="sd">    &gt;&gt;&gt; words = [{"text": " à", "start": 0, "end": 1}, {"text": " l", "start": 1, "end": 2},</span>
-</span><span id="line-1227"><span class="sd">    ...          {"text": "'est", "start": 2, "end": 3}, {"text": " l'est", "start": 3, "end": 4},</span>
-</span><span id="line-1228"><span class="sd">    ...          {"text": " 'War", "start": 4, "end": 5}]</span>
-</span><span id="line-1229"><span class="sd">    &gt;&gt;&gt; [(w["text"], w["start"], w["end"]) for w in split_elisions(words, elisions={"l'": "l"})]</span>
-</span><span id="line-1230"><span class="sd">    [(' à', 0, 1), (" l'", 1, 2), ('est', 2, 3), (" l'", 3, 3), ('est', 3, 4), (" 'War", 4, 5)]</span>
-</span><span id="line-1231"><span class="sd">    """</span>
-</span><span id="line-1232">    <span class="n">out</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-1233">    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
-</span><span id="line-1234">        <span class="n">word</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
-</span><span id="line-1235">        <span class="n">text</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span>
-</span><span id="line-1236">        <span class="k">if</span> <span class="p">(</span>
-</span><span id="line-1237">            <span class="n">out</span>
-</span><span id="line-1238">            <span class="ow">and</span> <span class="n">text</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"'"</span><span class="p">,</span> <span class="s2">"’"</span><span class="p">)</span>
-</span><span id="line-1239">            <span class="ow">and</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> <span class="o">+</span> <span class="s2">"'"</span> <span class="ow">in</span> <span class="n">elisions</span>
-</span><span id="line-1240">        <span class="p">):</span>
-</span><span id="line-1241">            <span class="n">out</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"text"</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="o">+</span> <span class="n">text</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-1242">            <span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
-</span><span id="line-1243">        <span class="n">clitic</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">split_clitic</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">elisions</span><span class="p">)</span>
-</span><span id="line-1244">        <span class="k">if</span> <span class="n">clitic</span><span class="p">:</span>
-</span><span id="line-1245">            <span class="n">lead</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">][:</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">])</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">())]</span>
-</span><span id="line-1246">            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="o">**</span><span class="n">word</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">lead</span> <span class="o">+</span> <span class="n">clitic</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="n">word</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]})</span>
-</span><span id="line-1247">            <span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span> <span class="o">=</span> <span class="n">rest</span>
-</span><span id="line-1248">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
-</span><span id="line-1249">    <span class="k">return</span> <span class="n">out</span></div>
+</span><span id="line-1226"><span class="sd">    Whisper's ``" l" | "'est"`` becomes ``" l'" | "est"`` (the apostrophe moved back);</span>
+</span><span id="line-1227"><span class="sd">    a word heard whole, ``" l'est"``, becomes ``" l'"`` (empty, at its start) and</span>
+</span><span id="line-1228"><span class="sd">    ``"est"`` (its whole span). Other apostrophes (an English opening quote) are left</span>
+</span><span id="line-1229"><span class="sd">    alone.</span>
+</span><span id="line-1230">
+</span><span id="line-1231"><span class="sd">    &gt;&gt;&gt; words = [{"text": " à", "start": 0, "end": 1}, {"text": " l", "start": 1, "end": 2},</span>
+</span><span id="line-1232"><span class="sd">    ...          {"text": "'est", "start": 2, "end": 3}, {"text": " l'est", "start": 3, "end": 4},</span>
+</span><span id="line-1233"><span class="sd">    ...          {"text": " 'War", "start": 4, "end": 5}]</span>
+</span><span id="line-1234"><span class="sd">    &gt;&gt;&gt; [(w["text"], w["start"], w["end"]) for w in split_elisions(words, elisions={"l'": "l"})]</span>
+</span><span id="line-1235"><span class="sd">    [(' à', 0, 1), (" l'", 1, 2), ('est', 2, 3), (" l'", 3, 3), ('est', 3, 4), (" 'War", 4, 5)]</span>
+</span><span id="line-1236"><span class="sd">    """</span>
+</span><span id="line-1237">    <span class="n">out</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-1238">    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+</span><span id="line-1239">        <span class="n">word</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+</span><span id="line-1240">        <span class="n">text</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span>
+</span><span id="line-1241">        <span class="k">if</span> <span class="p">(</span>
+</span><span id="line-1242">            <span class="n">out</span>
+</span><span id="line-1243">            <span class="ow">and</span> <span class="n">text</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"'"</span><span class="p">,</span> <span class="s2">"’"</span><span class="p">)</span>
+</span><span id="line-1244">            <span class="ow">and</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> <span class="o">+</span> <span class="s2">"'"</span> <span class="ow">in</span> <span class="n">elisions</span>
+</span><span id="line-1245">        <span class="p">):</span>
+</span><span id="line-1246">            <span class="n">out</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"text"</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="o">+</span> <span class="n">text</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-1247">            <span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+</span><span id="line-1248">        <span class="n">clitic</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">split_clitic</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">elisions</span><span class="p">)</span>
+</span><span id="line-1249">        <span class="k">if</span> <span class="n">clitic</span><span class="p">:</span>
+</span><span id="line-1250">            <span class="n">lead</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">][:</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">])</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">())]</span>
+</span><span id="line-1251">            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="o">**</span><span class="n">word</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">lead</span> <span class="o">+</span> <span class="n">clitic</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="n">word</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]})</span>
+</span><span id="line-1252">            <span class="n">word</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span> <span class="o">=</span> <span class="n">rest</span>
+</span><span id="line-1253">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+</span><span id="line-1254">    <span class="k">return</span> <span class="n">out</span></div>
 
-</span><span id="line-1250">
-</span><span id="line-1251">
+</span><span id="line-1255">
+</span><span id="line-1256">
 <div class="viewcode-block" id="align_words">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.align_words">[docs]</a>
-</span><span id="line-1252"><span class="k">def</span><span class="w"> </span><span class="nf">align_words</span><span class="p">(</span>
-</span><span id="line-1253">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">words</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">elisions</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
-</span><span id="line-1254"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-</span><span id="line-1255"><span class="w">    </span><span class="sd">"""``{index of a word of text: index of the ASR word heard for it}``.</span>
-</span><span id="line-1256">
-</span><span id="line-1257"><span class="sd">    Words are matched by aligning the two sequences (``difflib``), so a word ASR missed,</span>
-</span><span id="line-1258"><span class="sd">    merged or added elsewhere does not shift the others; a text word with no exact</span>
-</span><span id="line-1259"><span class="sd">    counterpart is left out. A word elided onto one of ``elisions`` counts as two</span>
-</span><span id="line-1260"><span class="sd">    (:func:`_text_words`).</span>
+</span><span id="line-1257"><span class="k">def</span><span class="w"> </span><span class="nf">align_words</span><span class="p">(</span>
+</span><span id="line-1258">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">words</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">elisions</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+</span><span id="line-1259"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="line-1260"><span class="w">    </span><span class="sd">"""``{index of a word of text: index of the ASR word heard for it}``.</span>
 </span><span id="line-1261">
-</span><span id="line-1262"><span class="sd">    &gt;&gt;&gt; align_words("Il est là", [{"text": " Il"}, {"text": " et"}, {"text": " est"}, {"text": " là."}])</span>
-</span><span id="line-1263"><span class="sd">    {0: 0, 1: 2, 2: 3}</span>
-</span><span id="line-1264"><span class="sd">    """</span>
-</span><span id="line-1265">    <span class="kn">from</span><span class="w"> </span><span class="nn">difflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">SequenceMatcher</span>
+</span><span id="line-1262"><span class="sd">    Words are matched by aligning the two sequences (``difflib``), so a word ASR missed,</span>
+</span><span id="line-1263"><span class="sd">    merged or added elsewhere does not shift the others; a text word with no exact</span>
+</span><span id="line-1264"><span class="sd">    counterpart is left out. A word elided onto one of ``elisions`` counts as two</span>
+</span><span id="line-1265"><span class="sd">    (:func:`_text_words`).</span>
 </span><span id="line-1266">
-</span><span id="line-1267">    <span class="n">said</span> <span class="o">=</span> <span class="p">[</span><span class="n">_normal_word</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">_text_words</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)]</span>
-</span><span id="line-1268">    <span class="n">heard</span> <span class="o">=</span> <span class="p">[</span><span class="n">_normal_word</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="s2">"text"</span><span class="p">])</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span><span class="p">]</span>
-</span><span id="line-1269">    <span class="n">matcher</span> <span class="o">=</span> <span class="n">SequenceMatcher</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">said</span><span class="p">,</span> <span class="n">heard</span><span class="p">,</span> <span class="n">autojunk</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="line-1270">    <span class="k">return</span> <span class="p">{</span>
-</span><span id="line-1271">        <span class="n">block</span><span class="o">.</span><span class="n">a</span> <span class="o">+</span> <span class="n">k</span><span class="p">:</span> <span class="n">block</span><span class="o">.</span><span class="n">b</span> <span class="o">+</span> <span class="n">k</span>
-</span><span id="line-1272">        <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">matcher</span><span class="o">.</span><span class="n">get_matching_blocks</span><span class="p">()</span>
-</span><span id="line-1273">        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
-</span><span id="line-1274">    <span class="p">}</span></div>
+</span><span id="line-1267"><span class="sd">    &gt;&gt;&gt; align_words("Il est là", [{"text": " Il"}, {"text": " et"}, {"text": " est"}, {"text": " là."}])</span>
+</span><span id="line-1268"><span class="sd">    {0: 0, 1: 2, 2: 3}</span>
+</span><span id="line-1269"><span class="sd">    """</span>
+</span><span id="line-1270">    <span class="kn">from</span><span class="w"> </span><span class="nn">difflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">SequenceMatcher</span>
+</span><span id="line-1271">
+</span><span id="line-1272">    <span class="n">said</span> <span class="o">=</span> <span class="p">[</span><span class="n">normal_word</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">_text_words</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)]</span>
+</span><span id="line-1273">    <span class="n">heard</span> <span class="o">=</span> <span class="p">[</span><span class="n">normal_word</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="s2">"text"</span><span class="p">])</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span><span class="p">]</span>
+</span><span id="line-1274">    <span class="n">matcher</span> <span class="o">=</span> <span class="n">SequenceMatcher</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">said</span><span class="p">,</span> <span class="n">heard</span><span class="p">,</span> <span class="n">autojunk</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="line-1275">    <span class="k">return</span> <span class="p">{</span>
+</span><span id="line-1276">        <span class="n">block</span><span class="o">.</span><span class="n">a</span> <span class="o">+</span> <span class="n">k</span><span class="p">:</span> <span class="n">block</span><span class="o">.</span><span class="n">b</span> <span class="o">+</span> <span class="n">k</span>
+</span><span id="line-1277">        <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">matcher</span><span class="o">.</span><span class="n">get_matching_blocks</span><span class="p">()</span>
+</span><span id="line-1278">        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+</span><span id="line-1279">    <span class="p">}</span></div>
 
-</span><span id="line-1275">
-</span><span id="line-1276">
-</span><span id="line-1277"><span class="k">def</span><span class="w"> </span><span class="nf">_risk_places</span><span class="p">(</span>
-</span><span id="line-1278">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">risks</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">elisions</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
-</span><span id="line-1279"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-</span><span id="line-1280"><span class="w">    </span><span class="sd">"""The index in ``_text_words(text)`` of each risk (by line, clitic and order on the</span>
-</span><span id="line-1281"><span class="sd">    line: the "est" of "c'est" is not the risk "est")."""</span>
-</span><span id="line-1282">    <span class="n">taken</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-</span><span id="line-1283">    <span class="n">tokens</span> <span class="o">=</span> <span class="n">_text_words</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)</span>
-</span><span id="line-1284">    <span class="n">places</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-1285">    <span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">risks</span><span class="p">:</span>
-</span><span id="line-1286">        <span class="n">clitic</span> <span class="o">=</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="s2">"clitic"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
-</span><span id="line-1287">        <span class="n">place</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
-</span><span id="line-1288">            <span class="p">(</span>
-</span><span id="line-1289">                <span class="n">i</span>
-</span><span id="line-1290">                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="n">elided</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span>
-</span><span id="line-1291">                <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">taken</span>
-</span><span id="line-1292">                <span class="ow">and</span> <span class="n">line</span> <span class="o">==</span> <span class="n">risk</span><span class="o">.</span><span class="n">line</span>
-</span><span id="line-1293">                <span class="ow">and</span> <span class="n">word</span> <span class="o">==</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span>
-</span><span id="line-1294">                <span class="ow">and</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="n">elided</span><span class="p">)</span> <span class="o">==</span> <span class="n">clitic</span>
-</span><span id="line-1295">            <span class="p">),</span>
-</span><span id="line-1296">            <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-1297">        <span class="p">)</span>
-</span><span id="line-1298">        <span class="k">if</span> <span class="n">place</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-1299">            <span class="n">taken</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">place</span><span class="p">)</span>
-</span><span id="line-1300">        <span class="n">places</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">place</span><span class="p">)</span>
-</span><span id="line-1301">    <span class="k">return</span> <span class="n">places</span>
-</span><span id="line-1302">
-</span><span id="line-1303">
+</span><span id="line-1280">
+</span><span id="line-1281">
+</span><span id="line-1282"><span class="k">def</span><span class="w"> </span><span class="nf">_risk_places</span><span class="p">(</span>
+</span><span id="line-1283">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">risks</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">elisions</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
+</span><span id="line-1284"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+</span><span id="line-1285"><span class="w">    </span><span class="sd">"""The index in ``_text_words(text)`` of each risk (by line, clitic and order on the</span>
+</span><span id="line-1286"><span class="sd">    line: the "est" of "c'est" is not the risk "est")."""</span>
+</span><span id="line-1287">    <span class="n">taken</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+</span><span id="line-1288">    <span class="n">tokens</span> <span class="o">=</span> <span class="n">_text_words</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)</span>
+</span><span id="line-1289">    <span class="n">places</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-1290">    <span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">risks</span><span class="p">:</span>
+</span><span id="line-1291">        <span class="n">clitic</span> <span class="o">=</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="s2">"clitic"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+</span><span id="line-1292">        <span class="n">place</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+</span><span id="line-1293">            <span class="p">(</span>
+</span><span id="line-1294">                <span class="n">i</span>
+</span><span id="line-1295">                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="n">elided</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span>
+</span><span id="line-1296">                <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">taken</span>
+</span><span id="line-1297">                <span class="ow">and</span> <span class="n">line</span> <span class="o">==</span> <span class="n">risk</span><span class="o">.</span><span class="n">line</span>
+</span><span id="line-1298">                <span class="ow">and</span> <span class="n">word</span> <span class="o">==</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span>
+</span><span id="line-1299">                <span class="ow">and</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="n">elided</span><span class="p">)</span> <span class="o">==</span> <span class="n">clitic</span>
+</span><span id="line-1300">            <span class="p">),</span>
+</span><span id="line-1301">            <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-1302">        <span class="p">)</span>
+</span><span id="line-1303">        <span class="k">if</span> <span class="n">place</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-1304">            <span class="n">taken</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">place</span><span class="p">)</span>
+</span><span id="line-1305">        <span class="n">places</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">place</span><span class="p">)</span>
+</span><span id="line-1306">    <span class="k">return</span> <span class="n">places</span>
+</span><span id="line-1307">
+</span><span id="line-1308">
 <div class="viewcode-block" id="Finding">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.Finding">[docs]</a>
-</span><span id="line-1304"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-1305"><span class="k">class</span><span class="w"> </span><span class="nc">Finding</span><span class="p">:</span>
-</span><span id="line-1306"><span class="w">    </span><span class="sd">"""One flagged word of a render: the risk, and what the audio said about it.</span>
-</span><span id="line-1307">
-</span><span id="line-1308"><span class="sd">    ``verdict`` is None when the word could not be located in the audio (ASR heard it</span>
-</span><span id="line-1309"><span class="sd">    a different number of times than the text has it): listen to that one.</span>
-</span><span id="line-1310"><span class="sd">    """</span>
-</span><span id="line-1311">
-</span><span id="line-1312">    <span class="n">risk</span><span class="p">:</span> <span class="nb">object</span>
-</span><span id="line-1313">    <span class="n">verdict</span><span class="p">:</span> <span class="n">Verdict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-1314">    <span class="c1">#: The reading the word should have, when known (also when ``verdict`` is None).</span>
-</span><span id="line-1315">    <span class="n">expected</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-1309"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-1310"><span class="k">class</span><span class="w"> </span><span class="nc">Finding</span><span class="p">:</span>
+</span><span id="line-1311"><span class="w">    </span><span class="sd">"""One flagged word of a render: the risk, and what the audio said about it.</span>
+</span><span id="line-1312">
+</span><span id="line-1313"><span class="sd">    ``verdict`` is None when the word could not be located in the audio (ASR heard it</span>
+</span><span id="line-1314"><span class="sd">    a different number of times than the text has it): listen to that one.</span>
+</span><span id="line-1315"><span class="sd">    """</span>
 </span><span id="line-1316">
-</span><span id="line-1317">    <span class="nd">@property</span>
-</span><span id="line-1318">    <span class="k">def</span><span class="w"> </span><span class="nf">ok</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-1319"><span class="w">        </span><span class="sd">"""As :attr:`Verdict.ok`; None when unchecked or undecided."""</span>
-</span><span id="line-1320">        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verdict</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">verdict</span><span class="o">.</span><span class="n">ok</span></div>
-
+</span><span id="line-1317">    <span class="n">risk</span><span class="p">:</span> <span class="nb">object</span>
+</span><span id="line-1318">    <span class="n">verdict</span><span class="p">:</span> <span class="n">Verdict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-1319">    <span class="c1">#: The reading the word should have, when known (also when ``verdict`` is None).</span>
+</span><span id="line-1320">    <span class="n">expected</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="line-1321">
-</span><span id="line-1322">
+</span><span id="line-1322">    <span class="nd">@property</span>
+</span><span id="line-1323">    <span class="k">def</span><span class="w"> </span><span class="nf">ok</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-1324"><span class="w">        </span><span class="sd">"""As :attr:`Verdict.ok`; None when unchecked or undecided."""</span>
+</span><span id="line-1325">        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verdict</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">verdict</span><span class="o">.</span><span class="n">ok</span></div>
+
+</span><span id="line-1326">
+</span><span id="line-1327">
 <div class="viewcode-block" id="audit">
 <a class="viewcode-back" href="../../_autosummary/voxy.pronounce.html#voxy.pronounce.audit">[docs]</a>
-</span><span id="line-1323"><span class="k">def</span><span class="w"> </span><span class="nf">audit</span><span class="p">(</span>
-</span><span id="line-1324">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-1325">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
-</span><span id="line-1326">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-1327">    <span class="n">readings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-1328">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
-</span><span id="line-1329">    <span class="n">elisions</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-1330">    <span class="n">clitics</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-1331">    <span class="n">expected</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">object</span><span class="p">],</span> <span class="s2">"str | None"</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-1332">    <span class="n">detectors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Iterable</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(),</span>
-</span><span id="line-1333">    <span class="n">emitter</span><span class="p">:</span> <span class="n">Emitter</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-1334">    <span class="n">words_of</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_transcribed_words</span><span class="p">,</span>
-</span><span id="line-1335">    <span class="n">scoring</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SCORING</span><span class="p">,</span>
-</span><span id="line-1336">    <span class="n">phonemize</span><span class="p">:</span> <span class="n">Phonemizer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-1337">    <span class="n">context</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_CONTEXT_WORDS</span><span class="p">,</span>
-</span><span id="line-1338">    <span class="n">filler_penalty</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_FILLER_PENALTY</span><span class="p">,</span>
-</span><span id="line-1339">    <span class="n">padding</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_CROP_PADDING</span><span class="p">,</span>
-</span><span id="line-1340">    <span class="n">margin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-1341">    <span class="n">scorer</span><span class="p">:</span> <span class="n">Scorer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-1342"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Finding</span><span class="p">]:</span>
-</span><span id="line-1343"><span class="w">    </span><span class="sd">"""Which reading did each heteronym of ``text`` get in the finished ``audio``?</span>
-</span><span id="line-1344">
-</span><span id="line-1345"><span class="sd">    ASR (WER) checks cannot answer this: Whisper writes "est" whether the model said</span>
-</span><span id="line-1346"><span class="sd">    /ɛ/ or /ɛst/. This flags the words of ``text`` that have several readings</span>
-</span><span id="line-1347"><span class="sd">    (:func:`voxy.speechtext.flag_risks`), finds each in the audio (ASR word times; the</span>
-</span><span id="line-1348"><span class="sd">    n-th time the text has a word is the n-th time ASR heard it) and scores its</span>
-</span><span id="line-1349"><span class="sd">    readings with the phoneme recogniser.</span>
-</span><span id="line-1350">
-</span><span id="line-1351"><span class="sd">    Args:</span>
-</span><span id="line-1352"><span class="sd">        text: What the model was given (the speech text, not the display text).</span>
-</span><span id="line-1353"><span class="sd">        audio: The render.</span>
-</span><span id="line-1354"><span class="sd">        readings: ``{word: {reading name: IPA}}``; default :func:`heteronym_readings`</span>
-</span><span id="line-1355"><span class="sd">            for ``language``.</span>
-</span><span id="line-1356"><span class="sd">        elisions: ``{clitic: IPA}`` of the language's elisions (default</span>
-</span><span id="line-1357"><span class="sd">            ``ELISIONS[language]``): text and ASR words are split there to be aligned.</span>
-</span><span id="line-1358"><span class="sd">        clitics: The clitics a heteronym is still flagged after (default</span>
-</span><span id="line-1359"><span class="sd">            ``NOUN_CLITICS[language]``): "l'Est" is the risk ``Est``, clitic ``l'``.</span>
-</span><span id="line-1360"><span class="sd">        expected: The reading each word should have: ``{word: reading}``, or</span>
-</span><span id="line-1361"><span class="sd">            ``risk -&gt; reading`` to decide per occurrence (``risk.line``, ``risk.word``,</span>
-</span><span id="line-1362"><span class="sd">            ``risk.clitic``). A mapping names an elided form by its clitic</span>
-</span><span id="line-1363"><span class="sd">            (``{"est": "verb", "l'est": "noun"}``); ``"est"`` alone does not cover</span>
-</span><span id="line-1364"><span class="sd">            "l'Est". Otherwise what a ``detectors`` entry found for that word on that</span>
-</span><span id="line-1365"><span class="sd">            line (e.g. :func:`voxy.speechtext.pos_detector`), else None (just report).</span>
-</span><span id="line-1366"><span class="sd">        detectors: ``text -&gt; risks`` proposers of expected readings.</span>
-</span><span id="line-1367"><span class="sd">        emitter: The phoneme recogniser; default :func:`phoneme_emitter`.</span>
-</span><span id="line-1368"><span class="sd">        words_of: ``audio -&gt; timed words``; default ASR (``voxy.refprep.transcribe``).</span>
-</span><span id="line-1369"><span class="sd">        scoring: How a reading is scored in the audio (:data:`SCORERS`).</span>
-</span><span id="line-1370"><span class="sd">            ``"phrase"`` (default): as the whole phrase around the word, its</span>
-</span><span id="line-1371"><span class="sd">            ``context`` neighbours written out with ``phonemize``</span>
-</span><span id="line-1372"><span class="sd">            (:func:`phrase_scorer`). ``"spot"``: spotted in that window</span>
-</span><span id="line-1373"><span class="sd">            (:func:`spot_scorer`). ``"crop"``: the word alone, cut at its ASR times</span>
-</span><span id="line-1374"><span class="sd">            (:func:`crop_scorer`). Only the options that scoring takes are used.</span>
-</span><span id="line-1375"><span class="sd">        phonemize: For ``"phrase"``; default :func:`espeak_phonemizer`.</span>
-</span><span id="line-1376"><span class="sd">        context: Words kept on each side of the flagged one.</span>
-</span><span id="line-1377"><span class="sd">        margin: See :attr:`Verdict.decided`; default ``scorer.margin``.</span>
-</span><span id="line-1378"><span class="sd">        scorer: A ready :class:`Scorer`; wins over ``scoring`` and its options.</span>
-</span><span id="line-1379">
-</span><span id="line-1380"><span class="sd">    Returns the findings in text order; ``[f for f in findings if f.ok is False]`` are</span>
-</span><span id="line-1381"><span class="sd">    the words decidedly misread (re-render those), ``f.ok is None`` ones were not</span>
-</span><span id="line-1382"><span class="sd">    decided or not found.</span>
-</span><span id="line-1383"><span class="sd">    """</span>
-</span><span id="line-1384">    <span class="n">table</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-1385">        <span class="n">k</span><span class="o">.</span><span class="n">casefold</span><span class="p">():</span> <span class="nb">dict</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-</span><span id="line-1386">        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">readings</span> <span class="ow">or</span> <span class="n">heteronym_readings</span><span class="p">(</span><span class="n">language</span><span class="p">))</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-</span><span id="line-1387">    <span class="p">}</span>
-</span><span id="line-1388">    <span class="k">if</span> <span class="n">elisions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-1389">        <span class="n">elisions</span> <span class="o">=</span> <span class="n">ELISIONS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">language</span><span class="p">,</span> <span class="p">{})</span>
-</span><span id="line-1390">    <span class="k">if</span> <span class="n">clitics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-1391">        <span class="n">clitics</span> <span class="o">=</span> <span class="n">NOUN_CLITICS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">language</span><span class="p">,</span> <span class="p">())</span>
-</span><span id="line-1392">    <span class="n">risks</span> <span class="o">=</span> <span class="n">flag_risks</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">heteronyms</span><span class="o">=</span><span class="n">table</span><span class="p">,</span> <span class="n">clitics</span><span class="o">=</span><span class="n">clitics</span><span class="p">)</span>
-</span><span id="line-1393">
-</span><span id="line-1394">    <span class="k">def</span><span class="w"> </span><span class="nf">place_key</span><span class="p">(</span><span class="n">risk</span><span class="p">):</span>  <span class="c1"># where a risk is on its line: "l'Est" is not "est"</span>
-</span><span id="line-1395">        <span class="k">return</span> <span class="n">risk</span><span class="o">.</span><span class="n">line</span><span class="p">,</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">casefold</span><span class="p">(),</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="s2">"clitic"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
-</span><span id="line-1396">
-</span><span id="line-1397">    <span class="n">proposed</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-1398">    <span class="k">for</span> <span class="n">detector</span> <span class="ow">in</span> <span class="n">detectors</span><span class="p">:</span>
-</span><span id="line-1399">        <span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">detector</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-</span><span id="line-1400">            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="s2">"expected"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-1401">                <span class="n">proposed</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">place_key</span><span class="p">(</span><span class="n">risk</span><span class="p">),</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">risk</span><span class="o">.</span><span class="n">expected</span><span class="p">)</span>
-</span><span id="line-1402">
-</span><span id="line-1403">    <span class="k">def</span><span class="w"> </span><span class="nf">expected_of</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="n">nth_on_line</span><span class="p">):</span>
-</span><span id="line-1404">        <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">expected</span><span class="p">):</span>
-</span><span id="line-1405">            <span class="k">return</span> <span class="n">expected</span><span class="p">(</span><span class="n">risk</span><span class="p">)</span>
-</span><span id="line-1406">        <span class="n">named</span> <span class="o">=</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="s2">"clitic"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span> <span class="o">+</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
-</span><span id="line-1407">        <span class="k">if</span> <span class="n">expected</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">named</span> <span class="ow">in</span> <span class="n">expected</span><span class="p">:</span>
-</span><span id="line-1408">            <span class="k">return</span> <span class="n">expected</span><span class="p">[</span><span class="n">named</span><span class="p">]</span>
-</span><span id="line-1409">        <span class="n">found</span> <span class="o">=</span> <span class="n">proposed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">place_key</span><span class="p">(</span><span class="n">risk</span><span class="p">),</span> <span class="p">[])</span>
-</span><span id="line-1410">        <span class="k">return</span> <span class="n">found</span><span class="p">[</span><span class="n">nth_on_line</span><span class="p">]</span> <span class="k">if</span> <span class="n">nth_on_line</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
-</span><span id="line-1411">
-</span><span id="line-1412">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expected</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
-</span><span id="line-1413">        <span class="n">expected</span> <span class="o">=</span> <span class="p">{</span><span class="n">_clitic_key</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">expected</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-</span><span id="line-1414">    <span class="k">if</span> <span class="n">scorer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-1415">        <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-</span><span id="line-1416">            <span class="n">phonemize</span><span class="o">=</span><span class="n">phonemize</span><span class="p">,</span>
-</span><span id="line-1417">            <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span>
-</span><span id="line-1418">            <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">,</span>
-</span><span id="line-1419">            <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">,</span>
-</span><span id="line-1420">            <span class="n">filler_penalty</span><span class="o">=</span><span class="n">filler_penalty</span><span class="p">,</span>
-</span><span id="line-1421">            <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span>
-</span><span id="line-1422">        <span class="p">)</span>
-</span><span id="line-1423">        <span class="n">factory</span> <span class="o">=</span> <span class="n">SCORERS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">scoring</span><span class="p">)</span>
-</span><span id="line-1424">        <span class="n">taken</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">factory</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span> <span class="k">if</span> <span class="n">factory</span> <span class="k">else</span> <span class="p">{}</span>
-</span><span id="line-1425">        <span class="n">scorer</span> <span class="o">=</span> <span class="n">reading_scorer</span><span class="p">(</span>  <span class="c1"># each scoring gets the options it takes</span>
-</span><span id="line-1426">            <span class="n">scoring</span><span class="p">,</span>
-</span><span id="line-1427">            <span class="n">emitter</span><span class="o">=</span><span class="n">emitter</span> <span class="ow">or</span> <span class="n">phoneme_emitter</span><span class="p">(),</span>
-</span><span id="line-1428">            <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">taken</span><span class="p">},</span>
-</span><span id="line-1429">        <span class="p">)</span>
-</span><span id="line-1430">    <span class="n">margin</span> <span class="o">=</span> <span class="n">scorer</span><span class="o">.</span><span class="n">margin</span> <span class="k">if</span> <span class="n">margin</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">margin</span>
-</span><span id="line-1431">    <span class="k">if</span> <span class="ow">not</span> <span class="n">risks</span><span class="p">:</span>
-</span><span id="line-1432">        <span class="k">return</span> <span class="p">[]</span>
-</span><span id="line-1433">    <span class="n">words</span> <span class="o">=</span> <span class="n">split_elisions</span><span class="p">(</span><span class="n">words_of</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">audio</span><span class="p">)),</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)</span>
-</span><span id="line-1434">    <span class="n">heard_at</span> <span class="o">=</span> <span class="n">align_words</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">words</span><span class="p">,</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)</span>
-</span><span id="line-1435">
-</span><span id="line-1436">    <span class="n">places</span> <span class="o">=</span> <span class="n">_risk_places</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">risks</span><span class="p">,</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)</span>
-</span><span id="line-1437">    <span class="n">on_line</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-1438">    <span class="n">findings</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-1439">    <span class="k">for</span> <span class="n">risk</span><span class="p">,</span> <span class="n">place</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">risks</span><span class="p">,</span> <span class="n">places</span><span class="p">):</span>
-</span><span id="line-1440">        <span class="n">key</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
-</span><span id="line-1441">        <span class="n">line_key</span> <span class="o">=</span> <span class="n">place_key</span><span class="p">(</span><span class="n">risk</span><span class="p">)</span>
-</span><span id="line-1442">        <span class="n">nth_on_line</span><span class="p">,</span> <span class="n">on_line</span><span class="p">[</span><span class="n">line_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-1443">            <span class="n">on_line</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">line_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-</span><span id="line-1444">            <span class="n">on_line</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">line_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
-</span><span id="line-1445">        <span class="p">)</span>
-</span><span id="line-1446">        <span class="n">want</span> <span class="o">=</span> <span class="n">expected_of</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="n">nth_on_line</span><span class="p">)</span>
-</span><span id="line-1447">        <span class="k">if</span> <span class="n">heard_at</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">place</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-1448">            <span class="n">findings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Finding</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="n">expected</span><span class="o">=</span><span class="n">want</span><span class="p">))</span>
-</span><span id="line-1449">            <span class="k">continue</span>
-</span><span id="line-1450">        <span class="n">i</span> <span class="o">=</span> <span class="n">heard_at</span><span class="p">[</span><span class="n">place</span><span class="p">]</span>
-</span><span id="line-1451">        <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"start"</span><span class="p">],</span> <span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"end"</span><span class="p">]</span>
-</span><span id="line-1452">        <span class="n">scores</span> <span class="o">=</span> <span class="n">scorer</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span> <span class="n">words</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">table</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
-</span><span id="line-1453">        <span class="n">findings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="line-1454">            <span class="n">Finding</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="n">Verdict</span><span class="p">(</span><span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">want</span><span class="p">,</span> <span class="n">margin</span><span class="p">),</span> <span class="n">want</span><span class="p">)</span>
-</span><span id="line-1455">        <span class="p">)</span>
-</span><span id="line-1456">    <span class="k">return</span> <span class="n">findings</span></div>
+</span><span id="line-1328"><span class="k">def</span><span class="w"> </span><span class="nf">audit</span><span class="p">(</span>
+</span><span id="line-1329">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-1330">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-1331">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-1332">    <span class="n">readings</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-1333">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
+</span><span id="line-1334">    <span class="n">elisions</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-1335">    <span class="n">clitics</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-1336">    <span class="n">expected</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">object</span><span class="p">],</span> <span class="s2">"str | None"</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-1337">    <span class="n">detectors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Iterable</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(),</span>
+</span><span id="line-1338">    <span class="n">emitter</span><span class="p">:</span> <span class="n">Emitter</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-1339">    <span class="n">words_of</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_transcribed_words</span><span class="p">,</span>
+</span><span id="line-1340">    <span class="n">scoring</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SCORING</span><span class="p">,</span>
+</span><span id="line-1341">    <span class="n">phonemize</span><span class="p">:</span> <span class="n">Phonemizer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-1342">    <span class="n">context</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_CONTEXT_WORDS</span><span class="p">,</span>
+</span><span id="line-1343">    <span class="n">filler_penalty</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_FILLER_PENALTY</span><span class="p">,</span>
+</span><span id="line-1344">    <span class="n">padding</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_CROP_PADDING</span><span class="p">,</span>
+</span><span id="line-1345">    <span class="n">margin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-1346">    <span class="n">scorer</span><span class="p">:</span> <span class="n">Scorer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-1347"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Finding</span><span class="p">]:</span>
+</span><span id="line-1348"><span class="w">    </span><span class="sd">"""Which reading did each heteronym of ``text`` get in the finished ``audio``?</span>
+</span><span id="line-1349">
+</span><span id="line-1350"><span class="sd">    ASR (WER) checks cannot answer this: Whisper writes "est" whether the model said</span>
+</span><span id="line-1351"><span class="sd">    /ɛ/ or /ɛst/. This flags the words of ``text`` that have several readings</span>
+</span><span id="line-1352"><span class="sd">    (:func:`voxy.speechtext.flag_risks`), finds each in the audio (ASR word times; the</span>
+</span><span id="line-1353"><span class="sd">    n-th time the text has a word is the n-th time ASR heard it) and scores its</span>
+</span><span id="line-1354"><span class="sd">    readings with the phoneme recogniser.</span>
+</span><span id="line-1355">
+</span><span id="line-1356"><span class="sd">    Args:</span>
+</span><span id="line-1357"><span class="sd">        text: What the model was given (the speech text, not the display text).</span>
+</span><span id="line-1358"><span class="sd">        audio: The render.</span>
+</span><span id="line-1359"><span class="sd">        readings: ``{word: {reading name: IPA}}``; default :func:`heteronym_readings`</span>
+</span><span id="line-1360"><span class="sd">            for ``language``.</span>
+</span><span id="line-1361"><span class="sd">        elisions: ``{clitic: IPA}`` of the language's elisions (default</span>
+</span><span id="line-1362"><span class="sd">            ``ELISIONS[language]``): text and ASR words are split there to be aligned.</span>
+</span><span id="line-1363"><span class="sd">        clitics: The clitics a heteronym is still flagged after (default</span>
+</span><span id="line-1364"><span class="sd">            ``NOUN_CLITICS[language]``): "l'Est" is the risk ``Est``, clitic ``l'``.</span>
+</span><span id="line-1365"><span class="sd">        expected: The reading each word should have: ``{word: reading}``, or</span>
+</span><span id="line-1366"><span class="sd">            ``risk -&gt; reading`` to decide per occurrence (``risk.line``, ``risk.word``,</span>
+</span><span id="line-1367"><span class="sd">            ``risk.clitic``). A mapping names an elided form by its clitic</span>
+</span><span id="line-1368"><span class="sd">            (``{"est": "verb", "l'est": "noun"}``); ``"est"`` alone does not cover</span>
+</span><span id="line-1369"><span class="sd">            "l'Est". Otherwise what a ``detectors`` entry found for that word on that</span>
+</span><span id="line-1370"><span class="sd">            line (e.g. :func:`voxy.speechtext.pos_detector`), else None (just report).</span>
+</span><span id="line-1371"><span class="sd">        detectors: ``text -&gt; risks`` proposers of expected readings.</span>
+</span><span id="line-1372"><span class="sd">        emitter: The phoneme recogniser; default :func:`phoneme_emitter`.</span>
+</span><span id="line-1373"><span class="sd">        words_of: ``audio -&gt; timed words``; default ASR (``voxy.refprep.transcribe``).</span>
+</span><span id="line-1374"><span class="sd">        scoring: How a reading is scored in the audio (:data:`SCORERS`).</span>
+</span><span id="line-1375"><span class="sd">            ``"phrase"`` (default): as the whole phrase around the word, its</span>
+</span><span id="line-1376"><span class="sd">            ``context`` neighbours written out with ``phonemize``</span>
+</span><span id="line-1377"><span class="sd">            (:func:`phrase_scorer`). ``"spot"``: spotted in that window</span>
+</span><span id="line-1378"><span class="sd">            (:func:`spot_scorer`). ``"crop"``: the word alone, cut at its ASR times</span>
+</span><span id="line-1379"><span class="sd">            (:func:`crop_scorer`). Only the options that scoring takes are used.</span>
+</span><span id="line-1380"><span class="sd">        phonemize: For ``"phrase"``; default :func:`espeak_phonemizer`.</span>
+</span><span id="line-1381"><span class="sd">        context: Words kept on each side of the flagged one.</span>
+</span><span id="line-1382"><span class="sd">        margin: See :attr:`Verdict.decided`; default ``scorer.margin``.</span>
+</span><span id="line-1383"><span class="sd">        scorer: A ready :class:`Scorer`; wins over ``scoring`` and its options.</span>
+</span><span id="line-1384">
+</span><span id="line-1385"><span class="sd">    Returns the findings in text order; ``[f for f in findings if f.ok is False]`` are</span>
+</span><span id="line-1386"><span class="sd">    the words decidedly misread (re-render those), ``f.ok is None`` ones were not</span>
+</span><span id="line-1387"><span class="sd">    decided or not found.</span>
+</span><span id="line-1388"><span class="sd">    """</span>
+</span><span id="line-1389">    <span class="n">table</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-1390">        <span class="n">k</span><span class="o">.</span><span class="n">casefold</span><span class="p">():</span> <span class="nb">dict</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+</span><span id="line-1391">        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">readings</span> <span class="ow">or</span> <span class="n">heteronym_readings</span><span class="p">(</span><span class="n">language</span><span class="p">))</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+</span><span id="line-1392">    <span class="p">}</span>
+</span><span id="line-1393">    <span class="k">if</span> <span class="n">elisions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-1394">        <span class="n">elisions</span> <span class="o">=</span> <span class="n">ELISIONS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">language</span><span class="p">,</span> <span class="p">{})</span>
+</span><span id="line-1395">    <span class="k">if</span> <span class="n">clitics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-1396">        <span class="n">clitics</span> <span class="o">=</span> <span class="n">NOUN_CLITICS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">language</span><span class="p">,</span> <span class="p">())</span>
+</span><span id="line-1397">    <span class="n">risks</span> <span class="o">=</span> <span class="n">flag_risks</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">heteronyms</span><span class="o">=</span><span class="n">table</span><span class="p">,</span> <span class="n">clitics</span><span class="o">=</span><span class="n">clitics</span><span class="p">)</span>
+</span><span id="line-1398">
+</span><span id="line-1399">    <span class="k">def</span><span class="w"> </span><span class="nf">place_key</span><span class="p">(</span><span class="n">risk</span><span class="p">):</span>  <span class="c1"># where a risk is on its line: "l'Est" is not "est"</span>
+</span><span id="line-1400">        <span class="k">return</span> <span class="n">risk</span><span class="o">.</span><span class="n">line</span><span class="p">,</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">casefold</span><span class="p">(),</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="s2">"clitic"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+</span><span id="line-1401">
+</span><span id="line-1402">    <span class="n">proposed</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-1403">    <span class="k">for</span> <span class="n">detector</span> <span class="ow">in</span> <span class="n">detectors</span><span class="p">:</span>
+</span><span id="line-1404">        <span class="k">for</span> <span class="n">risk</span> <span class="ow">in</span> <span class="n">detector</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span><span id="line-1405">            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="s2">"expected"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-1406">                <span class="n">proposed</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">place_key</span><span class="p">(</span><span class="n">risk</span><span class="p">),</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">risk</span><span class="o">.</span><span class="n">expected</span><span class="p">)</span>
+</span><span id="line-1407">
+</span><span id="line-1408">    <span class="k">def</span><span class="w"> </span><span class="nf">expected_of</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="n">nth_on_line</span><span class="p">):</span>
+</span><span id="line-1409">        <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">expected</span><span class="p">):</span>
+</span><span id="line-1410">            <span class="k">return</span> <span class="n">expected</span><span class="p">(</span><span class="n">risk</span><span class="p">)</span>
+</span><span id="line-1411">        <span class="n">named</span> <span class="o">=</span> <span class="n">_clitic_key</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="s2">"clitic"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span> <span class="o">+</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
+</span><span id="line-1412">        <span class="k">if</span> <span class="n">expected</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">named</span> <span class="ow">in</span> <span class="n">expected</span><span class="p">:</span>
+</span><span id="line-1413">            <span class="k">return</span> <span class="n">expected</span><span class="p">[</span><span class="n">named</span><span class="p">]</span>
+</span><span id="line-1414">        <span class="n">found</span> <span class="o">=</span> <span class="n">proposed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">place_key</span><span class="p">(</span><span class="n">risk</span><span class="p">),</span> <span class="p">[])</span>
+</span><span id="line-1415">        <span class="k">return</span> <span class="n">found</span><span class="p">[</span><span class="n">nth_on_line</span><span class="p">]</span> <span class="k">if</span> <span class="n">nth_on_line</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+</span><span id="line-1416">
+</span><span id="line-1417">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expected</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+</span><span id="line-1418">        <span class="n">expected</span> <span class="o">=</span> <span class="p">{</span><span class="n">_clitic_key</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">expected</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+</span><span id="line-1419">    <span class="k">if</span> <span class="n">scorer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-1420">        <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+</span><span id="line-1421">            <span class="n">phonemize</span><span class="o">=</span><span class="n">phonemize</span><span class="p">,</span>
+</span><span id="line-1422">            <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span>
+</span><span id="line-1423">            <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">,</span>
+</span><span id="line-1424">            <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">,</span>
+</span><span id="line-1425">            <span class="n">filler_penalty</span><span class="o">=</span><span class="n">filler_penalty</span><span class="p">,</span>
+</span><span id="line-1426">            <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span>
+</span><span id="line-1427">        <span class="p">)</span>
+</span><span id="line-1428">        <span class="n">factory</span> <span class="o">=</span> <span class="n">SCORERS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">scoring</span><span class="p">)</span>
+</span><span id="line-1429">        <span class="n">taken</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">factory</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span> <span class="k">if</span> <span class="n">factory</span> <span class="k">else</span> <span class="p">{}</span>
+</span><span id="line-1430">        <span class="n">scorer</span> <span class="o">=</span> <span class="n">reading_scorer</span><span class="p">(</span>  <span class="c1"># each scoring gets the options it takes</span>
+</span><span id="line-1431">            <span class="n">scoring</span><span class="p">,</span>
+</span><span id="line-1432">            <span class="n">emitter</span><span class="o">=</span><span class="n">emitter</span> <span class="ow">or</span> <span class="n">phoneme_emitter</span><span class="p">(),</span>
+</span><span id="line-1433">            <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">taken</span><span class="p">},</span>
+</span><span id="line-1434">        <span class="p">)</span>
+</span><span id="line-1435">    <span class="n">margin</span> <span class="o">=</span> <span class="n">scorer</span><span class="o">.</span><span class="n">margin</span> <span class="k">if</span> <span class="n">margin</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">margin</span>
+</span><span id="line-1436">    <span class="k">if</span> <span class="ow">not</span> <span class="n">risks</span><span class="p">:</span>
+</span><span id="line-1437">        <span class="k">return</span> <span class="p">[]</span>
+</span><span id="line-1438">    <span class="n">words</span> <span class="o">=</span> <span class="n">split_elisions</span><span class="p">(</span><span class="n">words_of</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">audio</span><span class="p">)),</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)</span>
+</span><span id="line-1439">    <span class="n">heard_at</span> <span class="o">=</span> <span class="n">align_words</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">words</span><span class="p">,</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)</span>
+</span><span id="line-1440">
+</span><span id="line-1441">    <span class="n">places</span> <span class="o">=</span> <span class="n">_risk_places</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">risks</span><span class="p">,</span> <span class="n">elisions</span><span class="o">=</span><span class="n">elisions</span><span class="p">)</span>
+</span><span id="line-1442">    <span class="n">on_line</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-1443">    <span class="n">findings</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-1444">    <span class="k">for</span> <span class="n">risk</span><span class="p">,</span> <span class="n">place</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">risks</span><span class="p">,</span> <span class="n">places</span><span class="p">):</span>
+</span><span id="line-1445">        <span class="n">key</span> <span class="o">=</span> <span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
+</span><span id="line-1446">        <span class="n">line_key</span> <span class="o">=</span> <span class="n">place_key</span><span class="p">(</span><span class="n">risk</span><span class="p">)</span>
+</span><span id="line-1447">        <span class="n">nth_on_line</span><span class="p">,</span> <span class="n">on_line</span><span class="p">[</span><span class="n">line_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-1448">            <span class="n">on_line</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">line_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+</span><span id="line-1449">            <span class="n">on_line</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">line_key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+</span><span id="line-1450">        <span class="p">)</span>
+</span><span id="line-1451">        <span class="n">want</span> <span class="o">=</span> <span class="n">expected_of</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="n">nth_on_line</span><span class="p">)</span>
+</span><span id="line-1452">        <span class="k">if</span> <span class="n">heard_at</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">place</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-1453">            <span class="n">findings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Finding</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="n">expected</span><span class="o">=</span><span class="n">want</span><span class="p">))</span>
+</span><span id="line-1454">            <span class="k">continue</span>
+</span><span id="line-1455">        <span class="n">i</span> <span class="o">=</span> <span class="n">heard_at</span><span class="p">[</span><span class="n">place</span><span class="p">]</span>
+</span><span id="line-1456">        <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"start"</span><span class="p">],</span> <span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"end"</span><span class="p">]</span>
+</span><span id="line-1457">        <span class="n">scores</span> <span class="o">=</span> <span class="n">scorer</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">audio</span><span class="p">),</span> <span class="n">words</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">table</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+</span><span id="line-1458">        <span class="n">findings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+</span><span id="line-1459">            <span class="n">Finding</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="n">Verdict</span><span class="p">(</span><span class="n">risk</span><span class="o">.</span><span class="n">word</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">want</span><span class="p">,</span> <span class="n">margin</span><span class="p">),</span> <span class="n">want</span><span class="p">)</span>
+</span><span id="line-1460">        <span class="p">)</span>
+</span><span id="line-1461">    <span class="k">return</span> <span class="n">findings</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -1768,7 +1777,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=84bd753f"></script>
+    <script src="../../_static/documentation_options.js?v=20c5f126"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

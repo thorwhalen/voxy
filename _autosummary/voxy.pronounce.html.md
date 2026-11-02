@@ -75,6 +75,7 @@ without torch.
 | [`known_symbols`](#voxy.pronounce.known_symbols)(ipa, vocab)                          | The symbols of `ipa` the recogniser knows, longest first; stress marks, spaces and anything else it never emits are dropped.                                                                                                         |
 | [`load_readings`](#voxy.pronounce.load_readings)(path)                                | Heteronym readings `{word: {reading name: IPA}}` from a caller's file.                                                                                                                                                               |
 | [`log_probs_from_path`](#voxy.pronounce.log_probs_from_path)(path, \*, vocab_size[, ...])   | Log-probabilities of a recogniser that hears `path` (one id per frame).                                                                                                                                                              |
+| [`normal_word`](#voxy.pronounce.normal_word)(word)                                  | `word` as compared with ASR words: stripped, edge punctuation off, casefolded.                                                                                                                                                       |
 | [`phoneme_emitter`](#voxy.pronounce.phoneme_emitter)(\*[, model, threads, rootdir])     | The default [`Emitter`](#voxy.pronounce.Emitter): the wav2vec2 phoneme recogniser in its own env.                                                                                                                |
 | [`phrase_readings`](#voxy.pronounce.phrase_readings)(log_probs, vocab, readings, \*)    | Each reading's CTC log-likelihood as the whole phrase `before + reading + after`.                                                                                                                                                    |
 | [`phrase_scorer`](#voxy.pronounce.phrase_scorer)(\*, emitter[, phonemize, ...])       | Each reading as the whole phrase around the word ([`phrase_readings()`](#voxy.pronounce.phrase_readings)), the `context` words on each side written out by `phonemize` in `language`.                                    |
@@ -524,6 +525,18 @@ the rest evenly.
 
 * **Return type:**
   `ndarray`
+
+### voxy.pronounce.normal_word(word)
+
+`word` as compared with ASR words: stripped, edge punctuation off, casefolded.
+
+```pycon
+>>> normal_word(" Smith’s,")
+"smith's"
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 ### voxy.pronounce.phoneme_emitter(, model='facebook/wav2vec2-lv-60-espeak-cv-ft', threads=None, rootdir=None)
 

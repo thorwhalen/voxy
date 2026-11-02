@@ -29,6 +29,7 @@ True
 | [`script`](voxy.script.html.md#module-voxy.script)                       | Render a cast script: text segments, each read by its own voice, one audio file per section.  |
 | [`speakers`](voxy.speakers.html.md#module-voxy.speakers)                   | Keep one speaker: find their voice in a recording and mark everyone else's words.             |
 | [`speechtext`](voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                          |
+| [`splice`](voxy.splice.html.md#module-voxy.splice)                       | Correct words in a recording, in the speaker's voice: find, render, splice, check.            |
 | [`stores`](voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.               |
 | [`textsplit`](voxy.textsplit.html.md#module-voxy.textsplit)                 | Split long text (a chapter) into chunks a speech model can say in one breath.                 |
 | [`voicestudio_model`](voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).               |

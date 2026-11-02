@@ -1,0 +1,38 @@
+voxy.splice
+===========
+
+.. automodule:: voxy.splice
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DFLT_MAX_MARGIN_MS
+      DFLT_SNAP_MS
+      DFLT_QUIET_TOLERANCE_DB
+      DFLT_LOUD_MARGIN_DB
+      DFLT_CHECK_CONTEXT_S
+      DFLT_RENDER_FORMATS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      crossfade_join
+      cut_points
+      find_phrase
+      heard_check
+      match_loudness
+      quietest
+      replace_words
+      speech_level
+      tts_render
+      voice_check
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Replacement
+   

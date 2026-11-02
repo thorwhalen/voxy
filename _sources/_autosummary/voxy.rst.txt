@@ -28,6 +28,7 @@
    script
    speakers
    speechtext
+   splice
    stores
    textsplit
    voicestudio_model
