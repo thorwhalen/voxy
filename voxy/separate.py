@@ -11,8 +11,8 @@ the voice, and ``rest``, the input minus the voice (so the two add back up to it
     >>> stems = separate("song.mp3")                                   # doctest: +SKIP
     >>> open("vocals.wav", "wb").write(stems["vocals"])                # doctest: +SKIP
 
-``run`` is the seam (``(audio_path, out_dir, **options) -> {stem: path}``); tests and
-other separators plug in there.
+``run`` is the seam (``(audio_path, out_dir, *, stem, sample_rate, **options) ->
+{stem: path}``); tests and other separators plug in there.
 
 >>> import tempfile, pathlib
 >>> def fake(audio, out_dir, **options):
@@ -43,8 +43,8 @@ MODEL_SOURCES = {
     "htdemucs_ft": _FOUR_SOURCES,
     "htdemucs_6s": (*_FOUR_SOURCES, "guitar", "piano"),
 }
-#: torch is bounded to the releases Demucs 4.0.1 was checked with (torchaudio, which
-#: Demucs imports but voxy never uses for I/O, follows it).
+#: torch is bounded to the releases Demucs 4.0.1 was checked with. torchaudio comes in
+#: as a Demucs dependency, unpinned: Demucs imports it but never calls it here.
 SEPARATION_ENV = EnvSpec(
     "demucs",
     ("demucs==4.0.1", "torch>=2.11,<2.16", "soundfile", "numpy"),
