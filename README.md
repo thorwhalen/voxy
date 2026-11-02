@@ -17,7 +17,7 @@ voxy.list_voices()  # our named voices
 voxy.list_voices("elevenlabs")  # a service's voices
 ```
 
-Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
+Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `kokoro` (local stock voices, CPU, no key; see below), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
 
 Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice ada -o out.mp3`.
 
@@ -195,6 +195,15 @@ profile = model.voice_profile("<voice_id>")
 `generate_speech` returns a tensor for `pcm_*`/`wav_*` output formats (default `pcm_24000`); `synthesize_bytes` returns the raw payload in any format (e.g. `mp3_44100_128`). `delete_voice` removes a clone from the account. ElevenLabs requires that you have the right, and the voice owner's consent, to clone a voice.
 
 Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `VOXY_LIVE_ELEVENLABS_SAMPLE=<audio you may clone>` also clones, speaks and deletes.
+
+### A local stock voice (no service, no clip, no torch)
+
+`kokoro` speaks in one of 54 stock voices (`af_heart`, `am_michael`, `bf_emma`, ...) with Kokoro-82M (Apache-2.0) through kokoro-onnx, faster than realtime on a CPU. It runs in its own small environment, which `python -m voxy setup kokoro` builds (or the first call does); the model files (about 354 MB) are fetched from the Hugging Face hub on first use into `$VOXY_DATA_DIR/models/hf`, like every other local backend's weights. Listing its voices needs neither. A voice's first letter is its language (`a` American, `b` British, `f` French, `e` Spanish, `i` Italian, `p` Portuguese, `h` Hindi, `j` Japanese, `z` Chinese). It is meant for Linux hosts without a cloud key; on macOS the espeak-ng that kokoro-onnx bundles currently fails to find its data (thorwhalen/voxy#61), and `say` is the local voice there.
+
+```python
+voxy.text_to_speech("Hello.", "bf_emma", backend="kokoro", speed=1.1).save("hi.wav")
+voxy.list_voices("kokoro")
+```
 
 ### Local voice cloning (no service, CPU works)
 

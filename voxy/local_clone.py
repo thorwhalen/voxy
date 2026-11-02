@@ -16,10 +16,15 @@ Long text is split into paragraphs and sentence-packed chunks (``voxy.textsplit`
 each chunk is synthesized, trimmed of edge silence, and joined with ``gap_ms`` of
 pause (``paragraph_gap_ms`` between paragraphs).
 
+``LocalSpeechModel`` holds what every local model shares (chunking, joining, the
+worker); ``LocalCloneSpeechModel`` adds reference voices. A local model with stock
+voices (``voxy.kokoro_model``) subclasses ``LocalSpeechModel`` directly.
+
 Seams (keyword arguments of every model):
 
-- ``generate(text, *, ref_audio, ref_text, **params) -> (samples, sample_rate)``: the
-  model call. Default: a ``voxy.worker.Worker`` running the backend's adapter in its
+- ``generate(text, **voice_request, **params) -> (samples, sample_rate)``: the
+  model call (``voice_request`` is ``ref_audio``/``ref_text`` for a cloner, ``voice``
+  for kokoro). Default: a ``voxy.worker.Worker`` running the backend's adapter in its
   own environment (built on first use under ``$VOXY_DATA_DIR/envs``). Tests inject a fake.
 - ``chunker(text) -> [[chunk, ...], ...]``: default ``split_text`` at the backend's
   ``max_chars``.
@@ -69,7 +74,7 @@ def voxy_cache_dir(*parts: str) -> Path:
 
 @dataclass(frozen=True)
 class LocalCloneBackend:
-    """What voxy knows about one local cloning model.
+    """What voxy knows about one local model (a cloner, or one with stock voices).
 
     Args:
         name: Registry name (also the adapter's name, ``workers/{name}_adapter.py``).
@@ -315,10 +320,9 @@ class WorkerGenerate:
         finally:
             out_path.unlink(missing_ok=True)
 
-    def __call__(self, text: str, *, ref_audio, ref_text: str, **params):
-        return self._run(
-            "synthesize", text=text, ref_audio=ref_audio, ref_text=ref_text, **params
-        )
+    def __call__(self, text: str, **request):
+        """The adapter's ``synthesize``: ``(samples, sample_rate)``."""
+        return self._run("synthesize", text=text, **request)
 
     def design(self, text: str, *, instruct: str, **params):
         """The adapter's ``design`` operation (backends that can design voices)."""
@@ -331,11 +335,15 @@ class WorkerGenerate:
             self._worker = None
 
 
-class LocalCloneSpeechModel(SpeechModel):
-    """A local voice-cloning model as a voxy backend.
+class LocalSpeechModel(SpeechModel):
+    """A model running on this machine, in its own environment, as a voxy backend.
+
+    Speaks text of any length: chunks it, calls ``generate`` per chunk, trims and
+    joins the pieces. Subclasses say what a voice is with ``_voice_request``.
 
     Args:
-        backend: A ``LocalCloneBackend`` or its name (subclasses fix it).
+        backend: A ``LocalCloneBackend``, or the name of a registered cloner
+            (subclasses fix it).
         generate: The model call (see the module docstring); default: worker.
         chunker: ``text -> [[chunk, ...], ...]``; default ``split_text``.
         text_prep: ``text -> text`` applied before chunking (e.g.
@@ -343,7 +351,7 @@ class LocalCloneSpeechModel(SpeechModel):
         gap_ms: Pause between chunks of a paragraph.
         paragraph_gap_ms: Pause between paragraphs.
         trim: Trim each chunk's leading and trailing silence before joining.
-        threads: Torch threads of the worker (default ``$VOXY_NUM_THREADS`` or 8).
+        threads: Threads of the worker's model (default ``$VOXY_NUM_THREADS`` or 8).
         rootdir: Data root for environments and weights (default ``$VOXY_DATA_DIR``).
         auto_setup: Build the environment on first use (else raise if missing).
         env_vars: Extra environment variables for the worker.
@@ -391,6 +399,60 @@ class LocalCloneSpeechModel(SpeechModel):
         self.text_prep = text_prep
         self.gap_ms, self.paragraph_gap_ms, self.trim = gap_ms, paragraph_gap_ms, trim
 
+    def _voice_request(self, voice) -> tuple[dict, str]:
+        """``(generate's voice keywords, the voice's label in Speech)`` for ``voice``."""
+        raise NotImplementedError
+
+    def synthesize(self, text, voice=None, **params) -> Speech:
+        """Speak ``text`` (any length) in ``voice``.
+
+        ``params`` go to the model (see ``self.backend.params`` for the knobs); they
+        can't override the voice's own keywords (e.g. a cloner's ``ref_audio``).
+        """
+        text = _resolve_text_input(text)
+        if self.text_prep is not None:
+            text = self.text_prep(text)
+        request, label = self._voice_request(voice)
+        if clash := sorted(request.keys() & params.keys()):
+            raise TypeError(f"{clash} come from the voice, not from params")
+        request = {**request, **params}
+        pieces, sample_rate = [], None
+        for paragraph in self.chunker(text):
+            for c, chunk in enumerate(paragraph):
+                samples, sr = self._generate(chunk, **request)
+                samples = np.asarray(samples, dtype=np.float32).reshape(-1)
+                if self.trim:
+                    samples = trim_silence(samples, sr)
+                sample_rate = sample_rate or sr
+                if pieces:
+                    gap = self.gap_ms if c else self.paragraph_gap_ms
+                    pieces.append(silence(gap, sample_rate))
+                pieces.append(samples)
+        if sample_rate is None:
+            raise ValueError("Nothing to say: the text is empty")
+        return Speech(
+            write_wav(np.concatenate(pieces), sample_rate),
+            format="wav",
+            backend=self.name,
+            voice=label,
+            sample_rate=sample_rate,
+            text=text,
+        )
+
+    def close(self) -> None:
+        """Free the model's memory (the next call reloads it)."""
+        close = getattr(self._generate, "close", None)
+        if close:
+            close()
+
+
+class LocalCloneSpeechModel(LocalSpeechModel):
+    """A local voice-cloning model: its voices are reference clips (``clone_voice``)."""
+
+    def _voice_request(self, voice) -> tuple[dict, str]:
+        reference = _reference(voice)
+        return reference, str(reference["ref_audio"])
+
     def clone_voice(
         self,
         audio_input,
@@ -413,44 +475,6 @@ class LocalCloneSpeechModel(SpeechModel):
 
             transcript = transcribe_text(audio_input)
         return reference_profile(audio_input, transcript, backend=self.name, **metadata)
-
-    def synthesize(self, text, voice=None, **params) -> Speech:
-        """Speak ``text`` (any length) in the reference ``voice``.
-
-        ``params`` go to the model (see ``self.backend.params`` for the knobs).
-        """
-        text = _resolve_text_input(text)
-        if self.text_prep is not None:
-            text = self.text_prep(text)
-        reference = _reference(voice)
-        pieces, sample_rate = [], None
-        for p, paragraph in enumerate(self.chunker(text)):
-            for c, chunk in enumerate(paragraph):
-                samples, sr = self._generate(chunk, **reference, **params)
-                samples = np.asarray(samples, dtype=np.float32).reshape(-1)
-                if self.trim:
-                    samples = trim_silence(samples, sr)
-                sample_rate = sample_rate or sr
-                if pieces:
-                    gap = self.gap_ms if c else self.paragraph_gap_ms
-                    pieces.append(silence(gap, sample_rate))
-                pieces.append(samples)
-        if sample_rate is None:
-            raise ValueError("Nothing to say: the text is empty")
-        return Speech(
-            write_wav(np.concatenate(pieces), sample_rate),
-            format="wav",
-            backend=self.name,
-            voice=str(reference["ref_audio"]),
-            sample_rate=sample_rate,
-            text=text,
-        )
-
-    def close(self) -> None:
-        """Free the model's memory (the next call reloads it)."""
-        close = getattr(self._generate, "close", None)
-        if close:
-            close()
 
 
 class F5TTSSpeechModel(LocalCloneSpeechModel):
