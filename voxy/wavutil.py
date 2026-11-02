@@ -270,21 +270,52 @@ def lowpass(
     n = np.arange(taps) - taps // 2
     kernel = np.sinc(2 * cutoff_hz / sample_rate * n) * np.blackman(taps)
     kernel /= kernel.sum()
-    return np.convolve(np.asarray(samples, np.float64), kernel, mode="same").astype(
-        np.float32
-    )
+    x = np.asarray(samples, np.float64)
+    full = np.convolve(x, kernel)  # "same" would return len(kernel) for a short input
+    start = (len(kernel) - 1) // 2
+    return full[start : start + len(x)].astype(np.float32)
+
+
+#: Samples mirrored at each edge before band-limited interpolation, so the FFT does not
+#: wrap the end of the signal onto its start (a click at both ends).
+UPSAMPLE_EDGE = 1024
+
+
+def _upsample(samples: np.ndarray, from_rate: int, to_rate: int) -> np.ndarray:
+    """Band-limited interpolation (zero-padded spectrum): nothing above the source's
+    Nyquist frequency is invented, unlike linear interpolation's images."""
+    x = np.asarray(samples, np.float64)
+    edge = min(UPSAMPLE_EDGE, len(x) - 1)
+    padded = np.pad(x, edge, mode="reflect") if edge > 0 else x
+    if len(padded) % 2:  # an even length keeps the source's Nyquist bin
+        padded = np.append(padded, padded[-1])
+    n_in, n_out = len(padded), int(round(len(padded) * to_rate / from_rate))
+    spectrum = np.zeros(n_out // 2 + 1, np.complex128)
+    source = np.fft.rfft(padded)
+    spectrum[: len(source)] = source
+    if n_in % 2 == 0:  # the source's Nyquist bin was the sum of two halves
+        spectrum[len(source) - 1] /= 2
+    y = np.fft.irfft(spectrum, n_out) * (n_out / n_in)
+    start = int(round(edge * to_rate / from_rate))
+    length = int(round(len(x) * to_rate / from_rate))
+    return y[start : start + length].astype(np.float32)
 
 
 def resample(samples: np.ndarray, from_rate: int, to_rate: int) -> np.ndarray:
-    """Resampling for joining pieces (use ffmpeg or soxr for masters): low-passed below
-    the target's Nyquist frequency first when downsampling (so a 24 kHz render put into
-    an 8 kHz recording does not alias), then linear interpolation.
+    """Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited
+    interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no
+    images above 12 kHz); when downsampling, low-passed below the target's Nyquist
+    frequency (so it does not alias), then linearly interpolated. The whole clip is
+    held in memory (about 1 GB to take 10 minutes from 24 to 48 kHz): fine for
+    rendered words and lines; use ffmpeg or soxr for long recordings.
 
-    >>> len(resample(np.zeros(100), 8000, 16000))
-    200
+    >>> len(resample(np.zeros(100), 8000, 16000)), len(resample(np.zeros(100), 16000, 8000))
+    (200, 50)
     """
     if from_rate == to_rate:
         return samples
+    if to_rate > from_rate and len(samples) > 1:
+        return _upsample(samples, from_rate, to_rate)
     if to_rate < from_rate:
         samples = lowpass(samples, DFLT_LOWPASS_SHARE * to_rate / 2, from_rate)
     n = int(round(len(samples) * to_rate / from_rate))
