@@ -346,9 +346,9 @@ def _fmt_params(params: Mapping, defaults: Mapping) -> str:
 
 
 def _defaults(backend: str) -> dict:
-    from voxy.local_clone import LOCAL_CLONE_BACKENDS
+    from voxy.local_clone import local_backends
 
-    spec = LOCAL_CLONE_BACKENDS.get(backend)
+    spec = local_backends().get(backend)
     return {**spec.init, **spec.params} if spec else {}
 
 
@@ -505,7 +505,7 @@ def build_page(
             (the page says so). Without it they stay in the listener's browser.
         noindex: Ask search engines not to index the page (for a page shared by link).
     """
-    from voxy.local_clone import LOCAL_CLONE_BACKENDS
+    from voxy.local_clone import local_backends
 
     appendix = dict(appendix or {})
     references = dict(references or {})
@@ -572,7 +572,7 @@ def build_page(
         parts = []
         for backend in dict.fromkeys(r["backend"] for r in rows):
             parts.append(f"<h2>{e(backend_name(backend))}</h2>")
-            spec = LOCAL_CLONE_BACKENDS.get(backend)
+            spec = local_backends().get(backend)
             note = backend_notes.get(backend) or (
                 f"{spec.notes} Licence: {spec.licence}." if spec else ""
             )

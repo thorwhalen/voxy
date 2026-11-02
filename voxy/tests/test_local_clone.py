@@ -752,3 +752,31 @@ def test_worker_generate_makes_one_worker_across_threads(monkeypatch):
     assert len(made) == 1
     generate.close()
     assert generate._worker is None
+
+
+def test_one_registry_holds_every_local_backend_kokoro_included():
+    """#64: setup, diagnosis and name lookup read one registry."""
+    from voxy import diagnosis
+    from voxy.local_clone import (
+        LocalBackend,
+        LocalCloneBackend,
+        LocalSpeechModel,
+        local_backends,
+    )
+
+    backends = local_backends()
+    assert {"f5tts", "chatterbox", "xtts", "voxcpm", "qwen3tts", "kokoro"} <= set(backends)
+    assert backends["kokoro"].clones is False and backends["f5tts"].clones is True
+    assert "kokoro" not in LOCAL_CLONE_BACKENDS and "f5tts" in LOCAL_CLONE_BACKENDS
+    assert diagnosis._defaults("kokoro")["speed"] == 1.0  # its params reach diagnosis
+    assert LocalSpeechModel("kokoro", generate=lambda *a, **k: None).backend.name == "kokoro"
+    assert LocalCloneBackend is LocalBackend  # the old name still works
+
+
+def test_setup_builds_every_local_backends_environment(monkeypatch, capsys):
+    from voxy import __main__ as cli
+
+    built = []
+    monkeypatch.setattr("voxy.envs.ensure_env", lambda spec, **kw: built.append(spec.name) or "py")
+    cli.main(["setup"])
+    assert {"kokoro", "f5tts", "asr", "speaker", "phonemes"} <= set(built)

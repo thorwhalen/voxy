@@ -32,7 +32,7 @@ from collections.abc import Callable, Iterable
 
 from voxy.base import Speech, VoiceInfo
 from voxy.envs import EnvSpec
-from voxy.local_clone import LocalCloneBackend, LocalSpeechModel
+from voxy.local_clone import LocalBackend, LocalSpeechModel, register_local_backend
 
 KOKORO_MODEL_TYPE = "kokoro"
 KOKORO_VOICE_ENVVAR = "VOXY_KOKORO_VOICE"
@@ -118,23 +118,26 @@ KOKORO_LANGUAGES = {
 #: A voice name's second letter -> the voice's gender.
 KOKORO_GENDERS = {"f": "female", "m": "male"}
 
-KOKORO = LocalCloneBackend(
-    KOKORO_MODEL_TYPE,
-    EnvSpec(
+KOKORO = register_local_backend(
+    LocalBackend(
         KOKORO_MODEL_TYPE,
-        ("kokoro-onnx==0.6.1", "soundfile", "huggingface_hub"),
-        torch_backend=None,
-    ),
-    init={
-        "repo_id": KOKORO_HF_REPO,
-        "revision": KOKORO_HF_REVISION,
-        "model_file": KOKORO_MODEL_FILE,
-        "voices_file": KOKORO_VOICES_FILE,
-    },
-    params={"speed": 1.0},
-    max_chars=400,
-    licence="code MIT (kokoro-onnx); weights Apache-2.0",
-    notes="Stock voices only (no cloning); CPU, faster than realtime; no torch.",
+        EnvSpec(
+            KOKORO_MODEL_TYPE,
+            ("kokoro-onnx==0.6.1", "soundfile", "huggingface_hub"),
+            torch_backend=None,
+        ),
+        init={
+            "repo_id": KOKORO_HF_REPO,
+            "revision": KOKORO_HF_REVISION,
+            "model_file": KOKORO_MODEL_FILE,
+            "voices_file": KOKORO_VOICES_FILE,
+        },
+        params={"speed": 1.0},
+        max_chars=400,
+        licence="code MIT (kokoro-onnx); weights Apache-2.0",
+        notes="Stock voices only (no cloning); CPU, faster than realtime; no torch.",
+        clones=False,
+    )
 )
 
 
