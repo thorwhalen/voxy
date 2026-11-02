@@ -428,41 +428,80 @@ def _slug(path: str | os.PathLike, *, parents: int = 0) -> str:
     'my-tape-1'
     >>> _slug("/songs/Track A/vocals.wav", parents=1)
     'track-a-vocals'
+    >>> _slug("/s/日本.wav", parents=1)  # a stem with nothing key-safe in it
+    's-source'
     """
+
+    def key_safe(text):
+        return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
     path = Path(path)
     folders = path.parent.parts[len(path.parent.parts) - parents :] if parents else ()
-    text = "-".join([*folders, path.stem]).lower()
-    return re.sub(r"[^a-z0-9]+", "-", text).strip("-") or "source"
+    return key_safe("-".join([*folders, key_safe(path.stem) or "source"]))
+
+
+def _deepened(paths: list[Path]) -> list[str]:
+    """Slugs for same-stem ``paths`` with the fewest parent folders that tell them apart
+    (only depths every path has); plain stems if no depth does.
+
+    >>> _deepened([Path("/s/one/vocals.wav"), Path("/s/two/vocals.wav")])
+    ['one-vocals', 'two-vocals']
+    >>> _deepened([Path("/home/x/talk.m4a"), Path("/home/x/talk.wav")])
+    ['talk', 'talk']
+    """
+    for depth in range(1, min(len(p.parent.parts) for p in paths) + 1):
+        slugs = [_slug(p, parents=depth) for p in paths]
+        if len(set(slugs)) == len(slugs):
+            return slugs
+    return [_slug(p) for p in paths]
+
+
+def _numbered(slugs: list[str]) -> list[str]:
+    """Distinct slugs: a slug's first occurrence stays, repeats get ``-2``, ``-3``, ...,
+    skipping any slug already in the list.
+
+    >>> _numbered(["a", "a", "a-2", "a"])
+    ['a', 'a-3', 'a-2', 'a-4']
+    """
+    taken, out = set(slugs), []
+    for slug in slugs:
+        if slug in out:
+            n = 2
+            while f"{slug}-{n}" in taken:
+                n += 1
+            slug = f"{slug}-{n}"
+            taken.add(slug)
+        out.append(slug)
+    return out
 
 
 def unique_slugs(sources: Iterable[str | os.PathLike]) -> list[str]:
-    """One distinct slug per source: the file's stem, plus parent folders only where
-    stems collide (stem tracks: every one is ``vocals.wav``), numbered as a last resort.
+    """One distinct slug per source: the file's stem, plus parent folders only within a
+    group of sources sharing a stem (stem tracks: every one is ``vocals.wav``), numbered
+    where folders cannot tell them apart. Slugs never climb past what separates a group,
+    and a source whose stem is unique keeps it.
 
     >>> unique_slugs(["/s/one/vocals.wav", "/s/two/vocals.wav", "/s/talk.m4a"])
     ['one-vocals', 'two-vocals', 'talk']
-    >>> unique_slugs(["a.wav", "a.wav", "a-2.wav"])
-    ['a', 'a-2', 'a-2-2']
+    >>> unique_slugs(["/Users/x/audio/talk.m4a", "/Users/x/audio/talk.wav"])
+    ['talk', 'talk-2']
+    >>> unique_slugs(["/s/a.wav", "/s/a.wav", "/s/a-2.wav"])
+    ['a', 'a-3', 'a-2']
     """
     paths = [Path(s) for s in sources]
-    depth = [0] * len(paths)
-    while True:
-        slugs = [_slug(p, parents=d) for p, d in zip(paths, depth)]
-        clashing = [i for i, s in enumerate(slugs) if slugs.count(s) > 1]
-        deeper = [i for i in clashing if depth[i] < len(paths[i].parent.parts)]
-        if not deeper:
-            break
-        for i in deeper:
-            depth[i] += 1
-    taken: set[str] = set()
-    for i, slug in enumerate(slugs):
-        n, candidate = 1, slug
-        while candidate in taken:
-            n += 1
-            candidate = f"{slug}-{n}"
-        taken.add(candidate)
-        slugs[i] = candidate
-    return slugs
+    stems = [_slug(p) for p in paths]
+    groups: dict[str, list[int]] = {}
+    for i, stem in enumerate(stems):
+        groups.setdefault(stem, []).append(i)
+    slugs = list(stems)
+    for group in groups.values():
+        if len(group) > 1:
+            for i, slug in zip(group, _deepened([paths[i] for i in group])):
+                slugs[i] = slug
+    # Plain stems claim their slug before deepened ones, so a unique stem keeps its key.
+    order = sorted(range(len(slugs)), key=lambda i: slugs[i] != stems[i])
+    final = dict(zip(order, _numbered([slugs[i] for i in order])))
+    return [final[i] for i in range(len(slugs))]
 
 
 def prepare_reference(
