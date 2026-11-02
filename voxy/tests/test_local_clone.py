@@ -299,6 +299,15 @@ def test_unique_slugs_one_repeat_or_folderless_member_does_not_collapse_its_grou
         "y-talk",  # keeps its folder
     ]
     assert refprep.unique_slugs(["a/v.wav", "v.wav", "b/v.wav"]) == ["a-v", "v", "b-v"]
+    # folders that only slug alike never separate paths: no climb to the home folder
+    assert refprep.unique_slugs(["/Users/x/Audio/v.wav", "/Users/x/audio/v.wav"]) == [
+        "v",
+        "v-2",
+    ]
+    assert refprep.unique_slugs(["/home/me/日本/v.wav", "/home/me/中国/v.wav"]) == [
+        "v",
+        "v-2",
+    ]
     assert refprep.unique_slugs(["/s/a/x/v.wav", "/s/b/x/v.wav", "/s/c/y/v.wav"]) == [
         "a-x-v",
         "b-x-v",

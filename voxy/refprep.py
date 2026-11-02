@@ -444,9 +444,10 @@ def _deepened(paths: list[Path]) -> list[str]:
     """Slugs for same-stem ``paths``, each with the fewest parent folders that tell it
     apart from the others.
 
-    A path adds a folder only while it still matches another path whose folder differs
-    (more folders cannot separate files in one folder, nor a path given twice: those
-    are numbered later), and keeps what it has once it runs out of folders.
+    A path adds a folder only while it still matches another path that more folders
+    could tell apart from it (not one in the same folder, a repeat, or one whose
+    folders only differ in case or characters slugs drop: those are numbered later),
+    and keeps what it has once it runs out of folders.
 
     >>> _deepened([Path("/s/one/vocals.wav"), Path("/s/two/vocals.wav")])
     ['one-vocals', 'two-vocals']
@@ -457,17 +458,19 @@ def _deepened(paths: list[Path]) -> list[str]:
     >>> _deepened([Path("/s/a/x/v.wav"), Path("/s/b/x/v.wav"), Path("/s/c/y/v.wav")])
     ['a-x-v', 'b-x-v', 'y-v']
     """
+    # what a path could ever become: folders that only slug alike (case, accents,
+    # scripts) can never tell paths apart, so they do not count as different
+    whole = [_slug(p, parents=len(p.parent.parts)) for p in paths]
     depth = [0] * len(paths)
     while True:
         slugs = [_slug(p, parents=d) for p, d in zip(paths, depth)]
+        futures: dict[str, set[str]] = {}
+        for slug, full in zip(slugs, whole):
+            futures.setdefault(slug, set()).add(full)
         deeper = [
             i
             for i, path in enumerate(paths)
-            if depth[i] < len(path.parent.parts)
-            and any(
-                slugs[j] == slugs[i] and paths[j].parent != path.parent
-                for j in range(len(paths))
-            )
+            if depth[i] < len(path.parent.parts) and len(futures[slugs[i]]) > 1
         ]
         if not deeper:
             return slugs
