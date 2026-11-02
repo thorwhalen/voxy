@@ -32,7 +32,8 @@ from pathlib import Path
 
 import numpy as np
 
-from voxy.envs import EnvSpec, ensure_env, worker_environ
+from voxy.envs import EnvSpec
+from voxy.worker import WorkerPool
 from voxy.wavutil import frame_db, read_wav
 
 DFLT_SPEAKER_MODEL = "speechbrain/spkrec-ecapa-voxceleb"
@@ -87,32 +88,13 @@ class Windows:
 
 # embeddings --------------------------------------------------------------------
 
-_SPEAKER_WORKERS: dict = {}
-
-
-def _speaker_worker(model: str, threads: int | None, rootdir: str | None):
-    """One embedding worker per (model, threads, data root), started on demand."""
-    from voxy.local_clone import voxy_cache_dir
-    from voxy.worker import Worker
-    from voxy.workers import adapter_path
-
-    key = (model, threads, rootdir)
-    if key not in _SPEAKER_WORKERS:
-        python = ensure_env(SPEAKER_ENV, rootdir=rootdir)
-        _SPEAKER_WORKERS[key] = Worker(
-            python,
-            adapter_path("speaker"),
-            init={"model": model},
-            env=worker_environ(SPEAKER_ENV, threads=threads, rootdir=rootdir),
-            log_path=voxy_cache_dir("logs", "speaker.log"),
-        )
-    return _SPEAKER_WORKERS[key]
+#: The speaker workers, one per (model, threads, data root), made on demand.
+_SPEAKER_POOL = WorkerPool(SPEAKER_ENV, "speaker")
 
 
 def close_speaker() -> None:
     """Stop the embedding workers (free their memory)."""
-    while _SPEAKER_WORKERS:
-        _SPEAKER_WORKERS.popitem()[1].close()
+    _SPEAKER_POOL.close()
 
 
 def embed_windows(
@@ -130,7 +112,7 @@ def embed_windows(
     ``spans`` restricts the windows to those ``(start, end)`` stretches (default:
     the whole file). Any sample rate; the worker resamples to 16 kHz.
     """
-    worker = _speaker_worker(model, threads, str(rootdir) if rootdir else None)
+    worker = _SPEAKER_POOL.get(model, threads, rootdir)
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "windows.npz")
         worker.call(

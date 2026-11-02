@@ -181,6 +181,45 @@ def test_a_request_that_cannot_be_serialised_leaves_the_worker_alive(tmp_path):
     worker.close()
 
 
+def test_worker_pool_makes_each_worker_once_across_threads():
+    """Shared ASR/speaker/phoneme workers: one per key, even under threads (#78)."""
+    import threading
+    import time
+
+    from voxy.worker import WorkerPool
+
+    made, closed = [], []
+
+    class FakeWorker:
+        def __init__(self, key):
+            self.key = key
+
+        def close(self):
+            closed.append(self.key)
+
+    def make(spec, adapter, *, model, threads, rootdir):
+        made.append((adapter, model, threads, rootdir))
+        time.sleep(0.05)  # an env build: two unguarded threads would both run it
+        return FakeWorker((model, threads))
+
+    pool = WorkerPool(EnvSpec("demo", ()), "asr", make=make)
+    got = []
+    threads = [
+        threading.Thread(target=lambda: got.append(pool.get("base"))) for _ in range(4)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(made) == 1 and len({id(w) for w in got}) == 1
+    assert pool.get("base", rootdir=None) is got[0]
+    assert pool.get("small", threads=2) is not got[0]
+    pool.close()
+    assert sorted(closed) == [("base", None), ("small", 2)]
+    pool.get("base")
+    assert len(made) == 3  # a fresh worker after close
+
+
 def test_ensure_env_builds_once_then_reuses(tmp_path):
     spec = EnvSpec("demo", ("numpy",))
     commands = []

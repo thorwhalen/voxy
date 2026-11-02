@@ -40,7 +40,8 @@ from typing import Protocol
 
 import numpy as np
 
-from voxy.envs import EnvSpec, ensure_env, worker_environ
+from voxy.envs import EnvSpec
+from voxy.worker import WorkerPool
 from voxy.speechtext import (
     ELISIONS,
     NOUN_CLITICS,
@@ -481,26 +482,8 @@ def failing(verdicts: Iterable[Verdict]) -> list[Verdict]:
 # 3. the recogniser worker ------------------------------------------------------
 
 
-_PHONEME_WORKERS: dict = {}
-
-
-def _phoneme_worker(model: str, threads: int | None, rootdir: str | None):
-    """One recogniser worker per (model, threads, data root), started on demand."""
-    from voxy.local_clone import voxy_cache_dir
-    from voxy.worker import Worker
-    from voxy.workers import adapter_path
-
-    key = (model, threads, rootdir)
-    if key not in _PHONEME_WORKERS:
-        python = ensure_env(PHONEME_ENV, rootdir=rootdir)
-        _PHONEME_WORKERS[key] = Worker(
-            python,
-            adapter_path("phonemes"),
-            init={"model": model},
-            env=worker_environ(PHONEME_ENV, threads=threads, rootdir=rootdir),
-            log_path=voxy_cache_dir("logs", "phonemes.log"),
-        )
-    return _PHONEME_WORKERS[key]
+#: The phonemes workers, one per (model, threads, data root), made on demand.
+_PHONEME_POOL = WorkerPool(PHONEME_ENV, "phonemes")
 
 
 def phoneme_emitter(
@@ -516,7 +499,7 @@ def phoneme_emitter(
     """
 
     def emit(audio: str, start: float, end: float):
-        worker = _phoneme_worker(model, threads, str(rootdir) if rootdir else None)
+        worker = _PHONEME_POOL.get(model, threads, rootdir)
         reply = worker.call("emissions", audio=audio, start=start, end=end)
         return np.asarray(reply["log_probs"], dtype=float), reply["vocab"]
 
@@ -533,7 +516,7 @@ def espeak_phonemizer(
     the recogniser's env, so its IPA is the recogniser's own alphabet."""
 
     def phonemize(texts: Sequence[str], language: str) -> list[str]:
-        worker = _phoneme_worker(model, threads, str(rootdir) if rootdir else None)
+        worker = _PHONEME_POOL.get(model, threads, rootdir)
         reply = worker.call(
             "phonemize",
             texts=list(texts),
