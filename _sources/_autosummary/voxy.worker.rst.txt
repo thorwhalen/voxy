@@ -4,11 +4,18 @@ voxy.worker
 .. automodule:: voxy.worker
 
    
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      env_worker
+   
    .. rubric:: Classes
 
    .. autosummary::
    
       Worker
+      WorkerPool
    
    .. rubric:: Exceptions
 

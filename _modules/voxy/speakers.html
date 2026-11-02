@@ -221,538 +221,520 @@
 </span><span id="line-32">
 </span><span id="line-33"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 </span><span id="line-34">
-</span><span id="line-35"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="n">ensure_env</span><span class="p">,</span> <span class="n">worker_environ</span>
-</span><span id="line-36"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">frame_db</span><span class="p">,</span> <span class="n">read_wav</span>
-</span><span id="line-37">
-</span><span id="line-38"><span class="n">DFLT_SPEAKER_MODEL</span> <span class="o">=</span> <span class="s2">"speechbrain/spkrec-ecapa-voxceleb"</span>
-</span><span id="line-39"><span class="n">DFLT_WINDOW_SECONDS</span> <span class="o">=</span> <span class="mf">1.0</span>
-</span><span id="line-40"><span class="n">DFLT_HOP_SECONDS</span> <span class="o">=</span> <span class="mf">0.1</span>
-</span><span id="line-41"><span class="c1">#: Cosine similarity to the voice print below which a window is someone else.</span>
-</span><span id="line-42"><span class="n">DFLT_MATCH_SIMILARITY</span> <span class="o">=</span> <span class="mf">0.45</span>
-</span><span id="line-43"><span class="c1">#: Windows this far below the recording's speech level are silence: neither voice.</span>
-</span><span id="line-44"><span class="n">DFLT_SILENCE_MARGIN_DB</span> <span class="o">=</span> <span class="mf">25.0</span>
-</span><span id="line-45"><span class="c1">#: Untranscribed foreign stretches shorter than this are ignored (one window's wobble).</span>
-</span><span id="line-46"><span class="n">DFLT_MIN_FOREIGN_SECONDS</span> <span class="o">=</span> <span class="mf">0.2</span>
-</span><span id="line-47"><span class="c1">#: Margin added around a foreign stretch, so a cut never clips its edge into a clip.</span>
-</span><span id="line-48"><span class="n">DFLT_FOREIGN_PAD_SECONDS</span> <span class="o">=</span> <span class="mf">0.15</span>
-</span><span id="line-49"><span class="c1">#: A word with this share of its length inside a foreign stretch is not kept.</span>
-</span><span id="line-50"><span class="n">DFLT_WORD_OVERLAP</span> <span class="o">=</span> <span class="mf">0.25</span>
-</span><span id="line-51"><span class="c1">#: Inside a transcribed turn, a stretch is someone else's only below this (smoothed) match:</span>
-</span><span id="line-52"><span class="c1">#: one-second windows of old, noisy audio dip well below ``DFLT_MATCH_SIMILARITY`` on the</span>
-</span><span id="line-53"><span class="c1">#: target's own voice, so a turn that matches as a whole is only cut where the dip is deep.</span>
-</span><span id="line-54"><span class="n">DFLT_DIP_SIMILARITY</span> <span class="o">=</span> <span class="mf">0.15</span>
-</span><span id="line-55"><span class="c1">#: Window similarities are averaged over this many neighbours before finding stretches.</span>
-</span><span id="line-56"><span class="n">DFLT_SMOOTH_WINDOWS</span> <span class="o">=</span> <span class="mi">3</span>
-</span><span id="line-57"><span class="c1">#: Turns shorter than this are too short to attribute ("Yes.", "Uh-huh"): never kept.</span>
-</span><span id="line-58"><span class="n">DFLT_MIN_TURN_SECONDS</span> <span class="o">=</span> <span class="mf">1.0</span>
-</span><span id="line-59"><span class="n">DOMINANT_ITERATIONS</span> <span class="o">=</span> <span class="mi">6</span>
-</span><span id="line-60"><span class="n">DOMINANT_QUANTILE</span> <span class="o">=</span> <span class="mf">0.5</span>
-</span><span id="line-61">
-</span><span id="line-62"><span class="n">SPEAKER_ENV</span> <span class="o">=</span> <span class="n">EnvSpec</span><span class="p">(</span>
-</span><span id="line-63">    <span class="s2">"speaker"</span><span class="p">,</span>
-</span><span id="line-64">    <span class="p">(</span><span class="s2">"speechbrain&gt;=1.0"</span><span class="p">,</span> <span class="s2">"torch"</span><span class="p">,</span> <span class="s2">"torchaudio"</span><span class="p">,</span> <span class="s2">"librosa"</span><span class="p">,</span> <span class="s2">"soundfile"</span><span class="p">,</span> <span class="s2">"numpy"</span><span class="p">),</span>
-</span><span id="line-65">    <span class="n">env_vars</span><span class="o">=</span><span class="p">{</span><span class="s2">"VOXY_SPEAKER_MODELS"</span><span class="p">:</span> <span class="s2">"</span><span class="si">{models}</span><span class="s2">"</span><span class="p">},</span>
-</span><span id="line-66"><span class="p">)</span>
-</span><span id="line-67">
+</span><span id="line-35"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvSpec</span>
+</span><span id="line-36"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorkerPool</span>
+</span><span id="line-37"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">frame_db</span><span class="p">,</span> <span class="n">read_wav</span>
+</span><span id="line-38">
+</span><span id="line-39"><span class="n">DFLT_SPEAKER_MODEL</span> <span class="o">=</span> <span class="s2">"speechbrain/spkrec-ecapa-voxceleb"</span>
+</span><span id="line-40"><span class="n">DFLT_WINDOW_SECONDS</span> <span class="o">=</span> <span class="mf">1.0</span>
+</span><span id="line-41"><span class="n">DFLT_HOP_SECONDS</span> <span class="o">=</span> <span class="mf">0.1</span>
+</span><span id="line-42"><span class="c1">#: Cosine similarity to the voice print below which a window is someone else.</span>
+</span><span id="line-43"><span class="n">DFLT_MATCH_SIMILARITY</span> <span class="o">=</span> <span class="mf">0.45</span>
+</span><span id="line-44"><span class="c1">#: Windows this far below the recording's speech level are silence: neither voice.</span>
+</span><span id="line-45"><span class="n">DFLT_SILENCE_MARGIN_DB</span> <span class="o">=</span> <span class="mf">25.0</span>
+</span><span id="line-46"><span class="c1">#: Untranscribed foreign stretches shorter than this are ignored (one window's wobble).</span>
+</span><span id="line-47"><span class="n">DFLT_MIN_FOREIGN_SECONDS</span> <span class="o">=</span> <span class="mf">0.2</span>
+</span><span id="line-48"><span class="c1">#: Margin added around a foreign stretch, so a cut never clips its edge into a clip.</span>
+</span><span id="line-49"><span class="n">DFLT_FOREIGN_PAD_SECONDS</span> <span class="o">=</span> <span class="mf">0.15</span>
+</span><span id="line-50"><span class="c1">#: A word with this share of its length inside a foreign stretch is not kept.</span>
+</span><span id="line-51"><span class="n">DFLT_WORD_OVERLAP</span> <span class="o">=</span> <span class="mf">0.25</span>
+</span><span id="line-52"><span class="c1">#: Inside a transcribed turn, a stretch is someone else's only below this (smoothed) match:</span>
+</span><span id="line-53"><span class="c1">#: one-second windows of old, noisy audio dip well below ``DFLT_MATCH_SIMILARITY`` on the</span>
+</span><span id="line-54"><span class="c1">#: target's own voice, so a turn that matches as a whole is only cut where the dip is deep.</span>
+</span><span id="line-55"><span class="n">DFLT_DIP_SIMILARITY</span> <span class="o">=</span> <span class="mf">0.15</span>
+</span><span id="line-56"><span class="c1">#: Window similarities are averaged over this many neighbours before finding stretches.</span>
+</span><span id="line-57"><span class="n">DFLT_SMOOTH_WINDOWS</span> <span class="o">=</span> <span class="mi">3</span>
+</span><span id="line-58"><span class="c1">#: Turns shorter than this are too short to attribute ("Yes.", "Uh-huh"): never kept.</span>
+</span><span id="line-59"><span class="n">DFLT_MIN_TURN_SECONDS</span> <span class="o">=</span> <span class="mf">1.0</span>
+</span><span id="line-60"><span class="n">DOMINANT_ITERATIONS</span> <span class="o">=</span> <span class="mi">6</span>
+</span><span id="line-61"><span class="n">DOMINANT_QUANTILE</span> <span class="o">=</span> <span class="mf">0.5</span>
+</span><span id="line-62">
+</span><span id="line-63"><span class="n">SPEAKER_ENV</span> <span class="o">=</span> <span class="n">EnvSpec</span><span class="p">(</span>
+</span><span id="line-64">    <span class="s2">"speaker"</span><span class="p">,</span>
+</span><span id="line-65">    <span class="p">(</span><span class="s2">"speechbrain&gt;=1.0"</span><span class="p">,</span> <span class="s2">"torch"</span><span class="p">,</span> <span class="s2">"torchaudio"</span><span class="p">,</span> <span class="s2">"librosa"</span><span class="p">,</span> <span class="s2">"soundfile"</span><span class="p">,</span> <span class="s2">"numpy"</span><span class="p">),</span>
+</span><span id="line-66">    <span class="n">env_vars</span><span class="o">=</span><span class="p">{</span><span class="s2">"VOXY_SPEAKER_MODELS"</span><span class="p">:</span> <span class="s2">"</span><span class="si">{models}</span><span class="s2">"</span><span class="p">},</span>
+</span><span id="line-67"><span class="p">)</span>
 </span><span id="line-68">
+</span><span id="line-69">
 <div class="viewcode-block" id="Windows">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.Windows">[docs]</a>
-</span><span id="line-69"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-70"><span class="k">class</span><span class="w"> </span><span class="nc">Windows</span><span class="p">:</span>
-</span><span id="line-71"><span class="w">    </span><span class="sd">"""Speaker embeddings of sliding windows: ``times`` (n, 2) seconds, unit ``vectors`` (n, d)."""</span>
-</span><span id="line-72">
-</span><span id="line-73">    <span class="n">times</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-</span><span id="line-74">    <span class="n">vectors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-</span><span id="line-75">
-</span><span id="line-76">    <span class="nd">@property</span>
-</span><span id="line-77">    <span class="k">def</span><span class="w"> </span><span class="nf">centers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-78">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="line-79">
-</span><span id="line-80">    <span class="k">def</span><span class="w"> </span><span class="nf">select</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"Windows"</span><span class="p">:</span>
-</span><span id="line-81">        <span class="k">return</span> <span class="n">Windows</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">vectors</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
-</span><span id="line-82">
+</span><span id="line-70"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-71"><span class="k">class</span><span class="w"> </span><span class="nc">Windows</span><span class="p">:</span>
+</span><span id="line-72"><span class="w">    </span><span class="sd">"""Speaker embeddings of sliding windows: ``times`` (n, 2) seconds, unit ``vectors`` (n, d)."""</span>
+</span><span id="line-73">
+</span><span id="line-74">    <span class="n">times</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+</span><span id="line-75">    <span class="n">vectors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+</span><span id="line-76">
+</span><span id="line-77">    <span class="nd">@property</span>
+</span><span id="line-78">    <span class="k">def</span><span class="w"> </span><span class="nf">centers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-79">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="line-80">
+</span><span id="line-81">    <span class="k">def</span><span class="w"> </span><span class="nf">select</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"Windows"</span><span class="p">:</span>
+</span><span id="line-82">        <span class="k">return</span> <span class="n">Windows</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">vectors</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+</span><span id="line-83">
 <div class="viewcode-block" id="Windows.similarity">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.Windows.similarity">[docs]</a>
-</span><span id="line-83">    <span class="k">def</span><span class="w"> </span><span class="nf">similarity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice_print</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-84"><span class="w">        </span><span class="sd">"""Cosine similarity of each window to ``voice_print``."""</span>
-</span><span id="line-85">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vectors</span> <span class="o">@</span> <span class="n">voice_print</span></div>
+</span><span id="line-84">    <span class="k">def</span><span class="w"> </span><span class="nf">similarity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">voice_print</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-85"><span class="w">        </span><span class="sd">"""Cosine similarity of each window to ``voice_print``."""</span>
+</span><span id="line-86">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vectors</span> <span class="o">@</span> <span class="n">voice_print</span></div>
 </div>
 
-</span><span id="line-86">
 </span><span id="line-87">
-</span><span id="line-88"><span class="c1"># embeddings --------------------------------------------------------------------</span>
-</span><span id="line-89">
-</span><span id="line-90"><span class="n">_SPEAKER_WORKERS</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-91">
-</span><span id="line-92">
-</span><span id="line-93"><span class="k">def</span><span class="w"> </span><span class="nf">_speaker_worker</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
-</span><span id="line-94"><span class="w">    </span><span class="sd">"""One embedding worker per (model, threads, data root), started on demand."""</span>
-</span><span id="line-95">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">voxy_cache_dir</span>
-</span><span id="line-96">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worker</span>
-</span><span id="line-97">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.workers</span><span class="w"> </span><span class="kn">import</span> <span class="n">adapter_path</span>
-</span><span id="line-98">
-</span><span id="line-99">    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-100">    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SPEAKER_WORKERS</span><span class="p">:</span>
-</span><span id="line-101">        <span class="n">python</span> <span class="o">=</span> <span class="n">ensure_env</span><span class="p">(</span><span class="n">SPEAKER_ENV</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-102">        <span class="n">_SPEAKER_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Worker</span><span class="p">(</span>
-</span><span id="line-103">            <span class="n">python</span><span class="p">,</span>
-</span><span id="line-104">            <span class="n">adapter_path</span><span class="p">(</span><span class="s2">"speaker"</span><span class="p">),</span>
-</span><span id="line-105">            <span class="n">init</span><span class="o">=</span><span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="n">model</span><span class="p">},</span>
-</span><span id="line-106">            <span class="n">env</span><span class="o">=</span><span class="n">worker_environ</span><span class="p">(</span><span class="n">SPEAKER_ENV</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">),</span>
-</span><span id="line-107">            <span class="n">log_path</span><span class="o">=</span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"logs"</span><span class="p">,</span> <span class="s2">"speaker.log"</span><span class="p">),</span>
-</span><span id="line-108">        <span class="p">)</span>
-</span><span id="line-109">    <span class="k">return</span> <span class="n">_SPEAKER_WORKERS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-</span><span id="line-110">
-</span><span id="line-111">
+</span><span id="line-88">
+</span><span id="line-89"><span class="c1"># embeddings --------------------------------------------------------------------</span>
+</span><span id="line-90">
+</span><span id="line-91"><span class="c1">#: The speaker workers, one per (model, threads, data root), made on demand.</span>
+</span><span id="line-92"><span class="n">_SPEAKER_POOL</span> <span class="o">=</span> <span class="n">WorkerPool</span><span class="p">(</span><span class="n">SPEAKER_ENV</span><span class="p">,</span> <span class="s2">"speaker"</span><span class="p">)</span>
+</span><span id="line-93">
+</span><span id="line-94">
 <div class="viewcode-block" id="close_speaker">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.close_speaker">[docs]</a>
-</span><span id="line-112"><span class="k">def</span><span class="w"> </span><span class="nf">close_speaker</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-113"><span class="w">    </span><span class="sd">"""Stop the embedding workers (free their memory)."""</span>
-</span><span id="line-114">    <span class="k">while</span> <span class="n">_SPEAKER_WORKERS</span><span class="p">:</span>
-</span><span id="line-115">        <span class="n">_SPEAKER_WORKERS</span><span class="o">.</span><span class="n">popitem</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</span><span id="line-95"><span class="k">def</span><span class="w"> </span><span class="nf">close_speaker</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-96"><span class="w">    </span><span class="sd">"""Stop the embedding workers (free their memory)."""</span>
+</span><span id="line-97">    <span class="n">_SPEAKER_POOL</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
-</span><span id="line-116">
-</span><span id="line-117">
+</span><span id="line-98">
+</span><span id="line-99">
 <div class="viewcode-block" id="embed_windows">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.embed_windows">[docs]</a>
-</span><span id="line-118"><span class="k">def</span><span class="w"> </span><span class="nf">embed_windows</span><span class="p">(</span>
-</span><span id="line-119">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
-</span><span id="line-120">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-121">    <span class="n">spans</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-122">    <span class="n">window</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_WINDOW_SECONDS</span><span class="p">,</span>
-</span><span id="line-123">    <span class="n">hop</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_HOP_SECONDS</span><span class="p">,</span>
-</span><span id="line-124">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SPEAKER_MODEL</span><span class="p">,</span>
-</span><span id="line-125">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-126">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-127"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Windows</span><span class="p">:</span>
-</span><span id="line-128"><span class="w">    </span><span class="sd">"""ECAPA embeddings of ``window``-second windows every ``hop`` s of ``audio``.</span>
-</span><span id="line-129">
-</span><span id="line-130"><span class="sd">    ``spans`` restricts the windows to those ``(start, end)`` stretches (default:</span>
-</span><span id="line-131"><span class="sd">    the whole file). Any sample rate; the worker resamples to 16 kHz.</span>
-</span><span id="line-132"><span class="sd">    """</span>
-</span><span id="line-133">    <span class="n">worker</span> <span class="o">=</span> <span class="n">_speaker_worker</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rootdir</span><span class="p">)</span> <span class="k">if</span> <span class="n">rootdir</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-134">    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
-</span><span id="line-135">        <span class="n">out</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="s2">"windows.npz"</span><span class="p">)</span>
-</span><span id="line-136">        <span class="n">worker</span><span class="o">.</span><span class="n">call</span><span class="p">(</span>
-</span><span id="line-137">            <span class="s2">"embed"</span><span class="p">,</span>
-</span><span id="line-138">            <span class="n">audio</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>  <span class="c1"># the worker has its own cwd</span>
-</span><span id="line-139">            <span class="n">out_path</span><span class="o">=</span><span class="n">out</span><span class="p">,</span>
-</span><span id="line-140">            <span class="n">spans</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">spans</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">],</span>
-</span><span id="line-141">            <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">,</span>
-</span><span id="line-142">            <span class="n">hop</span><span class="o">=</span><span class="n">hop</span><span class="p">,</span>
-</span><span id="line-143">        <span class="p">)</span>
-</span><span id="line-144">        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="k">as</span> <span class="n">data</span><span class="p">:</span>
-</span><span id="line-145">            <span class="k">return</span> <span class="n">Windows</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"times"</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">"vectors"</span><span class="p">])</span></div>
+</span><span id="line-100"><span class="k">def</span><span class="w"> </span><span class="nf">embed_windows</span><span class="p">(</span>
+</span><span id="line-101">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-102">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-103">    <span class="n">spans</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-104">    <span class="n">window</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_WINDOW_SECONDS</span><span class="p">,</span>
+</span><span id="line-105">    <span class="n">hop</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_HOP_SECONDS</span><span class="p">,</span>
+</span><span id="line-106">    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SPEAKER_MODEL</span><span class="p">,</span>
+</span><span id="line-107">    <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-108">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-109"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Windows</span><span class="p">:</span>
+</span><span id="line-110"><span class="w">    </span><span class="sd">"""ECAPA embeddings of ``window``-second windows every ``hop`` s of ``audio``.</span>
+</span><span id="line-111">
+</span><span id="line-112"><span class="sd">    ``spans`` restricts the windows to those ``(start, end)`` stretches (default:</span>
+</span><span id="line-113"><span class="sd">    the whole file). Any sample rate; the worker resamples to 16 kHz.</span>
+</span><span id="line-114"><span class="sd">    """</span>
+</span><span id="line-115">    <span class="n">worker</span> <span class="o">=</span> <span class="n">_SPEAKER_POOL</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-116">    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+</span><span id="line-117">        <span class="n">out</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="s2">"windows.npz"</span><span class="p">)</span>
+</span><span id="line-118">        <span class="n">worker</span><span class="o">.</span><span class="n">call</span><span class="p">(</span>
+</span><span id="line-119">            <span class="s2">"embed"</span><span class="p">,</span>
+</span><span id="line-120">            <span class="n">audio</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>  <span class="c1"># the worker has its own cwd</span>
+</span><span id="line-121">            <span class="n">out_path</span><span class="o">=</span><span class="n">out</span><span class="p">,</span>
+</span><span id="line-122">            <span class="n">spans</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">spans</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">],</span>
+</span><span id="line-123">            <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">,</span>
+</span><span id="line-124">            <span class="n">hop</span><span class="o">=</span><span class="n">hop</span><span class="p">,</span>
+</span><span id="line-125">        <span class="p">)</span>
+</span><span id="line-126">        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="k">as</span> <span class="n">data</span><span class="p">:</span>
+</span><span id="line-127">            <span class="k">return</span> <span class="n">Windows</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"times"</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">"vectors"</span><span class="p">])</span></div>
 
-</span><span id="line-146">
-</span><span id="line-147">
-</span><span id="line-148"><span class="c1"># voice prints -------------------------------------------------------------------</span>
-</span><span id="line-149">
-</span><span id="line-150">
-</span><span id="line-151"><span class="k">def</span><span class="w"> </span><span class="nf">_unit</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-152">    <span class="k">return</span> <span class="n">v</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="mf">1e-12</span><span class="p">)</span>
-</span><span id="line-153">
-</span><span id="line-154">
+</span><span id="line-128">
+</span><span id="line-129">
+</span><span id="line-130"><span class="c1"># voice prints -------------------------------------------------------------------</span>
+</span><span id="line-131">
+</span><span id="line-132">
+</span><span id="line-133"><span class="k">def</span><span class="w"> </span><span class="nf">_unit</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-134">    <span class="k">return</span> <span class="n">v</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="mf">1e-12</span><span class="p">)</span>
+</span><span id="line-135">
+</span><span id="line-136">
 <div class="viewcode-block" id="dominant_centroid">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.dominant_centroid">[docs]</a>
-</span><span id="line-155"><span class="k">def</span><span class="w"> </span><span class="nf">dominant_centroid</span><span class="p">(</span>
-</span><span id="line-156">    <span class="n">vectors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-</span><span id="line-157">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-158">    <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DOMINANT_ITERATIONS</span><span class="p">,</span>
-</span><span id="line-159">    <span class="n">quantile</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DOMINANT_QUANTILE</span><span class="p">,</span>
-</span><span id="line-160"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-161"><span class="w">    </span><span class="sd">"""The voice heard most: re-centre on the windows most like the centroid, repeatedly.</span>
-</span><span id="line-162">
-</span><span id="line-163"><span class="sd">    Clustering fragments a noisy voice into several clusters; this converges on</span>
-</span><span id="line-164"><span class="sd">    the majority voice instead (it needs that voice to be more than half the windows</span>
-</span><span id="line-165"><span class="sd">    the first mean is computed from).</span>
-</span><span id="line-166">
-</span><span id="line-167"><span class="sd">    &gt;&gt;&gt; rng = np.random.default_rng(0)</span>
-</span><span id="line-168"><span class="sd">    &gt;&gt;&gt; a, b = np.eye(4)[0], np.eye(4)[1]</span>
-</span><span id="line-169"><span class="sd">    &gt;&gt;&gt; vs = np.array([_unit(a + 0.1 * rng.standard_normal(4)) for _ in range(30)]</span>
-</span><span id="line-170"><span class="sd">    ...             + [_unit(b + 0.1 * rng.standard_normal(4)) for _ in range(10)])</span>
-</span><span id="line-171"><span class="sd">    &gt;&gt;&gt; bool(dominant_centroid(vs) @ a &gt; 0.95)</span>
-</span><span id="line-172"><span class="sd">    True</span>
-</span><span id="line-173"><span class="sd">    """</span>
-</span><span id="line-174">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">vectors</span><span class="p">):</span>
-</span><span id="line-175">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-176">            <span class="s2">"No speech windows to find a voice in (silent or too short audio)"</span>
-</span><span id="line-177">        <span class="p">)</span>
-</span><span id="line-178">    <span class="n">c</span> <span class="o">=</span> <span class="n">_unit</span><span class="p">(</span><span class="n">vectors</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
-</span><span id="line-179">    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iterations</span><span class="p">):</span>
-</span><span id="line-180">        <span class="n">sims</span> <span class="o">=</span> <span class="n">vectors</span> <span class="o">@</span> <span class="n">c</span>
-</span><span id="line-181">        <span class="n">c</span> <span class="o">=</span> <span class="n">_unit</span><span class="p">(</span><span class="n">vectors</span><span class="p">[</span><span class="n">sims</span> <span class="o">&gt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">quantile</span><span class="p">)]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
-</span><span id="line-182">    <span class="k">return</span> <span class="n">c</span></div>
+</span><span id="line-137"><span class="k">def</span><span class="w"> </span><span class="nf">dominant_centroid</span><span class="p">(</span>
+</span><span id="line-138">    <span class="n">vectors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+</span><span id="line-139">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-140">    <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DOMINANT_ITERATIONS</span><span class="p">,</span>
+</span><span id="line-141">    <span class="n">quantile</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DOMINANT_QUANTILE</span><span class="p">,</span>
+</span><span id="line-142"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-143"><span class="w">    </span><span class="sd">"""The voice heard most: re-centre on the windows most like the centroid, repeatedly.</span>
+</span><span id="line-144">
+</span><span id="line-145"><span class="sd">    Clustering fragments a noisy voice into several clusters; this converges on</span>
+</span><span id="line-146"><span class="sd">    the majority voice instead (it needs that voice to be more than half the windows</span>
+</span><span id="line-147"><span class="sd">    the first mean is computed from).</span>
+</span><span id="line-148">
+</span><span id="line-149"><span class="sd">    &gt;&gt;&gt; rng = np.random.default_rng(0)</span>
+</span><span id="line-150"><span class="sd">    &gt;&gt;&gt; a, b = np.eye(4)[0], np.eye(4)[1]</span>
+</span><span id="line-151"><span class="sd">    &gt;&gt;&gt; vs = np.array([_unit(a + 0.1 * rng.standard_normal(4)) for _ in range(30)]</span>
+</span><span id="line-152"><span class="sd">    ...             + [_unit(b + 0.1 * rng.standard_normal(4)) for _ in range(10)])</span>
+</span><span id="line-153"><span class="sd">    &gt;&gt;&gt; bool(dominant_centroid(vs) @ a &gt; 0.95)</span>
+</span><span id="line-154"><span class="sd">    True</span>
+</span><span id="line-155"><span class="sd">    """</span>
+</span><span id="line-156">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">vectors</span><span class="p">):</span>
+</span><span id="line-157">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-158">            <span class="s2">"No speech windows to find a voice in (silent or too short audio)"</span>
+</span><span id="line-159">        <span class="p">)</span>
+</span><span id="line-160">    <span class="n">c</span> <span class="o">=</span> <span class="n">_unit</span><span class="p">(</span><span class="n">vectors</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+</span><span id="line-161">    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iterations</span><span class="p">):</span>
+</span><span id="line-162">        <span class="n">sims</span> <span class="o">=</span> <span class="n">vectors</span> <span class="o">@</span> <span class="n">c</span>
+</span><span id="line-163">        <span class="n">c</span> <span class="o">=</span> <span class="n">_unit</span><span class="p">(</span><span class="n">vectors</span><span class="p">[</span><span class="n">sims</span> <span class="o">&gt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">sims</span><span class="p">,</span> <span class="n">quantile</span><span class="p">)]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+</span><span id="line-164">    <span class="k">return</span> <span class="n">c</span></div>
 
-</span><span id="line-183">
-</span><span id="line-184">
+</span><span id="line-165">
+</span><span id="line-166">
 <div class="viewcode-block" id="loud_mask">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.loud_mask">[docs]</a>
-</span><span id="line-185"><span class="k">def</span><span class="w"> </span><span class="nf">loud_mask</span><span class="p">(</span>
-</span><span id="line-186">    <span class="n">windows</span><span class="p">:</span> <span class="n">Windows</span><span class="p">,</span>
-</span><span id="line-187">    <span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-</span><span id="line-188">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-</span><span id="line-189">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-190">    <span class="n">margin_db</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_SILENCE_MARGIN_DB</span><span class="p">,</span>
-</span><span id="line-191"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-192"><span class="w">    </span><span class="sd">"""Windows with speech in them: loud frames within ``margin_db`` of the speech level.</span>
-</span><span id="line-193">
-</span><span id="line-194"><span class="sd">    &gt;&gt;&gt; w = Windows(np.array([[0, 1], [1, 2]]), np.zeros((2, 3)))</span>
-</span><span id="line-195"><span class="sd">    &gt;&gt;&gt; x = np.concatenate([0.3 * np.ones(8000), np.zeros(8000)])</span>
-</span><span id="line-196"><span class="sd">    &gt;&gt;&gt; loud_mask(w, x, 8000).tolist()</span>
-</span><span id="line-197"><span class="sd">    [True, False]</span>
-</span><span id="line-198"><span class="sd">    """</span>
-</span><span id="line-199">    <span class="n">levels</span> <span class="o">=</span> <span class="n">frame_db</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">)</span>
-</span><span id="line-200">    <span class="k">if</span> <span class="ow">not</span> <span class="n">levels</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">times</span><span class="p">):</span>
-</span><span id="line-201">        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">times</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-</span><span id="line-202">    <span class="n">speech_level</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="mi">95</span><span class="p">))</span>
-</span><span id="line-203">    <span class="n">frame_s</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">/</span> <span class="n">sample_rate</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span>
-</span><span id="line-204">    <span class="n">mask</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-205">    <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">windows</span><span class="o">.</span><span class="n">times</span><span class="p">:</span>
-</span><span id="line-206">        <span class="n">frames</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span>
-</span><span id="line-207">            <span class="nb">int</span><span class="p">(</span><span class="n">start</span> <span class="o">/</span> <span class="n">frame_s</span><span class="p">)</span> <span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">start</span> <span class="o">/</span> <span class="n">frame_s</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span> <span class="o">/</span> <span class="n">frame_s</span><span class="p">))</span>
-</span><span id="line-208">        <span class="p">]</span>
-</span><span id="line-209">        <span class="n">mask</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="line-210">            <span class="n">frames</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="mi">90</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">speech_level</span> <span class="o">-</span> <span class="n">margin_db</span>
-</span><span id="line-211">        <span class="p">)</span>
-</span><span id="line-212">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span></div>
+</span><span id="line-167"><span class="k">def</span><span class="w"> </span><span class="nf">loud_mask</span><span class="p">(</span>
+</span><span id="line-168">    <span class="n">windows</span><span class="p">:</span> <span class="n">Windows</span><span class="p">,</span>
+</span><span id="line-169">    <span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+</span><span id="line-170">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+</span><span id="line-171">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-172">    <span class="n">margin_db</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_SILENCE_MARGIN_DB</span><span class="p">,</span>
+</span><span id="line-173"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-174"><span class="w">    </span><span class="sd">"""Windows with speech in them: loud frames within ``margin_db`` of the speech level.</span>
+</span><span id="line-175">
+</span><span id="line-176"><span class="sd">    &gt;&gt;&gt; w = Windows(np.array([[0, 1], [1, 2]]), np.zeros((2, 3)))</span>
+</span><span id="line-177"><span class="sd">    &gt;&gt;&gt; x = np.concatenate([0.3 * np.ones(8000), np.zeros(8000)])</span>
+</span><span id="line-178"><span class="sd">    &gt;&gt;&gt; loud_mask(w, x, 8000).tolist()</span>
+</span><span id="line-179"><span class="sd">    [True, False]</span>
+</span><span id="line-180"><span class="sd">    """</span>
+</span><span id="line-181">    <span class="n">levels</span> <span class="o">=</span> <span class="n">frame_db</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">)</span>
+</span><span id="line-182">    <span class="k">if</span> <span class="ow">not</span> <span class="n">levels</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">times</span><span class="p">):</span>
+</span><span id="line-183">        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">times</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+</span><span id="line-184">    <span class="n">speech_level</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="mi">95</span><span class="p">))</span>
+</span><span id="line-185">    <span class="n">frame_s</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">/</span> <span class="n">sample_rate</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">levels</span><span class="p">)</span>
+</span><span id="line-186">    <span class="n">mask</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-187">    <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">windows</span><span class="o">.</span><span class="n">times</span><span class="p">:</span>
+</span><span id="line-188">        <span class="n">frames</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span>
+</span><span id="line-189">            <span class="nb">int</span><span class="p">(</span><span class="n">start</span> <span class="o">/</span> <span class="n">frame_s</span><span class="p">)</span> <span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">start</span> <span class="o">/</span> <span class="n">frame_s</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span> <span class="o">/</span> <span class="n">frame_s</span><span class="p">))</span>
+</span><span id="line-190">        <span class="p">]</span>
+</span><span id="line-191">        <span class="n">mask</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+</span><span id="line-192">            <span class="n">frames</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="mi">90</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">speech_level</span> <span class="o">-</span> <span class="n">margin_db</span>
+</span><span id="line-193">        <span class="p">)</span>
+</span><span id="line-194">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span></div>
 
-</span><span id="line-213">
-</span><span id="line-214">
+</span><span id="line-195">
+</span><span id="line-196">
 <div class="viewcode-block" id="voice_print">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.voice_print">[docs]</a>
-</span><span id="line-215"><span class="k">def</span><span class="w"> </span><span class="nf">voice_print</span><span class="p">(</span>
-</span><span id="line-216">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">],</span>
-</span><span id="line-217">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-218">    <span class="n">spans</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-219">    <span class="n">embed</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Windows</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-220">    <span class="o">**</span><span class="n">embed_kwargs</span><span class="p">,</span>
-</span><span id="line-221"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-222"><span class="w">    </span><span class="sd">"""The voice print of ``audio`` (one recording or several): the dominant voice's centroid.</span>
-</span><span id="line-223">
-</span><span id="line-224"><span class="sd">    Pass recordings (or ``spans`` of one) where the target speaks alone, and this is</span>
-</span><span id="line-225"><span class="sd">    simply their voice; over mixed recordings it is whoever speaks most.</span>
-</span><span id="line-226"><span class="sd">    """</span>
-</span><span id="line-227">    <span class="n">embed</span> <span class="o">=</span> <span class="n">embed</span> <span class="ow">or</span> <span class="n">embed_windows</span>
-</span><span id="line-228">    <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">audio</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">))</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
-</span><span id="line-229">    <span class="n">vectors</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-230">    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
-</span><span id="line-231">        <span class="n">windows</span> <span class="o">=</span> <span class="n">embed</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">spans</span><span class="o">=</span><span class="n">spans</span><span class="p">,</span> <span class="o">**</span><span class="n">embed_kwargs</span><span class="p">)</span>
-</span><span id="line-232">        <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-233">            <span class="n">read_wav</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".wav"</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-234">        <span class="p">)</span>
-</span><span id="line-235">        <span class="k">if</span> <span class="n">samples</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-236">            <span class="n">windows</span> <span class="o">=</span> <span class="n">windows</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">loud_mask</span><span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span><span class="p">))</span>
-</span><span id="line-237">        <span class="n">vectors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">vectors</span><span class="p">)</span>
-</span><span id="line-238">    <span class="k">return</span> <span class="n">dominant_centroid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">vectors</span><span class="p">))</span></div>
+</span><span id="line-197"><span class="k">def</span><span class="w"> </span><span class="nf">voice_print</span><span class="p">(</span>
+</span><span id="line-198">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">],</span>
+</span><span id="line-199">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-200">    <span class="n">spans</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-201">    <span class="n">embed</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Windows</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-202">    <span class="o">**</span><span class="n">embed_kwargs</span><span class="p">,</span>
+</span><span id="line-203"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-204"><span class="w">    </span><span class="sd">"""The voice print of ``audio`` (one recording or several): the dominant voice's centroid.</span>
+</span><span id="line-205">
+</span><span id="line-206"><span class="sd">    Pass recordings (or ``spans`` of one) where the target speaks alone, and this is</span>
+</span><span id="line-207"><span class="sd">    simply their voice; over mixed recordings it is whoever speaks most.</span>
+</span><span id="line-208"><span class="sd">    """</span>
+</span><span id="line-209">    <span class="n">embed</span> <span class="o">=</span> <span class="n">embed</span> <span class="ow">or</span> <span class="n">embed_windows</span>
+</span><span id="line-210">    <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">audio</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">))</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
+</span><span id="line-211">    <span class="n">vectors</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-212">    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+</span><span id="line-213">        <span class="n">windows</span> <span class="o">=</span> <span class="n">embed</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">spans</span><span class="o">=</span><span class="n">spans</span><span class="p">,</span> <span class="o">**</span><span class="n">embed_kwargs</span><span class="p">)</span>
+</span><span id="line-214">        <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-215">            <span class="n">read_wav</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".wav"</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-216">        <span class="p">)</span>
+</span><span id="line-217">        <span class="k">if</span> <span class="n">samples</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-218">            <span class="n">windows</span> <span class="o">=</span> <span class="n">windows</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">loud_mask</span><span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span><span class="p">))</span>
+</span><span id="line-219">        <span class="n">vectors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">vectors</span><span class="p">)</span>
+</span><span id="line-220">    <span class="k">return</span> <span class="n">dominant_centroid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">vectors</span><span class="p">))</span></div>
 
+</span><span id="line-221">
+</span><span id="line-222">
+</span><span id="line-223"><span class="c1"># marking words ------------------------------------------------------------------</span>
+</span><span id="line-224">
+</span><span id="line-225">
+</span><span id="line-226"><span class="k">def</span><span class="w"> </span><span class="nf">_merge</span><span class="p">(</span><span class="n">spans</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span> <span class="o">*</span><span class="p">,</span> <span class="n">gap</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+</span><span id="line-227"><span class="w">    </span><span class="sd">"""Union of intervals (touching within ``gap`` merge).</span>
+</span><span id="line-228">
+</span><span id="line-229"><span class="sd">    &gt;&gt;&gt; _merge([(0, 1), (0.9, 2), (3, 4)])</span>
+</span><span id="line-230"><span class="sd">    [[0, 2], [3, 4]]</span>
+</span><span id="line-231"><span class="sd">    """</span>
+</span><span id="line-232">    <span class="n">merged</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-233">    <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">spans</span><span class="p">):</span>
+</span><span id="line-234">        <span class="k">if</span> <span class="n">merged</span> <span class="ow">and</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="n">merged</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">gap</span><span class="p">:</span>
+</span><span id="line-235">            <span class="n">merged</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">merged</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">end</span><span class="p">)</span>
+</span><span id="line-236">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-237">            <span class="n">merged</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">])</span>
+</span><span id="line-238">    <span class="k">return</span> <span class="n">merged</span>
 </span><span id="line-239">
 </span><span id="line-240">
-</span><span id="line-241"><span class="c1"># marking words ------------------------------------------------------------------</span>
-</span><span id="line-242">
-</span><span id="line-243">
-</span><span id="line-244"><span class="k">def</span><span class="w"> </span><span class="nf">_merge</span><span class="p">(</span><span class="n">spans</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span> <span class="o">*</span><span class="p">,</span> <span class="n">gap</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
-</span><span id="line-245"><span class="w">    </span><span class="sd">"""Union of intervals (touching within ``gap`` merge).</span>
-</span><span id="line-246">
-</span><span id="line-247"><span class="sd">    &gt;&gt;&gt; _merge([(0, 1), (0.9, 2), (3, 4)])</span>
-</span><span id="line-248"><span class="sd">    [[0, 2], [3, 4]]</span>
-</span><span id="line-249"><span class="sd">    """</span>
-</span><span id="line-250">    <span class="n">merged</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-251">    <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">spans</span><span class="p">):</span>
-</span><span id="line-252">        <span class="k">if</span> <span class="n">merged</span> <span class="ow">and</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="n">merged</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">gap</span><span class="p">:</span>
-</span><span id="line-253">            <span class="n">merged</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">merged</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">end</span><span class="p">)</span>
-</span><span id="line-254">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-255">            <span class="n">merged</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">])</span>
-</span><span id="line-256">    <span class="k">return</span> <span class="n">merged</span>
-</span><span id="line-257">
-</span><span id="line-258">
 <div class="viewcode-block" id="foreign_spans">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.foreign_spans">[docs]</a>
-</span><span id="line-259"><span class="k">def</span><span class="w"> </span><span class="nf">foreign_spans</span><span class="p">(</span>
-</span><span id="line-260">    <span class="n">windows</span><span class="p">:</span> <span class="n">Windows</span><span class="p">,</span>
-</span><span id="line-261">    <span class="n">similarity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-</span><span id="line-262">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-263">    <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">DFLT_MATCH_SIMILARITY</span><span class="p">,</span>
-</span><span id="line-264">    <span class="n">loud</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-265">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_FOREIGN_SECONDS</span><span class="p">,</span>
-</span><span id="line-266">    <span class="n">pad</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_FOREIGN_PAD_SECONDS</span><span class="p">,</span>
-</span><span id="line-267"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
-</span><span id="line-268"><span class="w">    </span><span class="sd">"""Stretches where a loud window does not match the voice print, padded by ``pad``.</span>
-</span><span id="line-269">
-</span><span id="line-270"><span class="sd">    ``threshold`` is one similarity, or one per window.</span>
-</span><span id="line-271">
-</span><span id="line-272"><span class="sd">    Each window speaks for the ``hop``-wide slot around its centre, so a short "yes"</span>
-</span><span id="line-273"><span class="sd">    marks about the length of the dip it causes, not a whole window.</span>
-</span><span id="line-274">
-</span><span id="line-275"><span class="sd">    &gt;&gt;&gt; t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(20)])</span>
-</span><span id="line-276"><span class="sd">    &gt;&gt;&gt; sim = np.array([0.8] * 8 + [0.1] * 4 + [0.8] * 8)</span>
-</span><span id="line-277"><span class="sd">    &gt;&gt;&gt; [[round(x, 2) for x in s] for s in foreign_spans(Windows(t, None), sim, pad=0)]</span>
-</span><span id="line-278"><span class="sd">    [[1.25, 1.65]]</span>
-</span><span id="line-279"><span class="sd">    """</span>
-</span><span id="line-280">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">times</span><span class="p">):</span>
-</span><span id="line-281">        <span class="k">return</span> <span class="p">[]</span>
-</span><span id="line-282">    <span class="n">centers</span> <span class="o">=</span> <span class="n">windows</span><span class="o">.</span><span class="n">centers</span>
-</span><span id="line-283">    <span class="n">hop</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">centers</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">centers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mf">0.0</span>
-</span><span id="line-284">    <span class="n">bad</span> <span class="o">=</span> <span class="n">similarity</span> <span class="o">&lt;</span> <span class="n">threshold</span>
-</span><span id="line-285">    <span class="k">if</span> <span class="n">loud</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-286">        <span class="n">bad</span> <span class="o">&amp;=</span> <span class="n">loud</span>
-</span><span id="line-287">    <span class="n">slots</span> <span class="o">=</span> <span class="p">[(</span><span class="n">c</span> <span class="o">-</span> <span class="n">hop</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">c</span> <span class="o">+</span> <span class="n">hop</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">centers</span><span class="p">[</span><span class="n">bad</span><span class="p">]]</span>
-</span><span id="line-288">    <span class="k">return</span> <span class="p">[</span>
-</span><span id="line-289">        <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">-</span> <span class="n">pad</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">+</span> <span class="n">pad</span><span class="p">]</span>
-</span><span id="line-290">        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">_merge</span><span class="p">(</span><span class="n">slots</span><span class="p">,</span> <span class="n">gap</span><span class="o">=</span><span class="n">hop</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">)</span>
-</span><span id="line-291">        <span class="k">if</span> <span class="n">e</span> <span class="o">-</span> <span class="n">s</span> <span class="o">&gt;=</span> <span class="n">min_seconds</span>
-</span><span id="line-292">    <span class="p">]</span></div>
+</span><span id="line-241"><span class="k">def</span><span class="w"> </span><span class="nf">foreign_spans</span><span class="p">(</span>
+</span><span id="line-242">    <span class="n">windows</span><span class="p">:</span> <span class="n">Windows</span><span class="p">,</span>
+</span><span id="line-243">    <span class="n">similarity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+</span><span id="line-244">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-245">    <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">DFLT_MATCH_SIMILARITY</span><span class="p">,</span>
+</span><span id="line-246">    <span class="n">loud</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-247">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_FOREIGN_SECONDS</span><span class="p">,</span>
+</span><span id="line-248">    <span class="n">pad</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_FOREIGN_PAD_SECONDS</span><span class="p">,</span>
+</span><span id="line-249"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+</span><span id="line-250"><span class="w">    </span><span class="sd">"""Stretches where a loud window does not match the voice print, padded by ``pad``.</span>
+</span><span id="line-251">
+</span><span id="line-252"><span class="sd">    ``threshold`` is one similarity, or one per window.</span>
+</span><span id="line-253">
+</span><span id="line-254"><span class="sd">    Each window speaks for the ``hop``-wide slot around its centre, so a short "yes"</span>
+</span><span id="line-255"><span class="sd">    marks about the length of the dip it causes, not a whole window.</span>
+</span><span id="line-256">
+</span><span id="line-257"><span class="sd">    &gt;&gt;&gt; t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(20)])</span>
+</span><span id="line-258"><span class="sd">    &gt;&gt;&gt; sim = np.array([0.8] * 8 + [0.1] * 4 + [0.8] * 8)</span>
+</span><span id="line-259"><span class="sd">    &gt;&gt;&gt; [[round(x, 2) for x in s] for s in foreign_spans(Windows(t, None), sim, pad=0)]</span>
+</span><span id="line-260"><span class="sd">    [[1.25, 1.65]]</span>
+</span><span id="line-261"><span class="sd">    """</span>
+</span><span id="line-262">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">times</span><span class="p">):</span>
+</span><span id="line-263">        <span class="k">return</span> <span class="p">[]</span>
+</span><span id="line-264">    <span class="n">centers</span> <span class="o">=</span> <span class="n">windows</span><span class="o">.</span><span class="n">centers</span>
+</span><span id="line-265">    <span class="n">hop</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">centers</span><span class="p">)))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">centers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mf">0.0</span>
+</span><span id="line-266">    <span class="n">bad</span> <span class="o">=</span> <span class="n">similarity</span> <span class="o">&lt;</span> <span class="n">threshold</span>
+</span><span id="line-267">    <span class="k">if</span> <span class="n">loud</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-268">        <span class="n">bad</span> <span class="o">&amp;=</span> <span class="n">loud</span>
+</span><span id="line-269">    <span class="n">slots</span> <span class="o">=</span> <span class="p">[(</span><span class="n">c</span> <span class="o">-</span> <span class="n">hop</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">c</span> <span class="o">+</span> <span class="n">hop</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">centers</span><span class="p">[</span><span class="n">bad</span><span class="p">]]</span>
+</span><span id="line-270">    <span class="k">return</span> <span class="p">[</span>
+</span><span id="line-271">        <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">-</span> <span class="n">pad</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">+</span> <span class="n">pad</span><span class="p">]</span>
+</span><span id="line-272">        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">_merge</span><span class="p">(</span><span class="n">slots</span><span class="p">,</span> <span class="n">gap</span><span class="o">=</span><span class="n">hop</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">)</span>
+</span><span id="line-273">        <span class="k">if</span> <span class="n">e</span> <span class="o">-</span> <span class="n">s</span> <span class="o">&gt;=</span> <span class="n">min_seconds</span>
+</span><span id="line-274">    <span class="p">]</span></div>
 
-</span><span id="line-293">
-</span><span id="line-294">
+</span><span id="line-275">
+</span><span id="line-276">
 <div class="viewcode-block" id="smooth">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.smooth">[docs]</a>
-</span><span id="line-295"><span class="k">def</span><span class="w"> </span><span class="nf">smooth</span><span class="p">(</span><span class="n">similarity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">windows</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SMOOTH_WINDOWS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-296"><span class="w">    </span><span class="sd">"""Moving average of ``similarity`` over ``windows`` neighbours (edges: the shorter mean).</span>
-</span><span id="line-297">
-</span><span id="line-298"><span class="sd">    &gt;&gt;&gt; smooth(np.array([1.0, 1.0, 0.0, 1.0, 1.0])).round(2).tolist()</span>
-</span><span id="line-299"><span class="sd">    [1.0, 0.67, 0.67, 0.67, 1.0]</span>
-</span><span id="line-300"><span class="sd">    """</span>
-</span><span id="line-301">    <span class="n">windows</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">similarity</span><span class="p">))</span>
-</span><span id="line-302">    <span class="k">if</span> <span class="n">windows</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="line-303">        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">similarity</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-</span><span id="line-304">    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">windows</span><span class="p">)</span>
-</span><span id="line-305">    <span class="n">total</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">similarity</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"same"</span><span class="p">)</span>
-</span><span id="line-306">    <span class="n">count</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">similarity</span><span class="p">)),</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"same"</span><span class="p">)</span>
-</span><span id="line-307">    <span class="k">return</span> <span class="n">total</span> <span class="o">/</span> <span class="n">count</span></div>
+</span><span id="line-277"><span class="k">def</span><span class="w"> </span><span class="nf">smooth</span><span class="p">(</span><span class="n">similarity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">windows</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SMOOTH_WINDOWS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+</span><span id="line-278"><span class="w">    </span><span class="sd">"""Moving average of ``similarity`` over ``windows`` neighbours (edges: the shorter mean).</span>
+</span><span id="line-279">
+</span><span id="line-280"><span class="sd">    &gt;&gt;&gt; smooth(np.array([1.0, 1.0, 0.0, 1.0, 1.0])).round(2).tolist()</span>
+</span><span id="line-281"><span class="sd">    [1.0, 0.67, 0.67, 0.67, 1.0]</span>
+</span><span id="line-282"><span class="sd">    """</span>
+</span><span id="line-283">    <span class="n">windows</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">similarity</span><span class="p">))</span>
+</span><span id="line-284">    <span class="k">if</span> <span class="n">windows</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="line-285">        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">similarity</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+</span><span id="line-286">    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">windows</span><span class="p">)</span>
+</span><span id="line-287">    <span class="n">total</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">similarity</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"same"</span><span class="p">)</span>
+</span><span id="line-288">    <span class="n">count</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">similarity</span><span class="p">)),</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"same"</span><span class="p">)</span>
+</span><span id="line-289">    <span class="k">return</span> <span class="n">total</span> <span class="o">/</span> <span class="n">count</span></div>
 
-</span><span id="line-308">
-</span><span id="line-309">
+</span><span id="line-290">
+</span><span id="line-291">
 <div class="viewcode-block" id="turn_similarity">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.turn_similarity">[docs]</a>
-</span><span id="line-310"><span class="k">def</span><span class="w"> </span><span class="nf">turn_similarity</span><span class="p">(</span>
-</span><span id="line-311">    <span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
-</span><span id="line-312">    <span class="n">windows</span><span class="p">:</span> <span class="n">Windows</span><span class="p">,</span>
-</span><span id="line-313">    <span class="n">voice_print</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-</span><span id="line-314">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-315">    <span class="n">loud</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-316"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-</span><span id="line-317"><span class="w">    </span><span class="sd">"""Match of each transcribed segment (a turn) to ``voice_print``, from its mean window.</span>
-</span><span id="line-318">
-</span><span id="line-319"><span class="sd">    Averaging the embeddings over a whole turn is far steadier than any one window</span>
-</span><span id="line-320"><span class="sd">    on noisy audio: it is what tells an interviewer's question from an answer. None</span>
-</span><span id="line-321"><span class="sd">    for a segment with no (loud) window centred in it.</span>
-</span><span id="line-322">
-</span><span id="line-323"><span class="sd">    &gt;&gt;&gt; t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(40)])</span>
-</span><span id="line-324"><span class="sd">    &gt;&gt;&gt; v = np.array([np.eye(2)[0]] * 20 + [np.eye(2)[1]] * 20)</span>
-</span><span id="line-325"><span class="sd">    &gt;&gt;&gt; turn_similarity([{"start": 0, "end": 2}, {"start": 2.6, "end": 4.4}],</span>
-</span><span id="line-326"><span class="sd">    ...                 Windows(t, v), np.eye(2)[0])</span>
-</span><span id="line-327"><span class="sd">    [1.0, 0.0]</span>
-</span><span id="line-328"><span class="sd">    """</span>
-</span><span id="line-329">    <span class="n">centers</span> <span class="o">=</span> <span class="n">windows</span><span class="o">.</span><span class="n">centers</span>
-</span><span id="line-330">    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-331">    <span class="k">for</span> <span class="n">seg</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
-</span><span id="line-332">        <span class="n">inside</span> <span class="o">=</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&gt;=</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"start"</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&lt;=</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"end"</span><span class="p">])</span>
-</span><span id="line-333">        <span class="k">if</span> <span class="n">loud</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-334">            <span class="n">inside</span> <span class="o">&amp;=</span> <span class="n">loud</span>
-</span><span id="line-335">        <span class="k">if</span> <span class="ow">not</span> <span class="n">inside</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
-</span><span id="line-336">            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="line-337">            <span class="k">continue</span>
-</span><span id="line-338">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="line-339">            <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">_unit</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">vectors</span><span class="p">[</span><span class="n">inside</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">@</span> <span class="n">voice_print</span><span class="p">),</span> <span class="mi">3</span><span class="p">)</span>
-</span><span id="line-340">        <span class="p">)</span>
-</span><span id="line-341">    <span class="k">return</span> <span class="n">out</span></div>
+</span><span id="line-292"><span class="k">def</span><span class="w"> </span><span class="nf">turn_similarity</span><span class="p">(</span>
+</span><span id="line-293">    <span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
+</span><span id="line-294">    <span class="n">windows</span><span class="p">:</span> <span class="n">Windows</span><span class="p">,</span>
+</span><span id="line-295">    <span class="n">voice_print</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+</span><span id="line-296">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-297">    <span class="n">loud</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-298"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+</span><span id="line-299"><span class="w">    </span><span class="sd">"""Match of each transcribed segment (a turn) to ``voice_print``, from its mean window.</span>
+</span><span id="line-300">
+</span><span id="line-301"><span class="sd">    Averaging the embeddings over a whole turn is far steadier than any one window</span>
+</span><span id="line-302"><span class="sd">    on noisy audio: it is what tells an interviewer's question from an answer. None</span>
+</span><span id="line-303"><span class="sd">    for a segment with no (loud) window centred in it.</span>
+</span><span id="line-304">
+</span><span id="line-305"><span class="sd">    &gt;&gt;&gt; t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(40)])</span>
+</span><span id="line-306"><span class="sd">    &gt;&gt;&gt; v = np.array([np.eye(2)[0]] * 20 + [np.eye(2)[1]] * 20)</span>
+</span><span id="line-307"><span class="sd">    &gt;&gt;&gt; turn_similarity([{"start": 0, "end": 2}, {"start": 2.6, "end": 4.4}],</span>
+</span><span id="line-308"><span class="sd">    ...                 Windows(t, v), np.eye(2)[0])</span>
+</span><span id="line-309"><span class="sd">    [1.0, 0.0]</span>
+</span><span id="line-310"><span class="sd">    """</span>
+</span><span id="line-311">    <span class="n">centers</span> <span class="o">=</span> <span class="n">windows</span><span class="o">.</span><span class="n">centers</span>
+</span><span id="line-312">    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-313">    <span class="k">for</span> <span class="n">seg</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
+</span><span id="line-314">        <span class="n">inside</span> <span class="o">=</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&gt;=</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"start"</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&lt;=</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"end"</span><span class="p">])</span>
+</span><span id="line-315">        <span class="k">if</span> <span class="n">loud</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-316">            <span class="n">inside</span> <span class="o">&amp;=</span> <span class="n">loud</span>
+</span><span id="line-317">        <span class="k">if</span> <span class="ow">not</span> <span class="n">inside</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+</span><span id="line-318">            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="line-319">            <span class="k">continue</span>
+</span><span id="line-320">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+</span><span id="line-321">            <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">_unit</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">vectors</span><span class="p">[</span><span class="n">inside</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">@</span> <span class="n">voice_print</span><span class="p">),</span> <span class="mi">3</span><span class="p">)</span>
+</span><span id="line-322">        <span class="p">)</span>
+</span><span id="line-323">    <span class="k">return</span> <span class="n">out</span></div>
 
+</span><span id="line-324">
+</span><span id="line-325">
+</span><span id="line-326"><span class="k">def</span><span class="w"> </span><span class="nf">_overlap</span><span class="p">(</span><span class="n">start</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">spans</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+</span><span id="line-327"><span class="w">    </span><span class="sd">"""Seconds of ``[start, end]`` covered by ``spans``.</span>
+</span><span id="line-328">
+</span><span id="line-329"><span class="sd">    &gt;&gt;&gt; _overlap(1, 3, [(0, 1.5), (2.5, 4)])</span>
+</span><span id="line-330"><span class="sd">    1.0</span>
+</span><span id="line-331"><span class="sd">    """</span>
+</span><span id="line-332">    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="o">-</span> <span class="nb">max</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">)</span>
+</span><span id="line-333">
+</span><span id="line-334">
+</span><span id="line-335"><span class="k">def</span><span class="w"> </span><span class="nf">_word_similarity</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">similarity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-336"><span class="w">    </span><span class="sd">"""Mean similarity of the windows centred in ``[start, end]`` (else the nearest one)."""</span>
+</span><span id="line-337">    <span class="n">inside</span> <span class="o">=</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&gt;=</span> <span class="n">start</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&lt;=</span> <span class="n">end</span><span class="p">)</span>
+</span><span id="line-338">    <span class="k">if</span> <span class="ow">not</span> <span class="n">inside</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">centers</span><span class="p">):</span>
+</span><span id="line-339">        <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">centers</span> <span class="o">-</span> <span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="line-340">        <span class="n">inside</span> <span class="o">=</span> <span class="n">distance</span> <span class="o">==</span> <span class="n">distance</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+</span><span id="line-341">    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">similarity</span><span class="p">[</span><span class="n">inside</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="k">if</span> <span class="n">inside</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
 </span><span id="line-342">
 </span><span id="line-343">
-</span><span id="line-344"><span class="k">def</span><span class="w"> </span><span class="nf">_overlap</span><span class="p">(</span><span class="n">start</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">spans</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-</span><span id="line-345"><span class="w">    </span><span class="sd">"""Seconds of ``[start, end]`` covered by ``spans``.</span>
+</span><span id="line-344"><span class="k">def</span><span class="w"> </span><span class="nf">_ends_sentence</span><span class="p">(</span><span class="n">word</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-345">    <span class="k">return</span> <span class="n">word</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"text"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">"."</span><span class="p">,</span> <span class="s2">"!"</span><span class="p">,</span> <span class="s2">"?"</span><span class="p">,</span> <span class="s2">"…"</span><span class="p">))</span>
 </span><span id="line-346">
-</span><span id="line-347"><span class="sd">    &gt;&gt;&gt; _overlap(1, 3, [(0, 1.5), (2.5, 4)])</span>
-</span><span id="line-348"><span class="sd">    1.0</span>
-</span><span id="line-349"><span class="sd">    """</span>
-</span><span id="line-350">    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="o">-</span> <span class="nb">max</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">spans</span><span class="p">)</span>
-</span><span id="line-351">
-</span><span id="line-352">
-</span><span id="line-353"><span class="k">def</span><span class="w"> </span><span class="nf">_word_similarity</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">similarity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-354"><span class="w">    </span><span class="sd">"""Mean similarity of the windows centred in ``[start, end]`` (else the nearest one)."""</span>
-</span><span id="line-355">    <span class="n">inside</span> <span class="o">=</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&gt;=</span> <span class="n">start</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&lt;=</span> <span class="n">end</span><span class="p">)</span>
-</span><span id="line-356">    <span class="k">if</span> <span class="ow">not</span> <span class="n">inside</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">centers</span><span class="p">):</span>
-</span><span id="line-357">        <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">centers</span> <span class="o">-</span> <span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">end</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
-</span><span id="line-358">        <span class="n">inside</span> <span class="o">=</span> <span class="n">distance</span> <span class="o">==</span> <span class="n">distance</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
-</span><span id="line-359">    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">similarity</span><span class="p">[</span><span class="n">inside</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="k">if</span> <span class="n">inside</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
-</span><span id="line-360">
-</span><span id="line-361">
-</span><span id="line-362"><span class="k">def</span><span class="w"> </span><span class="nf">_ends_sentence</span><span class="p">(</span><span class="n">word</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="line-363">    <span class="k">return</span> <span class="n">word</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"text"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">"."</span><span class="p">,</span> <span class="s2">"!"</span><span class="p">,</span> <span class="s2">"?"</span><span class="p">,</span> <span class="s2">"…"</span><span class="p">))</span>
-</span><span id="line-364">
-</span><span id="line-365">
+</span><span id="line-347">
 <div class="viewcode-block" id="mark_speaker">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.mark_speaker">[docs]</a>
-</span><span id="line-366"><span class="k">def</span><span class="w"> </span><span class="nf">mark_speaker</span><span class="p">(</span>
-</span><span id="line-367">    <span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
-</span><span id="line-368">    <span class="n">windows</span><span class="p">:</span> <span class="n">Windows</span><span class="p">,</span>
-</span><span id="line-369">    <span class="n">similarity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-</span><span id="line-370">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-371">    <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MATCH_SIMILARITY</span><span class="p">,</span>
-</span><span id="line-372">    <span class="n">loud</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-373">    <span class="n">turns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-374">    <span class="n">dip_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_DIP_SIMILARITY</span><span class="p">,</span>
-</span><span id="line-375">    <span class="n">min_turn_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_TURN_SECONDS</span><span class="p">,</span>
-</span><span id="line-376">    <span class="n">word_overlap</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_WORD_OVERLAP</span><span class="p">,</span>
-</span><span id="line-377">    <span class="n">pad</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_FOREIGN_PAD_SECONDS</span><span class="p">,</span>
-</span><span id="line-378">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_FOREIGN_SECONDS</span><span class="p">,</span>
-</span><span id="line-379"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-380"><span class="w">    </span><span class="sd">"""Annotate each timed word with ``speaker_similarity`` and ``keep``; add gap markers.</span>
-</span><span id="line-381">
-</span><span id="line-382"><span class="sd">    Without ``turns``, a word is kept when the windows centred inside it match the</span>
-</span><span id="line-383"><span class="sd">    voice print on average. With ``turns`` (one match per segment, see</span>
-</span><span id="line-384"><span class="sd">    :func:`turn_similarity`), a word is kept when its whole segment matches and lasts</span>
-</span><span id="line-385"><span class="sd">    at least ``min_turn_seconds``, and its ``speaker_similarity`` is the segment's;</span>
-</span><span id="line-386"><span class="sd">    inside a segment only a deep dip (below ``dip_threshold``) counts as someone else,</span>
-</span><span id="line-387"><span class="sd">    and a one-word sentence ("Yes.") must match the voice print on its own.</span>
-</span><span id="line-388"><span class="sd">    Either way a word is dropped when ``word_overlap`` of it lies in a foreign</span>
-</span><span id="line-389"><span class="sd">    stretch. Every foreign stretch is also added as an empty word with</span>
-</span><span id="line-390"><span class="sd">    ``keep=False`` (an untranscribed "uh-huh" has no word of its own), padded by up</span>
-</span><span id="line-391"><span class="sd">    to ``pad`` and trimmed back to the kept words around it, so ``refprep.plan_clips``</span>
-</span><span id="line-392"><span class="sd">    never puts it inside a clip. A segment without word timings is judged as one word.</span>
-</span><span id="line-393">
-</span><span id="line-394"><span class="sd">    &gt;&gt;&gt; t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(40)])</span>
-</span><span id="line-395"><span class="sd">    &gt;&gt;&gt; sim = np.array([0.8] * 15 + [0.1] * 5 + [0.8] * 20)</span>
-</span><span id="line-396"><span class="sd">    &gt;&gt;&gt; w = lambda s, e, x: {"start": s, "end": e, "text": x}</span>
-</span><span id="line-397"><span class="sd">    &gt;&gt;&gt; segs = [{"start": 0, "end": 4, "text": "a b",</span>
-</span><span id="line-398"><span class="sd">    ...          "words": [w(0.5, 1.4, " a"), w(2.5, 3.8, " b")]}]</span>
-</span><span id="line-399"><span class="sd">    &gt;&gt;&gt; out = mark_speaker(segs, Windows(t, None), sim)</span>
-</span><span id="line-400"><span class="sd">    &gt;&gt;&gt; [(x["text"], x["keep"]) for x in out[0]["words"]], out[1]["words"][0]["end"]</span>
-</span><span id="line-401"><span class="sd">    ([(' a', True), (' b', True)], 2.5)</span>
-</span><span id="line-402"><span class="sd">    """</span>
-</span><span id="line-403">    <span class="n">segments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
-</span><span id="line-404">    <span class="n">centers</span> <span class="o">=</span> <span class="n">windows</span><span class="o">.</span><span class="n">centers</span>
-</span><span id="line-405">    <span class="n">floor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">centers</span><span class="p">),</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-</span><span id="line-406">    <span class="k">if</span> <span class="n">turns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-407">        <span class="k">for</span> <span class="n">seg</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
-</span><span id="line-408">            <span class="n">floor</span><span class="p">[(</span><span class="n">centers</span> <span class="o">&gt;=</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"start"</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&lt;=</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"end"</span><span class="p">])]</span> <span class="o">=</span> <span class="n">dip_threshold</span>
-</span><span id="line-409">    <span class="n">foreign</span> <span class="o">=</span> <span class="n">foreign_spans</span><span class="p">(</span>
-</span><span id="line-410">        <span class="n">windows</span><span class="p">,</span> <span class="n">similarity</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">floor</span><span class="p">,</span> <span class="n">loud</span><span class="o">=</span><span class="n">loud</span><span class="p">,</span> <span class="n">min_seconds</span><span class="o">=</span><span class="n">min_seconds</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">0</span>
-</span><span id="line-411">    <span class="p">)</span>
-</span><span id="line-412">    <span class="n">out</span><span class="p">,</span> <span class="n">kept</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
-</span><span id="line-413">    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">seg</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">segments</span><span class="p">):</span>
-</span><span id="line-414">        <span class="n">seg</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">seg</span><span class="p">)</span>
-</span><span id="line-415">        <span class="n">turn</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">turns</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">turns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-</span><span id="line-416">        <span class="n">turn_ok</span> <span class="o">=</span> <span class="n">turn</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">turn</span> <span class="o">&gt;=</span> <span class="n">threshold</span>
-</span><span id="line-417">        <span class="k">if</span> <span class="n">turns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-418">            <span class="n">turn_ok</span> <span class="o">=</span> <span class="n">turn_ok</span> <span class="ow">and</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">-</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_turn_seconds</span>
-</span><span id="line-419">        <span class="n">timed</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">seg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"words"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">()</span> <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
-</span><span id="line-420">        <span class="c1"># Untimed segment: judge it as one word, or plan_clips would keep it unmarked.</span>
-</span><span id="line-421">        <span class="n">source</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-422">            <span class="n">seg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"words"</span><span class="p">)</span>
-</span><span id="line-423">            <span class="k">if</span> <span class="n">timed</span>
-</span><span id="line-424">            <span class="k">else</span> <span class="p">[</span>
-</span><span id="line-425">                <span class="p">{</span>
-</span><span id="line-426">                    <span class="s2">"start"</span><span class="p">:</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span>
-</span><span id="line-427">                    <span class="s2">"end"</span><span class="p">:</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"end"</span><span class="p">],</span>
-</span><span id="line-428">                    <span class="s2">"text"</span><span class="p">:</span> <span class="n">seg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"text"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
-</span><span id="line-429">                    <span class="s2">"confidence"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-430">                <span class="p">}</span>
-</span><span id="line-431">            <span class="p">]</span>
-</span><span id="line-432">        <span class="p">)</span>
-</span><span id="line-433">        <span class="n">words</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-434">        <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
-</span><span id="line-435">            <span class="n">word</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
-</span><span id="line-436">            <span class="k">if</span> <span class="n">word</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-437">                <span class="n">words</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
-</span><span id="line-438">                <span class="k">continue</span>
-</span><span id="line-439">            <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span> <span class="n">word</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span>
-</span><span id="line-440">            <span class="n">in_foreign</span> <span class="o">=</span> <span class="n">_overlap</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">foreign</span><span class="p">)</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">)</span>
-</span><span id="line-441">            <span class="n">sim</span> <span class="o">=</span> <span class="n">_word_similarity</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">similarity</span><span class="p">)</span>
-</span><span id="line-442">            <span class="n">word_ok</span> <span class="o">=</span> <span class="n">sim</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">sim</span> <span class="o">&gt;=</span> <span class="n">threshold</span>
-</span><span id="line-443">            <span class="k">if</span> <span class="n">turns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-444">                <span class="n">word</span><span class="p">[</span><span class="s2">"speaker_similarity"</span><span class="p">]</span> <span class="o">=</span> <span class="n">turn</span>
-</span><span id="line-445">                <span class="c1"># A one-word sentence ("Yes.") inside a turn is often the listener's.</span>
-</span><span id="line-446">                <span class="n">alone</span> <span class="o">=</span> <span class="n">_ends_sentence</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
-</span><span id="line-447">                    <span class="ow">not</span> <span class="n">words</span> <span class="ow">or</span> <span class="n">_ends_sentence</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-</span><span id="line-448">                <span class="p">)</span>
-</span><span id="line-449">                <span class="n">word</span><span class="p">[</span><span class="s2">"keep"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-450">                    <span class="n">turn_ok</span> <span class="ow">and</span> <span class="p">(</span><span class="n">word_ok</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">alone</span><span class="p">)</span> <span class="ow">and</span> <span class="n">in_foreign</span> <span class="o">&lt;</span> <span class="n">word_overlap</span>
-</span><span id="line-451">                <span class="p">)</span>
-</span><span id="line-452">            <span class="k">else</span><span class="p">:</span>
-</span><span id="line-453">                <span class="n">word</span><span class="p">[</span><span class="s2">"speaker_similarity"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">sim</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">round</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
-</span><span id="line-454">                <span class="n">word</span><span class="p">[</span><span class="s2">"keep"</span><span class="p">]</span> <span class="o">=</span> <span class="n">word_ok</span> <span class="ow">and</span> <span class="n">in_foreign</span> <span class="o">&lt;</span> <span class="n">word_overlap</span>
-</span><span id="line-455">            <span class="k">if</span> <span class="n">word</span><span class="p">[</span><span class="s2">"keep"</span><span class="p">]:</span>
-</span><span id="line-456">                <span class="n">kept</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
-</span><span id="line-457">            <span class="n">words</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
-</span><span id="line-458">        <span class="n">seg</span><span class="p">[</span><span class="s2">"words"</span><span class="p">]</span> <span class="o">=</span> <span class="n">words</span>
-</span><span id="line-459">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">seg</span><span class="p">)</span>
-</span><span id="line-460">    <span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-461">    <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">foreign</span><span class="p">:</span>
-</span><span id="line-462">        <span class="c1"># Never into a kept word: plan_clips cuts between a word and the marker after it.</span>
-</span><span id="line-463">        <span class="n">lo</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">s</span> <span class="o">-</span> <span class="n">pad</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">we</span> <span class="k">for</span> <span class="n">ws</span><span class="p">,</span> <span class="n">we</span> <span class="ow">in</span> <span class="n">kept</span> <span class="k">if</span> <span class="n">ws</span> <span class="o">&lt;</span> <span class="n">s</span> <span class="ow">and</span> <span class="n">we</span> <span class="o">&gt;</span> <span class="n">s</span> <span class="o">-</span> <span class="n">pad</span><span class="p">])</span>
-</span><span id="line-464">        <span class="n">hi</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="n">e</span> <span class="o">+</span> <span class="n">pad</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">ws</span> <span class="k">for</span> <span class="n">ws</span><span class="p">,</span> <span class="n">we</span> <span class="ow">in</span> <span class="n">kept</span> <span class="k">if</span> <span class="n">we</span> <span class="o">&gt;</span> <span class="n">e</span> <span class="ow">and</span> <span class="n">ws</span> <span class="o">&lt;</span> <span class="n">e</span> <span class="o">+</span> <span class="n">pad</span><span class="p">])</span>
-</span><span id="line-465">        <span class="k">if</span> <span class="n">lo</span> <span class="o">&gt;=</span> <span class="n">hi</span><span class="p">:</span>  <span class="c1"># inside one kept word, within its word_overlap tolerance</span>
-</span><span id="line-466">            <span class="k">continue</span>
-</span><span id="line-467">        <span class="n">markers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="line-468">            <span class="p">{</span><span class="s2">"start"</span><span class="p">:</span> <span class="n">lo</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="n">hi</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"confidence"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"keep"</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
-</span><span id="line-469">        <span class="p">)</span>
-</span><span id="line-470">    <span class="k">if</span> <span class="n">markers</span><span class="p">:</span>
-</span><span id="line-471">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="line-472">            <span class="p">{</span>
-</span><span id="line-473">                <span class="s2">"start"</span><span class="p">:</span> <span class="n">markers</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"start"</span><span class="p">],</span>
-</span><span id="line-474">                <span class="s2">"end"</span><span class="p">:</span> <span class="n">markers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"end"</span><span class="p">],</span>
-</span><span id="line-475">                <span class="s2">"text"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
-</span><span id="line-476">                <span class="s2">"words"</span><span class="p">:</span> <span class="n">markers</span><span class="p">,</span>
-</span><span id="line-477">            <span class="p">}</span>
-</span><span id="line-478">        <span class="p">)</span>
-</span><span id="line-479">    <span class="k">return</span> <span class="n">out</span></div>
+</span><span id="line-348"><span class="k">def</span><span class="w"> </span><span class="nf">mark_speaker</span><span class="p">(</span>
+</span><span id="line-349">    <span class="n">segments</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Mapping</span><span class="p">],</span>
+</span><span id="line-350">    <span class="n">windows</span><span class="p">:</span> <span class="n">Windows</span><span class="p">,</span>
+</span><span id="line-351">    <span class="n">similarity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+</span><span id="line-352">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-353">    <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MATCH_SIMILARITY</span><span class="p">,</span>
+</span><span id="line-354">    <span class="n">loud</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-355">    <span class="n">turns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-356">    <span class="n">dip_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_DIP_SIMILARITY</span><span class="p">,</span>
+</span><span id="line-357">    <span class="n">min_turn_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_TURN_SECONDS</span><span class="p">,</span>
+</span><span id="line-358">    <span class="n">word_overlap</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_WORD_OVERLAP</span><span class="p">,</span>
+</span><span id="line-359">    <span class="n">pad</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_FOREIGN_PAD_SECONDS</span><span class="p">,</span>
+</span><span id="line-360">    <span class="n">min_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_FOREIGN_SECONDS</span><span class="p">,</span>
+</span><span id="line-361"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-362"><span class="w">    </span><span class="sd">"""Annotate each timed word with ``speaker_similarity`` and ``keep``; add gap markers.</span>
+</span><span id="line-363">
+</span><span id="line-364"><span class="sd">    Without ``turns``, a word is kept when the windows centred inside it match the</span>
+</span><span id="line-365"><span class="sd">    voice print on average. With ``turns`` (one match per segment, see</span>
+</span><span id="line-366"><span class="sd">    :func:`turn_similarity`), a word is kept when its whole segment matches and lasts</span>
+</span><span id="line-367"><span class="sd">    at least ``min_turn_seconds``, and its ``speaker_similarity`` is the segment's;</span>
+</span><span id="line-368"><span class="sd">    inside a segment only a deep dip (below ``dip_threshold``) counts as someone else,</span>
+</span><span id="line-369"><span class="sd">    and a one-word sentence ("Yes.") must match the voice print on its own.</span>
+</span><span id="line-370"><span class="sd">    Either way a word is dropped when ``word_overlap`` of it lies in a foreign</span>
+</span><span id="line-371"><span class="sd">    stretch. Every foreign stretch is also added as an empty word with</span>
+</span><span id="line-372"><span class="sd">    ``keep=False`` (an untranscribed "uh-huh" has no word of its own), padded by up</span>
+</span><span id="line-373"><span class="sd">    to ``pad`` and trimmed back to the kept words around it, so ``refprep.plan_clips``</span>
+</span><span id="line-374"><span class="sd">    never puts it inside a clip. A segment without word timings is judged as one word.</span>
+</span><span id="line-375">
+</span><span id="line-376"><span class="sd">    &gt;&gt;&gt; t = np.array([[i * 0.1, i * 0.1 + 1] for i in range(40)])</span>
+</span><span id="line-377"><span class="sd">    &gt;&gt;&gt; sim = np.array([0.8] * 15 + [0.1] * 5 + [0.8] * 20)</span>
+</span><span id="line-378"><span class="sd">    &gt;&gt;&gt; w = lambda s, e, x: {"start": s, "end": e, "text": x}</span>
+</span><span id="line-379"><span class="sd">    &gt;&gt;&gt; segs = [{"start": 0, "end": 4, "text": "a b",</span>
+</span><span id="line-380"><span class="sd">    ...          "words": [w(0.5, 1.4, " a"), w(2.5, 3.8, " b")]}]</span>
+</span><span id="line-381"><span class="sd">    &gt;&gt;&gt; out = mark_speaker(segs, Windows(t, None), sim)</span>
+</span><span id="line-382"><span class="sd">    &gt;&gt;&gt; [(x["text"], x["keep"]) for x in out[0]["words"]], out[1]["words"][0]["end"]</span>
+</span><span id="line-383"><span class="sd">    ([(' a', True), (' b', True)], 2.5)</span>
+</span><span id="line-384"><span class="sd">    """</span>
+</span><span id="line-385">    <span class="n">segments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
+</span><span id="line-386">    <span class="n">centers</span> <span class="o">=</span> <span class="n">windows</span><span class="o">.</span><span class="n">centers</span>
+</span><span id="line-387">    <span class="n">floor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">centers</span><span class="p">),</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+</span><span id="line-388">    <span class="k">if</span> <span class="n">turns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-389">        <span class="k">for</span> <span class="n">seg</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
+</span><span id="line-390">            <span class="n">floor</span><span class="p">[(</span><span class="n">centers</span> <span class="o">&gt;=</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"start"</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">centers</span> <span class="o">&lt;=</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"end"</span><span class="p">])]</span> <span class="o">=</span> <span class="n">dip_threshold</span>
+</span><span id="line-391">    <span class="n">foreign</span> <span class="o">=</span> <span class="n">foreign_spans</span><span class="p">(</span>
+</span><span id="line-392">        <span class="n">windows</span><span class="p">,</span> <span class="n">similarity</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">floor</span><span class="p">,</span> <span class="n">loud</span><span class="o">=</span><span class="n">loud</span><span class="p">,</span> <span class="n">min_seconds</span><span class="o">=</span><span class="n">min_seconds</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">0</span>
+</span><span id="line-393">    <span class="p">)</span>
+</span><span id="line-394">    <span class="n">out</span><span class="p">,</span> <span class="n">kept</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+</span><span id="line-395">    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">seg</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">segments</span><span class="p">):</span>
+</span><span id="line-396">        <span class="n">seg</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">seg</span><span class="p">)</span>
+</span><span id="line-397">        <span class="n">turn</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">turns</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">turns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+</span><span id="line-398">        <span class="n">turn_ok</span> <span class="o">=</span> <span class="n">turn</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">turn</span> <span class="o">&gt;=</span> <span class="n">threshold</span>
+</span><span id="line-399">        <span class="k">if</span> <span class="n">turns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-400">            <span class="n">turn_ok</span> <span class="o">=</span> <span class="n">turn_ok</span> <span class="ow">and</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span> <span class="o">-</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">min_turn_seconds</span>
+</span><span id="line-401">        <span class="n">timed</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">seg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"words"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">()</span> <span class="k">if</span> <span class="n">w</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+</span><span id="line-402">        <span class="c1"># Untimed segment: judge it as one word, or plan_clips would keep it unmarked.</span>
+</span><span id="line-403">        <span class="n">source</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-404">            <span class="n">seg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"words"</span><span class="p">)</span>
+</span><span id="line-405">            <span class="k">if</span> <span class="n">timed</span>
+</span><span id="line-406">            <span class="k">else</span> <span class="p">[</span>
+</span><span id="line-407">                <span class="p">{</span>
+</span><span id="line-408">                    <span class="s2">"start"</span><span class="p">:</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span>
+</span><span id="line-409">                    <span class="s2">"end"</span><span class="p">:</span> <span class="n">seg</span><span class="p">[</span><span class="s2">"end"</span><span class="p">],</span>
+</span><span id="line-410">                    <span class="s2">"text"</span><span class="p">:</span> <span class="n">seg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"text"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+</span><span id="line-411">                    <span class="s2">"confidence"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-412">                <span class="p">}</span>
+</span><span id="line-413">            <span class="p">]</span>
+</span><span id="line-414">        <span class="p">)</span>
+</span><span id="line-415">        <span class="n">words</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-416">        <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
+</span><span id="line-417">            <span class="n">word</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+</span><span id="line-418">            <span class="k">if</span> <span class="n">word</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"start"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-419">                <span class="n">words</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+</span><span id="line-420">                <span class="k">continue</span>
+</span><span id="line-421">            <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="s2">"start"</span><span class="p">],</span> <span class="n">word</span><span class="p">[</span><span class="s2">"end"</span><span class="p">]</span>
+</span><span id="line-422">            <span class="n">in_foreign</span> <span class="o">=</span> <span class="n">_overlap</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">foreign</span><span class="p">)</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">)</span>
+</span><span id="line-423">            <span class="n">sim</span> <span class="o">=</span> <span class="n">_word_similarity</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">similarity</span><span class="p">)</span>
+</span><span id="line-424">            <span class="n">word_ok</span> <span class="o">=</span> <span class="n">sim</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">sim</span> <span class="o">&gt;=</span> <span class="n">threshold</span>
+</span><span id="line-425">            <span class="k">if</span> <span class="n">turns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-426">                <span class="n">word</span><span class="p">[</span><span class="s2">"speaker_similarity"</span><span class="p">]</span> <span class="o">=</span> <span class="n">turn</span>
+</span><span id="line-427">                <span class="c1"># A one-word sentence ("Yes.") inside a turn is often the listener's.</span>
+</span><span id="line-428">                <span class="n">alone</span> <span class="o">=</span> <span class="n">_ends_sentence</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+</span><span id="line-429">                    <span class="ow">not</span> <span class="n">words</span> <span class="ow">or</span> <span class="n">_ends_sentence</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+</span><span id="line-430">                <span class="p">)</span>
+</span><span id="line-431">                <span class="n">word</span><span class="p">[</span><span class="s2">"keep"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-432">                    <span class="n">turn_ok</span> <span class="ow">and</span> <span class="p">(</span><span class="n">word_ok</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">alone</span><span class="p">)</span> <span class="ow">and</span> <span class="n">in_foreign</span> <span class="o">&lt;</span> <span class="n">word_overlap</span>
+</span><span id="line-433">                <span class="p">)</span>
+</span><span id="line-434">            <span class="k">else</span><span class="p">:</span>
+</span><span id="line-435">                <span class="n">word</span><span class="p">[</span><span class="s2">"speaker_similarity"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">sim</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">round</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</span><span id="line-436">                <span class="n">word</span><span class="p">[</span><span class="s2">"keep"</span><span class="p">]</span> <span class="o">=</span> <span class="n">word_ok</span> <span class="ow">and</span> <span class="n">in_foreign</span> <span class="o">&lt;</span> <span class="n">word_overlap</span>
+</span><span id="line-437">            <span class="k">if</span> <span class="n">word</span><span class="p">[</span><span class="s2">"keep"</span><span class="p">]:</span>
+</span><span id="line-438">                <span class="n">kept</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
+</span><span id="line-439">            <span class="n">words</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+</span><span id="line-440">        <span class="n">seg</span><span class="p">[</span><span class="s2">"words"</span><span class="p">]</span> <span class="o">=</span> <span class="n">words</span>
+</span><span id="line-441">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">seg</span><span class="p">)</span>
+</span><span id="line-442">    <span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-443">    <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">foreign</span><span class="p">:</span>
+</span><span id="line-444">        <span class="c1"># Never into a kept word: plan_clips cuts between a word and the marker after it.</span>
+</span><span id="line-445">        <span class="n">lo</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">s</span> <span class="o">-</span> <span class="n">pad</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">we</span> <span class="k">for</span> <span class="n">ws</span><span class="p">,</span> <span class="n">we</span> <span class="ow">in</span> <span class="n">kept</span> <span class="k">if</span> <span class="n">ws</span> <span class="o">&lt;</span> <span class="n">s</span> <span class="ow">and</span> <span class="n">we</span> <span class="o">&gt;</span> <span class="n">s</span> <span class="o">-</span> <span class="n">pad</span><span class="p">])</span>
+</span><span id="line-446">        <span class="n">hi</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="n">e</span> <span class="o">+</span> <span class="n">pad</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">ws</span> <span class="k">for</span> <span class="n">ws</span><span class="p">,</span> <span class="n">we</span> <span class="ow">in</span> <span class="n">kept</span> <span class="k">if</span> <span class="n">we</span> <span class="o">&gt;</span> <span class="n">e</span> <span class="ow">and</span> <span class="n">ws</span> <span class="o">&lt;</span> <span class="n">e</span> <span class="o">+</span> <span class="n">pad</span><span class="p">])</span>
+</span><span id="line-447">        <span class="k">if</span> <span class="n">lo</span> <span class="o">&gt;=</span> <span class="n">hi</span><span class="p">:</span>  <span class="c1"># inside one kept word, within its word_overlap tolerance</span>
+</span><span id="line-448">            <span class="k">continue</span>
+</span><span id="line-449">        <span class="n">markers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+</span><span id="line-450">            <span class="p">{</span><span class="s2">"start"</span><span class="p">:</span> <span class="n">lo</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="n">hi</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"confidence"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"keep"</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+</span><span id="line-451">        <span class="p">)</span>
+</span><span id="line-452">    <span class="k">if</span> <span class="n">markers</span><span class="p">:</span>
+</span><span id="line-453">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+</span><span id="line-454">            <span class="p">{</span>
+</span><span id="line-455">                <span class="s2">"start"</span><span class="p">:</span> <span class="n">markers</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"start"</span><span class="p">],</span>
+</span><span id="line-456">                <span class="s2">"end"</span><span class="p">:</span> <span class="n">markers</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"end"</span><span class="p">],</span>
+</span><span id="line-457">                <span class="s2">"text"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+</span><span id="line-458">                <span class="s2">"words"</span><span class="p">:</span> <span class="n">markers</span><span class="p">,</span>
+</span><span id="line-459">            <span class="p">}</span>
+</span><span id="line-460">        <span class="p">)</span>
+</span><span id="line-461">    <span class="k">return</span> <span class="n">out</span></div>
 
-</span><span id="line-480">
-</span><span id="line-481">
+</span><span id="line-462">
+</span><span id="line-463">
 <div class="viewcode-block" id="speaker_filter">
 <a class="viewcode-back" href="../../_autosummary/voxy.speakers.html#voxy.speakers.speaker_filter">[docs]</a>
-</span><span id="line-482"><span class="k">def</span><span class="w"> </span><span class="nf">speaker_filter</span><span class="p">(</span>
-</span><span id="line-483">    <span class="n">target</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-484">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-485">    <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MATCH_SIMILARITY</span><span class="p">,</span>
-</span><span id="line-486">    <span class="n">dip_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_DIP_SIMILARITY</span><span class="p">,</span>
-</span><span id="line-487">    <span class="n">smooth_windows</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SMOOTH_WINDOWS</span><span class="p">,</span>
-</span><span id="line-488">    <span class="n">min_turn_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_TURN_SECONDS</span><span class="p">,</span>
-</span><span id="line-489">    <span class="n">embed</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Windows</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-490">    <span class="o">**</span><span class="n">embed_kwargs</span><span class="p">,</span>
-</span><span id="line-491"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]:</span>
-</span><span id="line-492"><span class="w">    </span><span class="sd">"""A ``refprep.prepare_reference(speaker=...)`` step: ``(wav_path, segments) -&gt; segments``.</span>
-</span><span id="line-493">
-</span><span id="line-494"><span class="sd">    Decides per transcribed segment (a turn: :func:`turn_similarity`), then cuts</span>
-</span><span id="line-495"><span class="sd">    deep dips inside kept turns and other voices between them (:func:`mark_speaker`).</span>
-</span><span id="line-496">
-</span><span id="line-497"><span class="sd">    Args:</span>
-</span><span id="line-498"><span class="sd">        target: The voice print to keep (from :func:`voice_print`); None takes each</span>
-</span><span id="line-499"><span class="sd">            recording's dominant voice.</span>
-</span><span id="line-500"><span class="sd">        threshold: Cosine similarity a turn (or a stretch between turns) needs to</span>
-</span><span id="line-501"><span class="sd">            count as the target.</span>
-</span><span id="line-502"><span class="sd">        dip_threshold: Smoothed similarity below which a stretch inside a kept turn</span>
-</span><span id="line-503"><span class="sd">            is someone else.</span>
-</span><span id="line-504"><span class="sd">        smooth_windows: Neighbouring windows averaged before finding stretches.</span>
-</span><span id="line-505"><span class="sd">        min_turn_seconds: Shorter turns are never kept.</span>
-</span><span id="line-506"><span class="sd">        embed: ``(path, **embed_kwargs) -&gt; Windows`` (default :func:`embed_windows`).</span>
-</span><span id="line-507"><span class="sd">    """</span>
-</span><span id="line-508">    <span class="n">embed</span> <span class="o">=</span> <span class="n">embed</span> <span class="ow">or</span> <span class="n">embed_windows</span>
-</span><span id="line-509">
-</span><span id="line-510">    <span class="k">def</span><span class="w"> </span><span class="nf">mark</span><span class="p">(</span><span class="n">wav_path</span><span class="p">,</span> <span class="n">segments</span><span class="p">):</span>
-</span><span id="line-511">        <span class="n">segments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
-</span><span id="line-512">        <span class="n">windows</span> <span class="o">=</span> <span class="n">embed</span><span class="p">(</span><span class="n">wav_path</span><span class="p">,</span> <span class="o">**</span><span class="n">embed_kwargs</span><span class="p">)</span>
-</span><span id="line-513">        <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">read_wav</span><span class="p">(</span><span class="n">wav_path</span><span class="p">)</span>
-</span><span id="line-514">        <span class="n">loud</span> <span class="o">=</span> <span class="n">loud_mask</span><span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
-</span><span id="line-515">        <span class="k">if</span> <span class="ow">not</span> <span class="n">loud</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>  <span class="c1"># too short or silent: nothing to attribute, no clip either</span>
-</span><span id="line-516">            <span class="k">return</span> <span class="n">segments</span>
-</span><span id="line-517">        <span class="n">voice</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-518">            <span class="n">target</span> <span class="k">if</span> <span class="n">target</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dominant_centroid</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">vectors</span><span class="p">[</span><span class="n">loud</span><span class="p">])</span>
-</span><span id="line-519">        <span class="p">)</span>
-</span><span id="line-520">        <span class="k">return</span> <span class="n">mark_speaker</span><span class="p">(</span>
-</span><span id="line-521">            <span class="n">segments</span><span class="p">,</span>
-</span><span id="line-522">            <span class="n">windows</span><span class="p">,</span>
-</span><span id="line-523">            <span class="n">smooth</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span><span class="n">voice</span><span class="p">),</span> <span class="n">smooth_windows</span><span class="p">),</span>
-</span><span id="line-524">            <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span>
-</span><span id="line-525">            <span class="n">loud</span><span class="o">=</span><span class="n">loud</span><span class="p">,</span>
-</span><span id="line-526">            <span class="n">turns</span><span class="o">=</span><span class="n">turn_similarity</span><span class="p">(</span><span class="n">segments</span><span class="p">,</span> <span class="n">windows</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">loud</span><span class="o">=</span><span class="n">loud</span><span class="p">),</span>
-</span><span id="line-527">            <span class="n">dip_threshold</span><span class="o">=</span><span class="n">dip_threshold</span><span class="p">,</span>
-</span><span id="line-528">            <span class="n">min_turn_seconds</span><span class="o">=</span><span class="n">min_turn_seconds</span><span class="p">,</span>
-</span><span id="line-529">        <span class="p">)</span>
-</span><span id="line-530">
-</span><span id="line-531">    <span class="k">return</span> <span class="n">mark</span></div>
+</span><span id="line-464"><span class="k">def</span><span class="w"> </span><span class="nf">speaker_filter</span><span class="p">(</span>
+</span><span id="line-465">    <span class="n">target</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-466">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-467">    <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MATCH_SIMILARITY</span><span class="p">,</span>
+</span><span id="line-468">    <span class="n">dip_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_DIP_SIMILARITY</span><span class="p">,</span>
+</span><span id="line-469">    <span class="n">smooth_windows</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DFLT_SMOOTH_WINDOWS</span><span class="p">,</span>
+</span><span id="line-470">    <span class="n">min_turn_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_TURN_SECONDS</span><span class="p">,</span>
+</span><span id="line-471">    <span class="n">embed</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Windows</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-472">    <span class="o">**</span><span class="n">embed_kwargs</span><span class="p">,</span>
+</span><span id="line-473"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]:</span>
+</span><span id="line-474"><span class="w">    </span><span class="sd">"""A ``refprep.prepare_reference(speaker=...)`` step: ``(wav_path, segments) -&gt; segments``.</span>
+</span><span id="line-475">
+</span><span id="line-476"><span class="sd">    Decides per transcribed segment (a turn: :func:`turn_similarity`), then cuts</span>
+</span><span id="line-477"><span class="sd">    deep dips inside kept turns and other voices between them (:func:`mark_speaker`).</span>
+</span><span id="line-478">
+</span><span id="line-479"><span class="sd">    Args:</span>
+</span><span id="line-480"><span class="sd">        target: The voice print to keep (from :func:`voice_print`); None takes each</span>
+</span><span id="line-481"><span class="sd">            recording's dominant voice.</span>
+</span><span id="line-482"><span class="sd">        threshold: Cosine similarity a turn (or a stretch between turns) needs to</span>
+</span><span id="line-483"><span class="sd">            count as the target.</span>
+</span><span id="line-484"><span class="sd">        dip_threshold: Smoothed similarity below which a stretch inside a kept turn</span>
+</span><span id="line-485"><span class="sd">            is someone else.</span>
+</span><span id="line-486"><span class="sd">        smooth_windows: Neighbouring windows averaged before finding stretches.</span>
+</span><span id="line-487"><span class="sd">        min_turn_seconds: Shorter turns are never kept.</span>
+</span><span id="line-488"><span class="sd">        embed: ``(path, **embed_kwargs) -&gt; Windows`` (default :func:`embed_windows`).</span>
+</span><span id="line-489"><span class="sd">    """</span>
+</span><span id="line-490">    <span class="n">embed</span> <span class="o">=</span> <span class="n">embed</span> <span class="ow">or</span> <span class="n">embed_windows</span>
+</span><span id="line-491">
+</span><span id="line-492">    <span class="k">def</span><span class="w"> </span><span class="nf">mark</span><span class="p">(</span><span class="n">wav_path</span><span class="p">,</span> <span class="n">segments</span><span class="p">):</span>
+</span><span id="line-493">        <span class="n">segments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
+</span><span id="line-494">        <span class="n">windows</span> <span class="o">=</span> <span class="n">embed</span><span class="p">(</span><span class="n">wav_path</span><span class="p">,</span> <span class="o">**</span><span class="n">embed_kwargs</span><span class="p">)</span>
+</span><span id="line-495">        <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">read_wav</span><span class="p">(</span><span class="n">wav_path</span><span class="p">)</span>
+</span><span id="line-496">        <span class="n">loud</span> <span class="o">=</span> <span class="n">loud_mask</span><span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span><span class="p">)</span>
+</span><span id="line-497">        <span class="k">if</span> <span class="ow">not</span> <span class="n">loud</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>  <span class="c1"># too short or silent: nothing to attribute, no clip either</span>
+</span><span id="line-498">            <span class="k">return</span> <span class="n">segments</span>
+</span><span id="line-499">        <span class="n">voice</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-500">            <span class="n">target</span> <span class="k">if</span> <span class="n">target</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dominant_centroid</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">vectors</span><span class="p">[</span><span class="n">loud</span><span class="p">])</span>
+</span><span id="line-501">        <span class="p">)</span>
+</span><span id="line-502">        <span class="k">return</span> <span class="n">mark_speaker</span><span class="p">(</span>
+</span><span id="line-503">            <span class="n">segments</span><span class="p">,</span>
+</span><span id="line-504">            <span class="n">windows</span><span class="p">,</span>
+</span><span id="line-505">            <span class="n">smooth</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span><span class="n">voice</span><span class="p">),</span> <span class="n">smooth_windows</span><span class="p">),</span>
+</span><span id="line-506">            <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span>
+</span><span id="line-507">            <span class="n">loud</span><span class="o">=</span><span class="n">loud</span><span class="p">,</span>
+</span><span id="line-508">            <span class="n">turns</span><span class="o">=</span><span class="n">turn_similarity</span><span class="p">(</span><span class="n">segments</span><span class="p">,</span> <span class="n">windows</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">loud</span><span class="o">=</span><span class="n">loud</span><span class="p">),</span>
+</span><span id="line-509">            <span class="n">dip_threshold</span><span class="o">=</span><span class="n">dip_threshold</span><span class="p">,</span>
+</span><span id="line-510">            <span class="n">min_turn_seconds</span><span class="o">=</span><span class="n">min_turn_seconds</span><span class="p">,</span>
+</span><span id="line-511">        <span class="p">)</span>
+</span><span id="line-512">
+</span><span id="line-513">    <span class="k">return</span> <span class="n">mark</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -767,7 +749,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=78cc6f98"></script>
+    <script src="../../_static/documentation_options.js?v=dcb4eb81"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

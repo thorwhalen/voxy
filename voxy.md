@@ -1,4 +1,4 @@
-> built 2026-11-02 09:12 UTC from 9cb271d (main) · voxy 0.0.44. Details: build_info.json
+> built 2026-11-02 09:27 UTC from 6e4c120 (main) · voxy 0.0.45. Details: build_info.json
 
 # index.html.md
 
@@ -5056,10 +5056,16 @@ library can’t fill a pipe and hang the call.
 {'a': 1, 'b': 2}
 ```
 
+### Functions
+
+| [`env_worker`](_autosummary/voxy.worker.html.md#voxy.worker.env_worker)(spec, adapter, \*, model[, ...])   | A worker for adapter `adapter` in `spec`'s environment (built if missing), its model `model`, its log `logs/<adapter>.log` under voxy's cache.   |
+|------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+
 ### Classes
 
-| [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)(python, adapter, \*[, init, env, ...])   | A long-lived adapter process: `call(op, **request) -> dict`.   |
-|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------|
+| [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)(python, adapter, \*[, init, env, ...])   | A long-lived adapter process: `call(op, **request) -> dict`.                                                                                                                        |
+|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`WorkerPool`](_autosummary/voxy.worker.html.md#voxy.worker.WorkerPool)(spec, adapter, \*[, make])           | Shared workers of one adapter, one per `(model, threads, rootdir)`, each made once even when threads ask for it at the same time (so its environment is never built twice at once). |
 
 ### Exceptions
 
@@ -5107,6 +5113,42 @@ True while the process is alive.
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
 
 An operation failed inside the worker (the message carries its traceback tail).
+
+### *class* voxy.worker.WorkerPool(spec, adapter, \*, make=<function env_worker>)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Shared workers of one adapter, one per `(model, threads, rootdir)`, each made
+once even when threads ask for it at the same time (so its environment is never
+built twice at once).
+
+* **Parameters:**
+  * **spec** ([`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)) – The environment the adapter runs in (an `voxy.envs.EnvSpec`).
+  * **adapter** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The adapter’s name (`workers/<adapter>_adapter.py`).
+  * **make** – `(spec, adapter, *, model, threads, rootdir) -> Worker`; default
+    `env_worker`.
+
+#### close()
+
+Stop every worker (free their memory); the next `get` starts afresh.
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### get(model, threads=None, rootdir=None)
+
+The worker for this model, threads and data root (made on first use).
+
+* **Return type:**
+  [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)
+
+### voxy.worker.env_worker(spec, adapter, , model, threads=None, rootdir=None)
+
+A worker for adapter `adapter` in `spec`’s environment (built if missing),
+its model `model`, its log `logs/<adapter>.log` under voxy’s cache.
+
+* **Return type:**
+  [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)
 
 
 # _autosummary/voxy.workers.asr_adapter.html.md
@@ -5341,18 +5383,16 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 09:12 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/9cb271dc51fd4652875933085c05af07ac9a9dcd"><code>9cb271d</code></a> on branch <code>main</code>, for **voxy 0.0.44** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 09:27 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/6e4c120eb02c62e576de608c1c362800fbc23e0a"><code>6e4c120</code></a> on branch <code>main</code>, for **voxy 0.0.45** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.44) is behind the latest release on PyPI (0.0.45): `pip install voxy` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/9cb271dc51fd4652875933085c05af07ac9a9dcd"><code>9cb271dc51fd4652875933085c05af07ac9a9dcd</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/6e4c120eb02c62e576de608c1c362800fbc23e0a"><code>6e4c120eb02c62e576de608c1c362800fbc23e0a</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -5363,9 +5403,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41418480289">41418480289</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41420521479">41420521479</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>bb062863af5697016575e903919aa587189383f2</code> (in the history of the built commit) |
+| Event commit | <code>6e4c120eb02c62e576de608c1c362800fbc23e0a</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -5390,13 +5430,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.45/">0.0.45</a>, newer than the documented version (0.0.44).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.45/">0.0.45</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 9cb271dc51fd4652875933085c05af07ac9a9dcd
+git checkout 6e4c120eb02c62e576de608c1c362800fbc23e0a
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

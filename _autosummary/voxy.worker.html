@@ -154,11 +154,22 @@ library can’t fill a pipe and hang the call.</p>
 </span><span id="line-6"><span class="go">{'a': 1, 'b': 2}</span>
 </span></code></pre></div>
 </div>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.worker.env_worker" title="voxy.worker.env_worker"><code class="xref py py-obj docutils literal notranslate"><span class="pre">env_worker</span></code></a>(spec, adapter, *, model[, ...])</p></td>
+<td><p>A worker for adapter <code class="docutils literal notranslate"><span class="pre">adapter</span></code> in <code class="docutils literal notranslate"><span class="pre">spec</span></code>'s environment (built if missing), its model <code class="docutils literal notranslate"><span class="pre">model</span></code>, its log <code class="docutils literal notranslate"><span class="pre">logs/&lt;adapter&gt;.log</span></code> under voxy's cache.</p></td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Classes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.worker.Worker" title="voxy.worker.Worker"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Worker</span></code></a>(python, adapter, *[, init, env, ...])</p></td>
 <td><p>A long-lived adapter process: <code class="docutils literal notranslate"><span class="pre">call(op,</span> <span class="pre">**request)</span> <span class="pre">-&gt;</span> <span class="pre">dict</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.worker.WorkerPool" title="voxy.worker.WorkerPool"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WorkerPool</span></code></a>(spec, adapter, *[, make])</p></td>
+<td><p>Shared workers of one adapter, one per <code class="docutils literal notranslate"><span class="pre">(model,</span> <span class="pre">threads,</span> <span class="pre">rootdir)</span></code>, each made once even when threads ask for it at the same time (so its environment is never built twice at once).</p></td>
 </tr>
 </tbody>
 </table>
@@ -222,6 +233,55 @@ cannot abort a hung call (a separate <code class="docutils literal notranslate">
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></p>
 <p>An operation failed inside the worker (the message carries its traceback tail).</p>
 </dd></dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="voxy.worker.WorkerPool">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">voxy.worker.</span></span><span class="sig-name descname"><span class="pre">WorkerPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adapter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">make</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;function</span> <span class="pre">env_worker&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/worker.html#WorkerPool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.worker.WorkerPool" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.worker.WorkerPool'">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></p>
+<p>Shared workers of one adapter, one per <code class="docutils literal notranslate"><span class="pre">(model,</span> <span class="pre">threads,</span> <span class="pre">rootdir)</span></code>, each made
+once even when threads ask for it at the same time (so its environment is never
+built twice at once).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>spec</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="voxy.envs.html#voxy.envs.EnvSpec" title="voxy.envs.EnvSpec"><code class="xref py py-class docutils literal notranslate"><span class="pre">EnvSpec</span></code></a></span>) – The environment the adapter runs in (an <code class="docutils literal notranslate"><span class="pre">voxy.envs.EnvSpec</span></code>).</p></li>
+<li><p><strong>adapter</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span>) – The adapter’s name (<code class="docutils literal notranslate"><span class="pre">workers/&lt;adapter&gt;_adapter.py</span></code>).</p></li>
+<li><p><strong>make</strong> – <code class="docutils literal notranslate"><span class="pre">(spec,</span> <span class="pre">adapter,</span> <span class="pre">*,</span> <span class="pre">model,</span> <span class="pre">threads,</span> <span class="pre">rootdir)</span> <span class="pre">-&gt;</span> <span class="pre">Worker</span></code>; default
+<code class="docutils literal notranslate"><span class="pre">env_worker</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="voxy.worker.WorkerPool.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/worker.html#WorkerPool.close"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.worker.WorkerPool.close" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.worker.WorkerPool.close'">¶</a></dt>
+<dd><p>Stop every worker (free their memory); the next <code class="docutils literal notranslate"><span class="pre">get</span></code> starts afresh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="voxy.worker.WorkerPool.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/worker.html#WorkerPool.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.worker.WorkerPool.get" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.worker.WorkerPool.get'">¶</a></dt>
+<dd><p>The worker for this model, threads and data root (made on first use).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#voxy.worker.Worker" title="voxy.worker.Worker"><code class="xref py py-class docutils literal notranslate"><span class="pre">Worker</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.worker.env_worker">
+<span class="sig-prename descclassname"><span class="pre">voxy.worker.</span></span><span class="sig-name descname"><span class="pre">env_worker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">adapter</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/worker.html#env_worker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.worker.env_worker" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.worker.env_worker'">¶</a></dt>
+<dd><p>A worker for adapter <code class="docutils literal notranslate"><span class="pre">adapter</span></code> in <code class="docutils literal notranslate"><span class="pre">spec</span></code>’s environment (built if missing),
+its model <code class="docutils literal notranslate"><span class="pre">model</span></code>, its log <code class="docutils literal notranslate"><span class="pre">logs/&lt;adapter&gt;.log</span></code> under voxy’s cache.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#voxy.worker.Worker" title="voxy.worker.Worker"><code class="xref py py-class docutils literal notranslate"><span class="pre">Worker</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
 </section>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
@@ -233,6 +293,12 @@ cannot abort a hung call (a separate <code class="docutils literal notranslate">
 </ul>
 </li>
 <li><a :data-current="activeSection === '#voxy.worker.WorkerError'" class="reference internal" href="#voxy.worker.WorkerError"><code class="docutils literal notranslate"><span class="pre">WorkerError</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.worker.WorkerPool'" class="reference internal" href="#voxy.worker.WorkerPool"><code class="docutils literal notranslate"><span class="pre">WorkerPool</span></code></a><ul>
+<li><a :data-current="activeSection === '#voxy.worker.WorkerPool.close'" class="reference internal" href="#voxy.worker.WorkerPool.close"><code class="docutils literal notranslate"><span class="pre">WorkerPool.close()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.worker.WorkerPool.get'" class="reference internal" href="#voxy.worker.WorkerPool.get"><code class="docutils literal notranslate"><span class="pre">WorkerPool.get()</span></code></a></li>
+</ul>
+</li>
+<li><a :data-current="activeSection === '#voxy.worker.env_worker'" class="reference internal" href="#voxy.worker.env_worker"><code class="docutils literal notranslate"><span class="pre">env_worker()</span></code></a></li>
 </ul>
 </div>
 </aside>
@@ -246,7 +312,7 @@ cannot abort a hung call (a separate <code class="docutils literal notranslate">
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=78cc6f98"></script>
+<script src="../_static/documentation_options.js?v=dcb4eb81"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

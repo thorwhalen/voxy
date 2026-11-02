@@ -16,10 +16,16 @@ library can’t fill a pipe and hang the call.
 {'a': 1, 'b': 2}
 ```
 
+### Functions
+
+| [`env_worker`](#voxy.worker.env_worker)(spec, adapter, \*, model[, ...])   | A worker for adapter `adapter` in `spec`'s environment (built if missing), its model `model`, its log `logs/<adapter>.log` under voxy's cache.   |
+|------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+
 ### Classes
 
-| [`Worker`](#voxy.worker.Worker)(python, adapter, \*[, init, env, ...])   | A long-lived adapter process: `call(op, **request) -> dict`.   |
-|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------|
+| [`Worker`](#voxy.worker.Worker)(python, adapter, \*[, init, env, ...])   | A long-lived adapter process: `call(op, **request) -> dict`.                                                                                                                        |
+|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`WorkerPool`](#voxy.worker.WorkerPool)(spec, adapter, \*[, make])           | Shared workers of one adapter, one per `(model, threads, rootdir)`, each made once even when threads ask for it at the same time (so its environment is never built twice at once). |
 
 ### Exceptions
 
@@ -67,3 +73,39 @@ True while the process is alive.
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
 
 An operation failed inside the worker (the message carries its traceback tail).
+
+### *class* voxy.worker.WorkerPool(spec, adapter, \*, make=<function env_worker>)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Shared workers of one adapter, one per `(model, threads, rootdir)`, each made
+once even when threads ask for it at the same time (so its environment is never
+built twice at once).
+
+* **Parameters:**
+  * **spec** ([`EnvSpec`](voxy.envs.html.md#voxy.envs.EnvSpec)) – The environment the adapter runs in (an `voxy.envs.EnvSpec`).
+  * **adapter** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The adapter’s name (`workers/<adapter>_adapter.py`).
+  * **make** – `(spec, adapter, *, model, threads, rootdir) -> Worker`; default
+    `env_worker`.
+
+#### close()
+
+Stop every worker (free their memory); the next `get` starts afresh.
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### get(model, threads=None, rootdir=None)
+
+The worker for this model, threads and data root (made on first use).
+
+* **Return type:**
+  [`Worker`](#voxy.worker.Worker)
+
+### voxy.worker.env_worker(spec, adapter, , model, threads=None, rootdir=None)
+
+A worker for adapter `adapter` in `spec`’s environment (built if missing),
+its model `model`, its log `logs/<adapter>.log` under voxy’s cache.
+
+* **Return type:**
+  [`Worker`](#voxy.worker.Worker)
