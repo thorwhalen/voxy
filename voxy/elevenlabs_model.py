@@ -266,6 +266,7 @@ def _create_with_labels(create: Callable, *, labels: Mapping[str, str], **kwargs
     string would be double-encoded: 400 invalid_labels), and some (2.45) pass it to
     httpx, which refuses a dict in a multipart form with a ``TypeError`` before
     anything is sent. So send the dict, and the JSON string if that is refused.
+    Labels are sent even when empty: some releases encode an omitted value too.
 
     >>> def strict(*, labels, **kw):
     ...     if isinstance(labels, dict):
@@ -274,12 +275,13 @@ def _create_with_labels(create: Callable, *, labels: Mapping[str, str], **kwargs
     >>> _create_with_labels(strict, labels={"accent": "irish"})
     '{"accent": "irish"}'
     """
+    labels = dict(labels)
     try:
-        return create(labels=dict(labels), **kwargs)
-    except TypeError as e:
-        if "dict" not in str(e):
+        return create(labels=labels, **kwargs)
+    except TypeError as e:  # httpx's wording, raised while the form is built
+        if "Expected primitive type" not in str(e):
             raise
-    return create(labels=json.dumps(dict(labels)), **kwargs)
+    return create(labels=json.dumps(labels), **kwargs)
 
 
 class ElevenLabsSpeechModel(SpeechModel):
@@ -404,7 +406,7 @@ class ElevenLabsSpeechModel(SpeechModel):
         }
         response = _create_with_labels(
             self.client.voices.ivc.create,
-            labels=dict(labels or {}),
+            labels=labels or {},
             name=name,
             files=files,
             **{k: v for k, v in optional.items() if v is not None},
