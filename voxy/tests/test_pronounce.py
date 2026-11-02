@@ -282,7 +282,7 @@ def test_audit_refuses_an_expected_reading_the_table_does_not_have_before_any_wo
         asked.append(audio)
         return [{"start": 0.0, "end": 0.2, "text": "est"}]
 
-    with pytest.raises(ValueError, match=r"line 1 'est': 'adjective' not in \['noun', 'verb'\]"):
+    with pytest.raises(ValueError, match=r"'est': 'adjective' not in \['noun', 'verb'\]"):
         audit("est", "take.wav", readings={"est": READINGS}, expected={"est": "adjective"},
               scoring="spot", emitter=lambda *a: None, words_of=words_of)
 
@@ -708,7 +708,7 @@ def test_an_llm_proposal_for_an_elided_noun_reaches_audit_on_the_elided_place():
 
 
 def test_a_detectors_bad_proposal_is_not_blamed_on_the_callers_mapping():
-    class Proposal:  # the detector names a reading "fils" does not have
+    class Proposal:  # the detector names a reading "as" does not have
         line, word, clitic, expected = 1, "as", "", "pronoun"
 
     readings = {"est": READINGS, "as": {"verb": "a", "noun": "as"}}
@@ -719,3 +719,42 @@ def test_a_detectors_bad_proposal_is_not_blamed_on_the_callers_mapping():
                          expected={"est": "verb"}, detectors=[lambda text: [Proposal()]],
                          emitter=heard, words_of=lambda audio: words)
     assert [(f.risk.word, f.expected) for f in findings] == [("est", "verb"), ("as", None)]
+
+
+def test_audit_checks_an_expected_mapping_whole_key_typos_and_clitic_keys_included():
+    def never(*args):
+        raise AssertionError("called before the expected readings were checked")
+
+    run = lambda text, expected: audit(text, "take.wav", readings={"est": READINGS}, expected=expected,
+                                       scoring="spot", emitter=never, words_of=never)
+    with pytest.raises(ValueError, match=r"'ets': 'ets' is not a word of the readings table"):
+        run("est", {"est": "verb", "ets": "noun"})  # a typo would silently never match
+    with pytest.raises(ValueError, match=r"\"l'est\": 'x' not in \['noun', 'verb'\]"):
+        run("à l'Est", {"l'est": "x"})
+    with pytest.raises(ValueError, match=r"'L’esst': 'esst' is not a word"):
+        run("à l'Est", {"L’esst": "noun"})
+    with pytest.raises(ValueError, match=r"'rien': 'rien' is not a word"):
+        run("rien", {"rien": "noun"})  # checked even when the text flags nothing
+
+
+def test_audit_refuses_a_bad_name_from_an_expected_function():
+    def never(*args):
+        raise AssertionError("called before the expected readings were checked")
+
+    with pytest.raises(ValueError, match=r"line 2 'est': 'adjective' not in"):
+        audit("rien\nest", "take.wav", readings={"est": READINGS}, scoring="spot",
+              expected=lambda risk: "adjective", emitter=never, words_of=never)
+
+
+def test_audit_verifier_refuses_a_bad_expected_name_before_any_render_with_its_real_line():
+    lines = ["rien", "", "il est là"]
+    with pytest.raises(ValueError, match=r"line 3 'est': 'adjective' not in"):
+        audit_verifier(lines, readings={"est": READINGS},
+                       expected=lambda risk: "noun" if risk.clitic else "adjective")
+    with pytest.raises(ValueError, match=r"'ets': 'ets' is not a word"):
+        audit_verifier(lines, readings={"est": READINGS}, expected={"ets": "noun"})
+    rendered = []
+    with pytest.raises(ValueError, match="'adjective' not in"):
+        render_verified(lines, render=lambda *a: rendered.append(a),
+                        verify=audit_verifier(lines, readings={"est": READINGS}, expected={"est": "adjective"}))
+    assert rendered == []  # refused before the first (paid) render
