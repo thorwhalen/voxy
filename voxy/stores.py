@@ -29,6 +29,8 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 VOXY_DATA_DIR_ENVVAR = "VOXY_DATA_DIR"
+VOXY_CACHE_DIR_ENVVAR = "VOXY_CACHE_DIR"
+DFLT_VOXY_CACHE_DIR = "~/.cache/voxy"
 APP_NAME = "voxy"
 VOICES_KIND = "voices"
 SAMPLES_KIND = "samples"
@@ -68,6 +70,16 @@ def voxy_data_dir() -> Path:
     from config2py import get_app_data_folder
 
     return Path(get_app_data_folder(APP_NAME, ensure_exists=False))
+
+
+def voxy_cache_dir(*parts: str) -> Path:
+    """Intermediates (worker scratch audio, logs): ``$VOXY_CACHE_DIR`` or ``~/.cache/voxy``.
+
+    >>> voxy_cache_dir("logs", "asr.log").name
+    'asr.log'
+    """
+    root = os.environ.get(VOXY_CACHE_DIR_ENVVAR) or DFLT_VOXY_CACHE_DIR
+    return Path(root).expanduser().joinpath(*parts)
 
 
 def kind_dir(kind: str, *parts: str, rootdir: str | os.PathLike | None = None) -> Path:

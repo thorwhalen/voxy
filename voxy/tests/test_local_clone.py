@@ -257,6 +257,30 @@ def test_transcription_from_threads_starts_one_asr_worker(monkeypatch):
         refprep.close_asr()
 
 
+def test_env_worker_is_the_one_factory_for_local_workers(tmp_path, monkeypatch):
+    """#89: init, env vars and auto_setup in one place (WorkerGenerate and pools use it)."""
+    from voxy import worker as worker_module
+    from voxy.local_clone import WorkerGenerate
+
+    spec = EnvSpec("demo", ())
+    monkeypatch.setenv("VOXY_CACHE_DIR", str(tmp_path / "cache"))
+    with pytest.raises(RuntimeError, match="python -m voxy setup f5tts"):
+        worker_module.env_worker(spec, "f5tts", rootdir=tmp_path, auto_setup=False)
+
+    monkeypatch.setattr("voxy.envs.ensure_env", lambda spec, rootdir=None: "/env/python")
+    w = worker_module.env_worker(
+        spec, "asr", model="base", init={"device": "cpu"}, rootdir=tmp_path,
+        env_vars={"COQUI_TOS_AGREED": "1"},
+    )
+    assert w.python == "/env/python" and w.init == {"model": "base", "device": "cpu"}
+    assert w.env["COQUI_TOS_AGREED"] == "1" and "OMP_NUM_THREADS" in w.env
+    assert w.log_path == tmp_path / "cache" / "logs" / "asr.log"
+
+    generate = WorkerGenerate(LOCAL_CLONE_BACKENDS["xtts"], env_vars={"COQUI_TOS_AGREED": "1"})
+    made = generate._make_worker()
+    assert made.env["COQUI_TOS_AGREED"] == "1" and made.adapter.endswith("xtts_adapter.py")
+
+
 def test_ensure_env_builds_once_then_reuses(tmp_path):
     spec = EnvSpec("demo", ("numpy",))
     commands = []
