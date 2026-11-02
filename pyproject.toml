@@ -36,12 +36,10 @@ classifiers = [
 authors = [
     { name = "Thor Whalen" },
 ]
-# These are all imported at module level by voxy.base, so `import voxy` fails
-# without them. (setup.cfg declared no install_requires at all, which made
-# `pip install voxy` produce an unimportable package.)
+# What `import voxy` and the service backends need. torch and torchaudio are
+# in the `local` extra: only local models (CSM, decoding/cleaning audio for
+# them) import them, and a service-only host should not install several GB.
 dependencies = [
-    "torch",
-    "torchaudio",
     "numpy",
     "huggingface-hub",
     # voxy.stores: the voice library and its audio, as MutableMappings
@@ -56,6 +54,13 @@ Documentation = "https://thorwhalen.github.io/voxy"
 Issues = "https://github.com/thorwhalen/voxy/issues"
 
 [project.optional-dependencies]
+# Local models in this process (CSM-1B), audio decoding/cleanup as tensors, and
+# ``generate_speech`` tensors. The isolated local backends (f5tts, kokoro, ...)
+# build their own environments and don't need it.
+local = [
+    "torch",
+    "torchaudio",
+]
 # `voxy.base` imports whisper behind a try/except; installing this extra
 # enables the automatic-transcription features (audio_to_text, and voice
 # cloning without an explicit transcript).
@@ -160,6 +165,10 @@ test = []
 post_test = []
 lint = []
 format = []
+
+[tool.wads.ci.install]
+# The tests exercise the tensor paths too.
+extras = ["local"]
 
 [tool.wads.ci.env]
 required_envvars = []

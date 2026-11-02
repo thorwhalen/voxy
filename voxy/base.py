@@ -3,26 +3,26 @@ Voxy: A flexible speech synthesis and voice cloning module.
 
 This module provides a plugin architecture for working with different speech synthesis
 models, with initial support for the CSM-1B model.
+
+torch, torchaudio and whisper are imported only where a local model needs them
+(``voxy[local]``, ``voxy[transcription]``), so a cloud backend runs without them.
 """
 
+from __future__ import annotations
+
+import importlib
+import importlib.util
 import os
 import io
-from typing import Union, Optional, List, Dict, Any, BinaryIO, Tuple
+import sys
+from typing import TYPE_CHECKING, Union, Optional, List, Dict, Any, BinaryIO, Tuple
 from collections.abc import Callable
 from dataclasses import dataclass
 
-import torch
-import torchaudio
 import numpy as np
-from huggingface_hub import hf_hub_download
 
-# Try to import whisper for transcription, but don't fail if it's not available
-try:
-    import whisper
-
-    _HAS_WHISPER = True
-except ImportError:
-    _HAS_WHISPER = False
+if TYPE_CHECKING:
+    import torch
 
 
 # TODO: Scan for models and define DFLT accordingly
@@ -36,17 +36,57 @@ DFLT_ASSUMED_SAMPLE_RATE = 16000
 # The sample rate Whisper expects its input audio to be at
 WHISPER_SAMPLE_RATE = 16000
 
-# Determine the default device for model inference
+# The device for model inference: $DFLT_VOXY_DEVICE, else see ``dflt_voxy_device``
 DFLT_VOXY_DEVICE = os.environ.get("DFLT_VOXY_DEVICE", None)
 
-# Special case: CSM model has compatibility issues with MPS
-# See error: "Output channels > 65536 not supported at the MPS device"
-if DFLT_VOXY_DEVICE is None:
-    if torch.cuda.is_available():
-        DFLT_VOXY_DEVICE = "cuda"
-    # Note: We're skipping MPS even if available for CSM compatibility
-    else:
-        DFLT_VOXY_DEVICE = "cpu"
+#: The extra that installs each optional module (for the error raised without it).
+OPTIONAL_MODULE_EXTRAS = {
+    "torch": "local",
+    "torchaudio": "local",
+    "whisper": "transcription",
+}
+
+
+def optional_import(module: str):
+    """Import ``module``, or raise an ImportError naming the voxy extra that has it.
+
+    >>> optional_import("numpy").__name__
+    'numpy'
+    """
+    try:
+        return importlib.import_module(module)
+    except ImportError as e:
+        extra = OPTIONAL_MODULE_EXTRAS.get(module, module)
+        raise ImportError(
+            f"This needs {module}, which cloud backends don't: "
+            f"pip install 'voxy[{extra}]'"
+        ) from e
+
+
+def is_tensor(obj) -> bool:
+    """True if ``obj`` is a torch tensor (without importing torch to find out).
+
+    >>> is_tensor([0.0])
+    False
+    """
+    torch = sys.modules.get("torch")
+    return torch is not None and isinstance(obj, torch.Tensor)
+
+
+def dflt_voxy_device() -> str:
+    """``$DFLT_VOXY_DEVICE``, else 'cuda' if torch is installed and sees one, else 'cpu'.
+
+    MPS is skipped even when available: CSM fails on it ("Output channels > 65536
+    not supported at the MPS device").
+    """
+    if DFLT_VOXY_DEVICE:
+        return DFLT_VOXY_DEVICE
+    if importlib.util.find_spec("torch") is None:
+        return "cpu"
+    import torch
+
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
 
 VOXY_MODELS_CACHE_DIR = os.environ.get("VOXY_MODELS_CACHE_DIR")
 if VOXY_MODELS_CACHE_DIR is None:
@@ -86,6 +126,7 @@ def _resolve_audio_input(
     Returns:
         Tuple of (audio_tensor, sample_rate)
     """
+    torch, torchaudio = optional_import("torch"), optional_import("torchaudio")
     if isinstance(audio_input, str):
         # Check if it's a file path
         if os.path.isfile(audio_input):
@@ -195,6 +236,7 @@ def cleanup_audio(
     A 1-D input is given a channel dimension, and the loudest sample is
     normalized to 1.0:
 
+    >>> import torch
     >>> audio = torch.tensor([0.0, 0.5, 0.0, 0.0])
     >>> processed = cleanup_audio(audio, sample_rate=8000)
     >>> tuple(processed.shape)
@@ -208,6 +250,7 @@ def cleanup_audio(
     >>> tuple(cleanup_audio(stereo, sample_rate=8000).shape)
     (1, 4)
     """
+    torch = optional_import("torch")
     # Ensure input is 2D with shape [channels, samples]
     if len(audio.shape) == 1:
         audio = audio.unsqueeze(0)
@@ -318,12 +361,8 @@ def audio_to_text(
     Raises:
         ImportError: If whisper is not installed
     """
-    if not _HAS_WHISPER:
-        raise ImportError(
-            "openai-whisper is required for transcription. "
-            "Install with 'pip install voxy[transcription]' "
-            "(or 'pip install openai-whisper')."
-        )
+    whisper = optional_import("whisper")
+    torch, torchaudio = optional_import("torch"), optional_import("torchaudio")
 
     # Resolve audio input
     audio, resolved_sample_rate = _resolve_audio_input(
@@ -419,24 +458,28 @@ class VoiceInfo:
     labels: dict[str, Any] | None = None
 
 
-def tensor_to_wav_bytes(audio: torch.Tensor, sample_rate: int) -> bytes:
-    """Encode a tensor ([channels, samples] or [samples]) as mono 16-bit WAV.
+def tensor_to_wav_bytes(audio: torch.Tensor | np.ndarray, sample_rate: int) -> bytes:
+    """Encode audio ([channels, samples] or [samples]) as mono 16-bit WAV.
 
-    Integer tensors are taken as PCM and scaled to [-1, 1] first.
+    ``audio`` is a numpy array or a torch tensor (torch is not needed for arrays).
+    Integer audio is taken as PCM and scaled to [-1, 1] first.
 
-    >>> data = tensor_to_wav_bytes(torch.zeros(160), 16000)
+    >>> data = tensor_to_wav_bytes(np.zeros(160), 16000)
     >>> data[:4], len(data)
     (b'RIFF', 364)
-    >>> tensor_to_wav_bytes(torch.tensor([[0, 32767]], dtype=torch.int16), 8000)[-2:]
+    >>> tensor_to_wav_bytes(np.array([[0, 32767]], dtype=np.int16), 8000)[-2:]
     b'\\xff\\x7f'
     """
     import wave
 
-    if not torch.is_floating_point(audio):
-        audio = audio.to(torch.float64) / torch.iinfo(audio.dtype).max
-    if audio.dim() == 2:
-        audio = audio.mean(dim=0)
-    samples = audio.detach().cpu().to(torch.float32).clamp(-1.0, 1.0).numpy()
+    if is_tensor(audio):
+        audio = audio.detach().cpu().numpy()
+    audio = np.asarray(audio)
+    if not np.issubdtype(audio.dtype, np.floating):
+        audio = audio.astype(np.float64) / np.iinfo(audio.dtype).max
+    if audio.ndim == 2:
+        audio = audio.mean(axis=0)
+    samples = np.clip(audio.astype(np.float32), -1.0, 1.0)
     pcm = (samples * 32767).astype("<i2").tobytes()
     buffer = io.BytesIO()
     with wave.open(buffer, "wb") as w:
@@ -504,14 +547,27 @@ class SpeechModel:
         """Create a new voice from a text description."""
         raise self._unsupported("design voices")
 
-    def __init__(self, device: str = DFLT_VOXY_DEVICE):
+    def __init__(self, device: str | None = None):
         """
         Initialize the speech model.
 
         Args:
-            device: Device for model inference ('cuda', 'cpu', 'mps')
+            device: Device for model inference ('cuda', 'cpu', 'mps'); default
+                ``dflt_voxy_device()``, resolved on first use (so a service
+                backend never imports torch to find out).
         """
-        self.device = device
+        self._device = device
+
+    @property
+    def device(self) -> str:
+        """The inference device (resolved on first use)."""
+        if self._device is None:
+            self._device = dflt_voxy_device()
+        return self._device
+
+    @device.setter
+    def device(self, device: str) -> None:
+        self._device = device
 
     def clone_voice(
         self,
@@ -567,7 +623,7 @@ class CSMSpeechModel(SpeechModel):
     # Class-level cache for model path to avoid repeated downloads
     _model_cache_path = None
 
-    def __init__(self, model_path: str | None = None, device: str = DFLT_VOXY_DEVICE):
+    def __init__(self, model_path: str | None = None, device: str | None = None):
         """
         Initialize the CSM speech model.
 
@@ -620,6 +676,8 @@ class CSMSpeechModel(SpeechModel):
                             # Create a consistent cache directory
                             os.makedirs(cache_dir, exist_ok=True)
 
+                            from huggingface_hub import hf_hub_download
+
                             print("Downloading CSM-1B model from Hugging Face Hub...")
                             self.model_path = hf_hub_download(
                                 repo_id="sesame/csm-1b",
@@ -669,6 +727,7 @@ class CSMSpeechModel(SpeechModel):
         Returns:
             VoiceProfile: A packaged voice profile
         """
+        torch, torchaudio = optional_import("torch"), optional_import("torchaudio")
         # Load model if not already loaded
         self._ensure_generator_loaded()
 
@@ -784,7 +843,7 @@ class CSMSpeechModel(SpeechModel):
         # Save if path provided
         if output_path:
             os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-            torchaudio.save(
+            optional_import("torchaudio").save(
                 output_path, audio.unsqueeze(0).cpu(), self._generator.sample_rate
             )
 
