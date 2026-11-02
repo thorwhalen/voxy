@@ -268,22 +268,34 @@ def test_env_worker_is_the_one_factory_for_local_workers(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="python -m voxy setup f5tts"):
         worker_module.env_worker(spec, "f5tts", rootdir=tmp_path, auto_setup=False)
 
-    monkeypatch.setattr("voxy.envs.ensure_env", lambda spec, rootdir=None: "/env/python")
+    monkeypatch.setattr(
+        "voxy.envs.ensure_env", lambda spec, rootdir=None: "/env/python"
+    )
     w = worker_module.env_worker(
-        spec, "asr", model="base", init={"device": "cpu"}, rootdir=tmp_path,
+        spec,
+        "asr",
+        model="base",
+        init={"device": "cpu"},
+        rootdir=tmp_path,
         env_vars={"COQUI_TOS_AGREED": "1"},
     )
     assert w.python == "/env/python" and w.init == {"model": "base", "device": "cpu"}
     assert w.env["COQUI_TOS_AGREED"] == "1" and "OMP_NUM_THREADS" in w.env
     assert w.log_path == tmp_path / "cache" / "logs" / "asr.log"
 
-    generate = WorkerGenerate(LOCAL_CLONE_BACKENDS["f5tts"], env_vars={"COQUI_TOS_AGREED": "1"})
+    generate = WorkerGenerate(
+        LOCAL_CLONE_BACKENDS["f5tts"], env_vars={"COQUI_TOS_AGREED": "1"}
+    )
     made = generate._make_worker()
-    assert made.env["COQUI_TOS_AGREED"] == "1" and made.adapter.endswith("f5tts_adapter.py")
+    assert made.env["COQUI_TOS_AGREED"] == "1" and made.adapter.endswith(
+        "f5tts_adapter.py"
+    )
     assert made.init == {"model": "F5TTS_v1_Base"}  # the backend's init, unchanged
     monkeypatch.undo()  # the real ensure_env again: the env is missing under tmp_path
     with pytest.raises(RuntimeError, match="setup f5tts"):
-        WorkerGenerate(LOCAL_CLONE_BACKENDS["f5tts"], rootdir=tmp_path, auto_setup=False)._make_worker()
+        WorkerGenerate(
+            LOCAL_CLONE_BACKENDS["f5tts"], rootdir=tmp_path, auto_setup=False
+        )._make_worker()
 
 
 def test_ensure_env_builds_once_then_reuses(tmp_path):
@@ -433,17 +445,21 @@ def _stem(folder, root, rng, gain=0.2):
     (root / folder).mkdir(exist_ok=True)
     path = root / folder / "vocals.wav"
     path.write_bytes(
-        write_wav(gain * rng.standard_normal(SR * 4).astype(np.float32), SR)
+        write_wav(gain * rng.standard_normal(SR * 6).astype(np.float32), SR)
     )
     return path
 
 
-def _rerun(samples, *, n_clips=1):
-    """A ``prepare_reference`` into ``samples`` with fakes cutting ``n_clips`` per source."""
+def _rerun(samples, *, n_clips=1, offset=0.0, log=lambda *a: None):
+    """A ``prepare_reference`` into ``samples`` with fakes cutting ``n_clips`` per
+    source (starting ``offset`` seconds in)."""
 
     def transcriber(path, language=None):
-        words = [_word(i * 2 + 0.2, i * 2 + 1.8, "Hello.") for i in range(n_clips)]
-        return [{"start": 0, "end": 4, "text": "", "words": words}]
+        words = [
+            _word(offset + i * 2 + 0.2, offset + i * 2 + 1.8, f"Hello {i}.")
+            for i in range(n_clips)
+        ]
+        return [{"start": 0, "end": 6, "text": "", "words": words}]
 
     def run(*sources):
         return refprep.prepare_reference(
@@ -452,7 +468,7 @@ def _rerun(samples, *, n_clips=1):
             conditioner=lambda src, dst, **kw: dst.write_bytes(open(src, "rb").read()),
             transcriber=transcriber,
             min_seconds=1,
-            log=lambda *a: None,
+            log=log,
         )
 
     return run
@@ -464,114 +480,197 @@ def _keys(samples, prefix=""):
     }
 
 
-def test_running_prepare_reference_again_keeps_slugs_and_the_other_sources(tmp_path):
-    """#68: a source processed again keeps its keys; others are untouched, never reused."""
+def _snapshot(samples):
+    """Every key and its bytes, but the manifest (which a run rewrites)."""
+    return {
+        k.replace("\\", "/"): samples[k] for k in samples if k != refprep.MANIFEST_KEY
+    }
+
+
+def _assert_untouched(before, samples):
+    assert {k: samples[k] for k in before} == before  # nothing deleted or overwritten
+
+
+def _set_manifest(samples, entries):
+    samples[refprep.MANIFEST_KEY] = "\n".join(map(json.dumps, entries)).encode()
+
+
+def test_running_prepare_reference_again_keeps_earlier_clips_and_adds_new_keys(
+    tmp_path,
+):
+    """#68: a re-run adds; every earlier clip keeps its key, its bytes and its entry."""
     rng = np.random.default_rng(3)
     a, b = _stem("song-a", tmp_path, rng, 0.1), _stem("song-b", tmp_path, rng, 0.4)
-    c, d = _stem("song-c", tmp_path, rng, 0.6), _stem("song-d", tmp_path, rng, 0.6)
     samples = samples_store("ada", rootdir=tmp_path / "data")
-    run = _rerun(samples)
-    run(a, b)
-    assert _keys(samples, "clips/") == {
-        "clips/song-a-vocals-0001.wav",
-        "clips/song-b-vocals-0001.wav",
+    first = _rerun(samples)(a, b)
+    before = _snapshot(samples)
+    logged = []
+    second = _rerun(samples, log=logged.append)(a)
+    _assert_untouched(before, samples)
+    new = set(_snapshot(samples)) - set(before)
+    assert new == {"clips/vocals-0001.wav", "conditioned/vocals.wav"}  # fresh slug
+    assert {e["key"] for e in second} == {e["key"] for e in first} | {
+        "clips/vocals-0001.wav"
     }
-
-    manifest = run(a)  # song-a again, alone: it keeps its slug, so its keys stay valid
-    assert _keys(samples, "clips/") == {
-        "clips/song-a-vocals-0001.wav",
-        "clips/song-b-vocals-0001.wav",
-    }
-    assert "conditioned/song-a-vocals.wav" in samples
-    assert {e["slug"] for e in manifest} == {"song-a-vocals", "song-b-vocals"}
-    assert sorted(Path(e["source"]).parent.name for e in manifest) == [
-        "song-a",
-        "song-b",
-    ]
-
-    run(c)  # new to the store: plain "vocals" is free
-    manifest = run(d)  # new too, and "vocals" is now taken by song-c
-    by_source = {Path(e["source"]).parent.name: e["key"] for e in manifest}
-    assert by_source == {
-        "song-a": "clips/song-a-vocals-0001.wav",
-        "song-b": "clips/song-b-vocals-0001.wav",
-        "song-c": "clips/vocals-0001.wav",
-        "song-d": "clips/vocals-2-0001.wav",
-    }
-    rms = np.sqrt(np.mean(read_wav(samples["clips/song-a-vocals-0001.wav"])[0] ** 2))
-    assert rms < 0.2  # still song-a's bytes
-    assert refprep.load_manifest(samples) == manifest
+    assert len({e["run"] for e in second}) == 2
+    assert refprep.load_manifest(samples) == second
+    assert any("forget" in line and str(a) in line for line in logged)
 
 
-def test_prepare_reference_again_removes_only_a_sources_surplus_clips(tmp_path):
+def test_a_new_recording_under_an_old_filename_keeps_the_old_takes_clips(tmp_path):
     rng = np.random.default_rng(4)
-    a, b = _stem("song-a", tmp_path, rng), _stem("song-b", tmp_path, rng)
+    a = _stem("song-a", tmp_path, rng, 0.05)
     samples = samples_store("ada", rootdir=tmp_path / "data")
-    _rerun(samples, n_clips=2)(a, b)
-    manifest = _rerun(samples, n_clips=1)(a)
-    assert _keys(samples, "clips/") == {
-        "clips/song-a-vocals-0001.wav",
-        "clips/song-b-vocals-0001.wav",
-        "clips/song-b-vocals-0002.wav",
-    }
-    assert sorted(e["key"] for e in manifest) == sorted(_keys(samples, "clips/"))
+    _rerun(samples, n_clips=3)(a)
+    before = _snapshot(samples)
+    _stem("song-a", tmp_path, rng, 0.6)  # a new take, same path
+    manifest = _rerun(samples)(a)
+    _assert_untouched(before, samples)
+    assert len(manifest) == 4
 
 
-def test_prepare_reference_never_deletes_a_key_a_hand_written_entry_names(tmp_path):
+def test_saved_reference_paths_keep_their_bytes_and_text(tmp_path):
     rng = np.random.default_rng(5)
     a = _stem("song-a", tmp_path, rng)
-    samples = {"tape1.wav": b"mine", "clips/other-0001.wav": b"theirs"}
-    hand_written = [
-        {
-            "key": "tape1.wav",
-            "source": str(a),
-            "score": 0.5,
-        },  # names a top-level sample
-        {"key": "clips/other-0001.wav", "source": str(a), "slug": "../x", "score": 0.4},
-        {"key": "notes.wav", "score": 0.1},  # no source at all
-    ]
-    samples[refprep.MANIFEST_KEY] = "\n".join(map(json.dumps, hand_written)).encode()
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    ref = refprep.best_references(_rerun(samples, n_clips=2)(a), min_seconds=1)[0]
+    audio = Path(ref["path"]).read_bytes()
+    manifest = _rerun(samples, offset=1.0)(a)  # cut differently this time
+    assert Path(ref["path"]).read_bytes() == audio
+    assert [e["text"] for e in manifest if e["key"] == ref["key"]] == [ref["text"]]
+
+
+def test_prepare_reference_never_overwrites_orphan_keys(tmp_path):
+    """Clips in no manifest (an older store, a crashed run, a zero-clip source)."""
+    a = _stem("song-a", tmp_path, np.random.default_rng(6))
+    samples = {
+        "clips/vocals-0001.wav": b"orphan a saved profile points at",
+        "conditioned/vocals-2.wav": b"a zero-clip source's",
+    }
+    before = dict(samples)
     manifest = _rerun(samples)(a)
-    assert samples["tape1.wav"] == b"mine"
-    assert samples["clips/other-0001.wav"] == b"theirs"
-    assert {e["key"] for e in manifest} == {"clips/vocals-0001.wav", "notes.wav"}
+    _assert_untouched(before, samples)
+    assert [e["key"] for e in manifest] == ["clips/vocals-3-0001.wav"]
+
+
+@pytest.mark.parametrize(
+    "entries",
+    [
+        # a slug field that is not a slug, naming a clip-shaped key
+        [{"key": "clips/vocals-0001.wav", "slug": "BAD!", "source": "/x/o.wav"}],
+        # a slug field that disagrees with the key
+        [{"key": "clips/vocals-0001.wav", "slug": "x", "score": 0.5}],
+        # two sources sharing one slug
+        [
+            {"key": "clips/vocals-0001.wav", "slug": "vocals", "source": "/x/a.wav"},
+            {"key": "clips/vocals-0002.wav", "slug": "vocals", "source": "/x/b.wav"},
+        ],
+        # no score, no key, a non-string slug or key
+        [{"key": "tape1.wav"}, {"score": 0.1, "source": "/q.wav"}, {"slug": 3}],
+        [{"key": 7, "score": "high"}],
+    ],
+)
+def test_a_corrupt_manifest_neither_crashes_nor_overwrites(tmp_path, entries):
+    a = _stem("song-a", tmp_path, np.random.default_rng(7))
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    for e in entries:
+        if isinstance(e.get("key"), str):
+            samples[e["key"]] = f"bytes of {e['key']}".encode()
+    _set_manifest(samples, entries)
+    before = _snapshot(samples)
+    manifest = _rerun(samples, n_clips=2)(a)
+    _assert_untouched(before, samples)
+    assert len(manifest) == len(entries) + 2  # every earlier entry kept
+    assert all(e in manifest for e in refprep.load_manifest(samples))
+    scored = [isinstance(e.get("score"), (int, float)) for e in manifest]
+    assert scored == sorted(scored, reverse=True)  # unscored entries sort last
+
+
+def test_a_manifest_line_that_is_not_an_object_fails_before_writing(tmp_path):
+    a = _stem("song-a", tmp_path, np.random.default_rng(8))
+    samples = {refprep.MANIFEST_KEY: b'{"key": "clips/x-0001.wav"}\n[1, 2]'}
+    with pytest.raises(ValueError, match="not JSON objects"):
+        _rerun(samples)(a)
+    assert set(samples) == {refprep.MANIFEST_KEY}
+
+
+def test_writing_an_existing_key_raises():
+    with pytest.raises(FileExistsError):
+        refprep._put_new({"clips/a-0001.wav": b"A"}, "clips/a-0001.wav", b"B")
 
 
 def test_prepare_reference_tells_sources_apart_by_real_path(tmp_path, monkeypatch):
-    rng = np.random.default_rng(6)
+    rng = np.random.default_rng(9)
     a = _stem("song-a", tmp_path, rng)
     samples = samples_store("ada", rootdir=tmp_path / "data")
     monkeypatch.chdir(tmp_path)
     _rerun(samples, n_clips=2)(Path("song-a/vocals.wav"))
     manifest = _rerun(samples)(a, Path("song-a") / ".." / "song-a" / "vocals.wav")
-    assert [e["key"] for e in manifest] == ["clips/vocals-0001.wav"]  # one source, once
-    assert manifest[0]["source_path"] == os.path.realpath(a)
-    assert _keys(samples, "clips/") == {"clips/vocals-0001.wav"}
+    assert len([e for e in manifest if e["slug"] == "vocals-2"]) == 1  # once
+    assert {e["source_path"] for e in manifest} == {os.path.realpath(a)}
+    assert len(refprep.forget(samples, a)) == 5  # both runs: 3 clips, 2 conditioned
+    assert _keys(samples, "clips/") == _keys(samples, "conditioned/") == set()
+    assert refprep.load_manifest(samples) == []
 
 
-def test_prepare_reference_saves_the_manifest_before_deleting(tmp_path):
-    class Logged(dict):
-        def __init__(self):
-            super().__init__()
-            self.log = []
+def test_forget_removes_one_runs_entries_and_files_and_nothing_else(tmp_path):
+    rng = np.random.default_rng(10)
+    a, b = _stem("song-a", tmp_path, rng), _stem("song-b", tmp_path, rng)
+    samples = samples_store("ada", rootdir=tmp_path / "data")
+    first = _rerun(samples, n_clips=2)(a, b)
+    _rerun(samples)(a)
+    b_files = {k: v for k, v in _snapshot(samples).items() if "song-b" in k}
+    samples["tape1.wav"] = b"mine"
+    hand = {"key": "tape1.wav", "source": str(a)}  # a top-level sample, same source
+    _set_manifest(samples, refprep.load_manifest(samples) + [hand])
 
-        def __setitem__(self, k, v):
-            self.log.append(("set", k))
-            super().__setitem__(k, v)
-
-        def pop(self, k, *default):
-            self.log.append(("pop", k))
-            return super().pop(k, *default)
-
-    a = _stem("song-a", tmp_path, np.random.default_rng(7))
-    samples = Logged()
-    _rerun(samples, n_clips=2)(a)
-    samples.log.clear()
-    _rerun(samples, n_clips=1)(a)
-    assert samples.log[-2:] == [
-        ("set", refprep.MANIFEST_KEY),
-        ("pop", "clips/vocals-0002.wav"),
+    deleted = refprep.forget(samples, a, run=first[0]["run"])
+    assert sorted(deleted) == [
+        "clips/song-a-vocals-0001.wav",
+        "clips/song-a-vocals-0002.wav",
+        "conditioned/song-a-vocals.wav",
     ]
+    assert {"clips/vocals-0001.wav", "conditioned/vocals.wav"} <= _keys(samples)
+
+    deleted = refprep.forget(samples, a)  # the rest of a
+    assert sorted(deleted) == ["clips/vocals-0001.wav", "conditioned/vocals.wav"]
+    assert samples["tape1.wav"] == b"mine"  # its entry is gone, never the sample
+    _assert_untouched(b_files, samples)
+    assert sorted(e["key"] for e in refprep.load_manifest(samples)) == [
+        "clips/song-b-vocals-0001.wav",
+        "clips/song-b-vocals-0002.wav",
+    ]
+
+
+def test_forget_keeps_files_a_remaining_entry_names_or_shares_a_slug_with():
+    samples = {
+        k: b"x" for k in ("clips/a-0001.wav", "clips/a-0002.wav", "conditioned/a.wav")
+    }
+    _set_manifest(
+        samples,
+        [
+            {"key": "clips/a-0001.wav", "slug": "a", "source_path": "/s/a.wav"},
+            {"key": "clips/a-0002.wav", "slug": "a", "source_path": "/s/a.wav"},
+            {
+                "key": "clips/a-0002.wav",
+                "source_path": "/s/b.wav",
+            },  # corrupt: b names it
+        ],
+    )
+    assert refprep.forget(samples, "/s/a.wav") == []
+    assert len(_keys(samples, "clips/")) == 2 and "conditioned/a.wav" in samples
+    assert [e["source_path"] for e in refprep.load_manifest(samples)] == ["/s/b.wav"]
+
+
+def test_forget_matches_old_entries_by_source_as_given():
+    samples = {"clips/talk-0001.wav": b"T", "conditioned/talk.wav": b"C"}
+    _set_manifest(samples, [{"key": "clips/talk-0001.wav", "source": "talk.m4a"}])
+    assert refprep.forget(samples, "other.m4a") == []
+    assert refprep.forget(samples, "talk.m4a") == [
+        "clips/talk-0001.wav",
+        "conditioned/talk.wav",
+    ]
+    assert set(samples) == {refprep.MANIFEST_KEY}
 
 
 def test_plan_clips_respects_max_length():
