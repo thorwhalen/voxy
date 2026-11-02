@@ -162,21 +162,46 @@ def env_worker(
     spec: "EnvSpec",
     adapter: str,
     *,
-    model: str,
+    model: str | None = None,
+    init: Mapping | None = None,
     threads: int | None = None,
     rootdir: str | os.PathLike | None = None,
+    env_vars: Mapping[str, str] | None = None,
+    auto_setup: bool = True,
 ) -> "Worker":
-    """A worker for adapter ``adapter`` in ``spec``'s environment (built if missing),
-    its model ``model``, its log ``logs/<adapter>.log`` under voxy's cache."""
-    from voxy.envs import ensure_env, worker_environ
-    from voxy.local_clone import voxy_cache_dir
+    """A worker for adapter ``adapter`` in ``spec``'s environment, its log
+    ``logs/<adapter>.log`` under voxy's cache: the one place an environment and an
+    adapter become a worker.
+
+    Args:
+        spec: The environment (built here if missing, unless ``auto_setup`` is False).
+        adapter: The adapter's name (``workers/<adapter>_adapter.py``).
+        model: Shorthand for ``init={"model": model}``.
+        init: Keyword arguments of the adapter's ``load``.
+        threads, rootdir: As ``voxy.envs.worker_environ``.
+        env_vars: Extra environment variables of the worker.
+        auto_setup: Build a missing environment (else raise, naming the setup command).
+    """
+    from voxy.envs import ensure_env, env_python, is_env_ready, worker_environ
+    from voxy.stores import voxy_cache_dir
     from voxy.workers import adapter_path
 
+    if auto_setup:
+        python = ensure_env(spec, rootdir=rootdir)
+    elif is_env_ready(spec, rootdir=rootdir):
+        python = env_python(spec, rootdir=rootdir)
+    else:
+        raise RuntimeError(
+            f"The {spec.name!r} environment isn't built: python -m voxy setup {adapter}"
+        )
     return Worker(
-        ensure_env(spec, rootdir=rootdir),
+        python,
         adapter_path(adapter),
-        init={"model": model},
-        env=worker_environ(spec, threads=threads, rootdir=rootdir),
+        init={**({"model": model} if model is not None else {}), **(init or {})},
+        env={
+            **worker_environ(spec, threads=threads, rootdir=rootdir),
+            **(env_vars or {}),
+        },
         log_path=voxy_cache_dir("logs", f"{adapter}.log"),
     )
 

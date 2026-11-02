@@ -44,18 +44,18 @@ import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import partial
-from pathlib import Path
 
 import numpy as np
 
 from voxy.base import Speech, SpeechModel, VoiceProfile, _resolve_text_input
-from voxy.envs import EnvSpec, ensure_env, worker_environ
+from voxy.envs import EnvSpec
+# VOXY_CACHE_DIR_ENVVAR is re-exported for compatibility (it moved to voxy.stores);
+# remove it after the next release.
+from voxy.stores import VOXY_CACHE_DIR_ENVVAR, voxy_cache_dir  # noqa: F401
 from voxy.textsplit import split_text
 from voxy.wavutil import read_wav, silence, trim_silence, write_wav
-from voxy.worker import Worker
-from voxy.workers import adapter_path
+from voxy.worker import Worker, env_worker
 
-VOXY_CACHE_DIR_ENVVAR = "VOXY_CACHE_DIR"
 DFLT_GAP_MS = 250
 DFLT_PARAGRAPH_GAP_MS = 700
 REFERENCE_SPEAKER_ID = 0
@@ -65,12 +65,6 @@ DFLT_DESIGN_PREVIEW_TEXT = (
     "The morning light crossed the water, and for a moment nothing else moved."
 )
 DESIGN_CLIP_NAME = "design.wav"
-
-
-def voxy_cache_dir(*parts: str) -> Path:
-    """Intermediates (worker scratch audio, logs): ``$VOXY_CACHE_DIR`` or ``~/.cache/voxy``."""
-    root = os.environ.get(VOXY_CACHE_DIR_ENVVAR) or "~/.cache/voxy"
-    return Path(root).expanduser().joinpath(*parts)
 
 
 @dataclass(frozen=True)
@@ -287,26 +281,14 @@ class WorkerGenerate:
         self._lock = threading.Lock()  # one worker even when called from threads
 
     def _make_worker(self) -> Worker:
-        from voxy.envs import env_python, is_env_ready
-
-        spec = self.backend.env
-        if self.auto_setup:
-            python = ensure_env(spec, rootdir=self.rootdir)
-        elif is_env_ready(spec, rootdir=self.rootdir):
-            python = env_python(spec, rootdir=self.rootdir)
-        else:
-            raise RuntimeError(
-                f"The {spec.name!r} environment isn't built: "
-                f"python -m voxy setup {self.backend.name}"
-            )
-        env = worker_environ(spec, threads=self.threads, rootdir=self.rootdir)
-        env.update(self.env_vars)
-        return Worker(
-            python,
-            adapter_path(self.backend.name),
+        return env_worker(
+            self.backend.env,
+            self.backend.name,
             init=self.init,
-            env=env,
-            log_path=voxy_cache_dir("logs", f"{self.backend.name}.log"),
+            threads=self.threads,
+            rootdir=self.rootdir,
+            env_vars=self.env_vars,
+            auto_setup=self.auto_setup,
         )
 
     def _run(self, op: str, **request):

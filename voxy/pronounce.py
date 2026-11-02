@@ -487,6 +487,11 @@ def failing(verdicts: Iterable[Verdict]) -> list[Verdict]:
 _PHONEME_POOL = WorkerPool(PHONEME_ENV, "phonemes")
 
 
+def close_phonemes() -> None:
+    """Stop the recogniser workers (free their memory)."""
+    _PHONEME_POOL.close()
+
+
 def phoneme_emitter(
     *,
     model: str = DFLT_PHONEME_MODEL,
@@ -1137,7 +1142,7 @@ def speech_renderer(
     number is passed to ``model.synthesize`` under that name, so a seeded model gives
     a new take; without it, the model is simply called again.
     """
-    from voxy.local_clone import voxy_cache_dir
+    from voxy.stores import voxy_cache_dir
 
     if outdir is None:
         import time
