@@ -40,6 +40,7 @@ from pathlib import Path
 import numpy as np
 
 from voxy.envs import EnvSpec, ensure_env, worker_environ
+from voxy.worker import WorkerPool
 from voxy.wavutil import frame_db, read_wav, write_wav
 
 DFLT_SAMPLE_RATE = 24000
@@ -196,26 +197,8 @@ def with_deepfilternet(
 # 2. transcription -------------------------------------------------------------
 
 
-_ASR_WORKERS: dict = {}
-
-
-def _asr_worker(model: str, threads: int | None, rootdir: str | None):
-    """One transcription worker per (model, threads, data root), started on demand."""
-    from voxy.local_clone import voxy_cache_dir
-    from voxy.worker import Worker
-    from voxy.workers import adapter_path
-
-    key = (model, threads, rootdir)
-    if key not in _ASR_WORKERS:
-        python = ensure_env(ASR_ENV, rootdir=rootdir)
-        _ASR_WORKERS[key] = Worker(
-            python,
-            adapter_path("asr"),
-            init={"model": model},
-            env=worker_environ(ASR_ENV, threads=threads, rootdir=rootdir),
-            log_path=voxy_cache_dir("logs", "asr.log"),
-        )
-    return _ASR_WORKERS[key]
+#: The asr workers, one per (model, threads, data root), made on demand.
+_ASR_POOL = WorkerPool(ASR_ENV, "asr")
 
 
 def transcribe(
@@ -227,7 +210,7 @@ def transcribe(
     rootdir: str | os.PathLike | None = None,
 ) -> list[dict]:
     """Timed segments ``[{start, end, text, confidence, words: [...]}, ...]`` of ``audio``."""
-    worker = _asr_worker(model, threads, str(rootdir) if rootdir else None)
+    worker = _ASR_POOL.get(model, threads, rootdir)
     # The worker runs in its own working directory: hand it an absolute path.
     reply = worker.call(
         "transcribe", audio=str(Path(audio).resolve()), language=language
@@ -242,8 +225,7 @@ def transcribe_text(audio: str | os.PathLike, **kwargs) -> str:
 
 def close_asr() -> None:
     """Stop the transcription workers (free their memory)."""
-    while _ASR_WORKERS:
-        _ASR_WORKERS.popitem()[1].close()
+    _ASR_POOL.close()
 
 
 # 3. clip planning -------------------------------------------------------------
