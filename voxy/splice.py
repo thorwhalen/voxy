@@ -22,7 +22,13 @@ Steps, each a seam (keyword argument of ``replace_words``):
   times when there is none, since those are often early (a final /z/ left behind
   was heard as "Smith's"). The render is trimmed, resampled, loudness-matched to
   what it replaces (``level``: by default the RMS of the loud frames on both
-  sides, ``speech_level``, so pauses do not count), and crossfaded.
+  sides, ``speech_level``, so pauses do not count), and crossfaded. With
+  ``keep_pauses`` (default), the pauses the cut removed are put back around the
+  render from the cut's own edges, so they keep their length and their background.
+- ``background(samples, sample_rate, length)``: what is mixed under the render so
+  the recording's floor does not drop out while the new words play (default
+  ``quiet_background``: the recording's quietest frames, or nothing when even
+  those are not quiet, as in wall-to-wall audio; ``None`` for no background).
 - ``verify``: checks of the result (default ``heard_check``: the new words are
   transcribed where they were put, and the old ones are gone; ``voice_check``
   compares the new phrase's voice print with the rest of the recording's,
@@ -68,8 +74,10 @@ DFLT_CHECK_CONTEXT_S = 1.0
 DFLT_PEAK = 0.99
 #: A frame this far below the loudest of a stretch counts as pause, not speech.
 DFLT_PAUSE_DROP_DB = 25.0
-#: Length of the recording's quietest stretch used as room tone.
-DFLT_ROOM_TONE_S = 0.3
+#: Share of the recording's frames, the quietest, that its background is built from.
+DFLT_BACKGROUND_SHARE = 0.05
+#: Those frames count as background only this far below the speech level, or further.
+DFLT_BACKGROUND_DROP_DB = 30.0
 #: ElevenLabs returns mp3 by default; raw PCM decodes without ffmpeg.
 DFLT_RENDER_FORMATS = {"elevenlabs": "pcm_24000"}
 #: Slack for float error when turning a time into a frame index (3.0 s / 10 ms is 300).
@@ -78,6 +86,7 @@ _FRAME_EPSILON = 1e-6
 Render = Callable[[str], tuple[np.ndarray, int]]
 Check = Callable[[np.ndarray, int, "Replacement"], dict]
 Level = Callable[[np.ndarray, int], float]
+Background = Callable[[np.ndarray, int, int], "np.ndarray | None"]
 
 
 def _tokens(phrase: str) -> list[str]:
@@ -227,28 +236,73 @@ def edge_pauses(
     )
 
 
-def room_tone(
+def _overlap_add(frames: np.ndarray) -> np.ndarray:
+    """``frames`` (one per row) joined with sine-windowed 50% overlaps, the middle
+    part only: uncorrelated frames (noise) keep a steady power, with no clicks.
+
+    >>> rng = np.random.default_rng(0)
+    >>> y = _overlap_add(rng.standard_normal((400, 80)))
+    >>> len(y), round(float(np.sqrt(np.mean(y**2))), 1)
+    (15960, 1.0)
+    """
+    size = frames.shape[1] - frames.shape[1] % 2
+    hop = size // 2
+    windowed = frames[:, :size] * np.sin(np.pi * (np.arange(size) + 0.5) / size)
+    out = np.zeros(hop * (len(windowed) + 1))
+    evens, odds = windowed[::2].ravel(), windowed[1::2].ravel()
+    out[: len(evens)] += evens
+    out[hop : hop + len(odds)] += odds
+    return out[hop:-hop]
+
+
+def quiet_background(
     samples: np.ndarray,
     sample_rate: int,
     length: int,
     *,
-    window_s: float = DFLT_ROOM_TONE_S,
-) -> np.ndarray:
-    """``length`` samples of the recording's own background: its quietest
-    ``window_s`` stretch, laid end to end, every other copy reversed (no clicks).
+    share: float = DFLT_BACKGROUND_SHARE,
+    drop_db: float = DFLT_BACKGROUND_DROP_DB,
+) -> np.ndarray | None:
+    """``length`` samples of the recording's background, or ``None`` when it has none
+    quiet enough to trust.
 
-    >>> x = np.concatenate([np.full(4000, 0.5), np.full(2400, 0.01)])
-    >>> tone = room_tone(x, 8000, 5000)
-    >>> len(tone), round(float(np.abs(tone).max()), 3)
-    (5000, 0.01)
+    The background is made of the quietest ``share`` of its 10 ms frames, in time
+    order, overlap-added (``_overlap_add``) and cycled to ``length``. It is used only
+    when every one of those frames is at least ``drop_db`` below ``speech_level``:
+    otherwise they would carry speech (a recording with no pause) or music
+    (wall-to-wall audio), and nothing is better than that under the new words.
+    O(len(samples)).
+
+    >>> rng = np.random.default_rng(0)
+    >>> x = np.concatenate([np.full(4000, 0.5), 0.005 * rng.standard_normal(2400)])
+    >>> bg = quiet_background(x, 8000, 5000)
+    >>> len(bg), round(float(np.sqrt(np.mean(bg**2))), 4)  # the floor's quietest frames
+    (5000, 0.0044)
+    >>> print(quiet_background(np.full(8000, 0.5), 8000, 5000))  # wall-to-wall
+    None
     """
-    size = min(len(samples), max(1, int(window_s * sample_rate)))
-    energy = np.convolve(np.asarray(samples, np.float64) ** 2, np.ones(size), "valid")
-    start = int(np.argmin(energy))
-    piece = np.asarray(samples[start : start + size], np.float32)
-    copies = -(-length // len(piece))
-    tiles = [piece if i % 2 == 0 else piece[::-1] for i in range(copies)]
-    return np.concatenate(tiles)[:length]
+    size = max(1, int(sample_rate * FRAME_MS / 1000))
+    levels = frame_db(samples, sample_rate)
+    speech = speech_level(samples, sample_rate)
+    if not len(levels) or speech == 0:
+        return None
+    count = max(1, int(share * len(levels)))
+    quiet = np.sort(np.argpartition(levels, count - 1)[:count])
+    if levels[quiet].max() > 20 * np.log10(speech) - drop_db:
+        return None
+    frames = np.asarray(samples[: len(levels) * size], np.float64).reshape(-1, size)
+    needed = -(-length // (size // 2)) + 2  # ``_overlap_add`` gives a half frame each
+    return _overlap_add(frames[np.resize(quiet, needed)])[:length].astype(np.float32)
+
+
+def cap_peak(samples: np.ndarray, peak: float = DFLT_PEAK) -> np.ndarray:
+    """``samples``, scaled down if needed so that no sample exceeds ``peak``.
+
+    >>> cap_peak(np.array([0.5, -2.0]), 1.0).tolist()
+    [0.25, -1.0]
+    """
+    top = float(np.max(np.abs(samples))) if len(samples) else 0.0
+    return samples * (peak / top) if top > peak else samples
 
 
 def match_loudness(
@@ -268,9 +322,7 @@ def match_loudness(
     own, target = level(samples, sample_rate), level(reference, sample_rate)
     if own == 0 or target == 0:
         return samples
-    scaled = samples * (target / own)
-    top = float(np.max(np.abs(scaled)))
-    return scaled * (peak / top) if top > peak else scaled
+    return cap_peak(samples * (target / own), peak)
 
 
 def crossfade_join(
@@ -452,7 +504,7 @@ class Replacement:
     speech: Speech  # the corrected recording, as WAV
     old: str
     new: str
-    start: float  # seconds: the new phrase (crossfades included) in the result
+    start: float  # seconds: the new speech (the trimmed render) in the result
     end: float
     replaced: tuple[float, float]  # seconds: the cut in the original
     checks: list[dict] = field(default_factory=list)
@@ -540,16 +592,22 @@ def _insert(
 
 def _pause_padding(
     cut: np.ndarray, insert: np.ndarray, sample_rate: int
-) -> tuple[int, int]:
-    """Samples of silence to add before and after ``insert`` so its pauses match the
-    pauses at the edges of ``cut`` (what it replaces)."""
+) -> tuple[np.ndarray, np.ndarray]:
+    """The audio to put before and after ``insert`` so that its pauses match those at
+    the edges of ``cut`` (what it replaces): the cut's own edges, which are the
+    recording's true background at that spot.
+
+    >>> cut = np.r_[np.full(800, 0.01), np.ones(800), np.full(400, 0.02)]
+    >>> before, after = _pause_padding(cut, np.ones(800), 8000)
+    >>> len(before), float(before.max()), len(after), float(after.max())
+    (800, 0.01, 400, 0.02)
+    """
     (cut_lead, cut_tail), (ins_lead, ins_tail) = (
         edge_pauses(x, sample_rate) for x in (cut, insert)
     )
-    return (
-        max(0, int((cut_lead - ins_lead) * sample_rate)),
-        max(0, int((cut_tail - ins_tail) * sample_rate)),
-    )
+    lead = max(0, int((cut_lead - ins_lead) * sample_rate))
+    tail = max(0, int((cut_tail - ins_tail) * sample_rate))
+    return cut[:lead], cut[len(cut) - tail :]
 
 
 def _checks(verify, transcriber) -> tuple[Check, ...]:
@@ -573,7 +631,7 @@ def replace_words(
     snap_ms: float = DFLT_SNAP_MS,
     level: Level = speech_level,
     keep_pauses: bool = True,
-    with_room_tone: bool = True,
+    background: Background | None = quiet_background,
     verify: Check | Sequence[Check] | None = None,
 ) -> Replacement:
     """Replace the spoken phrase ``old`` with ``new``, rendered in ``voice``.
@@ -596,6 +654,13 @@ def replace_words(
         snap_ms: How far past an ASR boundary a cut may look for quiet.
         level: ``(samples, sample_rate) -> level`` the render is matched on;
             default ``speech_level`` (e.g. ``partial(speech_level, margin_db=10)``).
+        keep_pauses: Put back, around the render, the pauses at the edges of the
+            cut (taken from the cut itself, background included), so the pauses
+            keep their length; ``False`` for the tighter splice.
+        background: ``(samples, sample_rate, length) -> samples or None``: what to
+            mix under the render (``None`` from it: nothing); default
+            ``quiet_background``, which gives nothing for audio with no quiet
+            frames (wall-to-wall speech or music); ``None`` for no background.
         verify: A check or checks (``(samples, sample_rate, replacement) -> dict``
             with a ``passed`` key); default ``heard_check``; ``()`` for none.
     """
@@ -613,24 +678,23 @@ def replace_words(
         snap=snap_ms / 1000,
     )
     a, b = int(cut[0] * sr), int(cut[1] * sr)
-    insert = _insert(render, new, sr, reference=samples[a:b], level=level)
-    lead = tail = 0
-    if keep_pauses:  # the quiet the cut removed, around the new phrase too
-        lead, tail = _pause_padding(samples[a:b], insert, sr)
-        insert = np.concatenate(
-            [np.zeros(lead, np.float32), insert, np.zeros(tail, np.float32)]
-        )
-    if with_room_tone:  # the recording's background under the new phrase, no drop-out
-        insert = insert + room_tone(samples, sr, len(insert))
+    speech = _insert(render, new, sr, reference=samples[a:b], level=level)
+    bed = background(samples, sr, len(speech)) if background is not None else None
+    if bed is not None:  # the recording's floor under the new words, no drop-out
+        speech = cap_peak(speech + bed)
+    empty = np.zeros(0, np.float32)
+    before, after = (
+        _pause_padding(samples[a:b], speech, sr) if keep_pauses else (empty, empty)
+    )
+    insert = np.concatenate([before, speech, after]).astype(np.float32)
     fade = int(sr * crossfade_ms / 1000)
     joined, at = crossfade_join(samples[:a], insert, samples[b:], fade=fade)
-    speech = Speech(write_wav(joined, sr), format="wav", sample_rate=sr)
     result = Replacement(
-        speech,
+        Speech(write_wav(joined, sr), format="wav", sample_rate=sr),
         old,
         new,
-        start=(at + lead) / sr,
-        end=(at + len(insert) - tail) / sr,
+        start=(at + len(before)) / sr,
+        end=(at + len(before) + len(speech)) / sr,
         replaced=cut,
     )
     result.checks = [

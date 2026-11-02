@@ -433,15 +433,26 @@ def test_voice_check_fails_rather_than_raises_on_a_silent_remainder():
     )
 
 
-def _noisy_speech(floor=0.01, seed=0):
-    """Two "words" (tones) with a 0.4 s pause between them, over a noise floor."""
+def _noisy_speech(floor=0.005, seed=0, amp=0.3, word=tone):
+    """Two "words" with a 0.4 s pause between them, over a noise floor (0.005: 32 dB
+    below the words, so ``quiet_background`` trusts it)."""
     rng = np.random.default_rng(seed)
-    word = lambda s, f: tone(s, f, 0.3)
-    x = np.concatenate([np.zeros(SR // 2), word(0.6, 300), np.zeros(int(0.4 * SR)), word(0.6, 500), np.zeros(SR // 2)])
+    x = np.concatenate(
+        [
+            np.zeros(SR // 2),
+            word(0.6, 300, amp),
+            np.zeros(int(0.4 * SR)),
+            word(0.6, 500, amp),
+            np.zeros(SR // 2),
+        ]
+    )
     return (x + floor * rng.standard_normal(len(x))).astype(np.float32)
 
 
-NOISY_WORDS = [{"text": "one", "start": 0.5, "end": 1.1}, {"text": "two", "start": 1.5, "end": 2.1}]
+NOISY_WORDS = [
+    {"text": "one", "start": 0.5, "end": 1.1},
+    {"text": "two", "start": 1.5, "end": 2.1},
+]
 
 
 def _clean_render(text):
@@ -449,22 +460,69 @@ def _clean_render(text):
     return np.concatenate([pad, tone(0.5, 1000, 0.9), pad]), SR
 
 
-def test_room_tone_fills_the_spliced_span_so_nothing_drops_to_silence():
-    x = _noisy_speech()
-    rms = lambda y: float(np.sqrt(np.mean(y**2)))
-    for with_tone, expect_floor in ((True, True), (False, False)):
-        fixed = replace_words(x, "two", "deux", words=NOISY_WORDS, sample_rate=SR,
-                              render=_clean_render, verify=(), with_room_tone=with_tone)
-        out, _ = read_wav(fixed.audio)
-        quiet = out[int((fixed.start - 0.08) * SR) : int((fixed.start - 0.02) * SR)]  # the kept pause
-        assert (rms(quiet) > 0.005) == expect_floor
+def _rms(y):
+    return float(np.sqrt(np.mean(np.asarray(y, np.float64) ** 2)))
+
+
+def _fix_two(x, **kwargs):
+    fixed = replace_words(
+        x,
+        "two",
+        "deux",
+        words=NOISY_WORDS,
+        sample_rate=SR,
+        render=_clean_render,
+        verify=(),
+        **kwargs,
+    )
+    return fixed, read_wav(fixed.audio)[0]
+
+
+def test_kept_pauses_are_the_cuts_own_audio_so_they_keep_the_floor():
+    fixed, out = _fix_two(_noisy_speech(), background=None)
+    pause = out[int((fixed.start - 0.08) * SR) : int((fixed.start - 0.02) * SR)]
+    assert 0.003 < _rms(pause) < 0.008  # the 0.005 floor, not digital silence
+
+
+def test_the_default_background_puts_the_floor_under_the_new_words():
+    rendered_quiet = lambda fixed, out: out[
+        int(fixed.start * SR) : int((fixed.start + 0.05) * SR)
+    ]
+    with_bed, out = _fix_two(_noisy_speech())
+    without, out_none = _fix_two(_noisy_speech(), background=None)
+    assert 0.003 < _rms(rendered_quiet(with_bed, out)) < 0.008
+    assert _rms(rendered_quiet(without, out_none)) < 0.001  # the render's own silence
+
+
+def test_no_background_from_audio_without_quiet_frames():
+    wall = np.concatenate([tone(1, 200), tone(1, 300), tone(1, 400)])  # no pause at all
+    assert splice.quiet_background(wall, SR, SR) is None
+    ws = [{"text": t, "start": i, "end": i + 1} for i, t in enumerate(["a", "b", "c"])]
+    fix = lambda **kw: (
+        replace_words(
+            wall,
+            "b",
+            "bee",
+            words=ws,
+            sample_rate=SR,
+            render=_clean_render,
+            verify=(),
+            **kw,
+        ).audio
+    )
+    assert fix() == fix(background=None)
+
+
+def test_the_peak_stays_capped_after_the_background_is_mixed_in():
+    square = lambda s, f, amp: (
+        amp * np.sign(tone(s, f, 1.0))
+    )  # RMS = peak: a loud reference
+    fixed, out = _fix_two(_noisy_speech(amp=0.95, word=square))
+    assert np.abs(out).max() <= splice.DFLT_PEAK + 1 / 32767  # one PCM step of slack
 
 
 def test_the_pauses_around_the_phrase_keep_their_length():
-    x = _noisy_speech()
-    fixed = replace_words(x, "two", "deux", words=NOISY_WORDS, sample_rate=SR,
-                          render=_clean_render, verify=())
-    out, _ = read_wav(fixed.audio)
+    _, out = _fix_two(_noisy_speech())
     from voxy.wavutil import frame_db
 
     levels = frame_db(out, SR)
@@ -476,7 +534,23 @@ def test_the_pauses_around_the_phrase_keep_their_length():
 
 def test_keep_pauses_off_gives_the_old_tighter_splice():
     x = _noisy_speech()
-    kept = replace_words(x, "two", "deux", words=NOISY_WORDS, sample_rate=SR, render=_clean_render, verify=())
-    tight = replace_words(x, "two", "deux", words=NOISY_WORDS, sample_rate=SR, render=_clean_render,
-                          verify=(), keep_pauses=False)
+    kept = replace_words(
+        x,
+        "two",
+        "deux",
+        words=NOISY_WORDS,
+        sample_rate=SR,
+        render=_clean_render,
+        verify=(),
+    )
+    tight = replace_words(
+        x,
+        "two",
+        "deux",
+        words=NOISY_WORDS,
+        sample_rate=SR,
+        render=_clean_render,
+        verify=(),
+        keep_pauses=False,
+    )
     assert len(read_wav(tight.audio)[0]) < len(read_wav(kept.audio)[0])

@@ -246,9 +246,9 @@ def silence(ms: float, sample_rate: int) -> np.ndarray:
 
 
 #: Taps of the anti-aliasing filter applied before downsampling (odd).
-DFLT_LOWPASS_TAPS = 129
+DFLT_LOWPASS_TAPS = 255
 #: The filter's cutoff, as a share of the target rate's Nyquist frequency.
-DFLT_LOWPASS_SHARE = 0.9
+DFLT_LOWPASS_SHARE = 0.95
 
 
 def lowpass(
