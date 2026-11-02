@@ -779,3 +779,45 @@ def test_audit_verifier_warns_once_about_every_bad_proposal_with_its_real_line()
     assert len(caught) == 1
     message = str(caught[0].message)
     assert "line 2 'est'" in message and "line 3 'est'" in message and "line 4" not in message
+
+
+def test_a_word_asr_heard_as_another_is_scored_where_the_aligned_text_puts_it():
+    """#109: audit(align_missing=...) checks what ASR could not place."""
+    heard = lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB)
+    asr = [{"start": 0.0, "end": 0.2, "text": "lait"}]  # ASR heard another word
+    aligned = []
+
+    def align_missing(audio, words):
+        aligned.append(list(words))
+        return [{"start": 0.0, "end": 0.3}]
+
+    text = "est"
+    without = audit(text, "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                    scoring="spot", emitter=heard, words_of=lambda audio: asr)
+    assert without[0].verdict is None and without[0].located is None
+    found = audit(text, "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                  scoring="spot", emitter=heard, words_of=lambda audio: asr,
+                  align_missing=align_missing)
+    assert aligned == [["est"]] and found[0].located == "text" and found[0].ok is True
+
+
+def test_words_asr_placed_keep_their_asr_timing_and_say_so():
+    heard = lambda audio, start, end: (log_probs_from_path(_ids(["a", "ɛ", "a"]), vocab_size=len(VOCAB)), VOCAB)
+    calls = []
+    found = audit("est", "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                  scoring="spot", emitter=heard,
+                  words_of=lambda audio: [{"start": 0.0, "end": 0.2, "text": "est"}],
+                  align_missing=lambda audio, words: calls.append(words) or [])
+    assert found[0].located == "asr" and calls == []  # never aligned: nothing missing
+
+
+def test_a_failed_alignment_warns_and_leaves_the_word_unchecked():
+    def too_long(audio, words):
+        raise ValueError("31 s of audio is over max_seconds=30.0")
+
+    with pytest.warns(UserWarning, match="could not align"):
+        found = audit("est", "take.wav", readings={"est": READINGS}, expected={"est": "verb"},
+                      scoring="spot", emitter=lambda *a: None,
+                      words_of=lambda audio: [{"start": 0.0, "end": 0.2, "text": "lait"}],
+                      align_missing=too_long)
+    assert found[0].verdict is None
