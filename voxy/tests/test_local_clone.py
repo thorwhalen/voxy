@@ -540,3 +540,37 @@ def test_design_voice_without_preview_takes_the_first_generated(tmp_path):
         model.design_voice(
             "x", name="n", preview=model.design_voice_previews("x")[0], seeds=[1]
         )
+
+
+def test_worker_generate_makes_one_worker_across_threads(monkeypatch):
+    """Four threads calling a fresh model at once start one worker, not four (#65)."""
+    import threading
+    import time
+
+    import voxy.local_clone as lc
+
+    made = []
+
+    class FakeWorker:
+        def call(self, op, **request):
+            return {}
+
+        def close(self):
+            pass
+
+    def make_worker(self):
+        made.append(1)
+        time.sleep(0.05)  # widen the window two unguarded threads would both enter
+        return FakeWorker()
+
+    monkeypatch.setattr(lc.WorkerGenerate, "_make_worker", make_worker)
+    monkeypatch.setattr(lc, "read_wav", lambda path: (np.zeros(1), SR))
+    generate = lc.WorkerGenerate(LOCAL_CLONE_BACKENDS["f5tts"])
+    threads = [threading.Thread(target=generate, args=("Hi.",)) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(made) == 1
+    generate.close()
+    assert generate._worker is None
