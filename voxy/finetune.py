@@ -38,12 +38,34 @@ def select_clips(
     min_score: float = DFLT_MIN_SCORE,
     min_seconds: float = DFLT_MIN_SECONDS,
     max_seconds: float = DFLT_MAX_SECONDS,
+    latest_only: bool = True,
 ) -> list[dict]:
-    """Clips good enough to train on (score and length within bounds)."""
+    """Clips good enough to train on (score and length within bounds, some text).
+
+    Entries without a numeric ``score`` or ``duration``, a string ``key`` or ``text``
+    (hand-added, or from an older voxy) are skipped. With ``latest_only`` (the default)
+    it picks from ``refprep.latest_runs(manifest)``, so a source processed twice is
+    trained on once.
+
+    >>> select_clips([{"key": "tape1.wav", "text": "x"}, {"score": 0.9}])
+    []
+    """
+    if latest_only:
+        from voxy.refprep import latest_runs
+
+        manifest = latest_runs(manifest)
+
+    def number(x):
+        return isinstance(x, (int, float)) and not isinstance(x, bool)
+
     return [
         dict(c)
         for c in manifest
-        if c["score"] >= min_score
+        if number(c.get("score"))
+        and number(c.get("duration"))
+        and isinstance(c.get("key"), str)
+        and isinstance(c.get("text"), str)
+        and c["score"] >= min_score
         and min_seconds <= c["duration"] <= max_seconds
         and c["text"].strip()
     ]
@@ -64,6 +86,7 @@ def export_dataset(
     min_seconds: float = DFLT_MIN_SECONDS,
     max_seconds: float = DFLT_MAX_SECONDS,
     eval_fraction: float = DFLT_EVAL_FRACTION,
+    latest_only: bool = True,
 ) -> dict:
     """Write the training set to ``out_dir`` and return a summary.
 
@@ -71,6 +94,7 @@ def export_dataset(
         manifest: From ``prepare_reference`` (or ``refprep.load_manifest``).
         samples: The store the clips are in (``key -> wav bytes``).
         format: One of ``FORMATS``.
+        latest_only: Train on each source's latest run only (see ``select_clips``).
     """
     if format not in FORMATS:
         raise ValueError(f"Unknown format {format!r} (have: {', '.join(FORMATS)})")
@@ -78,7 +102,11 @@ def export_dataset(
     wavs = out / "wavs"
     wavs.mkdir(parents=True, exist_ok=True)
     clips = select_clips(
-        manifest, min_score=min_score, min_seconds=min_seconds, max_seconds=max_seconds
+        manifest,
+        min_score=min_score,
+        min_seconds=min_seconds,
+        max_seconds=max_seconds,
+        latest_only=latest_only,
     )
     lines, train, evals = [], [], []
     for clip in clips:
