@@ -532,7 +532,11 @@ def _conditioned_key(slug: str) -> str:
 
 def _earlier_entries(samples: Mapping, sources: Iterable) -> tuple[list, list]:
     """``(kept, redone)``: the store's manifest entries from sources not in this call,
-    and those from sources this call processes again."""
+    and those from sources this call processes again.
+
+    A source that gave no clips has no entry, so a later run cannot find (or remove)
+    its conditioned file.
+    """
     if MANIFEST_KEY not in samples:
         return [], []
     again = {str(s) for s in sources}
