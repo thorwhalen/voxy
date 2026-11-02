@@ -1,4 +1,4 @@
-> built 2026-11-02 11:20 UTC from 0a9d196 (main) · voxy 0.0.59. Details: build_info.json
+> built 2026-11-02 11:36 UTC from 516871d (main) · voxy 0.0.60. Details: build_info.json
 
 # index.html.md
 
@@ -434,6 +434,86 @@ Speech from aix; extra kwargs (`speed=`, `api_key=`…) go to aix.
 ### voxy.aix_model.OPENAI_TTS_VOICES *= ('alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer', 'verse')*
 
 OpenAI’s built-in TTS voices (which ones a model accepts depends on the model).
+
+
+# _autosummary/voxy.align.html.md
+
+# voxy.align
+
+Where each word of a known text is in a recording, to the character: forced alignment.
+
+ASR gives word times for what it heard; when the text is known (a script, lyrics, the
+words around a spot to edit), forced alignment places exactly those words, with each
+character’s span. That is what a splice needs at a word’s onset, and what a check
+needs when ASR heard a different word than the one spoken.
+
+```pycon
+>>> from voxy.align import force_align
+>>> spans = force_align("line.wav", "Mon frère est parti")
+>>> spans[2]["word"], spans[2]["start"], spans[2]["chars"][0]
+```
+
+The default aligner is torchaudio’s `MMS_FA` (multilingual, Latin letters; accents are
+dropped for matching) in its own environment, built on first use (or `python -m voxy
+setup align`). Its weights are non-commercial (see `workers/align_adapter.py`).
+Align short stretches (a line, a word and its neighbours, under about 30 s): one pass
+over a long recording drifts, sung audio most.
+
+`run` is the seam: `(audio_path, words) -> [span or None, ...]`.
+
+```pycon
+>>> fake = lambda audio, words: [{"start": i, "end": i + 0.5, "score": 0.9, "chars": []}
+...                              for i, _ in enumerate(words)]
+>>> [s["word"] for s in force_align(b"RIFF....", "Bonjour  le monde", run=fake)]
+['Bonjour', 'le', 'monde']
+```
+
+### Module Attributes
+
+| [`ALIGN_ENV`](_autosummary/voxy.align.html.md#voxy.align.ALIGN_ENV)   | torch and torchaudio bounded to releases that still ship `forced_align`.   |
+|--------------------------------------------------------------|----------------------------------------------------------------------------|
+
+### Functions
+
+| [`close_alignment`](_autosummary/voxy.align.html.md#voxy.align.close_alignment)()                         | Stop the aligner workers (free their memory).                                                                                                  |
+|--------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`force_align`](_autosummary/voxy.align.html.md#voxy.align.force_align)(audio, text, \*[, run])       | Each word of `text`, in order, with its `start`, `end` (s), `score` (mean character confidence) and `chars` (`char`, `start`, `end`, `score`). |
+| [`worker_run`](_autosummary/voxy.align.html.md#voxy.align.worker_run)(\*[, model, threads, rootdir]) | The default `run`: the aligner adapter in its own environment.                                                                                 |
+
+### voxy.align.ALIGN_ENV *= EnvSpec(name='align', requirements=('torch>=2.6,<2.12', 'torchaudio>=2.6,<2.12', 'soundfile', 'numpy'), python='3.11', torch_backend='cpu', env_vars={'TORCH_HOME': '{models}'})*
+
+torch and torchaudio bounded to releases that still ship `forced_align`.
+
+### voxy.align.close_alignment()
+
+Stop the aligner workers (free their memory).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.align.force_align(audio, text, , run=None)
+
+Each word of `text`, in order, with its `start`, `end` (s), `score` (mean
+character confidence) and `chars` (`char`, `start`, `end`, `score`).
+
+* **Parameters:**
+  * **audio** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)) – A WAV (or any format soundfile reads) path, or WAV bytes.
+  * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – The words spoken, as a string (split on whitespace) or a list.
+  * **run** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `(audio_path, words) -> [span or None, ...]`; default `worker_run()`.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+A word with no letter the aligner knows (a number, a symbol) is placed as one
+“any sound” token. Low scores (under about 0.5) mean the text is not what is said
+there. Audio over 30 s is refused by the default aligner: align in stretches. A
+run that returns None for a word gives `start`/`end` None.
+
+### voxy.align.worker_run(, model='MMS_FA', threads=None, rootdir=None)
+
+The default `run`: the aligner adapter in its own environment.
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]], [`Sequence`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]]
 
 
 # _autosummary/voxy.base.html.md
@@ -1795,6 +1875,7 @@ True
 
 | [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.     |
 |--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| [`align`](_autosummary/voxy.align.html.md#module-voxy.align)                         | Where each word of a known text is in a recording, to the character: forced alignment.        |
 | [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                   |
 | [`benchmarks`](_autosummary/voxy.benchmarks.html.md#module-voxy.benchmarks)               | Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.    |
 | [`diagnosis`](_autosummary/voxy.diagnosis.html.md#module-voxy.diagnosis)                 | Diagnosis pages: render one text through a grid of (model x parameters), listen side by side. |
@@ -5885,6 +5966,45 @@ adapter become a worker.
   [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)
 
 
+# _autosummary/voxy.workers.align_adapter.html.md
+
+# voxy.workers.align_adapter
+
+Forced alignment with torchaudio’s `MMS_FA` bundle (Meta’s multilingual CTC
+aligner): character spans of words already known to be in the audio.
+
+Run by `voxy.worker` in its own environment; audio is read with soundfile. The
+aligner’s weights come from Meta’s MMS release, under a non-commercial licence
+(CC-BY-NC-4.0, as far as the MMS release states; check before commercial use).
+
+### Module Attributes
+
+| [`LIGATURES`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.LIGATURES)   | Letters NFKD leaves whole, spelled with the aligner's letters (French œ, ...).   |
+|--------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [`STAR`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.STAR)        | The aligner's token for a word it has no letters for (a number, a symbol).       |
+
+### Functions
+
+| [`align`](_autosummary/voxy.workers.align_adapter.html.md#voxy.workers.align_adapter.align)(state, \*, audio, words[, max_seconds])   | `{"words": [{"start", "end", "score", "chars": [...]}, ...]}` for `words` (in order) in `audio`; a word with no letter (a number) is placed as the star token.   |
+|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `load`(\*[, model, device])                                                                      |                                                                                                                                                                  |
+
+### voxy.workers.align_adapter.LIGATURES *= {'ß': 'ss', 'æ': 'ae', 'ø': 'o', 'ł': 'l', 'œ': 'oe', 'ʼ': "'", '’': "'"}*
+
+Letters NFKD leaves whole, spelled with the aligner’s letters (French œ, …).
+
+### voxy.workers.align_adapter.STAR *= '\*'*
+
+The aligner’s token for a word it has no letters for (a number, a symbol).
+
+### voxy.workers.align_adapter.align(state, , audio, words, max_seconds=30.0)
+
+`{"words": [{"start", "end", "score", "chars": [...]}, ...]}` for `words`
+(in order) in `audio`; a word with no letter (a number) is placed as the star
+token. Audio longer than `max_seconds` is refused (memory grows fast: 150 s
+took about 6 GB): align it in stretches.
+
+
 # _autosummary/voxy.workers.asr_adapter.html.md
 
 # voxy.workers.asr_adapter
@@ -6008,18 +6128,19 @@ The adapter file for `name` (e.g. ‘f5tts’ -> `f5tts_adapter.py`).
 
 ### Modules
 
-| [`asr_adapter`](_autosummary/voxy.workers.asr_adapter.html.md#module-voxy.workers.asr_adapter)               | Speech recognition with timed words (scribed's faster-whisper backend), for reference prep.                                                       |
-|------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`chatterbox_adapter`](_autosummary/voxy.workers.chatterbox_adapter.html.md#module-voxy.workers.chatterbox_adapter) | Chatterbox (Resemble AI): 'original' (emotion exaggeration, CFG), 'turbo' (faster), or 'multilingual' (23 languages; pass `language`, e.g. 'fr'). |
-| [`demucs_adapter`](_autosummary/voxy.workers.demucs_adapter.html.md#module-voxy.workers.demucs_adapter)         | Demucs (Meta, MIT): split a recording into a voice stem and the rest (music, noise).                                                              |
-| [`f5tts_adapter`](_autosummary/voxy.workers.f5tts_adapter.html.md#module-voxy.workers.f5tts_adapter)           | F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).                                                                     |
-| [`kokoro_adapter`](_autosummary/voxy.workers.kokoro_adapter.html.md#module-voxy.workers.kokoro_adapter)         | Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.                                                                 |
-| [`phonemes_adapter`](_autosummary/voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.                                      |
-| [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).                   |
-| [`serve`](_autosummary/voxy.workers.serve.html.md#module-voxy.workers.serve)                           | Worker entry point: run a backend adapter inside its own environment.                                                                             |
-| [`speaker_adapter`](_autosummary/voxy.workers.speaker_adapter.html.md#module-voxy.workers.speaker_adapter)       | Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.                                                            |
-| [`voxcpm_adapter`](_autosummary/voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.                                                                |
-| [`xtts_adapter`](_autosummary/voxy.workers.xtts_adapter.html.md#module-voxy.workers.xtts_adapter)             | XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.                                                           |
+| [`align_adapter`](_autosummary/voxy.workers.align_adapter.html.md#module-voxy.workers.align_adapter)           | Forced alignment with torchaudio's `MMS_FA` bundle (Meta's multilingual CTC aligner): character spans of words already known to be in the audio.   |
+|------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`asr_adapter`](_autosummary/voxy.workers.asr_adapter.html.md#module-voxy.workers.asr_adapter)               | Speech recognition with timed words (scribed's faster-whisper backend), for reference prep.                                                        |
+| [`chatterbox_adapter`](_autosummary/voxy.workers.chatterbox_adapter.html.md#module-voxy.workers.chatterbox_adapter) | Chatterbox (Resemble AI): 'original' (emotion exaggeration, CFG), 'turbo' (faster), or 'multilingual' (23 languages; pass `language`, e.g. 'fr').  |
+| [`demucs_adapter`](_autosummary/voxy.workers.demucs_adapter.html.md#module-voxy.workers.demucs_adapter)         | Demucs (Meta, MIT): split a recording into a voice stem and the rest (music, noise).                                                               |
+| [`f5tts_adapter`](_autosummary/voxy.workers.f5tts_adapter.html.md#module-voxy.workers.f5tts_adapter)           | F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).                                                                      |
+| [`kokoro_adapter`](_autosummary/voxy.workers.kokoro_adapter.html.md#module-voxy.workers.kokoro_adapter)         | Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.                                                                  |
+| [`phonemes_adapter`](_autosummary/voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.                                       |
+| [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).                    |
+| [`serve`](_autosummary/voxy.workers.serve.html.md#module-voxy.workers.serve)                           | Worker entry point: run a backend adapter inside its own environment.                                                                              |
+| [`speaker_adapter`](_autosummary/voxy.workers.speaker_adapter.html.md#module-voxy.workers.speaker_adapter)       | Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.                                                             |
+| [`voxcpm_adapter`](_autosummary/voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.                                                                 |
+| [`xtts_adapter`](_autosummary/voxy.workers.xtts_adapter.html.md#module-voxy.workers.xtts_adapter)             | XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.                                                            |
 
 
 # _autosummary/voxy.workers.kokoro_adapter.html.md
@@ -6171,7 +6292,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 11:20 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/0a9d196e58d1242774fe7cea6e56228978d2b0c3"><code>0a9d196</code></a> on branch <code>main</code>, for **voxy 0.0.59** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-02 11:36 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/516871da5ff19addca5c6a44688df799653af09f"><code>516871d</code></a> on branch <code>main</code>, for **voxy 0.0.60** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6180,7 +6301,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/0a9d196e58d1242774fe7cea6e56228978d2b0c3"><code>0a9d196e58d1242774fe7cea6e56228978d2b0c3</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/516871da5ff19addca5c6a44688df799653af09f"><code>516871da5ff19addca5c6a44688df799653af09f</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6191,9 +6312,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41435650543">41435650543</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41437779829">41437779829</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>0a9d196e58d1242774fe7cea6e56228978d2b0c3</code> (in the history of the built commit) |
+| Event commit | <code>516871da5ff19addca5c6a44688df799653af09f</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6218,13 +6339,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.59/">0.0.59</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.60/">0.0.60</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 0a9d196e58d1242774fe7cea6e56228978d2b0c3
+git checkout 516871da5ff19addca5c6a44688df799653af09f
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

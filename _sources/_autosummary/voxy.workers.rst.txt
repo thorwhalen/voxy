@@ -16,6 +16,7 @@ voxy.workers
    :toctree:
    :recursive:
 
+   align_adapter
    asr_adapter
    chatterbox_adapter
    demucs_adapter

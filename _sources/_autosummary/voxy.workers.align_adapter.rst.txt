@@ -1,0 +1,20 @@
+voxy.workers.align\_adapter
+===========================
+
+.. automodule:: voxy.workers.align_adapter
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      LIGATURES
+      STAR
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      align
+      load
+   

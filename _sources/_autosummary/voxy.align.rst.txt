@@ -1,0 +1,20 @@
+voxy.align
+==========
+
+.. automodule:: voxy.align
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      ALIGN_ENV
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      close_alignment
+      force_align
+      worker_run
+   

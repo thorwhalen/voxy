@@ -12,6 +12,7 @@ True
 
 | [`aix_model`](voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.     |
 |--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| [`align`](voxy.align.html.md#module-voxy.align)                         | Where each word of a known text is in a recording, to the character: forced alignment.        |
 | [`base`](voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                   |
 | [`benchmarks`](voxy.benchmarks.html.md#module-voxy.benchmarks)               | Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.    |
 | [`diagnosis`](voxy.diagnosis.html.md#module-voxy.diagnosis)                 | Diagnosis pages: render one text through a grid of (model x parameters), listen side by side. |

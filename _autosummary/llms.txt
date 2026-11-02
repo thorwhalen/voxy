@@ -7,6 +7,7 @@
 
 - [voxy](voxy.html.md): Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
 - [voxy.aix_model](voxy.aix_model.html.md): Speech through aix (LiteLLM): OpenAI’s TTS voices and the other providers LiteLLM routes.
+- [voxy.align](voxy.align.html.md): Where each word of a known text is in a recording, to the character: forced alignment.
 - [voxy.base](voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
 - [voxy.benchmarks](voxy.benchmarks.html.md): Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.
 - [voxy.diagnosis](voxy.diagnosis.html.md): Diagnosis pages: render one text through a grid of (model x parameters), listen side by side.
@@ -33,6 +34,7 @@
 - [voxy.wavutil](voxy.wavutil.html.md): Mono PCM WAV in and out as float arrays, plus the few edits narration needs.
 - [voxy.worker](voxy.worker.html.md): Talk to a model running in another Python environment, as if it were local.
 - [voxy.workers](voxy.workers.html.md): Backend adapters run by &#96;voxy.worker&#96; inside each backend’s own environment.
+- [voxy.workers.align_adapter](voxy.workers.align_adapter.html.md): Forced alignment with torchaudio’s &#96;MMS_FA&#96; bundle (Meta’s multilingual CTC
 - [voxy.workers.asr_adapter](voxy.workers.asr_adapter.html.md): Speech recognition with timed words (scribed’s faster-whisper backend), for reference prep.
 - [voxy.workers.chatterbox_adapter](voxy.workers.chatterbox_adapter.html.md): Chatterbox (Resemble AI): ‘original’ (emotion exaggeration, CFG), ‘turbo’ (faster), or
 - [voxy.workers.demucs_adapter](voxy.workers.demucs_adapter.html.md): Demucs (Meta, MIT): split a recording into a voice stem and the rest (music, noise).
