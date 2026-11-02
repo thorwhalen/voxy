@@ -69,7 +69,7 @@ DESIGN_CLIP_NAME = "design.wav"
 
 
 @dataclass(frozen=True)
-class LocalCloneBackend:
+class LocalBackend:
     """What voxy knows about one local model (a cloner, or one with stock voices).
 
     Args:
@@ -82,6 +82,8 @@ class LocalCloneBackend:
         max_chars: Chunk size for long text.
         licence: Code and weights licences (flag non-commercial ones).
         notes: One line on strengths and caveats.
+        clones: True for a model whose voices are reference clips; False for one
+            with stock voices (kokoro).
     """
 
     name: str
@@ -91,19 +93,66 @@ class LocalCloneBackend:
     max_chars: int = 300
     licence: str = ""
     notes: str = ""
+    clones: bool = True
 
 
-LOCAL_CLONE_BACKENDS: dict[str, LocalCloneBackend] = {}
+#: The old name of ``LocalBackend``; kept for compatibility, remove after the next release.
+LocalCloneBackend = LocalBackend
+
+#: Every local model, by name; private: read it through ``local_backends()``, which
+#: registers the built-in ones that live in their own modules first.
+_LOCAL_BACKENDS: dict[str, LocalBackend] = {}
+#: Modules that register a built-in local backend when imported.
+BUILTIN_BACKEND_MODULES = ("voxy.kokoro_model",)
 
 
-def register_local_clone_backend(backend: LocalCloneBackend) -> LocalCloneBackend:
-    """Add (or replace) a local cloning backend description."""
-    LOCAL_CLONE_BACKENDS[backend.name] = backend
+def register_local_backend(
+    backend: LocalBackend, *, replace: bool = True
+) -> LocalBackend:
+    """Add a local backend description (``replace=False``: keep one already there,
+    as built-in modules do, so a user's own registration under that name wins)."""
+    if replace or backend.name not in _LOCAL_BACKENDS:
+        _LOCAL_BACKENDS[backend.name] = backend
     return backend
 
 
-register_local_clone_backend(
-    LocalCloneBackend(
+#: The old name of ``register_local_backend``; remove after the next release.
+register_local_clone_backend = register_local_backend
+
+
+def local_backends() -> dict[str, LocalBackend]:
+    """Every local backend (cloners and stock-voice models), by name."""
+    import importlib
+
+    for module in BUILTIN_BACKEND_MODULES:
+        importlib.import_module(module)
+    return _LOCAL_BACKENDS
+
+
+class _Cloners(Mapping):
+    """``LOCAL_CLONE_BACKENDS``: the local backends whose voices are reference clips."""
+
+    def _items(self) -> dict[str, LocalBackend]:
+        return {n: b for n, b in local_backends().items() if b.clones}
+
+    def __getitem__(self, name: str) -> LocalBackend:
+        return self._items()[name]
+
+    def __iter__(self):
+        return iter(self._items())
+
+    def __len__(self) -> int:
+        return len(self._items())
+
+    def __repr__(self) -> str:
+        return repr(self._items())
+
+
+LOCAL_CLONE_BACKENDS: Mapping[str, LocalBackend] = _Cloners()
+
+
+register_local_backend(
+    LocalBackend(
         "f5tts",
         EnvSpec("f5tts", ("f5-tts==1.1.22", "soundfile")),
         init={"model": "F5TTS_v1_Base"},
@@ -120,8 +169,8 @@ register_local_clone_backend(
         notes="Flow matching; strong similarity; needs an accurate ref_text.",
     )
 )
-register_local_clone_backend(
-    LocalCloneBackend(
+register_local_backend(
+    LocalBackend(
         "chatterbox",
         EnvSpec(
             "chatterbox",
@@ -147,8 +196,8 @@ register_local_clone_backend(
         ),
     )
 )
-register_local_clone_backend(
-    LocalCloneBackend(
+register_local_backend(
+    LocalBackend(
         "xtts",
         EnvSpec(
             "xtts",
@@ -180,8 +229,8 @@ register_local_clone_backend(
 )
 
 
-register_local_clone_backend(
-    LocalCloneBackend(
+register_local_backend(
+    LocalBackend(
         "voxcpm",
         EnvSpec("voxcpm", ("voxcpm==2.0.3", "soundfile")),
         init={"model_id": "openbmb/VoxCPM2"},
@@ -198,8 +247,8 @@ register_local_clone_backend(
         "distorts past ~300 characters, so chunks stay short.",
     )
 )
-register_local_clone_backend(
-    LocalCloneBackend(
+register_local_backend(
+    LocalBackend(
         "qwen3tts",
         EnvSpec("qwen3tts", ("qwen-tts==0.1.1", "soundfile")),
         init={"model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base", "dtype": "float32"},
@@ -265,7 +314,7 @@ class WorkerGenerate:
 
     def __init__(
         self,
-        backend: LocalCloneBackend,
+        backend: LocalBackend,
         *,
         init: Mapping | None = None,
         threads: int | None = None,
@@ -338,7 +387,7 @@ class LocalSpeechModel(SpeechModel):
     joins the pieces. Subclasses say what a voice is with ``_voice_request``.
 
     Args:
-        backend: A ``LocalCloneBackend``, or the name of a registered cloner
+        backend: A ``LocalBackend``, or the name of a registered local backend
             (subclasses fix it).
         generate: The model call (see the module docstring); default: worker.
         chunker: ``text -> [[chunk, ...], ...]``; default ``split_text``.
@@ -358,7 +407,7 @@ class LocalSpeechModel(SpeechModel):
 
     def __init__(
         self,
-        backend: LocalCloneBackend | str | None = None,
+        backend: LocalBackend | str | None = None,
         *,
         generate: Callable | None = None,
         chunker: Callable | None = None,
@@ -377,7 +426,7 @@ class LocalSpeechModel(SpeechModel):
         super().__init__(device=device)
         backend = backend or self.backend_name
         self.backend = (
-            LOCAL_CLONE_BACKENDS[backend] if isinstance(backend, str) else backend
+            local_backends()[backend] if isinstance(backend, str) else backend
         )
         self.name = self.backend.name
         self.init = {**(init or {}), **init_kwargs}

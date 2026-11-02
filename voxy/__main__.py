@@ -67,14 +67,12 @@ def main(argv=None) -> int:
 
     if args.command == "setup":
         from voxy.envs import ensure_env
-        from voxy.kokoro_model import KOKORO
-        from voxy.local_clone import LOCAL_CLONE_BACKENDS
+        from voxy.local_clone import local_backends
         from voxy.refprep import ASR_ENV
         from voxy.pronounce import PHONEME_ENV
         from voxy.speakers import SPEAKER_ENV
 
-        envs = {name: b.env for name, b in LOCAL_CLONE_BACKENDS.items()}
-        envs[KOKORO.name] = KOKORO.env
+        envs = {name: b.env for name, b in local_backends().items()}
         envs["asr"] = ASR_ENV
         envs["speaker"] = SPEAKER_ENV
         envs["phonemes"] = PHONEME_ENV
