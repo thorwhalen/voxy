@@ -20,6 +20,7 @@
 - [voxy.lexique](voxy.lexique.html.md): French heteronyms derived from Lexique, to merge under voxy’s hand-made table.
 - [voxy.library](voxy.library.html.md): A persistent voice library: clone a voice once, then use it by name.
 - [voxy.local_clone](voxy.local_clone.html.md): Local voice cloning: speak any text in a voice learned from a short reference clip.
+- [voxy.pauses](voxy.pauses.html.md): Pauses in text to speak: SSML breaks, honoured on every backend.
 - [voxy.pronounce](voxy.pronounce.html.md): Checking, in the audio, which reading of a flagged word a render used.
 - [voxy.refprep](voxy.refprep.html.md): Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
 - [voxy.say_model](voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.

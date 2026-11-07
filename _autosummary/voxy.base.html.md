@@ -183,6 +183,18 @@ The voices this backend offers.
 
 Registry name of the backend (also each profile’s `model_type`).
 
+#### native_break_s(\*\*synth_kwargs)
+
+The longest SSML `<break>` this backend renders itself, in seconds.
+
+`0.0` (the default): it renders none, so `voxy.text_to_speech` cuts
+the text at every break and joins the parts with real silence
+(`voxy.pauses`). `synth_kwargs` are the call’s options, for a
+backend whose answer depends on them (ElevenLabs: the `model_id`).
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
 #### synthesize(text, voice=None, \*\*kwargs)
 
 Render `text` in `voice` and return encoded audio.

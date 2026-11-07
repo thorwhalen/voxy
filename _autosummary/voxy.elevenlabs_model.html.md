@@ -22,6 +22,11 @@ the voice’s owner (or their guardian) to do so.
 24000
 ```
 
+### Module Attributes
+
+| [`ELEVENLABS_NATIVE_BREAK_S`](#voxy.elevenlabs_model.ELEVENLABS_NATIVE_BREAK_S)   | The longest SSML `<break>` each ElevenLabs model renders itself (seconds).   |
+|------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+
 ### Functions
 
 | [`default_elevenlabs_client_factory`](#voxy.elevenlabs_model.default_elevenlabs_client_factory)(api_key)     | Build the official SDK client (imported lazily).                        |
@@ -33,6 +38,13 @@ the voice’s owner (or their guardian) to do so.
 | [`ElevenLabsSpeechModel`](#voxy.elevenlabs_model.ElevenLabsSpeechModel)(\*[, api_key, ...])     | Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).   |
 |------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
 | [`VoiceDesignPreview`](#voxy.elevenlabs_model.VoiceDesignPreview)(generated_voice_id, audio) | One candidate voice from `design_voice_previews`: listen, then pick.       |
+
+### voxy.elevenlabs_model.ELEVENLABS_NATIVE_BREAK_S *= {'eleven_flash_v2': 3.0, 'eleven_flash_v2_5': 3.0, 'eleven_monolingual_v1': 3.0, 'eleven_multilingual_v1': 3.0, 'eleven_multilingual_v2': 3.0, 'eleven_turbo_v2': 3.0, 'eleven_turbo_v2_5': 3.0, 'eleven_v3': 0.0, 'eleven_v4': 0.0, 'eleven_v4_turbo': 0.0}*
+
+The longest SSML `<break>` each ElevenLabs model renders itself (seconds).
+The v2 family honours `<break time="..."/>` up to 3 s; `eleven_v3` and
+`eleven_v4` support no SSML at all. A model not listed gets 0 (voxy cuts at
+every break, which is exact on any model).
 
 ### *class* voxy.elevenlabs_model.ElevenLabsSpeechModel(, api_key=None, model_id='eleven_multilingual_v2', output_format='pcm_24000', client_factory=None, device=None)
 
@@ -149,6 +161,20 @@ Voices in the account and its library (`voice_type`: e.g. ‘default’,
 
 Registry name of the backend (also each profile’s `model_type`).
 
+#### native_break_s(, model_id=None, \*\*\_)
+
+The longest `<break>` the call’s model renders (see
+[`ELEVENLABS_NATIVE_BREAK_S`](#voxy.elevenlabs_model.ELEVENLABS_NATIVE_BREAK_S)).
+
+```pycon
+>>> m = ElevenLabsSpeechModel(model_id="eleven_v4")
+>>> m.native_break_s(), m.native_break_s(model_id="eleven_multilingual_v2")
+(0.0, 3.0)
+```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
 #### *property* sample_rate *: [int](https://docs.python.org/3/builtins/functions.html#int)*
 
 Sample rate of the audio `generate_speech` returns.
@@ -193,6 +219,11 @@ A profile for an existing ElevenLabs voice (a past clone, or a stock voice).
 
 * **Return type:**
   [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
+
+#### *property* wav_synth_kwargs *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)*
+
+PCM at the model’s `output_format` rate (PCM is on every tier;
+build the model with `output_format="pcm_44100"` for 44.1 kHz).
 
 ### *class* voxy.elevenlabs_model.VoiceDesignPreview(generated_voice_id, audio, text='', duration_s=None)
 

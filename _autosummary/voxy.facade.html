@@ -98,6 +98,7 @@
 <li class="toctree-l3"><a class="reference internal" href="voxy.lexique.html">voxy.lexique</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.local_clone.html">voxy.local_clone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.pauses.html">voxy.pauses</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.pronounce.html">voxy.pronounce</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.say_model.html">voxy.say_model</a></li>
@@ -279,6 +280,10 @@ narrator’s voice, splice.</p>
 <dt class="sig sig-object py" id="voxy.facade.text_to_speech">
 <span class="sig-prename descclassname"><span class="pre">voxy.facade.</span></span><span class="sig-name descname"><span class="pre">text_to_speech</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">models</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_library</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/facade.html#text_to_speech"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.facade.text_to_speech" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.facade.text_to_speech'">¶</a></dt>
 <dd><p>Speak <code class="docutils literal notranslate"><span class="pre">text</span></code> in <code class="docutils literal notranslate"><span class="pre">voice</span></code> and return the encoded audio (<code class="docutils literal notranslate"><span class="pre">.save(path)</span></code>).</p>
+<p>Pauses are SSML breaks in <code class="docutils literal notranslate"><span class="pre">text</span></code> (<code class="docutils literal notranslate"><span class="pre">&lt;break</span> <span class="pre">time="5s"/&gt;</span></code>), honoured on every
+backend: one the backend renders stays in the text; at any other the text is
+cut, the parts spoken separately and joined, as WAV, with that much silence
+(<code class="docutils literal notranslate"><span class="pre">voxy.pauses</span></code>). Text without breaks or marks is sent as is.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -344,7 +349,7 @@ ElevenLabs, <code class="docutils literal notranslate"><span class="pre">speed=<
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=7ada5fdd"></script>
+<script src="../_static/documentation_options.js?v=b153cf10"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

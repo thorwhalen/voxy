@@ -45,6 +45,21 @@ Change the voice of a recording (speech to speech, ElevenLabs): the words, timin
 voxy.speech_to_speech("my_take.wav", voice="ada").save("ada_take.mp3")
 ```
 
+## Pauses: SSML breaks, on any backend
+
+Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them, as WAV, with exactly that much silence. `eleven_v3` and `eleven_v4` render no SSML, so every break is cut there:
+
+```python
+model = voxy.ElevenLabsSpeechModel(model_id="eleven_v4")  # joins at pcm_24000 (44.1 kHz PCM needs Pro)
+voxy.text_to_speech(
+    '[calmly] Breathe in.<break time="4s"/> And out, slowly.<break time="6s"/>',
+    "my-voice-id",
+    model=model,
+).save("breath.wav")
+```
+
+`time` takes `s` or `ms`; `<break strength="strong"/>` works too. `voxy.parse_sections(text)` gives the text as `Section(text, pause_s, mark)`, cut at every break and at every `<mark name="..."/>`: what a player that waits at a mark for the listener would read. Why SSML and not a custom tag, and the limits per engine: `misc/docs/research/ssml-pauses-and-hold-points.md`.
+
 ## Features
 
 - Voice cloning from audio samples

@@ -24,6 +24,7 @@
    lexique
    library
    local_clone
+   pauses
    pronounce
    refprep
    say_model

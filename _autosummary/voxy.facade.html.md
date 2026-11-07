@@ -108,6 +108,11 @@ narrator’s voice, splice.
 
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
+Pauses are SSML breaks in `text` (`<break time="5s"/>`), honoured on every
+backend: one the backend renders stays in the text; at any other the text is
+cut, the parts spoken separately and joined, as WAV, with that much silence
+(`voxy.pauses`). Text without breaks or marks is sent as is.
+
 * **Parameters:**
   * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to say.
   * **voice** ([`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A library name or alias (‘ada’, ‘Addie’), a backend’s own voice

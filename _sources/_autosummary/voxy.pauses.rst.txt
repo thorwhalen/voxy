@@ -1,0 +1,30 @@
+voxy.pauses
+===========
+
+.. automodule:: voxy.pauses
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      BREAK_STRENGTH_S
+      DFLT_SILENCE_RATE
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      break_seconds
+      has_pause_markup
+      join_sections
+      parse_sections
+      plan_sections
+      render_break
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Section
+   

@@ -1,4 +1,4 @@
-> built 2026-11-02 12:19 UTC from ca1539d (main) · voxy 0.0.63. Details: build_info.json
+> built 2026-11-07 12:27 UTC from b449e22 (main) · voxy 0.0.64. Details: build_info.json
 
 # index.html.md
 
@@ -48,6 +48,21 @@ Change the voice of a recording (speech to speech, ElevenLabs): the words, timin
 ```python
 voxy.speech_to_speech("my_take.wav", voice="ada").save("ada_take.mp3")
 ```
+
+## Pauses: SSML breaks, on any backend
+
+Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them, as WAV, with exactly that much silence. `eleven_v3` and `eleven_v4` render no SSML, so every break is cut there:
+
+```python
+model = voxy.ElevenLabsSpeechModel(model_id="eleven_v4")  # joins at pcm_24000 (44.1 kHz PCM needs Pro)
+voxy.text_to_speech(
+    '[calmly] Breathe in.<break time="4s"/> And out, slowly.<break time="6s"/>',
+    "my-voice-id",
+    model=model,
+).save("breath.wav")
+```
+
+`time` takes `s` or `ms`; `<break strength="strong"/>` works too. `voxy.parse_sections(text)` gives the text as `Section(text, pause_s, mark)`, cut at every break and at every `<mark name="..."/>`: what a player that waits at a mark for the listener would read. Why SSML and not a custom tag, and the limits per engine: `misc/docs/research/ssml-pauses-and-hold-points.md`.
 
 ## Features
 
@@ -757,6 +772,18 @@ The voices this backend offers.
 
 Registry name of the backend (also each profile’s `model_type`).
 
+#### native_break_s(\*\*synth_kwargs)
+
+The longest SSML `<break>` this backend renders itself, in seconds.
+
+`0.0` (the default): it renders none, so `voxy.text_to_speech` cuts
+the text at every break and joins the parts with real silence
+(`voxy.pauses`). `synth_kwargs` are the call’s options, for a
+backend whose answer depends on them (ElevenLabs: the `model_id`).
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
 #### synthesize(text, voice=None, \*\*kwargs)
 
 Render `text` in `voice` and return encoded audio.
@@ -1302,6 +1329,11 @@ the voice’s owner (or their guardian) to do so.
 24000
 ```
 
+### Module Attributes
+
+| [`ELEVENLABS_NATIVE_BREAK_S`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.ELEVENLABS_NATIVE_BREAK_S)   | The longest SSML `<break>` each ElevenLabs model renders itself (seconds).   |
+|------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+
 ### Functions
 
 | [`default_elevenlabs_client_factory`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.default_elevenlabs_client_factory)(api_key)     | Build the official SDK client (imported lazily).                        |
@@ -1313,6 +1345,13 @@ the voice’s owner (or their guardian) to do so.
 | [`ElevenLabsSpeechModel`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.ElevenLabsSpeechModel)(\*[, api_key, ...])     | Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).   |
 |------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
 | [`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview)(generated_voice_id, audio) | One candidate voice from `design_voice_previews`: listen, then pick.       |
+
+### voxy.elevenlabs_model.ELEVENLABS_NATIVE_BREAK_S *= {'eleven_flash_v2': 3.0, 'eleven_flash_v2_5': 3.0, 'eleven_monolingual_v1': 3.0, 'eleven_multilingual_v1': 3.0, 'eleven_multilingual_v2': 3.0, 'eleven_turbo_v2': 3.0, 'eleven_turbo_v2_5': 3.0, 'eleven_v3': 0.0, 'eleven_v4': 0.0, 'eleven_v4_turbo': 0.0}*
+
+The longest SSML `<break>` each ElevenLabs model renders itself (seconds).
+The v2 family honours `<break time="..."/>` up to 3 s; `eleven_v3` and
+`eleven_v4` support no SSML at all. A model not listed gets 0 (voxy cuts at
+every break, which is exact on any model).
 
 ### *class* voxy.elevenlabs_model.ElevenLabsSpeechModel(, api_key=None, model_id='eleven_multilingual_v2', output_format='pcm_24000', client_factory=None, device=None)
 
@@ -1429,6 +1468,20 @@ Voices in the account and its library (`voice_type`: e.g. ‘default’,
 
 Registry name of the backend (also each profile’s `model_type`).
 
+#### native_break_s(, model_id=None, \*\*\_)
+
+The longest `<break>` the call’s model renders (see
+[`ELEVENLABS_NATIVE_BREAK_S`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.ELEVENLABS_NATIVE_BREAK_S)).
+
+```pycon
+>>> m = ElevenLabsSpeechModel(model_id="eleven_v4")
+>>> m.native_break_s(), m.native_break_s(model_id="eleven_multilingual_v2")
+(0.0, 3.0)
+```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
 #### *property* sample_rate *: [int](https://docs.python.org/3/builtins/functions.html#int)*
 
 Sample rate of the audio `generate_speech` returns.
@@ -1473,6 +1526,11 @@ A profile for an existing ElevenLabs voice (a past clone, or a stock voice).
 
 * **Return type:**
   [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+#### *property* wav_synth_kwargs *: [dict](https://docs.python.org/3/builtins/stdtypes.html#dict)*
+
+PCM at the model’s `output_format` rate (PCM is on every tier;
+build the model with `output_format="pcm_44100"` for 44.1 kHz).
 
 ### *class* voxy.elevenlabs_model.VoiceDesignPreview(generated_voice_id, audio, text='', duration_s=None)
 
@@ -1761,6 +1819,11 @@ narrator’s voice, splice.
 
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
+Pauses are SSML breaks in `text` (`<break time="5s"/>`), honoured on every
+backend: one the backend renders stays in the text; at any other the text is
+cut, the parts spoken separately and joined, as WAV, with that much silence
+(`voxy.pauses`). Text without breaks or marks is sent as is.
+
 * **Parameters:**
   * **text** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – What to say.
   * **voice** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A library name or alias (‘ada’, ‘Addie’), a backend’s own voice
@@ -1942,6 +2005,7 @@ True
 | [`lexique`](_autosummary/voxy.lexique.html.md#module-voxy.lexique)                     | French heteronyms derived from Lexique, to merge under voxy's hand-made table.                |
 | [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                          |
 | [`local_clone`](_autosummary/voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.           |
+| [`pauses`](_autosummary/voxy.pauses.html.md#module-voxy.pauses)                       | Pauses in text to speak: SSML breaks, honoured on every backend.                              |
 | [`pronounce`](_autosummary/voxy.pronounce.html.md#module-voxy.pronounce)                 | Checking, in the audio, which reading of a flagged word a render used.                        |
 | [`refprep`](_autosummary/voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.    |
 | [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                |
@@ -2705,6 +2769,167 @@ The old name of `register_local_backend`; remove after the next release.
 
 * **Return type:**
   [`LocalBackend`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.LocalBackend)
+
+
+# _autosummary/voxy.pauses.html.md
+
+# voxy.pauses
+
+Pauses in text to speak: SSML breaks, honoured on every backend.
+
+The standard way to ask a speech engine for silence is the W3C SSML 1.1 break
+element, written into the text [1]:
+
+> Breathe in.<break time=”4s”/> And out, slowly.<break time=”6s”/>
+
+Engines honour it unevenly: ElevenLabs’ v2-family models up to 3 s, `eleven_v3`
+and `eleven_v4` not at all [2], local models never. So `voxy.text_to_speech`
+resolves breaks itself. A break the backend renders (`SpeechModel.native_break_s`)
+stays in the text; at any other break the text is cut, each part is spoken on its
+own, and the parts are joined with exactly that much silence. Text with no markup
+takes the old path, untouched.
+
+The structure underneath is a list of [`Section`](_autosummary/voxy.pauses.html.md#voxy.pauses.Section) (`parse_sections`): the
+text, cut at every `<break>` and every SSML `<mark name="..."/>`, each section
+carrying the silence that follows it and the mark that ends it. A linear render
+reads `plan_sections`, which cuts only where the backend needs a cut and drops
+marks. A player that holds at a mark until the listener continues (SMIL 3.0’s
+`end="<id>.activateEvent"` [3]) reads `parse_sections` and speaks section by
+section: no other change is needed for that.
+
+```pycon
+>>> [(s.text, s.pause_s) for s in parse_sections('In.<break time="4s"/> Out.')]
+[('In.', 4.0), ('Out.', 0.0)]
+```
+
+[1] W3C. Speech Synthesis Markup Language (SSML) Version 1.1, section 3.2.3.
+: [https://www.w3.org/TR/speech-synthesis11/#edef_break](https://www.w3.org/TR/speech-synthesis11/#edef_break)
+
+[2] ElevenLabs. Eleven v4 / Eleven v3 prompting guides (“SSML is not supported”).
+: [https://elevenlabs.io/docs/overview/capabilities/text-to-speech/eleven-v4](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/eleven-v4)
+
+[3] W3C. SMIL 3.0 Timing and Synchronization (event-based end values).
+: [https://www.w3.org/TR/SMIL3/smil-timing.html](https://www.w3.org/TR/SMIL3/smil-timing.html)
+
+### Module Attributes
+
+| [`BREAK_STRENGTH_S`](_autosummary/voxy.pauses.html.md#voxy.pauses.BREAK_STRENGTH_S)   | Seconds for each SSML `strength` (SSML leaves them to the engine; these are Azure Speech's documented values).   |
+|---------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
+| [`DFLT_SILENCE_RATE`](_autosummary/voxy.pauses.html.md#voxy.pauses.DFLT_SILENCE_RATE)  | The rate of a render that is nothing but silence (no section had text).                                          |
+
+### Functions
+
+| [`break_seconds`](_autosummary/voxy.pauses.html.md#voxy.pauses.break_seconds)(attrs)                               | The silence a `<break>` asks for, from its attribute string.                                                       |
+|-----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [`has_pause_markup`](_autosummary/voxy.pauses.html.md#voxy.pauses.has_pause_markup)(text)                             | Whether `text` holds an SSML `<break>` or `<mark>`.                                                                |
+| [`join_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.join_sections)(sections, synthesize, \*[, backend]) | One WAV `Speech`: each section spoken by `synthesize`, then its silence.                                           |
+| [`parse_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.parse_sections)(text)                               | `text` cut at every SSML `<break>` and `<mark>`.                                                                   |
+| [`plan_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.plan_sections)(text, \*[, native_break_s])          | The sections to synthesize separately, for a backend that renders breaks of up to `native_break_s` seconds itself. |
+| [`render_break`](_autosummary/voxy.pauses.html.md#voxy.pauses.render_break)(seconds)                              | The SSML break for `seconds`, in the form ElevenLabs documents.                                                    |
+
+### Classes
+
+| [`Section`](_autosummary/voxy.pauses.html.md#voxy.pauses.Section)(text[, pause_s, mark])   | A stretch of text to speak, and how it ends.   |
+|-----------------------------------------------------------------------------------|------------------------------------------------|
+
+### voxy.pauses.BREAK_STRENGTH_S *: [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [float](https://docs.python.org/3/builtins/functions.html#float)]* *= {'medium': 0.75, 'none': 0.0, 'strong': 1.0, 'weak': 0.5, 'x-strong': 1.25, 'x-weak': 0.25}*
+
+Seconds for each SSML `strength` (SSML leaves them to the engine; these are
+Azure Speech’s documented values). A bare `<break/>` is `medium`.
+
+### voxy.pauses.DFLT_SILENCE_RATE *= 24000*
+
+The rate of a render that is nothing but silence (no section had text).
+
+### *class* voxy.pauses.Section(text, pause_s=0.0, mark=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+A stretch of text to speak, and how it ends.
+
+`pause_s` is the silence after it; `mark` the name of the SSML mark that
+ends it, if one does (a point a player may stop at).
+
+### voxy.pauses.break_seconds(attrs)
+
+The silence a `<break>` asks for, from its attribute string.
+
+`time` (`"3s"`, `"250ms"`) wins over `strength`; neither means medium.
+
+```pycon
+>>> break_seconds(' time="250ms"'), break_seconds(" strength='strong'"), break_seconds("")
+(0.25, 1.0, 0.75)
+```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
+### voxy.pauses.has_pause_markup(text)
+
+Whether `text` holds an SSML `<break>` or `<mark>`.
+
+```pycon
+>>> has_pause_markup('Hi <break time="1s"/>'), has_pause_markup("Hi [softly]")
+(True, False)
+```
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
+
+### voxy.pauses.join_sections(sections, synthesize, , backend='')
+
+One WAV `Speech`: each section spoken by `synthesize`, then its silence.
+
+`synthesize(text) -> Speech` must return WAV (or anything `read_wav`
+reads); sections at different rates are resampled to the first one’s.
+
+### voxy.pauses.parse_sections(text)
+
+`text` cut at every SSML `<break>` and `<mark>`.
+
+Breaks in a row add up; a mark keeps the pause of breaks around it. A leading
+break gives a first section with no text (silence first); a trailing one is
+kept (silence last).
+
+```pycon
+>>> parse_sections('<break time="2s"/>One.<mark name="m1"/> Two.<break/><break/>')
+[Section(text='', pause_s=2.0, mark=None), Section(text='One.', pause_s=0.0, mark='m1'), Section(text='Two.', pause_s=1.5, mark=None)]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Section`](_autosummary/voxy.pauses.html.md#voxy.pauses.Section)]
+
+### voxy.pauses.plan_sections(text, , native_break_s=0.0)
+
+The sections to synthesize separately, for a backend that renders breaks of
+up to `native_break_s` seconds itself.
+
+A break that short stays in the text (as [`render_break()`](_autosummary/voxy.pauses.html.md#voxy.pauses.render_break)); a mark is
+dropped (a linear render has nothing to do at it); every other break ends a
+section.
+
+```pycon
+>>> t = 'A.<break time="1s"/> B.<break time="5s"/> C.'
+>>> [(s.text, s.pause_s) for s in plan_sections(t, native_break_s=3)]
+[('A. <break time="1s" /> B.', 5.0), ('C.', 0.0)]
+>>> [s.text for s in plan_sections(t)]
+['A.', 'B.', 'C.']
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Section`](_autosummary/voxy.pauses.html.md#voxy.pauses.Section)]
+
+### voxy.pauses.render_break(seconds)
+
+The SSML break for `seconds`, in the form ElevenLabs documents.
+
+```pycon
+>>> render_break(1.5)
+'<break time="1.5s" />'
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
 
 
 # _autosummary/voxy.pronounce.html.md
@@ -6390,18 +6615,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-02 12:19 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/ca1539d39bf52a37de4c32cf4666dc312fc59137"><code>ca1539d</code></a> on branch <code>main</code>, for **voxy 0.0.63** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-07 12:27 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/b449e22a45577c347c0f21a7d2932872b6f1e70e"><code>b449e22</code></a> on branch <code>main</code>, for **voxy 0.0.64** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.63) is behind the latest release on PyPI (0.0.64): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.64) is behind the latest release on PyPI (0.0.65): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/ca1539d39bf52a37de4c32cf4666dc312fc59137"><code>ca1539d39bf52a37de4c32cf4666dc312fc59137</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/b449e22a45577c347c0f21a7d2932872b6f1e70e"><code>b449e22a45577c347c0f21a7d2932872b6f1e70e</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6412,9 +6637,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/41443423111">41443423111</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42372354786">42372354786</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>ca1539d39bf52a37de4c32cf4666dc312fc59137</code> (in the history of the built commit) |
+| Event commit | <code>b449e22a45577c347c0f21a7d2932872b6f1e70e</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6423,7 +6648,7 @@ The documentation and the package may be misaligned:
 | epythet  | 0.2.22  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
-| Python   | 3.12.15 |
+| Python   | 3.12.16 |
 
 ## Configuration as resolved
 
@@ -6439,13 +6664,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.64/">0.0.64</a>, newer than the documented version (0.0.63).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.65/">0.0.65</a>, newer than the documented version (0.0.64).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout ca1539d39bf52a37de4c32cf4666dc312fc59137
+git checkout b449e22a45577c347c0f21a7d2932872b6f1e70e
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

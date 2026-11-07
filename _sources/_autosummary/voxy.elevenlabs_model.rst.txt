@@ -4,6 +4,12 @@ voxy.elevenlabs\_model
 .. automodule:: voxy.elevenlabs_model
 
    
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      ELEVENLABS_NATIVE_BREAK_S
+   
    .. rubric:: Functions
 
    .. autosummary::
