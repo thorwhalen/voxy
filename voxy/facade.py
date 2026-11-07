@@ -171,7 +171,9 @@ def _speak_with_pauses(text: str, voice, model: SpeechModel, kwargs: dict) -> Sp
         return model.synthesize(sections[0].text, voice, **kwargs)
     options = {**model.wav_synth_kwargs, **kwargs}
     speech = join_sections(
-        sections, lambda part: model.synthesize(part, voice, **options), backend=model.name
+        sections,
+        lambda part: model.synthesize(part, voice, **options),
+        backend=model.name,
     )
     return replace(speech, text=text)
 

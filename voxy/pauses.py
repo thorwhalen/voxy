@@ -50,7 +50,9 @@ BREAK_STRENGTH_S: Mapping[str, float] = {
 }
 DFLT_BREAK_STRENGTH = "medium"
 
-_TAG = re.compile(r"<(?P<name>break|mark)\b(?P<attrs>[^>]*?)/?>(?:\s*</(?P=name)>)?", re.I)
+_TAG = re.compile(
+    r"<(?P<name>break|mark)\b(?P<attrs>[^>]*?)/?>(?:\s*</(?P=name)>)?", re.I
+)
 _ATTR = re.compile(r"""([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
 _TIME = re.compile(r"^\s*(\d+(?:\.\d+)?|\.\d+)\s*(ms|s)\s*$", re.I)
 
@@ -106,7 +108,7 @@ def _mark_name(attrs: str) -> str:
     for key, a, b in _ATTR.findall(attrs):
         if key.lower() == "name":
             return a or b
-    raise ValueError("<mark> needs a name: <mark name=\"...\"/>")
+    raise ValueError('<mark> needs a name: <mark name="..."/>')
 
 
 def _clean(text: str) -> str:

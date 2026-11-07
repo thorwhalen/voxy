@@ -312,7 +312,9 @@ class ElevenLabsSpeechModel(SpeechModel):
         """PCM at the model's ``output_format`` rate (PCM is on every tier;
         build the model with ``output_format="pcm_44100"`` for 44.1 kHz)."""
         fmt = self.output_format
-        return {"output_format": fmt if fmt.startswith(("pcm_", "wav_")) else "pcm_24000"}
+        return {
+            "output_format": fmt if fmt.startswith(("pcm_", "wav_")) else "pcm_24000"
+        }
 
     @property
     def sample_rate(self) -> int:
