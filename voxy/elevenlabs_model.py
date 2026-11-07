@@ -57,6 +57,22 @@ DFLT_ELEVENLABS_MODEL_ID = os.environ.get(
 # Raw PCM is available on every ElevenLabs tier and decodes without ffmpeg.
 DFLT_ELEVENLABS_OUTPUT_FORMAT = "pcm_24000"
 DFLT_CLONE_NAME_TEMPLATE = "voxy-{speaker_id}"
+#: The longest SSML ``<break>`` each ElevenLabs model renders itself (seconds).
+#: The v2 family honours ``<break time="..."/>`` up to 3 s; ``eleven_v3`` and
+#: ``eleven_v4`` support no SSML at all. A model not listed gets 0 (voxy cuts at
+#: every break, which is exact on any model).
+ELEVENLABS_NATIVE_BREAK_S = {
+    "eleven_multilingual_v2": 3.0,
+    "eleven_flash_v2_5": 3.0,
+    "eleven_turbo_v2_5": 3.0,
+    "eleven_flash_v2": 3.0,
+    "eleven_turbo_v2": 3.0,
+    "eleven_monolingual_v1": 3.0,
+    "eleven_multilingual_v1": 3.0,
+    "eleven_v3": 0.0,
+    "eleven_v4": 0.0,
+    "eleven_v4_turbo": 0.0,
+}
 # What synthesize() returns by default: a playable file, on every tier.
 DFLT_ELEVENLABS_SYNTH_FORMAT = "mp3_44100_128"
 DFLT_ELEVENLABS_STS_MODEL_ID = os.environ.get(
@@ -280,6 +296,23 @@ class ElevenLabsSpeechModel(SpeechModel):
             f"{type(self).__name__}(model_id={self.model_id!r}, "
             f"output_format={self.output_format!r})"
         )
+
+    def native_break_s(self, *, model_id: str | None = None, **_) -> float:
+        """The longest ``<break>`` the call's model renders (see
+        :data:`ELEVENLABS_NATIVE_BREAK_S`).
+
+        >>> m = ElevenLabsSpeechModel(model_id="eleven_v4")
+        >>> m.native_break_s(), m.native_break_s(model_id="eleven_multilingual_v2")
+        (0.0, 3.0)
+        """
+        return ELEVENLABS_NATIVE_BREAK_S.get(model_id or self.model_id, 0.0)
+
+    @property
+    def wav_synth_kwargs(self) -> dict:
+        """PCM at the model's ``output_format`` rate (PCM is on every tier;
+        build the model with ``output_format="pcm_44100"`` for 44.1 kHz)."""
+        fmt = self.output_format
+        return {"output_format": fmt if fmt.startswith(("pcm_", "wav_")) else "pcm_24000"}
 
     @property
     def sample_rate(self) -> int:
