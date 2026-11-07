@@ -559,6 +559,22 @@ class SpeechModel:
             text=_resolve_text_input(text),
         )
 
+    #: ``synthesize`` options that make it return WAV, used when voxy has to join
+    #: parts of a text (pauses): ``{}`` for a backend that always returns WAV.
+    @property
+    def wav_synth_kwargs(self) -> dict:
+        return {}
+
+    def native_break_s(self, **synth_kwargs) -> float:
+        """The longest SSML ``<break>`` this backend renders itself, in seconds.
+
+        ``0.0`` (the default): it renders none, so ``voxy.text_to_speech`` cuts
+        the text at every break and joins the parts with real silence
+        (``voxy.pauses``). ``synth_kwargs`` are the call's options, for a
+        backend whose answer depends on them (ElevenLabs: the ``model_id``).
+        """
+        return 0.0
+
     def list_voices(self) -> list[VoiceInfo]:
         """The voices this backend offers."""
         raise self._unsupported("list voices")

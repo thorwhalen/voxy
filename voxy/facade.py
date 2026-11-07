@@ -26,6 +26,7 @@ Backends are entries of ``voxy.speech_model_factories``; add one with
 """
 
 import os
+from dataclasses import replace
 from collections.abc import Mapping, MutableMapping
 
 from voxy import stores
@@ -38,6 +39,7 @@ from voxy.base import (
     create_speech_model,
 )
 from voxy.library import find_voice, profile_from_record
+from voxy.pauses import has_pause_markup, join_sections, plan_sections
 
 VOXY_TTS_BACKEND_ENVVAR = "VOXY_TTS_BACKEND"
 FALLBACK_TTS_BACKEND = "elevenlabs"
@@ -121,6 +123,11 @@ def text_to_speech(
 ) -> Speech:
     """Speak ``text`` in ``voice`` and return the encoded audio (``.save(path)``).
 
+    Pauses are SSML breaks in ``text`` (``<break time="5s"/>``), honoured on every
+    backend: one the backend renders stays in the text; at any other the text is
+    cut, the parts spoken separately and joined, as WAV, with that much silence
+    (``voxy.pauses``). Text without breaks or marks is sent as is.
+
     Args:
         text: What to say.
         voice: A library name or alias ('ada', 'Addie'), a backend's own voice
@@ -144,10 +151,29 @@ def text_to_speech(
     model = model or get_speech_model(backend, models=models)
     if voice is None:
         voice = model.dflt_voice
-    speech = model.synthesize(text, voice, **kwargs)
+    if has_pause_markup(text):
+        speech = _speak_with_pauses(text, voice, model, kwargs)
+    else:
+        speech = model.synthesize(text, voice, **kwargs)
     if output_path:
         speech.save(output_path)
     return speech
+
+
+def _speak_with_pauses(text: str, voice, model: SpeechModel, kwargs: dict) -> Speech:
+    """``text`` with SSML breaks and marks, spoken by ``model`` (``voxy.pauses``).
+
+    One call when every break is one the model renders; otherwise one call per
+    section, joined as WAV with exactly the requested silences.
+    """
+    sections = plan_sections(text, native_break_s=model.native_break_s(**kwargs))
+    if len(sections) == 1 and not sections[0].pause_s:
+        return model.synthesize(sections[0].text, voice, **kwargs)
+    options = {**model.wav_synth_kwargs, **kwargs}
+    speech = join_sections(
+        sections, lambda part: model.synthesize(part, voice, **options), backend=model.name
+    )
+    return replace(speech, text=text)
 
 
 def speech_to_speech(
