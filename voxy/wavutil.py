@@ -36,6 +36,12 @@ FRAME_MS = 10
 DFLT_LOSSY_BITRATE = "192k"
 #: Formats whose encoder takes a bitrate (``-b:a``).
 LOSSY_FORMATS = frozenset({"mp3", "aac", "opus", "ogg"})
+#: Raw (headerless) formats voxy backends return, and ffmpeg's names for them.
+RAW_FORMATS = {"pcm": "s16le", "ulaw": "mulaw", "alaw": "alaw"}
+#: Audio formats ffmpeg_decode / ffmpeg_encode handle, with the muxer ffmpeg
+#: calls each one when that is not its own name.
+FFMPEG_MUXERS = {"mp3": "mp3", "flac": "flac", "ogg": "ogg", "opus": "opus",
+                 "aac": "adts", **RAW_FORMATS}  # fmt: skip
 
 
 def pcm_to_float(raw: bytes, width: int = PCM_SAMPLE_WIDTH) -> np.ndarray:
@@ -329,6 +335,15 @@ def resample(samples: np.ndarray, from_rate: int, to_rate: int) -> np.ndarray:
     return np.interp(positions, np.arange(len(samples)), samples).astype(np.float32)
 
 
+def check_audio_format(audio_format: str) -> None:
+    """Raise ``ValueError`` (before any paid work) for a format ffmpeg_* can't do."""
+    if audio_format != "wav" and audio_format not in FFMPEG_MUXERS:
+        raise ValueError(
+            f"Can't join audio in {audio_format!r}: use one of "
+            f"{sorted({'wav', *FFMPEG_MUXERS})}, or ask the backend for WAV"
+        )
+
+
 def _ffmpeg_path(ffmpeg: str | None) -> str:
     path = ffmpeg or shutil.which("ffmpeg")
     if path is None:
@@ -343,21 +358,32 @@ def _ffmpeg_path(ffmpeg: str | None) -> str:
 def _run_ffmpeg(cmd: list[str], data: bytes, what: str) -> bytes:
     done = subprocess.run(cmd, input=data, capture_output=True)
     if done.returncode:
-        raise RuntimeError(f"ffmpeg could not {what}: {done.stderr.decode()[-300:]}")
+        err = done.stderr.decode(errors="replace")[-300:]
+        raise RuntimeError(f"ffmpeg could not {what}: {err}")
     return done.stdout
 
 
-def ffmpeg_decode(audio: bytes, *, ffmpeg: str | None = None) -> tuple[np.ndarray, int]:
+def ffmpeg_decode(
+    audio: bytes,
+    *,
+    audio_format: str | None = None,
+    sample_rate: int | None = None,
+    ffmpeg: str | None = None,
+) -> tuple[np.ndarray, int]:
     """``(samples, sample_rate)`` of audio in any format ffmpeg reads (mp3, ...),
     channels averaged, like :func:`read_wav`.
 
-    Raises ``RuntimeError`` (naming the remedy) when ffmpeg is not installed.
+    A raw format (``RAW_FORMATS``: pcm, ulaw, alaw) has no header, so it needs
+    ``audio_format`` and ``sample_rate``. Raises ``RuntimeError`` (naming the
+    remedy) when ffmpeg is not installed.
     """
-    cmd = [_ffmpeg_path(ffmpeg), "-hide_banner", "-loglevel", "error", "-i", "pipe:0"]
-    wav = _run_ffmpeg(
-        cmd + ["-f", "wav", "-c:a", "pcm_f32le", "pipe:1"], audio, "decode"
-    )
-    return read_wav(wav)
+    cmd = [_ffmpeg_path(ffmpeg), "-hide_banner", "-loglevel", "error"]
+    if audio_format in RAW_FORMATS:
+        if not sample_rate:
+            raise ValueError(f"Raw {audio_format!r} audio needs its sample_rate")
+        cmd += ["-f", RAW_FORMATS[audio_format], "-ar", str(sample_rate), "-ac", "1"]
+    cmd += ["-i", "pipe:0", "-f", "wav", "-c:a", "pcm_f32le", "pipe:1"]
+    return read_wav(_run_ffmpeg(cmd, audio, "decode"))
 
 
 def ffmpeg_encode(
@@ -373,8 +399,9 @@ def ffmpeg_encode(
     ``bitrate`` applies to the lossy formats (``LOSSY_FORMATS``); ``None`` leaves
     the encoder's default.
     """
+    check_audio_format(audio_format)
     cmd = [_ffmpeg_path(ffmpeg), "-hide_banner", "-loglevel", "error", "-i", "pipe:0"]
     if bitrate and audio_format in LOSSY_FORMATS:
         cmd += ["-b:a", bitrate]
-    cmd += ["-f", audio_format, "pipe:1"]
+    cmd += ["-f", FFMPEG_MUXERS[audio_format], "pipe:1"]
     return _run_ffmpeg(cmd, write_wav(samples, sample_rate), f"encode {audio_format}")

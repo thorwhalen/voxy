@@ -27,6 +27,7 @@ Backends are entries of ``voxy.speech_model_factories``; add one with
 
 import os
 from dataclasses import replace
+from functools import partial
 from collections.abc import Mapping, MutableMapping
 
 from voxy import stores
@@ -39,7 +40,7 @@ from voxy.base import (
     create_speech_model,
 )
 from voxy.library import find_voice, profile_from_record
-from voxy.pauses import has_pause_markup, join_sections, plan_sections
+from voxy.pauses import encode_audio, has_pause_markup, join_sections, plan_sections
 
 VOXY_TTS_BACKEND_ENVVAR = "VOXY_TTS_BACKEND"
 FALLBACK_TTS_BACKEND = "elevenlabs"
@@ -161,6 +162,16 @@ def text_to_speech(
     return speech
 
 
+def _requested_bitrate(options: Mapping) -> str | None:
+    """The bitrate an ``output_format`` like ``mp3_44100_128`` asks for ('128k').
+
+    >>> _requested_bitrate({"output_format": "mp3_44100_128"}), _requested_bitrate({})
+    ('128k', None)
+    """
+    parts = str(options.get("output_format") or "").split("_")
+    return f"{parts[2]}k" if len(parts) == 3 and parts[2].isdigit() else None
+
+
 def _speak_with_pauses(text: str, voice, model: SpeechModel, kwargs: dict) -> Speech:
     """``text`` with SSML breaks and marks, spoken by ``model`` (``voxy.pauses``).
 
@@ -175,6 +186,7 @@ def _speak_with_pauses(text: str, voice, model: SpeechModel, kwargs: dict) -> Sp
         sections,
         lambda part: model.synthesize(part, voice, **options),
         backend=model.name,
+        encode=partial(encode_audio, bitrate=_requested_bitrate(options)),
     )
     return replace(speech, text=text)
 

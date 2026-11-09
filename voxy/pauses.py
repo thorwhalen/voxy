@@ -205,18 +205,28 @@ def _trailing_break_to_pause(section: Section) -> Section:
 def decode_speech(speech) -> tuple[np.ndarray, int]:
     """``(samples, rate)`` of a :class:`Speech`: WAV directly, anything else (mp3,
     ...) through ffmpeg."""
-    from voxy.wavutil import ffmpeg_decode, read_wav
+    from voxy.wavutil import check_audio_format, ffmpeg_decode, read_wav
 
-    return (read_wav if speech.format == "wav" else ffmpeg_decode)(speech.audio)
+    if speech.format == "wav":
+        return read_wav(speech.audio)
+    check_audio_format(speech.format)
+    return ffmpeg_decode(
+        speech.audio, audio_format=speech.format, sample_rate=speech.sample_rate
+    )
 
 
-def encode_audio(samples: np.ndarray, rate: int, audio_format: str) -> bytes:
-    """``samples`` as ``audio_format`` bytes: WAV directly, anything else through ffmpeg."""
-    from voxy.wavutil import ffmpeg_encode, write_wav
+def encode_audio(
+    samples: np.ndarray, rate: int, audio_format: str, *, bitrate: str | None = None
+) -> bytes:
+    """``samples`` as ``audio_format`` bytes: WAV directly, anything else through
+    ffmpeg (at ``bitrate`` if given, else the encoder default of ``ffmpeg_encode``)."""
+    from voxy.wavutil import DFLT_LOSSY_BITRATE, ffmpeg_encode, write_wav
 
     if audio_format == "wav":
         return write_wav(samples, rate)
-    return ffmpeg_encode(samples, rate, audio_format)
+    return ffmpeg_encode(
+        samples, rate, audio_format, bitrate=bitrate or DFLT_LOSSY_BITRATE
+    )
 
 
 def join_sections(
@@ -233,7 +243,9 @@ def join_sections(
     section (default: WAV, or any format ffmpeg reads); sections at different
     rates are resampled to the first one's. The result is in the format the first
     section came in: WAV, or ``encode(samples, rate, format) -> bytes`` for a
-    compressed one (default: ffmpeg), so a request for mp3 gets mp3 back.
+    compressed one (default: ffmpeg), so a request for mp3 gets mp3 back. Lossy
+    encoders pad each section by tens of milliseconds, so a pause in a compressed
+    render can be up to ~50 ms off; ask for WAV or PCM where that matters.
     """
     from voxy.base import Speech
     from voxy.wavutil import resample, silence

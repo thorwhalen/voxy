@@ -124,21 +124,75 @@ def test_compressed_sections_join_through_injected_codecs():
 def test_compressed_without_ffmpeg_is_explained(monkeypatch):
     monkeypatch.setattr("voxy.wavutil.shutil.which", lambda name: None)
     with pytest.raises(RuntimeError, match="needs ffmpeg"):
-        join_sections(
-            [Section("One.")], lambda part: Speech(b"x", format="mp3")
-        )
+        join_sections([Section("One.")], lambda part: Speech(b"x", format="mp3"))
 
 
-@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
-def test_mp3_output_format_round_trips_through_ffmpeg():
+needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+
+
+def _tone(seconds=0.5, rate=44100):
+    t = np.arange(int(seconds * rate)) / rate
+    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)
+
+
+def _gap_s(samples, rate, *, floor=0.01):
+    """Length of the silent stretch between the first and last sound."""
+    loud = np.flatnonzero(np.abs(samples) > floor)
+    quiet = np.diff(loud)
+    return quiet.max() / rate
+
+
+@needs_ffmpeg
+@pytest.mark.parametrize("audio_format", ["mp3", "aac", "flac", "ogg"])
+def test_compressed_sections_join_with_the_requested_gap(audio_format):
     from voxy.wavutil import ffmpeg_encode
 
-    tone = np.sin(np.linspace(0, 440 * 2 * np.pi * 0.5, 22050)).astype(np.float32) * 0.5
-    mp3 = ffmpeg_encode(tone, 44100, "mp3")
+    piece = ffmpeg_encode(_tone(), 44100, audio_format)
     out = join_sections(
         [Section("One.", 1.0), Section("Two.")],
-        lambda part: Speech(mp3, format="mp3", voice="v"),
+        lambda part: Speech(piece, format=audio_format, voice="v"),
     )
-    assert out.format == "mp3" and out.audio[:3] in (b"ID3", b"\xff\xfb", b"\xff\xf3")
+    assert out.format == audio_format
     samples, rate = ffmpeg_decode(out.audio)
-    assert rate == 44100 and abs(len(samples) / rate - 2.0) < 0.15
+    assert rate == 44100
+    assert abs(_gap_s(samples, rate) - 1.0) < 0.08  # encoder padding, not exact
+
+
+@needs_ffmpeg
+def test_raw_ulaw_sections_join():
+    from voxy.wavutil import ffmpeg_encode
+
+    piece = ffmpeg_encode(_tone(rate=8000), 8000, "ulaw")
+    out = join_sections(
+        [Section("One.", 0.5), Section("Two.")],
+        lambda part: Speech(piece, format="ulaw", sample_rate=8000),
+    )
+    assert out.format == "ulaw" and out.sample_rate == 8000
+
+
+def test_unsupported_format_is_refused_before_more_calls():
+    calls = []
+
+    def synthesize(part):
+        calls.append(part)
+        return Speech(b"x", format="weird")
+
+    with pytest.raises(ValueError, match="Can't join audio in 'weird'"):
+        join_sections([Section("A.", 1.0), Section("B.")], synthesize)
+    assert calls == ["A."]
+
+
+@needs_ffmpeg
+def test_text_to_speech_mp3_output_format_keeps_mp3_and_rate():
+    from voxy.wavutil import ffmpeg_encode
+
+    mp3 = ffmpeg_encode(_tone(), 44100, "mp3")
+    client = FakeClient(pcm=mp3)
+    model = ElevenLabsSpeechModel(model_id="eleven_v4", client_factory=lambda k: client)
+    model._explicit_api_key = "k"
+    out = text_to_speech(
+        'One.<break time="2s"/> Two.', "vid", model=model, output_format="mp3_44100_128"
+    )
+    assert out.format == "mp3" and out.sample_rate == 44100
+    formats = [c[2]["output_format"] for c in client.calls if c[0] == "convert"]
+    assert formats == ["mp3_44100_128"] * 2
