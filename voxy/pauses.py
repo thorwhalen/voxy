@@ -202,35 +202,64 @@ def _trailing_break_to_pause(section: Section) -> Section:
     )
 
 
+def decode_speech(speech) -> tuple[np.ndarray, int]:
+    """``(samples, rate)`` of a :class:`Speech`: WAV directly, anything else (mp3,
+    ...) through ffmpeg."""
+    from voxy.wavutil import check_audio_format, ffmpeg_decode, read_wav
+
+    if speech.format == "wav":
+        return read_wav(speech.audio)
+    check_audio_format(speech.format)
+    return ffmpeg_decode(
+        speech.audio, audio_format=speech.format, sample_rate=speech.sample_rate
+    )
+
+
+def encode_audio(
+    samples: np.ndarray, rate: int, audio_format: str, *, bitrate: str | None = None
+) -> bytes:
+    """``samples`` as ``audio_format`` bytes: WAV directly, anything else through
+    ffmpeg (at ``bitrate`` if given, else the encoder default of ``ffmpeg_encode``)."""
+    from voxy.wavutil import DFLT_LOSSY_BITRATE, ffmpeg_encode, write_wav
+
+    if audio_format == "wav":
+        return write_wav(samples, rate)
+    return ffmpeg_encode(
+        samples, rate, audio_format, bitrate=bitrate or DFLT_LOSSY_BITRATE
+    )
+
+
 def join_sections(
     sections: Iterable[Section],
     synthesize: Callable[[str], "Speech"],
     *,
     backend: str = "",
+    decode: Callable[["Speech"], tuple[np.ndarray, int]] = decode_speech,
+    encode: Callable[[np.ndarray, int, str], bytes] = encode_audio,
 ):
-    """One WAV ``Speech``: each section spoken by ``synthesize``, then its silence.
+    """One ``Speech``: each section spoken by ``synthesize``, then its silence.
 
-    ``synthesize(text) -> Speech`` must return WAV (or anything ``read_wav``
-    reads); sections at different rates are resampled to the first one's.
+    ``synthesize(text) -> Speech``. ``decode(speech) -> (samples, rate)`` reads a
+    section (default: WAV, or any format ffmpeg reads); sections at different
+    rates are resampled to the first one's. The result is in the format the first
+    section came in: WAV, or ``encode(samples, rate, format) -> bytes`` for a
+    compressed one (default: ffmpeg), so a request for mp3 gets mp3 back. Lossy
+    encoders pad each section by tens of milliseconds, so a pause in a compressed
+    render can be up to ~50 ms off; ask for WAV or PCM where that matters.
     """
     from voxy.base import Speech
-    from voxy.wavutil import read_wav, resample, silence, write_wav
+    from voxy.wavutil import resample, silence
 
     pieces: list[np.ndarray] = []
     rate = None
     voice = None
+    audio_format = None
     for section in sections:
         if section.text:
             speech = synthesize(section.text)
-            if speech.format != "wav":
-                raise ValueError(
-                    f"Joining pauses needs WAV, and the {speech.backend or backend!r} "
-                    f"backend returned {speech.format!r}: pass an output format "
-                    "that gives WAV or PCM (for ElevenLabs, omit output_format or "
-                    "pass e.g. 'pcm_44100')"
-                )
-            samples, sr = read_wav(speech.audio)
+            samples, sr = decode(speech)
             voice = voice or speech.voice
+            audio_format = audio_format or speech.format
             if rate is None:
                 rate = sr
             elif sr != rate:
@@ -239,10 +268,11 @@ def join_sections(
         if section.pause_s:
             pieces.append(silence(section.pause_s * 1000, rate or DFLT_SILENCE_RATE))
     rate = rate or DFLT_SILENCE_RATE
+    audio_format = audio_format or "wav"
     audio = np.concatenate(pieces) if pieces else np.zeros(0, np.float32)
     return Speech(
-        write_wav(audio, rate),
-        format="wav",
+        encode(audio, rate, audio_format),
+        format=audio_format,
         backend=backend,
         voice=voice,
         sample_rate=rate,

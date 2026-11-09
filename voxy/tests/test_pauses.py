@@ -1,12 +1,20 @@
 """SSML pauses: parsing, planning per backend, and the facade's split-and-join."""
 
+import shutil
+
 import numpy as np
 import pytest
 
 from voxy import ElevenLabsSpeechModel, Speech, SpeechModel, text_to_speech
-from voxy.pauses import Section, break_seconds, parse_sections, plan_sections
+from voxy.pauses import (
+    Section,
+    break_seconds,
+    join_sections,
+    parse_sections,
+    plan_sections,
+)
 from voxy.tests.test_elevenlabs_model import FakeClient
-from voxy.wavutil import read_wav, write_wav
+from voxy.wavutil import ffmpeg_decode, read_wav, write_wav
 
 RATE = 8000
 
@@ -94,11 +102,97 @@ def test_elevenlabs_v4_splits_and_asks_for_pcm():
     assert model.native_break_s(model_id="eleven_flash_v2_5") == 3.0
 
 
-def test_non_wav_output_is_explained():
-    client = FakeClient()
+def test_compressed_sections_join_through_injected_codecs():
+    """No ffmpeg needed: decode= / encode= are the seams."""
+    sections = [Section("One.", 1.0), Section("Two.")]
+
+    def synthesize(part):
+        return Speech(b"fake-mp3", format="mp3", voice="v")
+
+    decode = lambda speech: (np.full(RATE // 10, 0.5, np.float32), RATE)
+    seen = {}
+
+    def encode(samples, rate, fmt):
+        seen.update(n=len(samples), rate=rate, fmt=fmt)
+        return b"joined-mp3"
+
+    out = join_sections(sections, synthesize, decode=decode, encode=encode)
+    assert (out.audio, out.format, out.sample_rate) == (b"joined-mp3", "mp3", RATE)
+    assert seen == {"n": RATE // 10 * 2 + RATE, "rate": RATE, "fmt": "mp3"}
+
+
+def test_compressed_without_ffmpeg_is_explained(monkeypatch):
+    monkeypatch.setattr("voxy.wavutil.shutil.which", lambda name: None)
+    with pytest.raises(RuntimeError, match="needs ffmpeg"):
+        join_sections([Section("One.")], lambda part: Speech(b"x", format="mp3"))
+
+
+needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+
+
+def _tone(seconds=0.5, rate=44100):
+    t = np.arange(int(seconds * rate)) / rate
+    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)
+
+
+def _gap_s(samples, rate, *, floor=0.01):
+    """Length of the silent stretch between the first and last sound."""
+    loud = np.flatnonzero(np.abs(samples) > floor)
+    quiet = np.diff(loud)
+    return quiet.max() / rate
+
+
+@needs_ffmpeg
+@pytest.mark.parametrize("audio_format", ["mp3", "aac", "flac", "ogg"])
+def test_compressed_sections_join_with_the_requested_gap(audio_format):
+    from voxy.wavutil import ffmpeg_encode
+
+    piece = ffmpeg_encode(_tone(), 44100, audio_format)
+    out = join_sections(
+        [Section("One.", 1.0), Section("Two.")],
+        lambda part: Speech(piece, format=audio_format, voice="v"),
+    )
+    assert out.format == audio_format
+    samples, rate = ffmpeg_decode(out.audio)
+    assert rate == 44100
+    assert abs(_gap_s(samples, rate) - 1.0) < 0.08  # encoder padding, not exact
+
+
+@needs_ffmpeg
+def test_raw_ulaw_sections_join():
+    from voxy.wavutil import ffmpeg_encode
+
+    piece = ffmpeg_encode(_tone(rate=8000), 8000, "ulaw")
+    out = join_sections(
+        [Section("One.", 0.5), Section("Two.")],
+        lambda part: Speech(piece, format="ulaw", sample_rate=8000),
+    )
+    assert out.format == "ulaw" and out.sample_rate == 8000
+
+
+def test_unsupported_format_is_refused_before_more_calls():
+    calls = []
+
+    def synthesize(part):
+        calls.append(part)
+        return Speech(b"x", format="weird")
+
+    with pytest.raises(ValueError, match="Can't join audio in 'weird'"):
+        join_sections([Section("A.", 1.0), Section("B.")], synthesize)
+    assert calls == ["A."]
+
+
+@needs_ffmpeg
+def test_text_to_speech_mp3_output_format_keeps_mp3_and_rate():
+    from voxy.wavutil import ffmpeg_encode
+
+    mp3 = ffmpeg_encode(_tone(), 44100, "mp3")
+    client = FakeClient(pcm=mp3)
     model = ElevenLabsSpeechModel(model_id="eleven_v4", client_factory=lambda k: client)
     model._explicit_api_key = "k"
-    with pytest.raises(ValueError, match="Joining pauses needs WAV"):
-        text_to_speech(
-            'One.<break time="5s"/> Two.', "vid", model=model, output_format="mp3_44100_128"
-        )
+    out = text_to_speech(
+        'One.<break time="2s"/> Two.', "vid", model=model, output_format="mp3_44100_128"
+    )
+    assert out.format == "mp3" and out.sample_rate == 44100
+    formats = [c[2]["output_format"] for c in client.calls if c[0] == "convert"]
+    assert formats == ["mp3_44100_128"] * 2
