@@ -19,7 +19,7 @@ needs no model.
 On macOS it works from a fresh environment (kokoro-onnx 0.6.1 with phonemizer 3.6
 and espeakng-loader 0.2.4, checked on arm64; the older pins, thorwhalen/voxy#61,
 could not find espeak-ng's data). If an environment built earlier still fails
-there, rebuild it: ``python -m voxy setup kokoro --rebuild``.
+there, delete ``$VOXY_DATA_DIR/envs/kokoro`` and run ``python -m voxy setup kokoro``.
 
 >>> import numpy as np
 >>> fake = lambda text, **kw: (np.full(800, 0.1, dtype=np.float32), 24000)
