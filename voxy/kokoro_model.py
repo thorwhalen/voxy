@@ -16,9 +16,10 @@ A voice's first letter is its language (``a`` American English, ``b`` British,
 you pass one. The voice list is static (``KOKORO_VOICES``), so listing voices
 needs no model.
 
-On macOS the espeak-ng bundled with kokoro-onnx (espeakng-loader) has its data
-folder compiled in and cannot find it, so the first synthesis fails; use ``say``
-there (thorwhalen/voxy#61).
+On macOS it works from a fresh environment (kokoro-onnx 0.6.1 with phonemizer 3.6
+and espeakng-loader 0.2.4, checked on arm64; the older pins, thorwhalen/voxy#61,
+could not find espeak-ng's data). If an environment built earlier still fails
+there, delete ``$VOXY_DATA_DIR/envs/kokoro`` and run ``python -m voxy setup kokoro``.
 
 >>> import numpy as np
 >>> fake = lambda text, **kw: (np.full(800, 0.1, dtype=np.float32), 24000)
