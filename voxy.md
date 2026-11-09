@@ -1,4 +1,4 @@
-> built 2026-11-07 12:27 UTC from b449e22 (main) · voxy 0.0.64. Details: build_info.json
+> built 2026-11-09 17:32 UTC from 3de9b38 (main) · voxy 0.0.65. Details: build_info.json
 
 # index.html.md
 
@@ -51,10 +51,12 @@ voxy.speech_to_speech("my_take.wav", voice="ada").save("ada_take.mp3")
 
 ## Pauses: SSML breaks, on any backend
 
-Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them, as WAV, with exactly that much silence. `eleven_v3` and `eleven_v4` render no SSML, so every break is cut there:
+Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them with exactly that much silence (as WAV; or, when you ask for a compressed `output_format` such as `mp3_44100_128`, in that format through ffmpeg, which is how to get 44.1 kHz on ElevenLabs tiers below Pro). `eleven_v3` and `eleven_v4` render no SSML, so every break is cut there:
 
 ```python
-model = voxy.ElevenLabsSpeechModel(model_id="eleven_v4")  # joins at pcm_24000 (44.1 kHz PCM needs Pro)
+model = voxy.ElevenLabsSpeechModel(
+    model_id="eleven_v4"
+)  # joins at pcm_24000 (44.1 kHz PCM needs Pro)
 voxy.text_to_speech(
     '[calmly] Breathe in.<break time="4s"/> And out, slowly.<break time="6s"/>',
     "my-voice-id",
@@ -1821,7 +1823,8 @@ Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
 Pauses are SSML breaks in `text` (`<break time="5s"/>`), honoured on every
 backend: one the backend renders stays in the text; at any other the text is
-cut, the parts spoken separately and joined, as WAV, with that much silence
+cut, the parts spoken separately and joined with that much silence (WAV, or the
+compressed format asked for, e.g. mp3, through ffmpeg)
 (`voxy.pauses`). Text without breaks or marks is sent as is.
 
 * **Parameters:**
@@ -2819,13 +2822,15 @@ section: no other change is needed for that.
 
 ### Functions
 
-| [`break_seconds`](_autosummary/voxy.pauses.html.md#voxy.pauses.break_seconds)(attrs)                               | The silence a `<break>` asks for, from its attribute string.                                                       |
-|-----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [`has_pause_markup`](_autosummary/voxy.pauses.html.md#voxy.pauses.has_pause_markup)(text)                             | Whether `text` holds an SSML `<break>` or `<mark>`.                                                                |
-| [`join_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.join_sections)(sections, synthesize, \*[, backend]) | One WAV `Speech`: each section spoken by `synthesize`, then its silence.                                           |
-| [`parse_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.parse_sections)(text)                               | `text` cut at every SSML `<break>` and `<mark>`.                                                                   |
-| [`plan_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.plan_sections)(text, \*[, native_break_s])          | The sections to synthesize separately, for a backend that renders breaks of up to `native_break_s` seconds itself. |
-| [`render_break`](_autosummary/voxy.pauses.html.md#voxy.pauses.render_break)(seconds)                              | The SSML break for `seconds`, in the form ElevenLabs documents.                                                    |
+| [`break_seconds`](_autosummary/voxy.pauses.html.md#voxy.pauses.break_seconds)(attrs)                           | The silence a `<break>` asks for, from its attribute string.                                                                                        |
+|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`decode_speech`](_autosummary/voxy.pauses.html.md#voxy.pauses.decode_speech)(speech)                          | `(samples, rate)` of a `Speech`: WAV directly, anything else (mp3, ...) through ffmpeg.                                                             |
+| [`encode_audio`](_autosummary/voxy.pauses.html.md#voxy.pauses.encode_audio)(samples, rate, audio_format, \*)  | `samples` as `audio_format` bytes: WAV directly, anything else through ffmpeg (at `bitrate` if given, else the encoder default of `ffmpeg_encode`). |
+| [`has_pause_markup`](_autosummary/voxy.pauses.html.md#voxy.pauses.has_pause_markup)(text)                         | Whether `text` holds an SSML `<break>` or `<mark>`.                                                                                                 |
+| [`join_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.join_sections)(sections, synthesize, \*[, ...]) | One `Speech`: each section spoken by `synthesize`, then its silence.                                                                                |
+| [`parse_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.parse_sections)(text)                           | `text` cut at every SSML `<break>` and `<mark>`.                                                                                                    |
+| [`plan_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.plan_sections)(text, \*[, native_break_s])      | The sections to synthesize separately, for a backend that renders breaks of up to `native_break_s` seconds itself.                                  |
+| [`render_break`](_autosummary/voxy.pauses.html.md#voxy.pauses.render_break)(seconds)                          | The SSML break for `seconds`, in the form ElevenLabs documents.                                                                                     |
 
 ### Classes
 
@@ -2864,6 +2869,22 @@ The silence a `<break>` asks for, from its attribute string.
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
+### voxy.pauses.decode_speech(speech)
+
+`(samples, rate)` of a `Speech`: WAV directly, anything else (mp3,
+…) through ffmpeg.
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)]
+
+### voxy.pauses.encode_audio(samples, rate, audio_format, , bitrate=None)
+
+`samples` as `audio_format` bytes: WAV directly, anything else through
+ffmpeg (at `bitrate` if given, else the encoder default of `ffmpeg_encode`).
+
+* **Return type:**
+  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
+
 ### voxy.pauses.has_pause_markup(text)
 
 Whether `text` holds an SSML `<break>` or `<mark>`.
@@ -2876,12 +2897,17 @@ Whether `text` holds an SSML `<break>` or `<mark>`.
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
-### voxy.pauses.join_sections(sections, synthesize, , backend='')
+### voxy.pauses.join_sections(sections, synthesize, \*, backend='', decode=<function decode_speech>, encode=<function encode_audio>)
 
-One WAV `Speech`: each section spoken by `synthesize`, then its silence.
+One `Speech`: each section spoken by `synthesize`, then its silence.
 
-`synthesize(text) -> Speech` must return WAV (or anything `read_wav`
-reads); sections at different rates are resampled to the first one’s.
+`synthesize(text) -> Speech`. `decode(speech) -> (samples, rate)` reads a
+section (default: WAV, or any format ffmpeg reads); sections at different
+rates are resampled to the first one’s. The result is in the format the first
+section came in: WAV, or `encode(samples, rate, format) -> bytes` for a
+compressed one (default: ffmpeg), so a request for mp3 gets mp3 back. Lossy
+encoders pad each section by tens of milliseconds, so a pause in a compressed
+render can be up to ~50 ms off; ask for WAV or PCM where that matters.
 
 ### voxy.pauses.parse_sections(text)
 
@@ -5962,23 +5988,34 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 | [`WAVE_FORMAT_FLOAT`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_FLOAT)      | integer PCM, IEEE float, and the extensible wrapper.                                                                                                   |
 | [`WAVE_FORMAT_EXTENSIBLE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.WAVE_FORMAT_EXTENSIBLE) | integer PCM, IEEE float, and the extensible wrapper.                                                                                                   |
 | [`TRAILING_CHUNK_IDS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.TRAILING_CHUNK_IDS)     | Chunks that can follow audio whose `data` size is a streaming placeholder.                                                                             |
+| [`DFLT_LOSSY_BITRATE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.DFLT_LOSSY_BITRATE)     | Bitrate when a render is encoded to a lossy format (mp3, aac, opus) and none is given.                                                                 |
+| [`LOSSY_FORMATS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.LOSSY_FORMATS)          | Formats whose encoder takes a bitrate (`-b:a`).                                                                                                        |
+| [`RAW_FORMATS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.RAW_FORMATS)            | Raw (headerless) formats voxy backends return, and ffmpeg's names for them.                                                                            |
+| [`FFMPEG_MUXERS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.FFMPEG_MUXERS)          | Audio formats ffmpeg_decode / ffmpeg_encode handle, with the muxer ffmpeg calls each one when that is not its own name.                                |
 | [`DFLT_LOWPASS_TAPS`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.DFLT_LOWPASS_TAPS)      | Taps of the anti-aliasing filter applied before downsampling (odd).                                                                                    |
 | [`DFLT_LOWPASS_SHARE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.DFLT_LOWPASS_SHARE)     | The filter's cutoff, as a share of the target rate's Nyquist frequency.                                                                                |
 | [`UPSAMPLE_EDGE`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.UPSAMPLE_EDGE)          | Samples mirrored at each edge before band-limited interpolation, so the FFT does not wrap the end of the signal onto its start (a click at both ends). |
 
 ### Functions
 
-| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])   | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                                                                                                                                                                                                           |
-|---------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`lowpass`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.lowpass)(samples, cutoff_hz, sample_rate, \*)     | `samples` with what lies above `cutoff_hz` removed (windowed-sinc FIR, Blackman window, zero phase: same length, no delay).                                                                                                                                                                                  |
-| [`pcm_to_float`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.pcm_to_float)(raw[, width])                       | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1).                                                                                                                                                                                       |
-| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                 | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads what [`read_wav_channels()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels) reads.                                                                                                                                                 |
-| [`read_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels)(source)                        | `(samples (frames, channels), sample_rate)` of a WAV (path or bytes).                                                                                                                                                                                                                                        |
-| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)            | Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no images above 12 kHz); when downsampling, low-passed below the target's Nyquist frequency (so it does not alias), then linearly interpolated. |
-| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                         | `ms` milliseconds of silence.                                                                                                                                                                                                                                                                                |
-| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])    | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                                                                                                                                                                                                            |
-| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                  | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                                                                                                                                                                                                                |
-| [`write_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav_channels)(samples, sample_rate)         | 32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono), lossless, for handing audio to another process.                                                                                                                                                                                     |
+| [`check_audio_format`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.check_audio_format)(audio_format)                | Raise `ValueError` (before any paid work) for a format ffmpeg_\* can't do.                                                                                                                                                                                                                                   |
+|--------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`ffmpeg_decode`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.ffmpeg_decode)(audio, \*[, audio_format, ...])   | `(samples, sample_rate)` of audio in any format ffmpeg reads (mp3, ...), channels averaged, like [`read_wav()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav).                                                                                                                                                |
+| [`ffmpeg_encode`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.ffmpeg_encode)(samples, sample_rate, ...[, ...]) | `samples` (floats in `[-1, 1]`) as `audio_format` bytes ('mp3', 'flac', ...).                                                                                                                                                                                                                                |
+| [`frame_db`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.frame_db)(samples, sample_rate, \*[, frame_ms])  | RMS level (dBFS) of consecutive `frame_ms` frames.                                                                                                                                                                                                                                                           |
+| [`lowpass`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.lowpass)(samples, cutoff_hz, sample_rate, \*)    | `samples` with what lies above `cutoff_hz` removed (windowed-sinc FIR, Blackman window, zero phase: same length, no delay).                                                                                                                                                                                  |
+| [`pcm_to_float`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.pcm_to_float)(raw[, width])                      | Little-endian PCM samples of `width` bytes as floats in about `[-1, 1]` (the most negative sample is a hair below -1).                                                                                                                                                                                       |
+| [`read_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav)(source)                                | `(samples, sample_rate)` of a WAV (path or bytes), channels averaged; reads what [`read_wav_channels()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels) reads.                                                                                                                                                 |
+| [`read_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav_channels)(source)                       | `(samples (frames, channels), sample_rate)` of a WAV (path or bytes).                                                                                                                                                                                                                                        |
+| [`resample`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.resample)(samples, from_rate, to_rate)           | Resampling for joining pieces (use ffmpeg or soxr for masters): band-limited interpolation when upsampling (a 24 kHz render put into a 48 kHz narration gets no images above 12 kHz); when downsampling, low-passed below the target's Nyquist frequency (so it does not alias), then linearly interpolated. |
+| [`silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.silence)(ms, sample_rate)                        | `ms` milliseconds of silence.                                                                                                                                                                                                                                                                                |
+| [`trim_silence`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.trim_silence)(samples, sample_rate, \*[, ...])   | Drop leading and trailing frames quieter than `threshold_db` (keeping `keep_ms`).                                                                                                                                                                                                                            |
+| [`write_wav`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav)(samples, sample_rate)                 | Mono 16-bit PCM WAV bytes from floats in `[-1, 1]` (clipped).                                                                                                                                                                                                                                                |
+| [`write_wav_channels`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.write_wav_channels)(samples, sample_rate)        | 32-bit float WAV bytes of `samples` `(frames, channels)` (or 1-D: mono), lossless, for handing audio to another process.                                                                                                                                                                                     |
+
+### voxy.wavutil.DFLT_LOSSY_BITRATE *= '192k'*
+
+Bitrate when a render is encoded to a lossy format (mp3, aac, opus) and none is given.
 
 ### voxy.wavutil.DFLT_LOWPASS_SHARE *= 0.95*
 
@@ -5987,6 +6024,19 @@ The filter’s cutoff, as a share of the target rate’s Nyquist frequency.
 ### voxy.wavutil.DFLT_LOWPASS_TAPS *= 255*
 
 Taps of the anti-aliasing filter applied before downsampling (odd).
+
+### voxy.wavutil.FFMPEG_MUXERS *= {'aac': 'adts', 'alaw': 'alaw', 'flac': 'flac', 'mp3': 'mp3', 'ogg': 'ogg', 'opus': 'opus', 'pcm': 's16le', 'ulaw': 'mulaw'}*
+
+Audio formats ffmpeg_decode / ffmpeg_encode handle, with the muxer ffmpeg
+calls each one when that is not its own name.
+
+### voxy.wavutil.LOSSY_FORMATS *= frozenset({'aac', 'mp3', 'ogg', 'opus'})*
+
+Formats whose encoder takes a bitrate (`-b:a`).
+
+### voxy.wavutil.RAW_FORMATS *= {'alaw': 'alaw', 'pcm': 's16le', 'ulaw': 'mulaw'}*
+
+Raw (headerless) formats voxy backends return, and ffmpeg’s names for them.
 
 ### voxy.wavutil.TRAILING_CHUNK_IDS *= re.compile(b'LIST|id3 |ID3 |fact|cue |smpl|bext|JUNK|PAD |iXML|_PMX|acid|inst|plst')*
 
@@ -6017,6 +6067,35 @@ integer PCM, IEEE float, and the extensible wrapper.
 
 * **Type:**
   WAV `fmt` format tags
+
+### voxy.wavutil.check_audio_format(audio_format)
+
+Raise `ValueError` (before any paid work) for a format ffmpeg_\* can’t do.
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.wavutil.ffmpeg_decode(audio, , audio_format=None, sample_rate=None, ffmpeg=None)
+
+`(samples, sample_rate)` of audio in any format ffmpeg reads (mp3, …),
+channels averaged, like [`read_wav()`](_autosummary/voxy.wavutil.html.md#voxy.wavutil.read_wav).
+
+A raw format (`RAW_FORMATS`: pcm, ulaw, alaw) has no header, so it needs
+`audio_format` and `sample_rate`. Raises `RuntimeError` (naming the
+remedy) when ffmpeg is not installed.
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)]
+
+### voxy.wavutil.ffmpeg_encode(samples, sample_rate, audio_format, , bitrate='192k', ffmpeg=None)
+
+`samples` (floats in `[-1, 1]`) as `audio_format` bytes (‘mp3’, ‘flac’, …).
+
+`bitrate` applies to the lossy formats (`LOSSY_FORMATS`); `None` leaves
+the encoder’s default.
+
+* **Return type:**
+  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
 
 ### voxy.wavutil.frame_db(samples, sample_rate, , frame_ms=10)
 
@@ -6615,18 +6694,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-07 12:27 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/b449e22a45577c347c0f21a7d2932872b6f1e70e"><code>b449e22</code></a> on branch <code>main</code>, for **voxy 0.0.64** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-09 17:32 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/3de9b384f68e9deec1ad071c6de0e24cdf614c99"><code>3de9b38</code></a> on branch <code>main</code>, for **voxy 0.0.65** (from <code>pyproject.toml</code>).
 
 #### WARNING
 The documentation and the package may be misaligned:
 
-- The documented version (0.0.64) is behind the latest release on PyPI (0.0.65): `pip install voxy` gives newer code than these docs describe.
+- The documented version (0.0.65) is behind the latest release on PyPI (0.0.66): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/b449e22a45577c347c0f21a7d2932872b6f1e70e"><code>b449e22a45577c347c0f21a7d2932872b6f1e70e</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/3de9b384f68e9deec1ad071c6de0e24cdf614c99"><code>3de9b384f68e9deec1ad071c6de0e24cdf614c99</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6637,9 +6716,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42372354786">42372354786</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42665116614">42665116614</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>b449e22a45577c347c0f21a7d2932872b6f1e70e</code> (in the history of the built commit) |
+| Event commit | <code>3de9b384f68e9deec1ad071c6de0e24cdf614c99</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6664,13 +6743,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.65/">0.0.65</a>, newer than the documented version (0.0.64).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.66/">0.0.66</a>, newer than the documented version (0.0.65).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout b449e22a45577c347c0f21a7d2932872b6f1e70e
+git checkout 3de9b384f68e9deec1ad071c6de0e24cdf614c99
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

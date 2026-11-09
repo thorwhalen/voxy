@@ -47,10 +47,12 @@ voxy.speech_to_speech("my_take.wav", voice="ada").save("ada_take.mp3")
 
 ## Pauses: SSML breaks, on any backend
 
-Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them, as WAV, with exactly that much silence. `eleven_v3` and `eleven_v4` render no SSML, so every break is cut there:
+Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them with exactly that much silence (as WAV; or, when you ask for a compressed `output_format` such as `mp3_44100_128`, in that format through ffmpeg, which is how to get 44.1 kHz on ElevenLabs tiers below Pro). `eleven_v3` and `eleven_v4` render no SSML, so every break is cut there:
 
 ```python
-model = voxy.ElevenLabsSpeechModel(model_id="eleven_v4")  # joins at pcm_24000 (44.1 kHz PCM needs Pro)
+model = voxy.ElevenLabsSpeechModel(
+    model_id="eleven_v4"
+)  # joins at pcm_24000 (44.1 kHz PCM needs Pro)
 voxy.text_to_speech(
     '[calmly] Breathe in.<break time="4s"/> And out, slowly.<break time="6s"/>',
     "my-voice-id",

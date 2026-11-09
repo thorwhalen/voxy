@@ -12,6 +12,10 @@ voxy.wavutil
       WAVE_FORMAT_FLOAT
       WAVE_FORMAT_EXTENSIBLE
       TRAILING_CHUNK_IDS
+      DFLT_LOSSY_BITRATE
+      LOSSY_FORMATS
+      RAW_FORMATS
+      FFMPEG_MUXERS
       DFLT_LOWPASS_TAPS
       DFLT_LOWPASS_SHARE
       UPSAMPLE_EDGE
@@ -20,6 +24,9 @@ voxy.wavutil
 
    .. autosummary::
    
+      check_audio_format
+      ffmpeg_decode
+      ffmpeg_encode
       frame_db
       lowpass
       pcm_to_float

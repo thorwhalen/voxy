@@ -242,226 +242,264 @@
 </span><span id="line-50"><span class="p">}</span>
 </span><span id="line-51"><span class="n">DFLT_BREAK_STRENGTH</span> <span class="o">=</span> <span class="s2">"medium"</span>
 </span><span id="line-52">
-</span><span id="line-53"><span class="n">_TAG</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"&lt;(?P&lt;name&gt;break|mark)\b(?P&lt;attrs&gt;[^&gt;]*?)/?&gt;(?:\s*&lt;/(?P=name)&gt;)?"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">I</span><span class="p">)</span>
-</span><span id="line-54"><span class="n">_ATTR</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"""([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')"""</span><span class="p">)</span>
-</span><span id="line-55"><span class="n">_TIME</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^\s*(\d+(?:\.\d+)?|\.\d+)\s*(ms|s)\s*$"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">I</span><span class="p">)</span>
-</span><span id="line-56">
-</span><span id="line-57">
+</span><span id="line-53"><span class="n">_TAG</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+</span><span id="line-54">    <span class="sa">r</span><span class="s2">"&lt;(?P&lt;name&gt;break|mark)\b(?P&lt;attrs&gt;[^&gt;]*?)/?&gt;(?:\s*&lt;/(?P=name)&gt;)?"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">I</span>
+</span><span id="line-55"><span class="p">)</span>
+</span><span id="line-56"><span class="n">_ATTR</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"""([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')"""</span><span class="p">)</span>
+</span><span id="line-57"><span class="n">_TIME</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^\s*(\d+(?:\.\d+)?|\.\d+)\s*(ms|s)\s*$"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">I</span><span class="p">)</span>
+</span><span id="line-58">
+</span><span id="line-59">
 <div class="viewcode-block" id="Section">
 <a class="viewcode-back" href="../../_autosummary/voxy.pauses.html#voxy.pauses.Section">[docs]</a>
-</span><span id="line-58"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-59"><span class="k">class</span><span class="w"> </span><span class="nc">Section</span><span class="p">:</span>
-</span><span id="line-60"><span class="w">    </span><span class="sd">"""A stretch of text to speak, and how it ends.</span>
-</span><span id="line-61">
-</span><span id="line-62"><span class="sd">    ``pause_s`` is the silence after it; ``mark`` the name of the SSML mark that</span>
-</span><span id="line-63"><span class="sd">    ends it, if one does (a point a player may stop at).</span>
-</span><span id="line-64"><span class="sd">    """</span>
-</span><span id="line-65">
-</span><span id="line-66">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="line-67">    <span class="n">pause_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
-</span><span id="line-68">    <span class="n">mark</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
+</span><span id="line-60"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-61"><span class="k">class</span><span class="w"> </span><span class="nc">Section</span><span class="p">:</span>
+</span><span id="line-62"><span class="w">    </span><span class="sd">"""A stretch of text to speak, and how it ends.</span>
+</span><span id="line-63">
+</span><span id="line-64"><span class="sd">    ``pause_s`` is the silence after it; ``mark`` the name of the SSML mark that</span>
+</span><span id="line-65"><span class="sd">    ends it, if one does (a point a player may stop at).</span>
+</span><span id="line-66"><span class="sd">    """</span>
+</span><span id="line-67">
+</span><span id="line-68">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="line-69">    <span class="n">pause_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+</span><span id="line-70">    <span class="n">mark</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
 
-</span><span id="line-69">
-</span><span id="line-70">
+</span><span id="line-71">
+</span><span id="line-72">
 <div class="viewcode-block" id="has_pause_markup">
 <a class="viewcode-back" href="../../_autosummary/voxy.pauses.html#voxy.pauses.has_pause_markup">[docs]</a>
-</span><span id="line-71"><span class="k">def</span><span class="w"> </span><span class="nf">has_pause_markup</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="line-72"><span class="w">    </span><span class="sd">"""Whether ``text`` holds an SSML ``&lt;break&gt;`` or ``&lt;mark&gt;``.</span>
-</span><span id="line-73">
-</span><span id="line-74"><span class="sd">    &gt;&gt;&gt; has_pause_markup('Hi &lt;break time="1s"/&gt;'), has_pause_markup("Hi [softly]")</span>
-</span><span id="line-75"><span class="sd">    (True, False)</span>
-</span><span id="line-76"><span class="sd">    """</span>
-</span><span id="line-77">    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_TAG</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span></div>
+</span><span id="line-73"><span class="k">def</span><span class="w"> </span><span class="nf">has_pause_markup</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-74"><span class="w">    </span><span class="sd">"""Whether ``text`` holds an SSML ``&lt;break&gt;`` or ``&lt;mark&gt;``.</span>
+</span><span id="line-75">
+</span><span id="line-76"><span class="sd">    &gt;&gt;&gt; has_pause_markup('Hi &lt;break time="1s"/&gt;'), has_pause_markup("Hi [softly]")</span>
+</span><span id="line-77"><span class="sd">    (True, False)</span>
+</span><span id="line-78"><span class="sd">    """</span>
+</span><span id="line-79">    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_TAG</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span></div>
 
-</span><span id="line-78">
-</span><span id="line-79">
+</span><span id="line-80">
+</span><span id="line-81">
 <div class="viewcode-block" id="break_seconds">
 <a class="viewcode-back" href="../../_autosummary/voxy.pauses.html#voxy.pauses.break_seconds">[docs]</a>
-</span><span id="line-80"><span class="k">def</span><span class="w"> </span><span class="nf">break_seconds</span><span class="p">(</span><span class="n">attrs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-</span><span id="line-81"><span class="w">    </span><span class="sd">"""The silence a ``&lt;break&gt;`` asks for, from its attribute string.</span>
-</span><span id="line-82">
-</span><span id="line-83"><span class="sd">    ``time`` (``"3s"``, ``"250ms"``) wins over ``strength``; neither means medium.</span>
+</span><span id="line-82"><span class="k">def</span><span class="w"> </span><span class="nf">break_seconds</span><span class="p">(</span><span class="n">attrs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+</span><span id="line-83"><span class="w">    </span><span class="sd">"""The silence a ``&lt;break&gt;`` asks for, from its attribute string.</span>
 </span><span id="line-84">
-</span><span id="line-85"><span class="sd">    &gt;&gt;&gt; break_seconds(' time="250ms"'), break_seconds(" strength='strong'"), break_seconds("")</span>
-</span><span id="line-86"><span class="sd">    (0.25, 1.0, 0.75)</span>
-</span><span id="line-87"><span class="sd">    """</span>
-</span><span id="line-88">    <span class="n">found</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span> <span class="n">a</span> <span class="k">if</span> <span class="n">a</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">b</span> <span class="k">else</span> <span class="n">b</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">_ATTR</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">attrs</span><span class="p">)}</span>
-</span><span id="line-89">    <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">in</span> <span class="n">found</span><span class="p">:</span>
-</span><span id="line-90">        <span class="n">m</span> <span class="o">=</span> <span class="n">_TIME</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">found</span><span class="p">[</span><span class="s2">"time"</span><span class="p">])</span>
-</span><span id="line-91">        <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
-</span><span id="line-92">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-93">                <span class="sa">f</span><span class="s2">"&lt;break time=</span><span class="si">{</span><span class="n">found</span><span class="p">[</span><span class="s1">'time'</span><span class="p">]</span><span class="si">!r}</span><span class="s2">&gt;: SSML times are like '3s' or '250ms'"</span>
-</span><span id="line-94">            <span class="p">)</span>
-</span><span id="line-95">        <span class="n">value</span><span class="p">,</span> <span class="n">unit</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-</span><span id="line-96">        <span class="k">return</span> <span class="n">value</span> <span class="o">/</span> <span class="mi">1000</span> <span class="k">if</span> <span class="n">unit</span> <span class="o">==</span> <span class="s2">"ms"</span> <span class="k">else</span> <span class="n">value</span>
-</span><span id="line-97">    <span class="n">strength</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"strength"</span><span class="p">,</span> <span class="n">DFLT_BREAK_STRENGTH</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-</span><span id="line-98">    <span class="k">if</span> <span class="n">strength</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">BREAK_STRENGTH_S</span><span class="p">:</span>
-</span><span id="line-99">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-100">            <span class="sa">f</span><span class="s2">"&lt;break strength=</span><span class="si">{</span><span class="n">strength</span><span class="si">!r}</span><span class="s2">&gt;: use one of </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">BREAK_STRENGTH_S</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="line-101">        <span class="p">)</span>
-</span><span id="line-102">    <span class="k">return</span> <span class="n">BREAK_STRENGTH_S</span><span class="p">[</span><span class="n">strength</span><span class="p">]</span></div>
+</span><span id="line-85"><span class="sd">    ``time`` (``"3s"``, ``"250ms"``) wins over ``strength``; neither means medium.</span>
+</span><span id="line-86">
+</span><span id="line-87"><span class="sd">    &gt;&gt;&gt; break_seconds(' time="250ms"'), break_seconds(" strength='strong'"), break_seconds("")</span>
+</span><span id="line-88"><span class="sd">    (0.25, 1.0, 0.75)</span>
+</span><span id="line-89"><span class="sd">    """</span>
+</span><span id="line-90">    <span class="n">found</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span> <span class="n">a</span> <span class="k">if</span> <span class="n">a</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">b</span> <span class="k">else</span> <span class="n">b</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">_ATTR</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">attrs</span><span class="p">)}</span>
+</span><span id="line-91">    <span class="k">if</span> <span class="s2">"time"</span> <span class="ow">in</span> <span class="n">found</span><span class="p">:</span>
+</span><span id="line-92">        <span class="n">m</span> <span class="o">=</span> <span class="n">_TIME</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">found</span><span class="p">[</span><span class="s2">"time"</span><span class="p">])</span>
+</span><span id="line-93">        <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+</span><span id="line-94">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-95">                <span class="sa">f</span><span class="s2">"&lt;break time=</span><span class="si">{</span><span class="n">found</span><span class="p">[</span><span class="s1">'time'</span><span class="p">]</span><span class="si">!r}</span><span class="s2">&gt;: SSML times are like '3s' or '250ms'"</span>
+</span><span id="line-96">            <span class="p">)</span>
+</span><span id="line-97">        <span class="n">value</span><span class="p">,</span> <span class="n">unit</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</span><span id="line-98">        <span class="k">return</span> <span class="n">value</span> <span class="o">/</span> <span class="mi">1000</span> <span class="k">if</span> <span class="n">unit</span> <span class="o">==</span> <span class="s2">"ms"</span> <span class="k">else</span> <span class="n">value</span>
+</span><span id="line-99">    <span class="n">strength</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"strength"</span><span class="p">,</span> <span class="n">DFLT_BREAK_STRENGTH</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</span><span id="line-100">    <span class="k">if</span> <span class="n">strength</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">BREAK_STRENGTH_S</span><span class="p">:</span>
+</span><span id="line-101">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-102">            <span class="sa">f</span><span class="s2">"&lt;break strength=</span><span class="si">{</span><span class="n">strength</span><span class="si">!r}</span><span class="s2">&gt;: use one of </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">BREAK_STRENGTH_S</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-103">        <span class="p">)</span>
+</span><span id="line-104">    <span class="k">return</span> <span class="n">BREAK_STRENGTH_S</span><span class="p">[</span><span class="n">strength</span><span class="p">]</span></div>
 
-</span><span id="line-103">
-</span><span id="line-104">
-</span><span id="line-105"><span class="k">def</span><span class="w"> </span><span class="nf">_mark_name</span><span class="p">(</span><span class="n">attrs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-106">    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">_ATTR</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">attrs</span><span class="p">):</span>
-</span><span id="line-107">        <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"name"</span><span class="p">:</span>
-</span><span id="line-108">            <span class="k">return</span> <span class="n">a</span> <span class="ow">or</span> <span class="n">b</span>
-</span><span id="line-109">    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"&lt;mark&gt; needs a name: &lt;mark name=</span><span class="se">\"</span><span class="s2">...</span><span class="se">\"</span><span class="s2">/&gt;"</span><span class="p">)</span>
-</span><span id="line-110">
-</span><span id="line-111">
-</span><span id="line-112"><span class="k">def</span><span class="w"> </span><span class="nf">_clean</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-113">    <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
-</span><span id="line-114">
-</span><span id="line-115">
+</span><span id="line-105">
+</span><span id="line-106">
+</span><span id="line-107"><span class="k">def</span><span class="w"> </span><span class="nf">_mark_name</span><span class="p">(</span><span class="n">attrs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-108">    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">_ATTR</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">attrs</span><span class="p">):</span>
+</span><span id="line-109">        <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"name"</span><span class="p">:</span>
+</span><span id="line-110">            <span class="k">return</span> <span class="n">a</span> <span class="ow">or</span> <span class="n">b</span>
+</span><span id="line-111">    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'&lt;mark&gt; needs a name: &lt;mark name="..."/&gt;'</span><span class="p">)</span>
+</span><span id="line-112">
+</span><span id="line-113">
+</span><span id="line-114"><span class="k">def</span><span class="w"> </span><span class="nf">_clean</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-115">    <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+</span><span id="line-116">
+</span><span id="line-117">
 <div class="viewcode-block" id="parse_sections">
 <a class="viewcode-back" href="../../_autosummary/voxy.pauses.html#voxy.pauses.parse_sections">[docs]</a>
-</span><span id="line-116"><span class="k">def</span><span class="w"> </span><span class="nf">parse_sections</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Section</span><span class="p">]:</span>
-</span><span id="line-117"><span class="w">    </span><span class="sd">"""``text`` cut at every SSML ``&lt;break&gt;`` and ``&lt;mark&gt;``.</span>
-</span><span id="line-118">
-</span><span id="line-119"><span class="sd">    Breaks in a row add up; a mark keeps the pause of breaks around it. A leading</span>
-</span><span id="line-120"><span class="sd">    break gives a first section with no text (silence first); a trailing one is</span>
-</span><span id="line-121"><span class="sd">    kept (silence last).</span>
-</span><span id="line-122">
-</span><span id="line-123"><span class="sd">    &gt;&gt;&gt; parse_sections('&lt;break time="2s"/&gt;One.&lt;mark name="m1"/&gt; Two.&lt;break/&gt;&lt;break/&gt;')</span>
-</span><span id="line-124"><span class="sd">    [Section(text='', pause_s=2.0, mark=None), Section(text='One.', pause_s=0.0, mark='m1'), Section(text='Two.', pause_s=1.5, mark=None)]</span>
-</span><span id="line-125"><span class="sd">    """</span>
-</span><span id="line-126">    <span class="n">sections</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Section</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-127">    <span class="n">pos</span><span class="p">,</span> <span class="n">pause</span><span class="p">,</span> <span class="n">mark</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span>
-</span><span id="line-128">    <span class="n">pending_text</span> <span class="o">=</span> <span class="s2">""</span>
-</span><span id="line-129">    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">_TAG</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-</span><span id="line-130">        <span class="n">chunk</span> <span class="o">=</span> <span class="n">_clean</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">pos</span> <span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">start</span><span class="p">()])</span>
-</span><span id="line-131">        <span class="k">if</span> <span class="n">chunk</span><span class="p">:</span>
-</span><span id="line-132">            <span class="k">if</span> <span class="n">pending_text</span> <span class="ow">or</span> <span class="n">pause</span> <span class="ow">or</span> <span class="n">mark</span><span class="p">:</span>
-</span><span id="line-133">                <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="n">pending_text</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">pause</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">mark</span><span class="p">))</span>
-</span><span id="line-134">            <span class="n">pending_text</span><span class="p">,</span> <span class="n">pause</span><span class="p">,</span> <span class="n">mark</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span>
-</span><span id="line-135">        <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"break"</span><span class="p">:</span>
-</span><span id="line-136">            <span class="n">pause</span> <span class="o">+=</span> <span class="n">break_seconds</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"attrs"</span><span class="p">))</span>
-</span><span id="line-137">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-138">            <span class="k">if</span> <span class="n">mark</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># two marks with nothing between: keep both points</span>
-</span><span id="line-139">                <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="n">pending_text</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">pause</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">mark</span><span class="p">))</span>
-</span><span id="line-140">                <span class="n">pending_text</span><span class="p">,</span> <span class="n">pause</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span> <span class="mf">0.0</span>
-</span><span id="line-141">            <span class="n">mark</span> <span class="o">=</span> <span class="n">_mark_name</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"attrs"</span><span class="p">))</span>
-</span><span id="line-142">        <span class="n">pos</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">end</span><span class="p">()</span>
-</span><span id="line-143">    <span class="n">tail</span> <span class="o">=</span> <span class="n">_clean</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">pos</span><span class="p">:])</span>
-</span><span id="line-144">    <span class="k">if</span> <span class="n">tail</span><span class="p">:</span>
-</span><span id="line-145">        <span class="k">if</span> <span class="n">pending_text</span> <span class="ow">or</span> <span class="n">pause</span> <span class="ow">or</span> <span class="n">mark</span><span class="p">:</span>
-</span><span id="line-146">            <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="n">pending_text</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">pause</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">mark</span><span class="p">))</span>
-</span><span id="line-147">        <span class="n">pending_text</span><span class="p">,</span> <span class="n">pause</span><span class="p">,</span> <span class="n">mark</span> <span class="o">=</span> <span class="n">tail</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span>
-</span><span id="line-148">    <span class="k">if</span> <span class="n">pending_text</span> <span class="ow">or</span> <span class="n">pause</span> <span class="ow">or</span> <span class="n">mark</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">sections</span><span class="p">:</span>
-</span><span id="line-149">        <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="n">pending_text</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">pause</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">mark</span><span class="p">))</span>
-</span><span id="line-150">    <span class="k">return</span> <span class="n">sections</span></div>
+</span><span id="line-118"><span class="k">def</span><span class="w"> </span><span class="nf">parse_sections</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Section</span><span class="p">]:</span>
+</span><span id="line-119"><span class="w">    </span><span class="sd">"""``text`` cut at every SSML ``&lt;break&gt;`` and ``&lt;mark&gt;``.</span>
+</span><span id="line-120">
+</span><span id="line-121"><span class="sd">    Breaks in a row add up; a mark keeps the pause of breaks around it. A leading</span>
+</span><span id="line-122"><span class="sd">    break gives a first section with no text (silence first); a trailing one is</span>
+</span><span id="line-123"><span class="sd">    kept (silence last).</span>
+</span><span id="line-124">
+</span><span id="line-125"><span class="sd">    &gt;&gt;&gt; parse_sections('&lt;break time="2s"/&gt;One.&lt;mark name="m1"/&gt; Two.&lt;break/&gt;&lt;break/&gt;')</span>
+</span><span id="line-126"><span class="sd">    [Section(text='', pause_s=2.0, mark=None), Section(text='One.', pause_s=0.0, mark='m1'), Section(text='Two.', pause_s=1.5, mark=None)]</span>
+</span><span id="line-127"><span class="sd">    """</span>
+</span><span id="line-128">    <span class="n">sections</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Section</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-129">    <span class="n">pos</span><span class="p">,</span> <span class="n">pause</span><span class="p">,</span> <span class="n">mark</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="line-130">    <span class="n">pending_text</span> <span class="o">=</span> <span class="s2">""</span>
+</span><span id="line-131">    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">_TAG</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span><span id="line-132">        <span class="n">chunk</span> <span class="o">=</span> <span class="n">_clean</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">pos</span> <span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">start</span><span class="p">()])</span>
+</span><span id="line-133">        <span class="k">if</span> <span class="n">chunk</span><span class="p">:</span>
+</span><span id="line-134">            <span class="k">if</span> <span class="n">pending_text</span> <span class="ow">or</span> <span class="n">pause</span> <span class="ow">or</span> <span class="n">mark</span><span class="p">:</span>
+</span><span id="line-135">                <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="n">pending_text</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">pause</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">mark</span><span class="p">))</span>
+</span><span id="line-136">            <span class="n">pending_text</span><span class="p">,</span> <span class="n">pause</span><span class="p">,</span> <span class="n">mark</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="line-137">        <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"break"</span><span class="p">:</span>
+</span><span id="line-138">            <span class="n">pause</span> <span class="o">+=</span> <span class="n">break_seconds</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"attrs"</span><span class="p">))</span>
+</span><span id="line-139">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-140">            <span class="k">if</span> <span class="n">mark</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># two marks with nothing between: keep both points</span>
+</span><span id="line-141">                <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="n">pending_text</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">pause</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">mark</span><span class="p">))</span>
+</span><span id="line-142">                <span class="n">pending_text</span><span class="p">,</span> <span class="n">pause</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span> <span class="mf">0.0</span>
+</span><span id="line-143">            <span class="n">mark</span> <span class="o">=</span> <span class="n">_mark_name</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="s2">"attrs"</span><span class="p">))</span>
+</span><span id="line-144">        <span class="n">pos</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">end</span><span class="p">()</span>
+</span><span id="line-145">    <span class="n">tail</span> <span class="o">=</span> <span class="n">_clean</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">pos</span><span class="p">:])</span>
+</span><span id="line-146">    <span class="k">if</span> <span class="n">tail</span><span class="p">:</span>
+</span><span id="line-147">        <span class="k">if</span> <span class="n">pending_text</span> <span class="ow">or</span> <span class="n">pause</span> <span class="ow">or</span> <span class="n">mark</span><span class="p">:</span>
+</span><span id="line-148">            <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="n">pending_text</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">pause</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">mark</span><span class="p">))</span>
+</span><span id="line-149">        <span class="n">pending_text</span><span class="p">,</span> <span class="n">pause</span><span class="p">,</span> <span class="n">mark</span> <span class="o">=</span> <span class="n">tail</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="line-150">    <span class="k">if</span> <span class="n">pending_text</span> <span class="ow">or</span> <span class="n">pause</span> <span class="ow">or</span> <span class="n">mark</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">sections</span><span class="p">:</span>
+</span><span id="line-151">        <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="n">pending_text</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">pause</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">mark</span><span class="p">))</span>
+</span><span id="line-152">    <span class="k">return</span> <span class="n">sections</span></div>
 
-</span><span id="line-151">
-</span><span id="line-152">
+</span><span id="line-153">
+</span><span id="line-154">
 <div class="viewcode-block" id="render_break">
 <a class="viewcode-back" href="../../_autosummary/voxy.pauses.html#voxy.pauses.render_break">[docs]</a>
-</span><span id="line-153"><span class="k">def</span><span class="w"> </span><span class="nf">render_break</span><span class="p">(</span><span class="n">seconds</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-154"><span class="w">    </span><span class="sd">"""The SSML break for ``seconds``, in the form ElevenLabs documents.</span>
-</span><span id="line-155">
-</span><span id="line-156"><span class="sd">    &gt;&gt;&gt; render_break(1.5)</span>
-</span><span id="line-157"><span class="sd">    '&lt;break time="1.5s" /&gt;'</span>
-</span><span id="line-158"><span class="sd">    """</span>
-</span><span id="line-159">    <span class="k">return</span> <span class="sa">f</span><span class="s1">'&lt;break time="</span><span class="si">{</span><span class="n">seconds</span><span class="si">:</span><span class="s1">g</span><span class="si">}</span><span class="s1">s" /&gt;'</span></div>
+</span><span id="line-155"><span class="k">def</span><span class="w"> </span><span class="nf">render_break</span><span class="p">(</span><span class="n">seconds</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-156"><span class="w">    </span><span class="sd">"""The SSML break for ``seconds``, in the form ElevenLabs documents.</span>
+</span><span id="line-157">
+</span><span id="line-158"><span class="sd">    &gt;&gt;&gt; render_break(1.5)</span>
+</span><span id="line-159"><span class="sd">    '&lt;break time="1.5s" /&gt;'</span>
+</span><span id="line-160"><span class="sd">    """</span>
+</span><span id="line-161">    <span class="k">return</span> <span class="sa">f</span><span class="s1">'&lt;break time="</span><span class="si">{</span><span class="n">seconds</span><span class="si">:</span><span class="s1">g</span><span class="si">}</span><span class="s1">s" /&gt;'</span></div>
 
-</span><span id="line-160">
-</span><span id="line-161">
+</span><span id="line-162">
+</span><span id="line-163">
 <div class="viewcode-block" id="plan_sections">
 <a class="viewcode-back" href="../../_autosummary/voxy.pauses.html#voxy.pauses.plan_sections">[docs]</a>
-</span><span id="line-162"><span class="k">def</span><span class="w"> </span><span class="nf">plan_sections</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">native_break_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Section</span><span class="p">]:</span>
-</span><span id="line-163"><span class="w">    </span><span class="sd">"""The sections to synthesize separately, for a backend that renders breaks of</span>
-</span><span id="line-164"><span class="sd">    up to ``native_break_s`` seconds itself.</span>
-</span><span id="line-165">
-</span><span id="line-166"><span class="sd">    A break that short stays in the text (as :func:`render_break`); a mark is</span>
-</span><span id="line-167"><span class="sd">    dropped (a linear render has nothing to do at it); every other break ends a</span>
-</span><span id="line-168"><span class="sd">    section.</span>
-</span><span id="line-169">
-</span><span id="line-170"><span class="sd">    &gt;&gt;&gt; t = 'A.&lt;break time="1s"/&gt; B.&lt;break time="5s"/&gt; C.'</span>
-</span><span id="line-171"><span class="sd">    &gt;&gt;&gt; [(s.text, s.pause_s) for s in plan_sections(t, native_break_s=3)]</span>
-</span><span id="line-172"><span class="sd">    [('A. &lt;break time="1s" /&gt; B.', 5.0), ('C.', 0.0)]</span>
-</span><span id="line-173"><span class="sd">    &gt;&gt;&gt; [s.text for s in plan_sections(t)]</span>
-</span><span id="line-174"><span class="sd">    ['A.', 'B.', 'C.']</span>
-</span><span id="line-175"><span class="sd">    """</span>
-</span><span id="line-176">    <span class="n">out</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Section</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-177">    <span class="n">text_parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-178">    <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">parse_sections</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-</span><span id="line-179">        <span class="k">if</span> <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
-</span><span id="line-180">            <span class="n">text_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-</span><span id="line-181">        <span class="k">if</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-182">            <span class="k">continue</span>
-</span><span id="line-183">        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span> <span class="o">&lt;=</span> <span class="n">native_break_s</span> <span class="ow">and</span> <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
-</span><span id="line-184">            <span class="n">text_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">render_break</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">pause_s</span><span class="p">))</span>
-</span><span id="line-185">            <span class="k">continue</span>
-</span><span id="line-186">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text_parts</span><span class="p">),</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span><span class="p">))</span>
-</span><span id="line-187">        <span class="n">text_parts</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-188">    <span class="k">if</span> <span class="n">text_parts</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">out</span><span class="p">:</span>
-</span><span id="line-189">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text_parts</span><span class="p">)))</span>
-</span><span id="line-190">    <span class="c1"># a break kept inline at the very end of a section is better as silence</span>
-</span><span id="line-191">    <span class="k">return</span> <span class="p">[</span><span class="n">_trailing_break_to_pause</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">out</span><span class="p">]</span></div>
+</span><span id="line-164"><span class="k">def</span><span class="w"> </span><span class="nf">plan_sections</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">native_break_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Section</span><span class="p">]:</span>
+</span><span id="line-165"><span class="w">    </span><span class="sd">"""The sections to synthesize separately, for a backend that renders breaks of</span>
+</span><span id="line-166"><span class="sd">    up to ``native_break_s`` seconds itself.</span>
+</span><span id="line-167">
+</span><span id="line-168"><span class="sd">    A break that short stays in the text (as :func:`render_break`); a mark is</span>
+</span><span id="line-169"><span class="sd">    dropped (a linear render has nothing to do at it); every other break ends a</span>
+</span><span id="line-170"><span class="sd">    section.</span>
+</span><span id="line-171">
+</span><span id="line-172"><span class="sd">    &gt;&gt;&gt; t = 'A.&lt;break time="1s"/&gt; B.&lt;break time="5s"/&gt; C.'</span>
+</span><span id="line-173"><span class="sd">    &gt;&gt;&gt; [(s.text, s.pause_s) for s in plan_sections(t, native_break_s=3)]</span>
+</span><span id="line-174"><span class="sd">    [('A. &lt;break time="1s" /&gt; B.', 5.0), ('C.', 0.0)]</span>
+</span><span id="line-175"><span class="sd">    &gt;&gt;&gt; [s.text for s in plan_sections(t)]</span>
+</span><span id="line-176"><span class="sd">    ['A.', 'B.', 'C.']</span>
+</span><span id="line-177"><span class="sd">    """</span>
+</span><span id="line-178">    <span class="n">out</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Section</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-179">    <span class="n">text_parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-180">    <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">parse_sections</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span><span id="line-181">        <span class="k">if</span> <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+</span><span id="line-182">            <span class="n">text_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+</span><span id="line-183">        <span class="k">if</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="line-184">            <span class="k">continue</span>
+</span><span id="line-185">        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span> <span class="o">&lt;=</span> <span class="n">native_break_s</span> <span class="ow">and</span> <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+</span><span id="line-186">            <span class="n">text_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">render_break</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">pause_s</span><span class="p">))</span>
+</span><span id="line-187">            <span class="k">continue</span>
+</span><span id="line-188">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text_parts</span><span class="p">),</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span><span class="p">))</span>
+</span><span id="line-189">        <span class="n">text_parts</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-190">    <span class="k">if</span> <span class="n">text_parts</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">out</span><span class="p">:</span>
+</span><span id="line-191">        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Section</span><span class="p">(</span><span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text_parts</span><span class="p">)))</span>
+</span><span id="line-192">    <span class="c1"># a break kept inline at the very end of a section is better as silence</span>
+</span><span id="line-193">    <span class="k">return</span> <span class="p">[</span><span class="n">_trailing_break_to_pause</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">out</span><span class="p">]</span></div>
 
-</span><span id="line-192">
-</span><span id="line-193">
-</span><span id="line-194"><span class="k">def</span><span class="w"> </span><span class="nf">_trailing_break_to_pause</span><span class="p">(</span><span class="n">section</span><span class="p">:</span> <span class="n">Section</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Section</span><span class="p">:</span>
-</span><span id="line-195">    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">'\s*&lt;break time="([\d.]+)s" /&gt;$'</span><span class="p">,</span> <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-</span><span id="line-196">    <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
-</span><span id="line-197">        <span class="k">return</span> <span class="n">section</span>
-</span><span id="line-198">    <span class="k">return</span> <span class="n">Section</span><span class="p">(</span>
-</span><span id="line-199">        <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">[:</span> <span class="n">m</span><span class="o">.</span><span class="n">start</span><span class="p">()],</span> <span class="nb">round</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">pause_s</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="mi">6</span><span class="p">)</span>
-</span><span id="line-200">    <span class="p">)</span>
-</span><span id="line-201">
-</span><span id="line-202">
+</span><span id="line-194">
+</span><span id="line-195">
+</span><span id="line-196"><span class="k">def</span><span class="w"> </span><span class="nf">_trailing_break_to_pause</span><span class="p">(</span><span class="n">section</span><span class="p">:</span> <span class="n">Section</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Section</span><span class="p">:</span>
+</span><span id="line-197">    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">'\s*&lt;break time="([\d.]+)s" /&gt;$'</span><span class="p">,</span> <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+</span><span id="line-198">    <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+</span><span id="line-199">        <span class="k">return</span> <span class="n">section</span>
+</span><span id="line-200">    <span class="k">return</span> <span class="n">Section</span><span class="p">(</span>
+</span><span id="line-201">        <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">[:</span> <span class="n">m</span><span class="o">.</span><span class="n">start</span><span class="p">()],</span> <span class="nb">round</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">pause_s</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="mi">6</span><span class="p">)</span>
+</span><span id="line-202">    <span class="p">)</span>
+</span><span id="line-203">
+</span><span id="line-204">
+<div class="viewcode-block" id="decode_speech">
+<a class="viewcode-back" href="../../_autosummary/voxy.pauses.html#voxy.pauses.decode_speech">[docs]</a>
+</span><span id="line-205"><span class="k">def</span><span class="w"> </span><span class="nf">decode_speech</span><span class="p">(</span><span class="n">speech</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="line-206"><span class="w">    </span><span class="sd">"""``(samples, rate)`` of a :class:`Speech`: WAV directly, anything else (mp3,</span>
+</span><span id="line-207"><span class="sd">    ...) through ffmpeg."""</span>
+</span><span id="line-208">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_audio_format</span><span class="p">,</span> <span class="n">ffmpeg_decode</span><span class="p">,</span> <span class="n">read_wav</span>
+</span><span id="line-209">
+</span><span id="line-210">    <span class="k">if</span> <span class="n">speech</span><span class="o">.</span><span class="n">format</span> <span class="o">==</span> <span class="s2">"wav"</span><span class="p">:</span>
+</span><span id="line-211">        <span class="k">return</span> <span class="n">read_wav</span><span class="p">(</span><span class="n">speech</span><span class="o">.</span><span class="n">audio</span><span class="p">)</span>
+</span><span id="line-212">    <span class="n">check_audio_format</span><span class="p">(</span><span class="n">speech</span><span class="o">.</span><span class="n">format</span><span class="p">)</span>
+</span><span id="line-213">    <span class="k">return</span> <span class="n">ffmpeg_decode</span><span class="p">(</span>
+</span><span id="line-214">        <span class="n">speech</span><span class="o">.</span><span class="n">audio</span><span class="p">,</span> <span class="n">audio_format</span><span class="o">=</span><span class="n">speech</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">speech</span><span class="o">.</span><span class="n">sample_rate</span>
+</span><span id="line-215">    <span class="p">)</span></div>
+
+</span><span id="line-216">
+</span><span id="line-217">
+<div class="viewcode-block" id="encode_audio">
+<a class="viewcode-back" href="../../_autosummary/voxy.pauses.html#voxy.pauses.encode_audio">[docs]</a>
+</span><span id="line-218"><span class="k">def</span><span class="w"> </span><span class="nf">encode_audio</span><span class="p">(</span>
+</span><span id="line-219">    <span class="n">samples</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">audio_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">bitrate</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-220"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+</span><span id="line-221"><span class="w">    </span><span class="sd">"""``samples`` as ``audio_format`` bytes: WAV directly, anything else through</span>
+</span><span id="line-222"><span class="sd">    ffmpeg (at ``bitrate`` if given, else the encoder default of ``ffmpeg_encode``)."""</span>
+</span><span id="line-223">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">DFLT_LOSSY_BITRATE</span><span class="p">,</span> <span class="n">ffmpeg_encode</span><span class="p">,</span> <span class="n">write_wav</span>
+</span><span id="line-224">
+</span><span id="line-225">    <span class="k">if</span> <span class="n">audio_format</span> <span class="o">==</span> <span class="s2">"wav"</span><span class="p">:</span>
+</span><span id="line-226">        <span class="k">return</span> <span class="n">write_wav</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">rate</span><span class="p">)</span>
+</span><span id="line-227">    <span class="k">return</span> <span class="n">ffmpeg_encode</span><span class="p">(</span>
+</span><span id="line-228">        <span class="n">samples</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">audio_format</span><span class="p">,</span> <span class="n">bitrate</span><span class="o">=</span><span class="n">bitrate</span> <span class="ow">or</span> <span class="n">DFLT_LOSSY_BITRATE</span>
+</span><span id="line-229">    <span class="p">)</span></div>
+
+</span><span id="line-230">
+</span><span id="line-231">
 <div class="viewcode-block" id="join_sections">
 <a class="viewcode-back" href="../../_autosummary/voxy.pauses.html#voxy.pauses.join_sections">[docs]</a>
-</span><span id="line-203"><span class="k">def</span><span class="w"> </span><span class="nf">join_sections</span><span class="p">(</span>
-</span><span id="line-204">    <span class="n">sections</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Section</span><span class="p">],</span>
-</span><span id="line-205">    <span class="n">synthesize</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="s2">"Speech"</span><span class="p">],</span>
-</span><span id="line-206">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-207">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
-</span><span id="line-208"><span class="p">):</span>
-</span><span id="line-209"><span class="w">    </span><span class="sd">"""One WAV ``Speech``: each section spoken by ``synthesize``, then its silence.</span>
-</span><span id="line-210">
-</span><span id="line-211"><span class="sd">    ``synthesize(text) -&gt; Speech`` must return WAV (or anything ``read_wav``</span>
-</span><span id="line-212"><span class="sd">    reads); sections at different rates are resampled to the first one's.</span>
-</span><span id="line-213"><span class="sd">    """</span>
-</span><span id="line-214">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Speech</span>
-</span><span id="line-215">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_wav</span><span class="p">,</span> <span class="n">resample</span><span class="p">,</span> <span class="n">silence</span><span class="p">,</span> <span class="n">write_wav</span>
-</span><span id="line-216">
-</span><span id="line-217">    <span class="n">pieces</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-218">    <span class="n">rate</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-219">    <span class="n">voice</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-220">    <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">sections</span><span class="p">:</span>
-</span><span id="line-221">        <span class="k">if</span> <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
-</span><span id="line-222">            <span class="n">speech</span> <span class="o">=</span> <span class="n">synthesize</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-</span><span id="line-223">            <span class="k">if</span> <span class="n">speech</span><span class="o">.</span><span class="n">format</span> <span class="o">!=</span> <span class="s2">"wav"</span><span class="p">:</span>
-</span><span id="line-224">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-225">                    <span class="sa">f</span><span class="s2">"Joining pauses needs WAV, and the </span><span class="si">{</span><span class="n">speech</span><span class="o">.</span><span class="n">backend</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">backend</span><span class="si">!r}</span><span class="s2"> "</span>
-</span><span id="line-226">                    <span class="sa">f</span><span class="s2">"backend returned </span><span class="si">{</span><span class="n">speech</span><span class="o">.</span><span class="n">format</span><span class="si">!r}</span><span class="s2">: pass an output format "</span>
-</span><span id="line-227">                    <span class="s2">"that gives WAV or PCM (for ElevenLabs, omit output_format or "</span>
-</span><span id="line-228">                    <span class="s2">"pass e.g. 'pcm_44100')"</span>
-</span><span id="line-229">                <span class="p">)</span>
-</span><span id="line-230">            <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">read_wav</span><span class="p">(</span><span class="n">speech</span><span class="o">.</span><span class="n">audio</span><span class="p">)</span>
-</span><span id="line-231">            <span class="n">voice</span> <span class="o">=</span> <span class="n">voice</span> <span class="ow">or</span> <span class="n">speech</span><span class="o">.</span><span class="n">voice</span>
-</span><span id="line-232">            <span class="k">if</span> <span class="n">rate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-233">                <span class="n">rate</span> <span class="o">=</span> <span class="n">sr</span>
-</span><span id="line-234">            <span class="k">elif</span> <span class="n">sr</span> <span class="o">!=</span> <span class="n">rate</span><span class="p">:</span>
-</span><span id="line-235">                <span class="n">samples</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">rate</span><span class="p">)</span>
-</span><span id="line-236">            <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
-</span><span id="line-237">        <span class="k">if</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span><span class="p">:</span>
-</span><span id="line-238">            <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">silence</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">pause_s</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">rate</span> <span class="ow">or</span> <span class="n">DFLT_SILENCE_RATE</span><span class="p">))</span>
-</span><span id="line-239">    <span class="n">rate</span> <span class="o">=</span> <span class="n">rate</span> <span class="ow">or</span> <span class="n">DFLT_SILENCE_RATE</span>
-</span><span id="line-240">    <span class="n">audio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">pieces</span><span class="p">)</span> <span class="k">if</span> <span class="n">pieces</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-</span><span id="line-241">    <span class="k">return</span> <span class="n">Speech</span><span class="p">(</span>
-</span><span id="line-242">        <span class="n">write_wav</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">rate</span><span class="p">),</span>
-</span><span id="line-243">        <span class="nb">format</span><span class="o">=</span><span class="s2">"wav"</span><span class="p">,</span>
-</span><span id="line-244">        <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">,</span>
-</span><span id="line-245">        <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span>
-</span><span id="line-246">        <span class="n">sample_rate</span><span class="o">=</span><span class="n">rate</span><span class="p">,</span>
-</span><span id="line-247">    <span class="p">)</span></div>
+</span><span id="line-232"><span class="k">def</span><span class="w"> </span><span class="nf">join_sections</span><span class="p">(</span>
+</span><span id="line-233">    <span class="n">sections</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Section</span><span class="p">],</span>
+</span><span id="line-234">    <span class="n">synthesize</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="s2">"Speech"</span><span class="p">],</span>
+</span><span id="line-235">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-236">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
+</span><span id="line-237">    <span class="n">decode</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="s2">"Speech"</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="n">decode_speech</span><span class="p">,</span>
+</span><span id="line-238">    <span class="n">encode</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">bytes</span><span class="p">]</span> <span class="o">=</span> <span class="n">encode_audio</span><span class="p">,</span>
+</span><span id="line-239"><span class="p">):</span>
+</span><span id="line-240"><span class="w">    </span><span class="sd">"""One ``Speech``: each section spoken by ``synthesize``, then its silence.</span>
+</span><span id="line-241">
+</span><span id="line-242"><span class="sd">    ``synthesize(text) -&gt; Speech``. ``decode(speech) -&gt; (samples, rate)`` reads a</span>
+</span><span id="line-243"><span class="sd">    section (default: WAV, or any format ffmpeg reads); sections at different</span>
+</span><span id="line-244"><span class="sd">    rates are resampled to the first one's. The result is in the format the first</span>
+</span><span id="line-245"><span class="sd">    section came in: WAV, or ``encode(samples, rate, format) -&gt; bytes`` for a</span>
+</span><span id="line-246"><span class="sd">    compressed one (default: ffmpeg), so a request for mp3 gets mp3 back. Lossy</span>
+</span><span id="line-247"><span class="sd">    encoders pad each section by tens of milliseconds, so a pause in a compressed</span>
+</span><span id="line-248"><span class="sd">    render can be up to ~50 ms off; ask for WAV or PCM where that matters.</span>
+</span><span id="line-249"><span class="sd">    """</span>
+</span><span id="line-250">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Speech</span>
+</span><span id="line-251">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">resample</span><span class="p">,</span> <span class="n">silence</span>
+</span><span id="line-252">
+</span><span id="line-253">    <span class="n">pieces</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-254">    <span class="n">rate</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-255">    <span class="n">voice</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-256">    <span class="n">audio_format</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-257">    <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">sections</span><span class="p">:</span>
+</span><span id="line-258">        <span class="k">if</span> <span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+</span><span id="line-259">            <span class="n">speech</span> <span class="o">=</span> <span class="n">synthesize</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+</span><span id="line-260">            <span class="n">samples</span><span class="p">,</span> <span class="n">sr</span> <span class="o">=</span> <span class="n">decode</span><span class="p">(</span><span class="n">speech</span><span class="p">)</span>
+</span><span id="line-261">            <span class="n">voice</span> <span class="o">=</span> <span class="n">voice</span> <span class="ow">or</span> <span class="n">speech</span><span class="o">.</span><span class="n">voice</span>
+</span><span id="line-262">            <span class="n">audio_format</span> <span class="o">=</span> <span class="n">audio_format</span> <span class="ow">or</span> <span class="n">speech</span><span class="o">.</span><span class="n">format</span>
+</span><span id="line-263">            <span class="k">if</span> <span class="n">rate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-264">                <span class="n">rate</span> <span class="o">=</span> <span class="n">sr</span>
+</span><span id="line-265">            <span class="k">elif</span> <span class="n">sr</span> <span class="o">!=</span> <span class="n">rate</span><span class="p">:</span>
+</span><span id="line-266">                <span class="n">samples</span> <span class="o">=</span> <span class="n">resample</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">rate</span><span class="p">)</span>
+</span><span id="line-267">            <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+</span><span id="line-268">        <span class="k">if</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span><span class="p">:</span>
+</span><span id="line-269">            <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">silence</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">pause_s</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">rate</span> <span class="ow">or</span> <span class="n">DFLT_SILENCE_RATE</span><span class="p">))</span>
+</span><span id="line-270">    <span class="n">rate</span> <span class="o">=</span> <span class="n">rate</span> <span class="ow">or</span> <span class="n">DFLT_SILENCE_RATE</span>
+</span><span id="line-271">    <span class="n">audio_format</span> <span class="o">=</span> <span class="n">audio_format</span> <span class="ow">or</span> <span class="s2">"wav"</span>
+</span><span id="line-272">    <span class="n">audio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">pieces</span><span class="p">)</span> <span class="k">if</span> <span class="n">pieces</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</span><span id="line-273">    <span class="k">return</span> <span class="n">Speech</span><span class="p">(</span>
+</span><span id="line-274">        <span class="n">encode</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">rate</span><span class="p">,</span> <span class="n">audio_format</span><span class="p">),</span>
+</span><span id="line-275">        <span class="nb">format</span><span class="o">=</span><span class="n">audio_format</span><span class="p">,</span>
+</span><span id="line-276">        <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">,</span>
+</span><span id="line-277">        <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span>
+</span><span id="line-278">        <span class="n">sample_rate</span><span class="o">=</span><span class="n">rate</span><span class="p">,</span>
+</span><span id="line-279">    <span class="p">)</span></div>
 
-</span><span id="line-248">
-</span><span id="line-249">
-</span><span id="line-250"><span class="c1">#: The rate of a render that is nothing but silence (no section had text).</span>
-</span><span id="line-251"><span class="n">DFLT_SILENCE_RATE</span> <span class="o">=</span> <span class="mi">24000</span>
+</span><span id="line-280">
+</span><span id="line-281">
+</span><span id="line-282"><span class="c1">#: The rate of a render that is nothing but silence (no section had text).</span>
+</span><span id="line-283"><span class="n">DFLT_SILENCE_RATE</span> <span class="o">=</span> <span class="mi">24000</span>
 </span></code></pre></div>
     </div></div>
           </main>
@@ -475,7 +513,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=b153cf10"></script>
+    <script src="../../_static/documentation_options.js?v=152b4b09"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

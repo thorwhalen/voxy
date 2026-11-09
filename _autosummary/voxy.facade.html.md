@@ -110,7 +110,8 @@ Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
 Pauses are SSML breaks in `text` (`<break time="5s"/>`), honoured on every
 backend: one the backend renders stays in the text; at any other the text is
-cut, the parts spoken separately and joined, as WAV, with that much silence
+cut, the parts spoken separately and joined with that much silence (WAV, or the
+compressed format asked for, e.g. mp3, through ffmpeg)
 (`voxy.pauses`). Text without breaks or marks is sent as is.
 
 * **Parameters:**

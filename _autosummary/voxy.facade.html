@@ -282,7 +282,8 @@ narrator’s voice, splice.</p>
 <dd><p>Speak <code class="docutils literal notranslate"><span class="pre">text</span></code> in <code class="docutils literal notranslate"><span class="pre">voice</span></code> and return the encoded audio (<code class="docutils literal notranslate"><span class="pre">.save(path)</span></code>).</p>
 <p>Pauses are SSML breaks in <code class="docutils literal notranslate"><span class="pre">text</span></code> (<code class="docutils literal notranslate"><span class="pre">&lt;break</span> <span class="pre">time="5s"/&gt;</span></code>), honoured on every
 backend: one the backend renders stays in the text; at any other the text is
-cut, the parts spoken separately and joined, as WAV, with that much silence
+cut, the parts spoken separately and joined with that much silence (WAV, or the
+compressed format asked for, e.g. mp3, through ffmpeg)
 (<code class="docutils literal notranslate"><span class="pre">voxy.pauses</span></code>). Text without breaks or marks is sent as is.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -349,7 +350,7 @@ ElevenLabs, <code class="docutils literal notranslate"><span class="pre">speed=<
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=b153cf10"></script>
+<script src="../_static/documentation_options.js?v=152b4b09"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

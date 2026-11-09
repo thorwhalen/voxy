@@ -16,6 +16,8 @@ voxy.pauses
    .. autosummary::
    
       break_seconds
+      decode_speech
+      encode_audio
       has_pause_markup
       join_sections
       parse_sections

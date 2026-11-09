@@ -171,13 +171,15 @@
 </section>
 <section id="pauses-ssml-breaks-on-any-backend">
 <h2>Pauses: SSML breaks, on any backend<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#pauses-ssml-breaks-on-any-backend" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#pauses-ssml-breaks-on-any-backend'">¶</a></h2>
-<p>Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them, as WAV, with exactly that much silence. <code class="docutils literal notranslate"><span class="pre">eleven_v3</span></code> and <code class="docutils literal notranslate"><span class="pre">eleven_v4</span></code> render no SSML, so every break is cut there:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">model</span> <span class="o">=</span> <span class="n">voxy</span><span class="o">.</span><span class="n">ElevenLabsSpeechModel</span><span class="p">(</span><span class="n">model_id</span><span class="o">=</span><span class="s2">"eleven_v4"</span><span class="p">)</span>  <span class="c1"># joins at pcm_24000 (44.1 kHz PCM needs Pro)</span>
-</span><span id="line-2"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span>
-</span><span id="line-3">    <span class="s1">'[calmly] Breathe in.&lt;break time="4s"/&gt; And out, slowly.&lt;break time="6s"/&gt;'</span><span class="p">,</span>
-</span><span id="line-4">    <span class="s2">"my-voice-id"</span><span class="p">,</span>
-</span><span id="line-5">    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-</span><span id="line-6"><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"breath.wav"</span><span class="p">)</span>
+<p>Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them with exactly that much silence (as WAV; or, when you ask for a compressed <code class="docutils literal notranslate"><span class="pre">output_format</span></code> such as <code class="docutils literal notranslate"><span class="pre">mp3_44100_128</span></code>, in that format through ffmpeg, which is how to get 44.1 kHz on ElevenLabs tiers below Pro). <code class="docutils literal notranslate"><span class="pre">eleven_v3</span></code> and <code class="docutils literal notranslate"><span class="pre">eleven_v4</span></code> render no SSML, so every break is cut there:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">model</span> <span class="o">=</span> <span class="n">voxy</span><span class="o">.</span><span class="n">ElevenLabsSpeechModel</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">model_id</span><span class="o">=</span><span class="s2">"eleven_v4"</span>
+</span><span id="line-3"><span class="p">)</span>  <span class="c1"># joins at pcm_24000 (44.1 kHz PCM needs Pro)</span>
+</span><span id="line-4"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span>
+</span><span id="line-5">    <span class="s1">'[calmly] Breathe in.&lt;break time="4s"/&gt; And out, slowly.&lt;break time="6s"/&gt;'</span><span class="p">,</span>
+</span><span id="line-6">    <span class="s2">"my-voice-id"</span><span class="p">,</span>
+</span><span id="line-7">    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+</span><span id="line-8"><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"breath.wav"</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">time</span></code> takes <code class="docutils literal notranslate"><span class="pre">s</span></code> or <code class="docutils literal notranslate"><span class="pre">ms</span></code>; <code class="docutils literal notranslate"><span class="pre">&lt;break</span> <span class="pre">strength="strong"/&gt;</span></code> works too. <code class="docutils literal notranslate"><span class="pre">voxy.parse_sections(text)</span></code> gives the text as <code class="docutils literal notranslate"><span class="pre">Section(text,</span> <span class="pre">pause_s,</span> <span class="pre">mark)</span></code>, cut at every break and at every <code class="docutils literal notranslate"><span class="pre">&lt;mark</span> <span class="pre">name="..."/&gt;</span></code>: what a player that waits at a mark for the listener would read. Why SSML and not a custom tag, and the limits per engine: <code class="docutils literal notranslate"><span class="pre">misc/docs/research/ssml-pauses-and-hold-points.md</span></code>.</p>
@@ -491,7 +493,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-07 12:27 UTC from <a href="https://github.com/thorwhalen/voxy/commit/b449e22a45577c347c0f21a7d2932872b6f1e70e">b449e22</a> (main) · voxy 0.0.64 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-09 17:32 UTC from <a href="https://github.com/thorwhalen/voxy/commit/3de9b384f68e9deec1ad071c6de0e24cdf614c99">3de9b38</a> (main) · voxy 0.0.65 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -540,7 +542,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=b153cf10"></script>
+<script src="_static/documentation_options.js?v=152b4b09"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

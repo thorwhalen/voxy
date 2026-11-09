@@ -44,13 +44,15 @@ section: no other change is needed for that.
 
 ### Functions
 
-| [`break_seconds`](#voxy.pauses.break_seconds)(attrs)                               | The silence a `<break>` asks for, from its attribute string.                                                       |
-|-----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [`has_pause_markup`](#voxy.pauses.has_pause_markup)(text)                             | Whether `text` holds an SSML `<break>` or `<mark>`.                                                                |
-| [`join_sections`](#voxy.pauses.join_sections)(sections, synthesize, \*[, backend]) | One WAV `Speech`: each section spoken by `synthesize`, then its silence.                                           |
-| [`parse_sections`](#voxy.pauses.parse_sections)(text)                               | `text` cut at every SSML `<break>` and `<mark>`.                                                                   |
-| [`plan_sections`](#voxy.pauses.plan_sections)(text, \*[, native_break_s])          | The sections to synthesize separately, for a backend that renders breaks of up to `native_break_s` seconds itself. |
-| [`render_break`](#voxy.pauses.render_break)(seconds)                              | The SSML break for `seconds`, in the form ElevenLabs documents.                                                    |
+| [`break_seconds`](#voxy.pauses.break_seconds)(attrs)                           | The silence a `<break>` asks for, from its attribute string.                                                                                        |
+|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`decode_speech`](#voxy.pauses.decode_speech)(speech)                          | `(samples, rate)` of a `Speech`: WAV directly, anything else (mp3, ...) through ffmpeg.                                                             |
+| [`encode_audio`](#voxy.pauses.encode_audio)(samples, rate, audio_format, \*)  | `samples` as `audio_format` bytes: WAV directly, anything else through ffmpeg (at `bitrate` if given, else the encoder default of `ffmpeg_encode`). |
+| [`has_pause_markup`](#voxy.pauses.has_pause_markup)(text)                         | Whether `text` holds an SSML `<break>` or `<mark>`.                                                                                                 |
+| [`join_sections`](#voxy.pauses.join_sections)(sections, synthesize, \*[, ...]) | One `Speech`: each section spoken by `synthesize`, then its silence.                                                                                |
+| [`parse_sections`](#voxy.pauses.parse_sections)(text)                           | `text` cut at every SSML `<break>` and `<mark>`.                                                                                                    |
+| [`plan_sections`](#voxy.pauses.plan_sections)(text, \*[, native_break_s])      | The sections to synthesize separately, for a backend that renders breaks of up to `native_break_s` seconds itself.                                  |
+| [`render_break`](#voxy.pauses.render_break)(seconds)                          | The SSML break for `seconds`, in the form ElevenLabs documents.                                                                                     |
 
 ### Classes
 
@@ -89,6 +91,22 @@ The silence a `<break>` asks for, from its attribute string.
 * **Return type:**
   [`float`](https://docs.python.org/3/builtins/functions.html#float)
 
+### voxy.pauses.decode_speech(speech)
+
+`(samples, rate)` of a `Speech`: WAV directly, anything else (mp3,
+…) through ffmpeg.
+
+* **Return type:**
+  [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[`ndarray`, [`int`](https://docs.python.org/3/builtins/functions.html#int)]
+
+### voxy.pauses.encode_audio(samples, rate, audio_format, , bitrate=None)
+
+`samples` as `audio_format` bytes: WAV directly, anything else through
+ffmpeg (at `bitrate` if given, else the encoder default of `ffmpeg_encode`).
+
+* **Return type:**
+  [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)
+
 ### voxy.pauses.has_pause_markup(text)
 
 Whether `text` holds an SSML `<break>` or `<mark>`.
@@ -101,12 +119,17 @@ Whether `text` holds an SSML `<break>` or `<mark>`.
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
-### voxy.pauses.join_sections(sections, synthesize, , backend='')
+### voxy.pauses.join_sections(sections, synthesize, \*, backend='', decode=<function decode_speech>, encode=<function encode_audio>)
 
-One WAV `Speech`: each section spoken by `synthesize`, then its silence.
+One `Speech`: each section spoken by `synthesize`, then its silence.
 
-`synthesize(text) -> Speech` must return WAV (or anything `read_wav`
-reads); sections at different rates are resampled to the first one’s.
+`synthesize(text) -> Speech`. `decode(speech) -> (samples, rate)` reads a
+section (default: WAV, or any format ffmpeg reads); sections at different
+rates are resampled to the first one’s. The result is in the format the first
+section came in: WAV, or `encode(samples, rate, format) -> bytes` for a
+compressed one (default: ffmpeg), so a request for mp3 gets mp3 back. Lossy
+encoders pad each section by tens of milliseconds, so a pause in a compressed
+render can be up to ~50 ms off; ask for WAV or PCM where that matters.
 
 ### voxy.pauses.parse_sections(text)
 
