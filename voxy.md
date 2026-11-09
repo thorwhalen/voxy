@@ -1,4 +1,4 @@
-> built 2026-11-09 17:37 UTC from ddef7f5 (main) · voxy 0.0.66. Details: build_info.json
+> built 2026-11-09 17:58 UTC from 18f6378 (main) · voxy 0.0.67. Details: build_info.json
 
 # index.html.md
 
@@ -604,10 +604,11 @@ Annotations are postponed and torch is imported only for type checking, so
 
 ### Module Attributes
 
-| [`OPTIONAL_MODULE_EXTRAS`](_autosummary/voxy.base.html.md#voxy.base.OPTIONAL_MODULE_EXTRAS)   | The extra that installs each optional module (for the error raised without it).   |
-|---------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`speech_model_factories`](_autosummary/voxy.base.html.md#voxy.base.speech_model_factories)   | Backend name -> factory (keys lowercase).                                         |
-| [`backend_aliases`](_autosummary/voxy.base.html.md#voxy.base.backend_aliases)          | Other names for a backend -> its registry name (one model, one profile type).     |
+| [`OPTIONAL_MODULE_EXTRAS`](_autosummary/voxy.base.html.md#voxy.base.OPTIONAL_MODULE_EXTRAS)                             | The extra that installs each optional module (for the error raised without it).   |
+|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`optional_import`](_autosummary/voxy.base.html.md#voxy.base.optional_import)(module, \*[, package, extra, ...]) | Import `module`, or raise a `ModuleNotFoundError` saying how to install it.       |
+| [`speech_model_factories`](_autosummary/voxy.base.html.md#voxy.base.speech_model_factories)                             | Backend name -> factory (keys lowercase).                                         |
+| [`backend_aliases`](_autosummary/voxy.base.html.md#voxy.base.backend_aliases)                                    | Other names for a backend -> its registry name (one model, one profile type).     |
 
 ### Functions
 
@@ -618,7 +619,6 @@ Annotations are postponed and torch is imported only for type checking, so
 | [`create_speech_model`](_autosummary/voxy.base.html.md#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                                             |
 | [`dflt_voxy_device`](_autosummary/voxy.base.html.md#voxy.base.dflt_voxy_device)()                              | `$DFLT_VOXY_DEVICE`, else 'cuda' if torch is installed and sees one, else 'cpu'.         |
 | [`is_tensor`](_autosummary/voxy.base.html.md#voxy.base.is_tensor)(obj)                                  | True if `obj` is a torch tensor (without importing torch to find out).                   |
-| [`optional_import`](_autosummary/voxy.base.html.md#voxy.base.optional_import)(module)                         | Import `module`, or raise an ImportError naming the voxy extra that has it.              |
 | [`register_speech_model`](_autosummary/voxy.base.html.md#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).                      |
 | [`tensor_to_wav_bytes`](_autosummary/voxy.base.html.md#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode audio ([samples], [channels, samples] or [samples, channels]) as mono 16-bit WAV. |
 
@@ -931,14 +931,12 @@ False
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
-### voxy.base.optional_import(module)
+### voxy.base.optional_import(module, , package='voxy', extra=None, extras={'huggingface_hub': 'local', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'})
 
-Import `module`, or raise an ImportError naming the voxy extra that has it.
+`optional_import(module)`: the module, or an ImportError naming the voxy extra.
 
-```pycon
->>> optional_import("numpy").__name__
-'numpy'
-```
+* **Return type:**
+  [`ModuleType`](https://docs.python.org/3/library/types.html#types.ModuleType)
 
 ### voxy.base.register_speech_model(name, factory, , overwrite=False)
 
@@ -6695,16 +6693,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-09 17:37 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/ddef7f5b15d347694ce3a3acf7d2001d83714ffb"><code>ddef7f5</code></a> on branch <code>main</code>, for **voxy 0.0.66** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-09 17:58 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/18f63783ee7100f180ba94268bd34923da4993b5"><code>18f6378</code></a> on branch <code>main</code>, for **voxy 0.0.67** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.67) is behind the latest release on PyPI (0.0.68): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/ddef7f5b15d347694ce3a3acf7d2001d83714ffb"><code>ddef7f5b15d347694ce3a3acf7d2001d83714ffb</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/18f63783ee7100f180ba94268bd34923da4993b5"><code>18f63783ee7100f180ba94268bd34923da4993b5</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6715,9 +6715,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42666075605">42666075605</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42669318085">42669318085</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>ddef7f5b15d347694ce3a3acf7d2001d83714ffb</code> (in the history of the built commit) |
+| Event commit | <code>18f63783ee7100f180ba94268bd34923da4993b5</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6742,13 +6742,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.66/">0.0.66</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.68/">0.0.68</a>, newer than the documented version (0.0.67).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout ddef7f5b15d347694ce3a3acf7d2001d83714ffb
+git checkout 18f63783ee7100f180ba94268bd34923da4993b5
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

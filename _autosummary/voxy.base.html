@@ -158,10 +158,13 @@ Annotations are postponed and torch is imported only for type checking, so
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.base.OPTIONAL_MODULE_EXTRAS" title="voxy.base.OPTIONAL_MODULE_EXTRAS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OPTIONAL_MODULE_EXTRAS</span></code></a></p></td>
 <td><p>The extra that installs each optional module (for the error raised without it).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.base.speech_model_factories" title="voxy.base.speech_model_factories"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speech_model_factories</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.base.optional_import" title="voxy.base.optional_import"><code class="xref py py-obj docutils literal notranslate"><span class="pre">optional_import</span></code></a>(module, *[, package, extra, ...])</p></td>
+<td><p>Import <code class="docutils literal notranslate"><span class="pre">module</span></code>, or raise a <code class="docutils literal notranslate"><span class="pre">ModuleNotFoundError</span></code> saying how to install it.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.base.speech_model_factories" title="voxy.base.speech_model_factories"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speech_model_factories</span></code></a></p></td>
 <td><p>Backend name -&gt; factory (keys lowercase).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.base.backend_aliases" title="voxy.base.backend_aliases"><code class="xref py py-obj docutils literal notranslate"><span class="pre">backend_aliases</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.base.backend_aliases" title="voxy.base.backend_aliases"><code class="xref py py-obj docutils literal notranslate"><span class="pre">backend_aliases</span></code></a></p></td>
 <td><p>Other names for a backend -&gt; its registry name (one model, one profile type).</p></td>
 </tr>
 </tbody>
@@ -187,13 +190,10 @@ Annotations are postponed and torch is imported only for type checking, so
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.base.is_tensor" title="voxy.base.is_tensor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_tensor</span></code></a>(obj)</p></td>
 <td><p>True if <code class="docutils literal notranslate"><span class="pre">obj</span></code> is a torch tensor (without importing torch to find out).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.base.optional_import" title="voxy.base.optional_import"><code class="xref py py-obj docutils literal notranslate"><span class="pre">optional_import</span></code></a>(module)</p></td>
-<td><p>Import <code class="docutils literal notranslate"><span class="pre">module</span></code>, or raise an ImportError naming the voxy extra that has it.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.base.register_speech_model" title="voxy.base.register_speech_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_speech_model</span></code></a>(name, factory, *[, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.base.register_speech_model" title="voxy.base.register_speech_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_speech_model</span></code></a>(name, factory, *[, ...])</p></td>
 <td><p>Register a backend (a class or <code class="docutils literal notranslate"><span class="pre">**kwargs</span> <span class="pre">-&gt;</span> <span class="pre">SpeechModel</span></code> callable).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.base.tensor_to_wav_bytes" title="voxy.base.tensor_to_wav_bytes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tensor_to_wav_bytes</span></code></a>(audio, sample_rate)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.base.tensor_to_wav_bytes" title="voxy.base.tensor_to_wav_bytes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tensor_to_wav_bytes</span></code></a>(audio, sample_rate)</p></td>
 <td><p>Encode audio ([samples], [channels, samples] or [samples, channels]) as mono 16-bit WAV.</p></td>
 </tr>
 </tbody>
@@ -602,13 +602,12 @@ not supported at the MPS device”).</p>
 </dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.base.optional_import">
-<span class="sig-prename descclassname"><span class="pre">voxy.base.</span></span><span class="sig-name descname"><span class="pre">optional_import</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">module</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/base.html#optional_import"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.base.optional_import" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.base.optional_import'">¶</a></dt>
-<dd><p>Import <code class="docutils literal notranslate"><span class="pre">module</span></code>, or raise an ImportError naming the voxy extra that has it.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">optional_import</span><span class="p">(</span><span class="s2">"numpy"</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
-</span><span id="line-2"><span class="go">'numpy'</span>
-</span></code></pre></div>
-</div>
+<span class="sig-prename descclassname"><span class="pre">voxy.base.</span></span><span class="sig-name descname"><span class="pre">optional_import</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">module</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">package</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'voxy'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extras</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'huggingface_hub':</span> <span class="pre">'local',</span> <span class="pre">'torch':</span> <span class="pre">'local',</span> <span class="pre">'torchaudio':</span> <span class="pre">'local',</span> <span class="pre">'whisper':</span> <span class="pre">'transcription'}</span></span></em><span class="sig-paren">)</span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.base.optional_import" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.base.optional_import'">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">optional_import(module)</span></code>: the module, or an ImportError naming the voxy extra.</p>
 <dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/types.html#types.ModuleType" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModuleType</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
+</dd>
 </dl>
 </dd></dl>
 <dl class="py function">
@@ -723,7 +722,7 @@ square input is read channels-first); channels are averaged, and
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=22d3c163"></script>
+<script src="../_static/documentation_options.js?v=86ab457a"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

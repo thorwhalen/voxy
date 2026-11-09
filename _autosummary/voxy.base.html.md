@@ -13,10 +13,11 @@ Annotations are postponed and torch is imported only for type checking, so
 
 ### Module Attributes
 
-| [`OPTIONAL_MODULE_EXTRAS`](#voxy.base.OPTIONAL_MODULE_EXTRAS)   | The extra that installs each optional module (for the error raised without it).   |
-|---------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [`speech_model_factories`](#voxy.base.speech_model_factories)   | Backend name -> factory (keys lowercase).                                         |
-| [`backend_aliases`](#voxy.base.backend_aliases)          | Other names for a backend -> its registry name (one model, one profile type).     |
+| [`OPTIONAL_MODULE_EXTRAS`](#voxy.base.OPTIONAL_MODULE_EXTRAS)                             | The extra that installs each optional module (for the error raised without it).   |
+|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`optional_import`](#voxy.base.optional_import)(module, \*[, package, extra, ...]) | Import `module`, or raise a `ModuleNotFoundError` saying how to install it.       |
+| [`speech_model_factories`](#voxy.base.speech_model_factories)                             | Backend name -> factory (keys lowercase).                                         |
+| [`backend_aliases`](#voxy.base.backend_aliases)                                    | Other names for a backend -> its registry name (one model, one profile type).     |
 
 ### Functions
 
@@ -27,7 +28,6 @@ Annotations are postponed and torch is imported only for type checking, so
 | [`create_speech_model`](#voxy.base.create_speech_model)([model_type])               | Create a speech model of the specified type.                                             |
 | [`dflt_voxy_device`](#voxy.base.dflt_voxy_device)()                              | `$DFLT_VOXY_DEVICE`, else 'cuda' if torch is installed and sees one, else 'cpu'.         |
 | [`is_tensor`](#voxy.base.is_tensor)(obj)                                  | True if `obj` is a torch tensor (without importing torch to find out).                   |
-| [`optional_import`](#voxy.base.optional_import)(module)                         | Import `module`, or raise an ImportError naming the voxy extra that has it.              |
 | [`register_speech_model`](#voxy.base.register_speech_model)(name, factory, \*[, ...]) | Register a backend (a class or `**kwargs -> SpeechModel` callable).                      |
 | [`tensor_to_wav_bytes`](#voxy.base.tensor_to_wav_bytes)(audio, sample_rate)         | Encode audio ([samples], [channels, samples] or [samples, channels]) as mono 16-bit WAV. |
 
@@ -340,14 +340,12 @@ False
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
-### voxy.base.optional_import(module)
+### voxy.base.optional_import(module, , package='voxy', extra=None, extras={'huggingface_hub': 'local', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'})
 
-Import `module`, or raise an ImportError naming the voxy extra that has it.
+`optional_import(module)`: the module, or an ImportError naming the voxy extra.
 
-```pycon
->>> optional_import("numpy").__name__
-'numpy'
-```
+* **Return type:**
+  [`ModuleType`](https://docs.python.org/3/library/types.html#types.ModuleType)
 
 ### voxy.base.register_speech_model(name, factory, , overwrite=False)
 
