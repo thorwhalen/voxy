@@ -1,4 +1,4 @@
-> built 2026-11-09 17:32 UTC from 3de9b38 (main) · voxy 0.0.65. Details: build_info.json
+> built 2026-11-09 17:37 UTC from ddef7f5 (main) · voxy 0.0.66. Details: build_info.json
 
 # index.html.md
 
@@ -221,7 +221,7 @@ Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `
 
 ### A local stock voice (no service, no clip, no torch)
 
-`kokoro` speaks in one of 54 stock voices (`af_heart`, `am_michael`, `bf_emma`, …) with Kokoro-82M (Apache-2.0) through kokoro-onnx, faster than realtime on a CPU. It runs in its own small environment, which `python -m voxy setup kokoro` builds (or the first call does); the model files (about 354 MB) are fetched from the Hugging Face hub on first use into `$VOXY_DATA_DIR/models/hf`, like every other local backend’s weights. Listing its voices needs neither. A voice’s first letter is its language (`a` American, `b` British, `f` French, `e` Spanish, `i` Italian, `p` Portuguese, `h` Hindi, `j` Japanese, `z` Chinese). It is meant for Linux hosts without a cloud key; on macOS the espeak-ng that kokoro-onnx bundles currently fails to find its data (thorwhalen/voxy#61), and `say` is the local voice there.
+`kokoro` speaks in one of 54 stock voices (`af_heart`, `am_michael`, `bf_emma`, …) with Kokoro-82M (Apache-2.0) through kokoro-onnx, faster than realtime on a CPU. It runs in its own small environment, which `python -m voxy setup kokoro` builds (or the first call does); the model files (about 354 MB) are fetched from the Hugging Face hub on first use into `$VOXY_DATA_DIR/models/hf`, like every other local backend’s weights. Listing its voices needs neither. A voice’s first letter is its language (`a` American, `b` British, `f` French, `e` Spanish, `i` Italian, `p` Portuguese, `h` Hindi, `j` Japanese, `z` Chinese). It runs on Linux and macOS (an environment built with the older kokoro-onnx pins failed on macOS, thorwhalen/voxy#61; delete `$VOXY_DATA_DIR/envs/kokoro` and run `python -m voxy setup kokoro` if you still see that), with no cloud key.
 
 ```python
 voxy.text_to_speech("Hello.", "bf_emma", backend="kokoro", speed=1.1).save("hi.wav")
@@ -2048,9 +2048,10 @@ A voice’s first letter is its language (`a` American English, `b` British,
 you pass one. The voice list is static (`KOKORO_VOICES`), so listing voices
 needs no model.
 
-On macOS the espeak-ng bundled with kokoro-onnx (espeakng-loader) has its data
-folder compiled in and cannot find it, so the first synthesis fails; use `say`
-there (thorwhalen/voxy#61).
+On macOS it works from a fresh environment (kokoro-onnx 0.6.1 with phonemizer 3.6
+and espeakng-loader 0.2.4, checked on arm64; the older pins, thorwhalen/voxy#61,
+could not find espeak-ng’s data). If an environment built earlier still fails
+there, delete `$VOXY_DATA_DIR/envs/kokoro` and run `python -m voxy setup kokoro`.
 
 ```pycon
 >>> import numpy as np
@@ -6694,18 +6695,16 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-09 17:32 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/3de9b384f68e9deec1ad071c6de0e24cdf614c99"><code>3de9b38</code></a> on branch <code>main</code>, for **voxy 0.0.65** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-09 17:37 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/ddef7f5b15d347694ce3a3acf7d2001d83714ffb"><code>ddef7f5</code></a> on branch <code>main</code>, for **voxy 0.0.66** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.65) is behind the latest release on PyPI (0.0.66): `pip install voxy` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/3de9b384f68e9deec1ad071c6de0e24cdf614c99"><code>3de9b384f68e9deec1ad071c6de0e24cdf614c99</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/ddef7f5b15d347694ce3a3acf7d2001d83714ffb"><code>ddef7f5b15d347694ce3a3acf7d2001d83714ffb</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6716,9 +6715,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42665116614">42665116614</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42666075605">42666075605</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>3de9b384f68e9deec1ad071c6de0e24cdf614c99</code> (in the history of the built commit) |
+| Event commit | <code>ddef7f5b15d347694ce3a3acf7d2001d83714ffb</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6743,13 +6742,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.66/">0.0.66</a>, newer than the documented version (0.0.65).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.66/">0.0.66</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 3de9b384f68e9deec1ad071c6de0e24cdf614c99
+git checkout ddef7f5b15d347694ce3a3acf7d2001d83714ffb
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
