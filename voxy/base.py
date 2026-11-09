@@ -21,8 +21,10 @@ import sys
 from typing import TYPE_CHECKING, Union, Optional, List, Dict, Any, BinaryIO, Tuple
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 
 import numpy as np
+from i2 import optional_import as _optional_import
 
 from voxy.wavutil import write_wav
 
@@ -53,17 +55,10 @@ OPTIONAL_MODULE_EXTRAS = {
 }
 
 
-def optional_import(module: str):
-    """Import ``module``, or raise an ImportError naming the voxy extra that has it.
-
-    >>> optional_import("numpy").__name__
-    'numpy'
-    """
-    try:
-        return importlib.import_module(module)
-    except ImportError as e:
-        extra = OPTIONAL_MODULE_EXTRAS.get(module, module)
-        raise ImportError(f"This needs {module}: pip install 'voxy[{extra}]'") from e
+#: ``optional_import(module)``: the module, or an ImportError naming the voxy extra.
+optional_import = partial(
+    _optional_import, package="voxy", extras=OPTIONAL_MODULE_EXTRAS
+)
 
 
 def is_tensor(obj) -> bool:
