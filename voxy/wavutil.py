@@ -15,6 +15,8 @@ silence, and joins pieces with pauses, using only numpy and the standard library
 import io
 import os
 import re
+import shutil
+import subprocess
 import wave
 
 import numpy as np
@@ -30,6 +32,10 @@ TRAILING_CHUNK_IDS = re.compile(
 DFLT_SILENCE_DB = -45.0
 DFLT_KEEP_MS = 60
 FRAME_MS = 10
+#: Bitrate when a render is encoded to a lossy format (mp3, aac, opus) and none is given.
+DFLT_LOSSY_BITRATE = "192k"
+#: Formats whose encoder takes a bitrate (``-b:a``).
+LOSSY_FORMATS = frozenset({"mp3", "aac", "opus", "ogg"})
 
 
 def pcm_to_float(raw: bytes, width: int = PCM_SAMPLE_WIDTH) -> np.ndarray:
@@ -321,3 +327,54 @@ def resample(samples: np.ndarray, from_rate: int, to_rate: int) -> np.ndarray:
     n = int(round(len(samples) * to_rate / from_rate))
     positions = np.linspace(0, len(samples) - 1, n)
     return np.interp(positions, np.arange(len(samples)), samples).astype(np.float32)
+
+
+def _ffmpeg_path(ffmpeg: str | None) -> str:
+    path = ffmpeg or shutil.which("ffmpeg")
+    if path is None:
+        raise RuntimeError(
+            "This needs ffmpeg for compressed audio and it is not on PATH: install "
+            "it (brew install ffmpeg / apt install ffmpeg), or ask the backend for "
+            "WAV or PCM output instead"
+        )
+    return path
+
+
+def _run_ffmpeg(cmd: list[str], data: bytes, what: str) -> bytes:
+    done = subprocess.run(cmd, input=data, capture_output=True)
+    if done.returncode:
+        raise RuntimeError(f"ffmpeg could not {what}: {done.stderr.decode()[-300:]}")
+    return done.stdout
+
+
+def ffmpeg_decode(audio: bytes, *, ffmpeg: str | None = None) -> tuple[np.ndarray, int]:
+    """``(samples, sample_rate)`` of audio in any format ffmpeg reads (mp3, ...),
+    channels averaged, like :func:`read_wav`.
+
+    Raises ``RuntimeError`` (naming the remedy) when ffmpeg is not installed.
+    """
+    cmd = [_ffmpeg_path(ffmpeg), "-hide_banner", "-loglevel", "error", "-i", "pipe:0"]
+    wav = _run_ffmpeg(
+        cmd + ["-f", "wav", "-c:a", "pcm_f32le", "pipe:1"], audio, "decode"
+    )
+    return read_wav(wav)
+
+
+def ffmpeg_encode(
+    samples,
+    sample_rate: int,
+    audio_format: str,
+    *,
+    bitrate: str | None = DFLT_LOSSY_BITRATE,
+    ffmpeg: str | None = None,
+) -> bytes:
+    """``samples`` (floats in ``[-1, 1]``) as ``audio_format`` bytes ('mp3', 'flac', ...).
+
+    ``bitrate`` applies to the lossy formats (``LOSSY_FORMATS``); ``None`` leaves
+    the encoder's default.
+    """
+    cmd = [_ffmpeg_path(ffmpeg), "-hide_banner", "-loglevel", "error", "-i", "pipe:0"]
+    if bitrate and audio_format in LOSSY_FORMATS:
+        cmd += ["-b:a", bitrate]
+    cmd += ["-f", audio_format, "pipe:1"]
+    return _run_ffmpeg(cmd, write_wav(samples, sample_rate), f"encode {audio_format}")

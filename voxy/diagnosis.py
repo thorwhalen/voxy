@@ -39,11 +39,12 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from voxy.wavutil import DFLT_LOSSY_BITRATE
+
 RESULTS_FILE = "results.json"
 AUDIO_DIR = "audio"
 PAGE_FILE = "index.html"
 DFLT_AUDIO_FORMAT = "mp3"
-DFLT_MP3_BITRATE = "192k"
 ID_CHARS = 4
 
 #: Short, readable ID prefixes (other backends use their first two letters).
@@ -148,7 +149,7 @@ def _encode_audio(wav_bytes: bytes, path: Path, audio_format: str) -> Path:
     path = path.with_suffix(f".{audio_format}")
     cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", "pipe:0"]
     if audio_format == "mp3":
-        cmd += ["-b:a", DFLT_MP3_BITRATE]
+        cmd += ["-b:a", DFLT_LOSSY_BITRATE]
     subprocess.run(cmd + [str(path)], input=wav_bytes, check=True)
     return path
 

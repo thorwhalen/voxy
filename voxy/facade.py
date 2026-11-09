@@ -125,7 +125,8 @@ def text_to_speech(
 
     Pauses are SSML breaks in ``text`` (``<break time="5s"/>``), honoured on every
     backend: one the backend renders stays in the text; at any other the text is
-    cut, the parts spoken separately and joined, as WAV, with that much silence
+    cut, the parts spoken separately and joined with that much silence (WAV, or the
+    compressed format asked for, e.g. mp3, through ffmpeg)
     (``voxy.pauses``). Text without breaks or marks is sent as is.
 
     Args:
@@ -164,7 +165,7 @@ def _speak_with_pauses(text: str, voice, model: SpeechModel, kwargs: dict) -> Sp
     """``text`` with SSML breaks and marks, spoken by ``model`` (``voxy.pauses``).
 
     One call when every break is one the model renders; otherwise one call per
-    section, joined as WAV with exactly the requested silences.
+    section, joined with exactly the requested silences (as WAV, or mp3 etc. via ffmpeg).
     """
     sections = plan_sections(text, native_break_s=model.native_break_s(**kwargs))
     if len(sections) == 1 and not sections[0].pause_s:

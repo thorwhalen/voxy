@@ -1,12 +1,20 @@
 """SSML pauses: parsing, planning per backend, and the facade's split-and-join."""
 
+import shutil
+
 import numpy as np
 import pytest
 
 from voxy import ElevenLabsSpeechModel, Speech, SpeechModel, text_to_speech
-from voxy.pauses import Section, break_seconds, parse_sections, plan_sections
+from voxy.pauses import (
+    Section,
+    break_seconds,
+    join_sections,
+    parse_sections,
+    plan_sections,
+)
 from voxy.tests.test_elevenlabs_model import FakeClient
-from voxy.wavutil import read_wav, write_wav
+from voxy.wavutil import ffmpeg_decode, read_wav, write_wav
 
 RATE = 8000
 
@@ -94,11 +102,43 @@ def test_elevenlabs_v4_splits_and_asks_for_pcm():
     assert model.native_break_s(model_id="eleven_flash_v2_5") == 3.0
 
 
-def test_non_wav_output_is_explained():
-    client = FakeClient()
-    model = ElevenLabsSpeechModel(model_id="eleven_v4", client_factory=lambda k: client)
-    model._explicit_api_key = "k"
-    with pytest.raises(ValueError, match="Joining pauses needs WAV"):
-        text_to_speech(
-            'One.<break time="5s"/> Two.', "vid", model=model, output_format="mp3_44100_128"
+def test_compressed_sections_join_through_injected_codecs():
+    """No ffmpeg needed: decode= / encode= are the seams."""
+    sections = [Section("One.", 1.0), Section("Two.")]
+
+    def synthesize(part):
+        return Speech(b"fake-mp3", format="mp3", voice="v")
+
+    decode = lambda speech: (np.full(RATE // 10, 0.5, np.float32), RATE)
+    seen = {}
+
+    def encode(samples, rate, fmt):
+        seen.update(n=len(samples), rate=rate, fmt=fmt)
+        return b"joined-mp3"
+
+    out = join_sections(sections, synthesize, decode=decode, encode=encode)
+    assert (out.audio, out.format, out.sample_rate) == (b"joined-mp3", "mp3", RATE)
+    assert seen == {"n": RATE // 10 * 2 + RATE, "rate": RATE, "fmt": "mp3"}
+
+
+def test_compressed_without_ffmpeg_is_explained(monkeypatch):
+    monkeypatch.setattr("voxy.wavutil.shutil.which", lambda name: None)
+    with pytest.raises(RuntimeError, match="needs ffmpeg"):
+        join_sections(
+            [Section("One.")], lambda part: Speech(b"x", format="mp3")
         )
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+def test_mp3_output_format_round_trips_through_ffmpeg():
+    from voxy.wavutil import ffmpeg_encode
+
+    tone = np.sin(np.linspace(0, 440 * 2 * np.pi * 0.5, 22050)).astype(np.float32) * 0.5
+    mp3 = ffmpeg_encode(tone, 44100, "mp3")
+    out = join_sections(
+        [Section("One.", 1.0), Section("Two.")],
+        lambda part: Speech(mp3, format="mp3", voice="v"),
+    )
+    assert out.format == "mp3" and out.audio[:3] in (b"ID3", b"\xff\xfb", b"\xff\xf3")
+    samples, rate = ffmpeg_decode(out.audio)
+    assert rate == 44100 and abs(len(samples) / rate - 2.0) < 0.15
