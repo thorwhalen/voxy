@@ -40,7 +40,7 @@ CLI: `python -m voxy voices [--backend X]`, `python -m voxy speak "text" --voice
 | `say` | free, offline drafts and previews (macOS voices) | macOS |
 | `aix` | OpenAI voices (nova, onyx...) and other LiteLLM providers | `voxy[aix]` + provider key |
 | `fal` | fal.ai TTS models picked by quality tier | `voxy[fal]` + `FAL_KEY` |
-| `kokoro` | local stock voices (54: `af_heart`, `bf_emma`, ...), CPU faster than realtime, no key, no clip; Linux (on macOS it fails, voxy#61: use `say`); Apache-2.0 | `uv`; env (`python -m voxy setup kokoro`) + 354 MB of model files on first use |
+| `kokoro` | local stock voices (54: `af_heart`, `bf_emma`, ...), CPU faster than realtime, no key, no clip; Linux and macOS; Apache-2.0 | `uv`; env (`python -m voxy setup kokoro`) + 354 MB of model files on first use |
 | `voicestudio` | local; a voice is a text description (Parler-TTS), no cloning | `voxy[voicestudio]` + model weights (GBs) |
 | `voxcpm`, `qwen3tts`, `chatterbox`, `f5tts`, `xtts` | local cloning from one reference clip + transcript, CPU OK (slow: RTF > 1); long text chunked | `uv`, `ffmpeg`; env + weights built on first use under `$VOXY_DATA_DIR` |
 | `csm` | local Sesame CSM-1B (GPU) | torch, the CSM repo |
