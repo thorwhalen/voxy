@@ -44,6 +44,8 @@ dependencies = [
     # voxy.stores: the voice library and its audio, as MutableMappings
     "dol",
     "config2py",
+    # voxy.base.optional_import: the shared optional-dependency helper
+    "i2>=0.1.92",
 ]
 
 [project.urls]
