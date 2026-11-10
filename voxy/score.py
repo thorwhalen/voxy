@@ -16,8 +16,10 @@ Reading a score is audiate's job: ``read_score`` takes the sung line from
 ``audiate.sung_line`` (its module docstring states the reading rules: which line,
 which verse, repeats, melismas, karaoke files) and makes ``Note``s of it. When
 audiate is not sure (several candidate lines, a chord, a lyric on no note), it
-raises and names the choices (``track=``, ``channel=``, ``part=``, ``verse=``);
-for its other options (``voice=``, ``chords=``, ...) read the line with
+raises and names the choices. ``read_score`` (and ``voxy.sing``) take them as
+``track=``, ``channel=``, ``part=``, ``verse=``, ``chords=`` and ``score_voice=``
+(audiate's ``voice=``: in voxy, ``voice=`` is the singer), and audiate's errors
+are reworded to match; for audiate's other options read the line with
 ``audiate.sung_line`` and pass the notes it returns. audiate is in the
 ``voxy[singing]`` extra and imported only when a score is read or lyrics attached.
 
@@ -30,7 +32,9 @@ word one more note (``audiate.sung.lyric_tokens``).
 [(0.0, 0.5, 64), (0.5, 0.5, 67), (1.0, 1.0, 60)]
 """
 
+import importlib.util
 import os
+import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -39,6 +43,10 @@ from voxy.base import optional_import
 
 #: The module that reads scores (``sung_line``) and attaches lyrics (``attach_lyrics``).
 SCORE_READER = "audiate.sung"
+#: The first audiate release that has ``SCORE_READER`` (keep in step with pyproject).
+MIN_AUDIATE = "0.0.4"
+#: ``read_score``'s name for each ``audiate.sung_line`` option it renames.
+SUNG_LINE_NAMES = {"score_voice": "voice"}
 #: The word given to sung notes that have none (a score without lyrics on every note).
 DFLT_FILLER_WORD = "la"
 DFLT_BPM = 100
@@ -116,10 +124,39 @@ def _is_notes(score) -> bool:
     )
 
 
+def _score_reader():
+    """The score reader module, or an error saying how to get it."""
+    try:
+        return optional_import(SCORE_READER)
+    except ModuleNotFoundError:
+        if importlib.util.find_spec(SCORE_READER.split(".")[0]) is None:
+            raise
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            have = version("audiate")
+        except PackageNotFoundError:
+            have = "unknown"
+        raise ModuleNotFoundError(
+            f"Reading scores needs audiate>={MIN_AUDIATE} (it has {SCORE_READER}); "
+            f"the installed audiate ({have}) predates it: upgrade it to "
+            f"'audiate[symbolic]>={MIN_AUDIATE}', or update a local checkout of it",
+            name=SCORE_READER,
+        ) from None
+
+
+def _in_voxy_terms(error: ValueError) -> ValueError:
+    """audiate's error, with its option names as ``read_score`` spells them."""
+    message = str(error)
+    for ours, theirs in SUNG_LINE_NAMES.items():
+        message = re.sub(rf"(?<![\w_]){theirs}=", f"{ours}=", message)
+    return ValueError(message)
+
+
 def _with_lyrics(notes: Sequence[Note], lyrics: str) -> list[Note]:
     """``notes`` with the words of the lyric line ``lyrics``, through audiate's
     ``attach_lyrics`` (one token per note)."""
-    reader = optional_import(SCORE_READER)
+    reader = _score_reader()
     sung = [reader.SungNote(n.start, n.dur, n.pitch) for n in notes]
     return [to_note(n) for n in reader.attach_lyrics(sung, lyrics)]
 
@@ -133,6 +170,8 @@ def read_score(
     channel: int | None = None,
     part: int | str | None = None,
     verse: int | str | None = None,
+    score_voice: int | str | None = None,
+    chords: str | None = None,
 ) -> list[Note]:
     """The notes of ``score``, with words: from ``lyrics`` if given, else the score's own.
 
@@ -150,6 +189,10 @@ def read_score(
             ``channel``: 1 to 16).
         part, verse: The music21 part (an index, or a name or id) and the lyric
             verse to sing.
+        score_voice: The voice of that part (its MusicXML voice number; the
+            ``voice=`` of ``audiate.sung_line``).
+        chords: Two notes at once: an error (None, the default), or sing the
+            ``"top"`` or ``"bottom"`` one.
 
     Which line and verse are sung by default, and when the reading raises
     instead of guessing, is audiate's to say: see ``audiate.sung``.
@@ -157,24 +200,30 @@ def read_score(
     >>> [n.word for n in read_score([Note(0, 1, 60, "do"), Note(1, 1, 62, "re")])]
     ['do', 're']
     """
+    options = {
+        "track": track,
+        "channel": channel,
+        "part": part,
+        "verse": verse,
+        "score_voice": score_voice,
+        "chords": chords,
+    }
+    options = {k: v for k, v in options.items() if v is not None}
     if _is_notes(score):
-        given = {"track": track, "channel": channel, "part": part, "verse": verse}
-        if any(v is not None for v in given.values()):
-            names = ", ".join(k for k, v in given.items() if v is not None)
-            raise ValueError(f"{names}: pick a line of a score, not of notes")
+        if options:
+            raise ValueError(
+                f"{', '.join(options)}: pick a line of a score, not of notes"
+            )
         notes = sorted((to_note(n) for n in score), key=lambda n: n.start)
     else:
         if isinstance(score, (str, os.PathLike)) and not Path(score).exists():
             raise FileNotFoundError(f"No score at {score}")
-        reader = optional_import(SCORE_READER)
-        line = reader.sung_line(
-            score,
-            track=track,
-            channel=channel,
-            part=part,
-            verse=verse,
-            with_lyrics=lyrics is None,
-        )
+        reader = _score_reader()
+        options = {SUNG_LINE_NAMES.get(k, k): v for k, v in options.items()}
+        try:
+            line = reader.sung_line(score, with_lyrics=lyrics is None, **options)
+        except ValueError as error:
+            raise _in_voxy_terms(error) from error
         notes = [to_note(n) for n in line]
     notes = [n for n in notes if n.dur > 0]
     if not notes:

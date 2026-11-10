@@ -4,6 +4,7 @@ libraries), the facade (fake worker), and an opt-in real run."""
 import importlib.util
 import json
 import os
+import re
 import sys
 import types
 from pathlib import Path
@@ -11,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from voxy import score as score_module
 from voxy import singing, soulx
 from voxy.base import VoiceProfile
 from voxy.envs import GitSource, ensure_git_source, git_source_dir, is_env_ready
@@ -186,6 +188,27 @@ def test_notes_are_sung_as_given():
         read_score(notes_from_pitches([(60, 1), (62, 1)]), "one two three")
 
 
+ELISION = (
+    "<note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration>"
+    "<type>quarter</type><lyric><syllabic>single</syllabic><text>me</text><elision/>"
+    "<syllabic>single</syllabic><text>and</text></lyric></note>"
+)
+
+
+def test_an_elision_sings_its_words_on_one_note(tmp_path):
+    pytest.importorskip("audiate")
+    pytest.importorskip("music21")
+    path = tmp_path / "elision.musicxml"
+    path.write_text(MUSICXML.format(notes=ELISION + xml_note("D", 5, 1, "you")))
+    notes = read_score(path)  # audiate's own output: two words on the first note
+    assert [n.word for n in notes] == ["me and", "you"]
+    (segment,) = soulx.soulx_metadata(notes)
+    assert segment["text"] == "<SP> me+and you <SP>"
+    assert segment["note_type"] == "1 2 2 1"
+    with pytest.raises(ValueError, match="joins the words"):
+        soulx.soulx_metadata([Note(0, 1, 60, "a+b")])
+
+
 def test_a_missing_score_file_is_named():
     with pytest.raises(FileNotFoundError, match="No score at"):
         read_score("nowhere.mid", "la")
@@ -252,7 +275,7 @@ def test_long_lines_split_at_a_rest_when_there_is_one():
     assert all(s["note_pitch"].split()[0] != "0" for s in segments[1:])
 
 
-@pytest.mark.parametrize("word", ["two words", "", "123"])
+@pytest.mark.parametrize("word", ["la 12", "", "123"])
 def test_each_sung_note_needs_one_word(word):
     with pytest.raises(ValueError, match="one word"):
         soulx.soulx_metadata([Note(0, 1, 60, word)])
@@ -455,6 +478,13 @@ def test_adapter_places_segments_at_their_time_with_faded_joins(adapter, tmp_pat
     halfway = fade // 2  # inside the fade-in: the ramp's value times the fade's
     expected = (-2 + 4 * halfway / 799) * halfway / (fade - 1)
     assert samples[second + halfway] == pytest.approx(expected, abs=0.01)
+
+
+def test_adapter_phonemizes_each_word_of_an_elision_onto_its_note(adapter):
+    state = adapter.load(repo_dir=str(adapter.repo), weights_dir="/w", device="cpu")
+    (segment,) = soulx.soulx_metadata([Note(0, 1, 60, "me and"), Note(1, 1, 62, "you")])
+    (filled,) = adapter.fill_phonemes(state, [segment])
+    assert filled["phoneme"] == "<SP> en_M-E-A-N-D en_Y-O-U <SP>"
 
 
 def test_adapter_rejects_fields_of_different_lengths(adapter):
@@ -683,8 +713,43 @@ def test_sing_passes_the_line_choice_to_the_score(tmp_path, cache, monkeypatch):
     path = raw_midi(tmp_path / "m.mid", [[*melody, *bass]])
     run = FakeRun()
     singing.sing(path, "hi", track=0, channel=3, model=soulx.SoulXSingingModel(run=run), voices={})
-    assert seen[0] == {"track": 0, "channel": 3, "part": None, "verse": None}
+    assert seen[0] == {
+        "track": 0, "channel": 3, "part": None, "verse": None,
+        "score_voice": None, "chords": None,
+    }
     assert run.requests[0][1]["meta"][0]["note_pitch"] == "0 72 0"
+    # a singing voice's clip: its score's line is chosen the same way
+    voice = singing.singing_voice(tmp_path / "clip.wav", path, "hi", track=0, channel=2)
+    assert [n["pitch"] for n in voice.segment["prompt_notes"]] == [36]
+
+
+def test_a_chord_names_voxy_s_keywords_and_chords_picks_one(tmp_path, cache):
+    pytest.importorskip("audiate")
+    pytest.importorskip("music21")
+    chord = (
+        xml_note("C", 5, 1, "oh")
+        + "<note><chord/><pitch><step>E</step><octave>5</octave></pitch>"
+        "<duration>1</duration><type>quarter</type></note>"
+    )
+    path = tmp_path / "chord.musicxml"
+    path.write_text(MUSICXML.format(notes=chord + xml_note("D", 5, 1, "my")))
+    model = soulx.SoulXSingingModel(run=FakeRun())
+    with pytest.raises(ValueError, match="chords=") as raised:
+        singing.sing(path, model=model, voices={})
+    assert "score_voice=" in str(raised.value)
+    assert not re.search(r"(?<![\w])voice=", str(raised.value))  # voice= is the singer
+    assert [n.pitch for n in read_score(path, chords="top")] == [76, 74]
+    assert [n.pitch for n in read_score(path, chords="bottom", score_voice=1)] == [72, 74]
+
+
+def test_an_old_audiate_is_named_with_the_version_it_needs(monkeypatch):
+    def old_audiate(module):
+        raise ModuleNotFoundError(f"No module named {module!r}", name=module)
+
+    monkeypatch.setattr(score_module, "optional_import", old_audiate)
+    monkeypatch.setattr(score_module.importlib.util, "find_spec", lambda name: object())
+    with pytest.raises(ModuleNotFoundError, match=r"audiate>=0\.0\.4"):
+        read_score(notes_from_pitches([(60, 1)]), "la")
 
 
 def test_ensure_git_source_is_ps_s_in_voxy_s_models_folder(tmp_path, monkeypatch):

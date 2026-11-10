@@ -213,6 +213,12 @@ def singing_voice(
     sample_rate: int = SYNTHETIC_SAMPLE_RATE,
     name: str = DFLT_SINGING_SAMPLES,
     rootdir: str | os.PathLike | None = None,
+    track: int | None = None,
+    channel: int | None = None,
+    part: int | str | None = None,
+    verse: int | str | None = None,
+    score_voice: int | str | None = None,
+    chords: str | None = None,
     **metadata,
 ) -> VoiceProfile:
     """A singing voice: a sung clip, and (for synthesis) the score it sings.
@@ -227,6 +233,8 @@ def singing_voice(
             ``sing``; ``convert_singing`` needs only the clip.
         lyrics: Its words, if the score has none.
         backend: The backend the voice is for (its ``model_type``).
+        track, channel, part, verse, score_voice, chords: Which line of the
+            score the clip sings, as in ``sing``.
         **metadata: Kept with the voice (e.g. ``consent=``, ``description=``).
 
     The profile's ``segment`` is plain data (``prompt_audio`` path, ``prompt_notes``),
@@ -237,7 +245,15 @@ def singing_voice(
         key = f"prompt-{hashlib.sha256(audio).hexdigest()[:16]}.wav"
         stores.samples_store(name, rootdir=rootdir)[key] = audio
         audio = stores.kind_dir(stores.SAMPLES_KIND, name, rootdir=rootdir) / key
-    notes = read_score(score, lyrics) if score is not None else None
+    line = dict(
+        track=track,
+        channel=channel,
+        part=part,
+        verse=verse,
+        score_voice=score_voice,
+        chords=chords,
+    )
+    notes = read_score(score, lyrics, **line) if score is not None else None
     return VoiceProfile(
         {
             "prompt_audio": str(Path(audio).resolve()),
@@ -338,6 +354,8 @@ def sing(
     channel: int | None = None,
     part: int | str | None = None,
     verse: int | str | None = None,
+    score_voice: int | str | None = None,
+    chords: str | None = None,
     model: "SingingModel | None" = None,
     models: MutableMapping | None = None,
     voices: Mapping | None = None,
@@ -360,15 +378,29 @@ def sing(
         track, channel: Which line of a MIDI file to sing (``track``: index in
             the file; ``channel``: 1 to 16).
         part, verse: Which part (an index, a name or an id) and lyric verse of a
-            MusicXML score to sing. When the score leaves the choice open, reading
-            it raises and names the candidates (see ``audiate.sung``).
+            MusicXML score to sing.
+        score_voice: Which voice of that part (its MusicXML voice number; named
+            so because ``voice`` is the singer).
+        chords: Two notes at once: an error (None), or sing the ``"top"`` or
+            ``"bottom"`` one.
+
+            When the score leaves one of these choices open, reading it raises
+            and names the candidates (see ``voxy.score.read_score`` and
+            ``audiate.sung``).
         model: A ready model (its backend is then the backend).
         models: Model cache to use instead of the shared one.
         voices: Voice library store (default ``voxy.voices_store()``).
         **params: The backend's parameters (``singing_backends()[b].params``).
     """
     notes = read_score(
-        score, lyrics, track=track, channel=channel, part=part, verse=verse
+        score,
+        lyrics,
+        track=track,
+        channel=channel,
+        part=part,
+        verse=verse,
+        score_voice=score_voice,
+        chords=chords,
     )
     model = model or get_singing_model(backend, models=models)
     voice = resolve_singing_voice(voice, backend=model.name, voices=voices)
