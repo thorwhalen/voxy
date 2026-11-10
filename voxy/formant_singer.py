@@ -20,6 +20,8 @@ import numpy as np
 
 from voxy.score import Note
 
+#: Bump when the synthesis changes, so cached renders are made again.
+SYNTH_VERSION = 1
 DFLT_SAMPLE_RATE = 24000
 DFLT_TAIL_S = 0.4
 DFLT_LEVEL = 0.8

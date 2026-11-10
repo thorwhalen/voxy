@@ -144,17 +144,33 @@ def _with_rests(
 def _segments(
     line: list[Note], *, split_rest_s: float, max_segment_s: float
 ) -> list[list[Note]]:
+    """``line`` cut into segments: after a rest longer than ``split_rest_s``, and
+    before a segment would pass ``max_segment_s``, at its last rest if it has one
+    (so the join lands in silence), else at that note."""
     segments, current = [], []
     for note in line:
-        too_long = current and note.end - current[0].start > max_segment_s
-        after_long_rest = (
-            current and not current[-1].pitch and current[-1].dur > split_rest_s
-        )
-        if too_long or after_long_rest:
+        if current and not current[-1].pitch and current[-1].dur > split_rest_s:
             segments.append(current)
             current = []
+        elif current and note.end - current[0].start > max_segment_s:
+            rests = [k for k in range(1, len(current)) if not current[k].pitch]
+            cut = rests[-1] + 1 if rests else len(current)
+            segments.append(current[:cut])
+            current = current[cut:]
         current.append(note)
     return segments + [current] if current else segments
+
+
+def _check_word(note: Note) -> None:
+    """One sung note, one word: no spaces, at least one letter (else the phonemes
+    and the notes would not line up)."""
+    word = note.word
+    if not word or any(c.isspace() for c in word) or not any(c.isalpha() for c in word):
+        raise ValueError(
+            f"The note at {note.start:.2f} s sings {word!r}: each sung note needs one "
+            "word, without spaces and with letters (hyphenate a word over notes: "
+            "'can-dle')"
+        )
 
 
 def _durations(segment: Sequence[Note]) -> list[float]:
@@ -211,6 +227,8 @@ def soulx_metadata(
         raise NotImplementedError(
             f"SoulX singing in {language} needs its phonemes (only English is done here)"
         )
+    for note in notes:
+        _check_word(note)
     line = _with_rests(notes, lead_s=lead_s, tail_s=tail_s, min_rest_s=min_rest_s)
     segments = _segments(line, split_rest_s=split_rest_s, max_segment_s=max_segment_s)
     return [_segment(name, i, s, language) for i, s in enumerate(segments)]
@@ -246,13 +264,39 @@ def soulx_prompt_metadata(
 # --------------------------------------------------------------------------- model
 
 
-def _shift(transpose) -> dict:
+def _lower_median(values: Sequence[int]) -> int:
+    """The lower middle value (``torch.median``'s rule, which upstream uses)."""
+    ordered = sorted(values)
+    return ordered[(len(ordered) - 1) // 2]
+
+
+def fit_voice_shift(target: Sequence[Note], prompt: Sequence[Note]) -> int:
+    """Semitones that move ``target`` into the register of the voice singing
+    ``prompt``: median prompt pitch minus median target pitch, over notes.
+
+    Upstream computes this per segment (and weights notes by their phoneme count),
+    so a long song would change key between segments; voxy computes it once.
+
+    >>> fit_voice_shift([Note(0, 1, 60), Note(1, 1, 64)], [Note(0, 1, 55)])
+    -5
+    """
+    return _lower_median([n.pitch for n in prompt]) - _lower_median(
+        [n.pitch for n in target]
+    )
+
+
+def _shift(transpose, *, target=None, prompt=None) -> dict:
     """The adapter's ``auto_shift`` / ``pitch_shift`` for a ``transpose`` value.
+
+    With ``target`` and ``prompt`` notes, 'fit_voice' is computed here, once for
+    every segment; without (conversion), the adapter fits it from the audio.
 
     >>> _shift(0), _shift(-12), _shift("fit_voice")
     ({'auto_shift': False, 'pitch_shift': 0}, {'auto_shift': False, 'pitch_shift': -12}, {'auto_shift': True, 'pitch_shift': 0})
     """
     if transpose == FIT_VOICE:
+        if target and prompt:
+            return {"auto_shift": False, "pitch_shift": fit_voice_shift(target, prompt)}
         return {"auto_shift": True, "pitch_shift": 0}
     if isinstance(transpose, bool) or not isinstance(transpose, int):
         raise ValueError(f"transpose is semitones or {FIT_VOICE!r}, not {transpose!r}")
@@ -338,7 +382,7 @@ class SoulXSingingModel:
             "meta": soulx_metadata(notes, language=language),
             "prompt_audio": prompt_audio,
             "prompt_meta": soulx_prompt_metadata(prompt_notes),
-            **_shift(transpose),
+            **_shift(transpose, target=notes, prompt=prompt_notes),
         }
         text = " ".join(n.word for n in notes if n.starts_word)
         return self._speech("sing", request, params, voice=prompt_audio, text=text)
@@ -378,6 +422,7 @@ SOULX_BACKEND = register_singing_backend(
             "control": "score",
             "seed": None,
             "peak": 0.95,
+            "crossfade_s": 0.02,
         },
         source=SOULX_SOURCE,
         licence="code and weights Apache-2.0 (RMVPE and whisper-base: Apache-2.0)",

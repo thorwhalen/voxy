@@ -38,6 +38,7 @@ takes any object with ``sing(notes, voice, *, transpose, language, **params)`` a
 """
 
 import hashlib
+import json
 import os
 import tempfile
 import threading
@@ -56,6 +57,8 @@ from voxy.wavutil import write_wav
 from voxy.worker import Worker
 
 DFLT_SINGING_BACKEND = "soulx"
+#: The samples store that keeps singing clips given as bytes.
+DFLT_SINGING_SAMPLES = "singing-voices"
 DFLT_LANGUAGE = "English"
 #: ``transpose`` value meaning "move the melody into the voice's register".
 FIT_VOICE = "fit_voice"
@@ -161,7 +164,8 @@ def get_singing_model(
 
 
 def close_singing_models(models: MutableMapping | None = None) -> None:
-    """Stop the cached singing models' workers (free their memory)."""
+    """Stop the cached singing models' workers and free their memory (a model stays
+    loaded, about 6 GB for SoulX, until this is called or the process ends)."""
     cache = _singing_models if models is None else models
     for model in list(cache.values()):
         close = getattr(model, "close", None)
@@ -206,13 +210,16 @@ def singing_voice(
     *,
     backend: str = DFLT_SINGING_BACKEND,
     sample_rate: int = SYNTHETIC_SAMPLE_RATE,
+    name: str = DFLT_SINGING_SAMPLES,
+    rootdir: str | os.PathLike | None = None,
     **metadata,
 ) -> VoiceProfile:
     """A singing voice: a sung clip, and (for synthesis) the score it sings.
 
     Args:
-        audio: The clip (a path, or WAV bytes, kept under voxy's cache), 5 to 30 s of
-            one voice singing, without accompaniment.
+        audio: The clip, 5 to 30 s of one voice singing, without accompaniment: a
+            path, or WAV bytes (kept in the samples store of voice ``name``, under
+            the data root ``rootdir``, so the voice outlives the session).
         score: What the clip sings, timed as in the clip (a MIDI or MusicXML file,
             a music21 stream, or notes; see ``voxy.score.read_score``). Needed by
             ``sing``; ``convert_singing`` needs only the clip.
@@ -225,11 +232,9 @@ def singing_voice(
     consent=...)``.
     """
     if isinstance(audio, bytes):
-        folder = stores.voxy_cache_dir("singing")
-        folder.mkdir(parents=True, exist_ok=True)
-        path = folder / f"voice-{hashlib.sha256(audio).hexdigest()[:16]}.wav"
-        path.write_bytes(audio)
-        audio = path
+        key = f"prompt-{hashlib.sha256(audio).hexdigest()[:16]}.wav"
+        stores.samples_store(name, rootdir=rootdir)[key] = audio
+        audio = stores.kind_dir(stores.SAMPLES_KIND, name, rootdir=rootdir) / key
     notes = read_score(score, lyrics) if score is not None else None
     return VoiceProfile(
         {
@@ -247,11 +252,12 @@ def synthetic_singing_voice(
     preset: str = "high", *, backend: str = DFLT_SINGING_BACKEND
 ) -> VoiceProfile:
     """A voice that belongs to no one: a formant synthesiser singing "la" on a short
-    phrase (``voxy.formant_singer``), rendered once into voxy's cache.
+    phrase (``voxy.formant_singer``), rendered once into voxy's cache (the file is
+    named by a hash of everything it is rendered from, so a change re-renders it).
 
     ``preset`` is 'high' or 'low' (an octave down, darker vowels).
     """
-    from voxy.formant_singer import sing_la
+    from voxy.formant_singer import FORMANT_PRESETS, SYNTH_VERSION, sing_la
 
     notes = notes_from_pitches(
         [
@@ -262,7 +268,18 @@ def synthetic_singing_voice(
         start=SYNTHETIC_PROMPT_LEAD_S,
     )
     notes = [Note(n.start, n.dur, n.pitch, "la") for n in notes]
-    path = stores.voxy_cache_dir("singing", f"synthetic-{preset}.wav")
+    settings = json.dumps(
+        [
+            SYNTH_VERSION,
+            preset,
+            FORMANT_PRESETS[preset],
+            [asdict(n) for n in notes],
+            SYNTHETIC_PROMPT_TAIL_S,
+            SYNTHETIC_SAMPLE_RATE,
+        ]
+    )
+    digest = hashlib.sha256(settings.encode()).hexdigest()[:12]
+    path = stores.voxy_cache_dir("singing", f"synthetic-{preset}-{digest}.wav")
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         samples = sing_la(
@@ -315,6 +332,8 @@ def sing(
     output_path: str | os.PathLike | None = None,
     transpose: Transpose = 0,
     language: str = DFLT_LANGUAGE,
+    track: int | None = None,
+    channel: int | None = None,
     model: "SingingModel | None" = None,
     models: MutableMapping | None = None,
     voices: Mapping | None = None,
@@ -333,12 +352,14 @@ def sing(
         transpose: Semitones to move the melody (0: as written), or 'fit_voice'
             (into the voice's register).
         language: Of the lyrics (SoulX here: English).
+        track, channel: Which line of a MIDI file to sing, when it has several
+            (``voxy.score.notes_from_midi``).
         model: A ready model (its backend is then the backend).
         models: Model cache to use instead of the shared one.
         voices: Voice library store (default ``voxy.voices_store()``).
         **params: The backend's parameters (``singing_backends()[b].params``).
     """
-    notes = read_score(score, lyrics)
+    notes = read_score(score, lyrics, track=track, channel=channel)
     model = model or get_singing_model(backend, models=models)
     voice = resolve_singing_voice(voice, backend=model.name, voices=voices)
     speech = model.sing(notes, voice, transpose=transpose, language=language, **params)

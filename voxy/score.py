@@ -34,7 +34,7 @@ from pathlib import Path
 
 from voxy.base import optional_import
 
-MIDI_SUFFIXES = (".mid", ".midi")
+MIDI_SUFFIXES = (".mid", ".midi", ".kar")
 #: Tokens of a lyric line that hold the previous word one more note.
 HOLD_TOKENS = frozenset({"-", "_"})
 #: The word given to sung notes that have none (a score without lyrics on every note).
@@ -42,6 +42,15 @@ DFLT_FILLER_WORD = "la"
 DFLT_BPM = 100
 #: MIDI tempo before any ``set_tempo`` event: 500 000 microseconds a beat (120 BPM).
 DFLT_MIDI_TEMPO = 500_000
+#: MIDI channel 10 (index 9): percussion, never a melody.
+DRUM_CHANNEL = 9
+#: A note may overlap the next by this much (legato) before the line counts as polyphonic.
+DFLT_MAX_OVERLAP_S = 0.1
+#: Karaoke (.kar) lyric marks: '/' starts a line, '\\' a paragraph.
+KARAOKE_MARKS = "/\\"
+#: A gap this long between notes ends a word: a note after it without a lyric of
+#: its own starts a new word instead of continuing (melisma).
+WORD_BREAK_REST_S = 0.2
 
 
 @dataclass(frozen=True)
@@ -93,44 +102,164 @@ def notes_from_pitches(
     return notes
 
 
-def notes_from_midi(path: str | os.PathLike, *, track: int | None = None) -> list[Note]:
-    """The monophonic line of a MIDI file, with its lyric meta-events as words.
+def notes_from_midi(
+    path: str | os.PathLike,
+    *,
+    track: int | None = None,
+    channel: int | None = None,
+    max_overlap_s: float = DFLT_MAX_OVERLAP_S,
+) -> list[Note]:
+    """The melody of a MIDI file: the notes of one track and channel, with its lyric
+    events joined into words.
 
-    Times follow the file's tempo map. Overlapping notes are cut at the next onset,
-    so the line is strictly monophonic. ``track`` limits it to one track.
+    The line is the one track and channel that has notes, drums (channel 10) aside;
+    with several, pass ``track=`` (its index in the file) and, for a file that mixes
+    channels in one track, ``channel=`` (1 to 16); the error lists the candidates.
+    Times follow the file's tempo map. A note overlapping the next by up to
+    ``max_overlap_s`` (legato) is cut at the next onset; more, or two notes starting
+    together, is polyphony, and an error.
+
+    Lyric events (``lyrics``, or a karaoke file's ``text`` events) are syllables: a
+    trailing ``-`` (``can-``) or a leading one (``-dle``) joins the next or previous
+    syllable into one word; karaoke line marks (``/``, ``\\``) are dropped. A note
+    without a syllable continues the word before it (a melisma), unless a rest
+    separates them.
     """
     mido = optional_import("mido")
     mid = mido.MidiFile(str(path))
     tempo_map = _midi_tempo_map(mido.merge_tracks(mid.tracks))
-    raw, lyrics = [], {}
-    for trk in [mid.tracks[track]] if track is not None else mid.tracks:
+    groups: dict[tuple[int, int], list[tuple[int, int, int]]] = {}
+    syllables: dict[int, list[tuple[int, str, str]]] = {}
+    for t, trk in enumerate(mid.tracks):
         tick, active = 0, {}
         for msg in trk:
             tick += msg.time
-            if msg.type == "lyrics" and msg.text.strip():
-                lyrics[tick] = msg.text.strip()
+            if msg.type in ("lyrics", "text") and msg.text.strip():
+                syllables.setdefault(t, []).append((tick, msg.type, msg.text))
             elif msg.type == "note_on" and msg.velocity > 0:
                 active[(msg.channel, msg.note)] = tick
             elif msg.type in ("note_off", "note_on"):
                 begin = active.pop((msg.channel, msg.note), None)
                 if begin is not None and tick > begin:
-                    raw.append((begin, tick, msg.note))
-    if not raw:
-        raise ValueError(f"No notes in {path}")
-    raw.sort()
+                    groups.setdefault((t, msg.channel), []).append(
+                        (begin, tick, msg.note)
+                    )
+    (t, ch), raw = _midi_line(groups, track=track, channel=channel, path=path)
 
     def seconds(ticks: int) -> float:
         return _midi_ticks_to_seconds(ticks, tempo_map, mid.ticks_per_beat)
 
-    notes = []
+    raw.sort()
+    notes, onsets = [], []
     for i, (begin, end, pitch) in enumerate(raw):
         if i + 1 < len(raw):
-            end = min(end, raw[i + 1][0])
-        if end > begin:
-            onset = seconds(begin)
-            notes.append(
-                Note(onset, seconds(end) - onset, pitch, lyrics.get(begin, ""))
-            )
+            following = raw[i + 1][0]
+            if following == begin or seconds(end) - seconds(following) > max_overlap_s:
+                raise ValueError(
+                    f"Track {t} channel {ch + 1} of {path} is polyphonic at "
+                    f"{seconds(following):.2f} s: pick a one-voice line (track=, "
+                    "channel=) or reduce it to its melody"
+                )
+            end = min(end, following)
+        onset = seconds(begin)
+        notes.append(Note(onset, seconds(end) - onset, pitch))
+        onsets.append(begin)
+    lyric_at = _midi_syllables(
+        syllables.get(t, []), onsets, tolerance=mid.ticks_per_beat // 16
+    )
+    return _join_words(
+        [
+            (note, *_hyphenated(lyric_at[i]))
+            if i in lyric_at
+            else (note, None, False, False)
+            for i, note in enumerate(notes)
+        ]
+    )
+
+
+def _midi_line(groups, *, track, channel, path):
+    """The one ``((track, channel), notes)`` the melody is, or an error naming the choices."""
+    wanted = {
+        key: notes
+        for key, notes in groups.items()
+        if (track is None or key[0] == track)
+        and (key[1] == channel - 1 if channel is not None else key[1] != DRUM_CHANNEL)
+    }
+    if len(wanted) == 1:
+        return next(iter(wanted.items()))
+    if not wanted:
+        raise ValueError(f"No notes in {path} (track={track}, channel={channel})")
+    choices = ", ".join(
+        f"track={t} channel={c + 1} ({len(n)} notes)"
+        for (t, c), n in sorted(wanted.items())
+    )
+    raise ValueError(f"{path} has several lines; pick one: {choices}")
+
+
+def _midi_syllables(events, onsets, *, tolerance):
+    """``{note index: syllable}``: each lyric event on the first unclaimed note
+    starting at (or just after) it. ``text`` events count only in a file without
+    ``lyrics`` events (karaoke files), and their ``@`` header lines never."""
+    kinds = {kind for _, kind, _ in events}
+    kind = "lyrics" if "lyrics" in kinds else "text"
+    found, i = {}, 0
+    for tick, k, text in events:
+        if k != kind or (kind == "text" and text.startswith("@")):
+            continue
+        while i < len(onsets) and onsets[i] < tick - tolerance:
+            i += 1
+        if i < len(onsets):
+            found[i] = text
+            i += 1
+    return found
+
+
+def _hyphenated(syllable: str) -> tuple[str, bool, bool]:
+    """``(text, continues_a_word, leaves_the_word_open)`` of a MIDI lyric syllable.
+
+    >>> _hyphenated("can-"), _hyphenated("-dle"), _hyphenated("/Light")
+    (('can', False, True), ('dle', True, False), ('Light', False, False))
+    """
+    text = syllable.strip().lstrip(KARAOKE_MARKS).strip()
+    return text.strip("-").strip(), text.startswith("-"), text.endswith("-")
+
+
+def _join_words(items, *, rest_s: float = WORD_BREAK_REST_S) -> list[Note]:
+    """Notes named with whole words, from ``(note, syllable, continues, open_after)``
+    items (``syllable`` None for a note without one; an item None for a rest).
+
+    A syllable continues the current word when it says so or the one before left
+    the word open; a note without a syllable continues the current word (melisma)
+    unless a rest (an item None, or a gap of ``rest_s``) came between.
+    """
+    notes: list[Note] = []
+    word: list[int] = []
+    parts: list[str] = []
+    open_word, previous = False, None
+    for item in items:
+        if item is None:
+            word, open_word, previous = [], False, None
+            continue
+        note, syllable, continues, open_after = item
+        after_rest = previous is not None and note.start - previous.end >= rest_s
+        if syllable:
+            if (continues or open_word) and word:
+                parts.append(syllable)
+                notes.append(replace(note, starts_word=False))
+            else:
+                parts, word = [syllable], []
+                notes.append(replace(note, starts_word=True))
+            word.append(len(notes) - 1)
+            open_word = open_after
+        elif word and not after_rest:
+            notes.append(replace(note, starts_word=False))
+            word.append(len(notes) - 1)
+        else:
+            notes.append(replace(note, word="", starts_word=True))
+            word, open_word = [], False
+        if word:
+            _name_word(notes, word, "".join(parts))
+        previous = note
     return notes
 
 
@@ -163,45 +292,45 @@ def notes_from_musicxml(score, *, part: int = 0) -> list[Note]:
     """The notes of one part of a MusicXML file (or any score music21 reads, or a
     music21 stream), with its lyrics as words.
 
-    Tied notes become one. Syllables are joined into words with MusicXML's
-    ``syllabic`` (begin, middle, end), so ``can-dle`` on two notes is ``candle`` on
-    both, the second continuing the word. A note without a lyric inside a word, or
-    right after a sung note (a melisma under a slur), continues that word.
+    Only the part's first voice is read; grace notes and zero-length notes are
+    skipped; a chord sings its highest note. Tied notes become one. Syllables are
+    joined into words with MusicXML's ``syllabic`` (begin, middle, end), so
+    ``can-dle`` on two notes is ``candle`` on both, the second continuing the
+    word. A note without a lyric continues the word before it (a melisma under a
+    slur), unless a rest came between.
     """
     music21 = optional_import("music21")
     if isinstance(score, (str, os.PathLike)):
         score = music21.converter.parse(str(score))
     stream = score.parts[part] if getattr(score, "parts", None) else score
-    notes, word, syllables = [], [], []
+    if stream.recurse().getElementsByClass(music21.stream.Voice):
+        stream = stream.voicesToParts().parts[0]
+    items = []
     for item in stream.stripTies().flatten().secondsMap:
         element = item["element"]
         if not isinstance(element, music21.note.GeneralNote):
             continue
         if element.isRest:
-            word = []
+            items.append(None)
             continue
         start, dur = float(item["offsetSeconds"]), float(item["durationSeconds"])
-        pitch = element.pitches[-1].midi  # the top note, if a chord slipped in
+        if element.duration.isGrace or dur <= 0:
+            continue
+        note = Note(start, dur, max(p.midi for p in element.pitches))
         lyric = element.lyrics[0] if element.lyrics else None
-        if lyric is not None and lyric.text.strip():
-            syllabic = lyric.syllabic or "single"
-            if syllabic in ("single", "begin") or not word:
-                syllables, word = [lyric.text.strip()], []
-                notes.append(Note(start, dur, pitch))
-            else:
-                syllables.append(lyric.text.strip())
-                notes.append(Note(start, dur, pitch, starts_word=False))
-            word.append(len(notes) - 1)
-            _name_word(notes, word, "".join(syllables))
-            if syllabic in ("single", "end"):
-                word = [len(notes) - 1]  # a melisma may still hold this word
-        elif word:
-            notes.append(Note(start, dur, pitch, starts_word=False))
-            word.append(len(notes) - 1)
-            _name_word(notes, word, "".join(syllables))
-        else:
-            notes.append(Note(start, dur, pitch))
-    return notes
+        if lyric is None or not lyric.text.strip():
+            items.append((note, None, False, False))
+            continue
+        syllabic = lyric.syllabic or "single"
+        items.append(
+            (
+                note,
+                lyric.text.strip(),
+                syllabic in ("middle", "end"),
+                syllabic in ("begin", "middle"),
+            )
+        )
+    return _join_words(items)
 
 
 def _name_word(notes: list[Note], indices: Sequence[int], word: str) -> None:
@@ -257,6 +386,9 @@ def read_score(
     lyrics: str | None = None,
     *,
     filler: str = DFLT_FILLER_WORD,
+    track: int | None = None,
+    channel: int | None = None,
+    part: int = 0,
 ) -> list[Note]:
     """The notes of ``score``, with words: from ``lyrics`` if given, else the score's own.
 
@@ -266,9 +398,11 @@ def read_score(
             a sequence of ``Note``.
         lyrics: A lyric line (one token per note, see ``lyric_tokens``); replaces
             the score's own words.
-        filler: The word for sung notes that still have none (a MIDI file with a
-            lyric event on only some notes); a score with no words at all, and no
-            ``lyrics``, is an error.
+        filler: The word for sung notes that still have none and continue no word
+            (a note after a rest, in a score with lyrics on only some notes); a
+            score with no words at all, and no ``lyrics``, is an error.
+        track, channel: The MIDI line to sing (see ``notes_from_midi``).
+        part: The MusicXML part to sing.
 
     >>> [n.word for n in read_score(notes_from_pitches([(60, 1), (62, 1)]), "do re")]
     ['do', 're']
@@ -278,13 +412,14 @@ def read_score(
         if not path.exists():
             raise FileNotFoundError(f"No score at {path}")
         if path.suffix.lower() in MIDI_SUFFIXES:
-            notes = notes_from_midi(path)
+            notes = notes_from_midi(path, track=track, channel=channel)
         else:
-            notes = notes_from_musicxml(path)
+            notes = notes_from_musicxml(path, part=part)
     elif isinstance(score, Sequence) and all(isinstance(n, Note) for n in score):
         notes = list(score)
     else:
-        notes = notes_from_musicxml(score)
+        notes = notes_from_musicxml(score, part=part)
+    notes = [n for n in notes if n.dur > 0]
     if not notes:
         raise ValueError("The score has no notes")
     notes.sort(key=lambda n: n.start)

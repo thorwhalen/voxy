@@ -42,6 +42,7 @@ from voxy.facade import (
 from voxy.singing import (
     sing,
     convert_singing,
+    close_singing_models,
     singing_voice,
     synthetic_singing_voice,
     singing_backends,

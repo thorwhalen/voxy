@@ -39,6 +39,12 @@ PHONESET = os.path.join("soulxsinger", "utils", "phoneme", "phone_set.json")
 F0_EXTRACTION = os.path.join("preprocess", "tools", "f0_extraction.py")
 SP = "<SP>"
 DFLT_PEAK = 0.95
+#: Fade length at each join between segments (they are rendered separately).
+DFLT_CROSSFADE_S = 0.02
+#: The two singers; loading one frees the other (2.8 GB each, about 6 GB in use).
+SINGERS = ("svs", "svc")
+#: Per-note fields of a segment, which must all have one token per note.
+NOTE_FIELDS = ("duration", "text", "phoneme", "note_pitch", "note_type")
 #: g2p_en's NLTK resources (nltk 3.9 tags with the ``_eng`` tagger).
 NLTK_RESOURCES = {
     "taggers/averaged_perceptron_tagger_eng": "averaged_perceptron_tagger_eng",
@@ -133,6 +139,9 @@ def _model(state, component):
 
 
 def _singer(state, component):
+    for other in SINGERS:
+        if other != component and other in state["models"]:
+            unload(state, component=other)
     if component == "svs":
         from soulxsinger.models.soulxsinger import SoulXSinger as cls
 
@@ -176,9 +185,22 @@ def unload(state, *, component):
     """Free one component's weights; returns what stays loaded."""
     import gc
 
-    state["models"].pop(component, None)
-    gc.collect()
+    if state["models"].pop(component, None) is not None:
+        gc.collect()
+        _empty_device_cache(state["device"])
     return {"loaded": sorted(state["models"])}
+
+
+def _empty_device_cache(device):
+    try:
+        import torch
+
+        if device == "mps":
+            torch.mps.empty_cache()
+        elif device == "cuda":
+            torch.cuda.empty_cache()
+    except Exception:  # noqa: BLE001 - freeing a cache is best effort
+        pass
 
 
 # --------------------------------------------------------------------------- phonemes
@@ -232,8 +254,18 @@ def fill_phonemes(state, meta):
             segment["phoneme"] = " ".join(
                 SP if w == SP else phonemize_en(w, g2p) for w in segment["text"].split()
             )
+        _check_lengths(segment)
         out.append(segment)
     return out
+
+
+def _check_lengths(segment):
+    """Every per-note field has one token per note, else the words slide off the notes."""
+    counts = {f: len(str(segment.get(f, "")).split()) for f in NOTE_FIELDS}
+    if len(set(counts.values())) != 1:
+        raise ValueError(
+            f"Segment {segment.get('index')!r} has fields of different lengths: {counts}"
+        )
 
 
 # --------------------------------------------------------------------------- operations
@@ -272,12 +304,15 @@ def sing(
     cfg=None,
     seed=None,
     peak=DFLT_PEAK,
+    crossfade_s=DFLT_CROSSFADE_S,
 ):
     """SVS: sing ``meta`` in the voice of ``prompt_audio``, into ``out_path``.
 
     ``control='score'`` follows the notes; ``'melody'`` follows each segment's
-    ``f0``. ``auto_shift`` transposes the notes to the prompt's register (upstream's
-    median rule); ``pitch_shift`` transposes by that many semitones instead.
+    ``f0``. ``pitch_shift`` transposes by that many semitones; ``auto_shift``
+    (upstream's median rule, recomputed for each segment) is best left off for a
+    score of several segments. Each segment is placed at its ``time[0]``, with
+    ``crossfade_s`` fades where segments meet.
     """
     import numpy as np
     import torch
@@ -296,8 +331,9 @@ def sing(
     segments = fill_phonemes(state, meta)
     sr = config.audio.sample_rate
     total = np.zeros(int(segments[-1]["time"][1] / 1000 * sr), dtype=np.float32)
+    fade = int(crossfade_s * sr)
     t0 = time.perf_counter()
-    for segment in segments:
+    for i, segment in enumerate(segments):
         start = int(segment["time"][0] / 1000 * sr)
         with torch.no_grad():
             audio = model.infer(
@@ -310,7 +346,8 @@ def sing(
             )
         audio = audio.squeeze().float().cpu().numpy()
         n = min(len(audio), len(total) - start)
-        total[start : start + n] = audio[:n]
+        audio = _faded(audio[:n], fade, fade_in=i > 0, fade_out=i < len(segments) - 1)
+        total[start : start + n] += audio
     elapsed = time.perf_counter() - t0
     return {
         "sample_rate": sr,
@@ -320,6 +357,21 @@ def sing(
         "segments": len(segments),
         **_write(out_path, total, sr, peak),
     }
+
+
+def _faded(audio, n, *, fade_in, fade_out):
+    """``audio`` with linear fades of ``n`` samples at the ends asked for."""
+    import numpy as np
+
+    audio = audio.copy()
+    n = min(n, len(audio) // 2)
+    if n > 0:
+        ramp = np.linspace(0.0, 1.0, n, dtype=audio.dtype)
+        if fade_in:
+            audio[:n] *= ramp
+        if fade_out:
+            audio[-n:] *= ramp[::-1]
+    return audio
 
 
 def f0(state, *, audio, out_path=None):

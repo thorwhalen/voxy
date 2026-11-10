@@ -86,20 +86,79 @@ def test_a_midi_without_lyrics_needs_them(tmp_path):
     assert [n.word for n in read_score(path, "hey")] == ["hey"]
 
 
-def test_overlapping_midi_notes_are_made_monophonic(tmp_path):
+def raw_midi(path, tracks, *, tpb=480):
+    """A MIDI file from ``[[(kind, delta_ticks, fields), ...], ...]`` per track."""
     mido = pytest.importorskip("mido")
-    mid = mido.MidiFile(ticks_per_beat=480)
-    track = mido.MidiTrack()
-    mid.tracks.append(track)
-    track.append(mido.Message("note_on", note=60, velocity=90, time=0))
-    track.append(mido.Message("note_on", note=64, velocity=90, time=240))
-    track.append(mido.Message("note_off", note=60, velocity=0, time=240))
-    track.append(mido.Message("note_off", note=64, velocity=0, time=480))
-    mid.save(str(tmp_path / "o.mid"))
-    notes = notes_from_midi(tmp_path / "o.mid")
-    assert [(n.pitch, round(n.start, 3), round(n.dur, 3)) for n in notes] == [
-        (60, 0.0, 0.25),
-        (64, 0.25, 0.75),
+    mid = mido.MidiFile(ticks_per_beat=tpb)
+    for events in tracks:
+        track = mido.MidiTrack()
+        mid.tracks.append(track)
+        for kind, delta, fields in events:
+            if kind in ("lyrics", "text"):
+                track.append(mido.MetaMessage(kind, time=delta, **fields))
+            else:
+                track.append(mido.Message(kind, time=delta, **fields))
+    mid.save(str(path))
+    return path
+
+
+def on(note, delta=0, channel=0):
+    return ("note_on", delta, {"note": note, "velocity": 90, "channel": channel})
+
+
+def off(note, delta, channel=0):
+    return ("note_off", delta, {"note": note, "velocity": 0, "channel": channel})
+
+
+def test_a_slight_overlap_is_legato_a_large_one_is_polyphony(tmp_path):
+    legato = raw_midi(tmp_path / "l.mid", [[on(60), on(64, 470), off(60, 10), off(64, 480)]])
+    notes = notes_from_midi(legato)
+    assert [(n.pitch, round(n.dur, 3)) for n in notes] == [(60, 0.49), (64, 0.51)]
+    chords = raw_midi(tmp_path / "p.mid", [[on(60), on(64, 240), off(60, 240), off(64, 480)]])
+    with pytest.raises(ValueError, match="polyphonic at 0.25 s"):
+        notes_from_midi(chords)
+
+
+def test_the_melody_track_is_found_and_drums_ignored(tmp_path):
+    melody = [on(72), off(72, 480), on(74), off(74, 480)]
+    drums = [on(36, channel=9), off(36, 120, channel=9)] * 4
+    path = raw_midi(tmp_path / "d.mid", [melody, drums])
+    assert [n.pitch for n in notes_from_midi(path)] == [72, 74]
+    bass = [on(36, channel=1), off(36, 960, channel=1)]
+    several = raw_midi(tmp_path / "s.mid", [melody, bass, drums])
+    with pytest.raises(ValueError, match=r"several lines.*track=0 channel=1.*track=1 channel=2"):
+        notes_from_midi(several)
+    assert [n.pitch for n in notes_from_midi(several, track=1)] == [36]
+    assert [n.pitch for n in read_score(several, "la", track=1)] == [36]
+
+
+def test_embedded_syllables_join_into_words_and_melismas_hold_them(tmp_path):
+    lyric = lambda text, delta=0: ("lyrics", delta, {"text": text})  # noqa: E731
+    events = [
+        lyric("can-"), on(60), off(60, 480),
+        lyric("dle"), on(62), off(62, 480),
+        on(64), off(64, 480),  # no syllable: holds "candle"
+        lyric("light"), on(65), off(65, 480),
+        on(67, 480), off(67, 480),  # after a rest: a new word, the filler
+    ]
+    path = raw_midi(tmp_path / "w.mid", [events])
+    notes = read_score(path)
+    assert [(n.word, n.starts_word) for n in notes] == [
+        ("candle", True), ("candle", False), ("candle", False),
+        ("light", True), ("la", True),
+    ]
+    soulx.soulx_metadata(notes)  # one word per note: the metadata accepts it
+
+
+def test_karaoke_text_events_are_lyrics(tmp_path):
+    text = lambda t, delta=0: ("text", delta, {"text": t})  # noqa: E731
+    events = [
+        text("@TTitle"), text("/Sun"), on(60), off(60, 480),
+        text("-ny"), on(62), off(62, 480), text("\\day"), on(64), off(64, 480),
+    ]
+    notes = notes_from_midi(raw_midi(tmp_path / "k.kar", [events]))
+    assert [(n.word, n.starts_word) for n in notes] == [
+        ("Sunny", True), ("Sunny", False), ("day", True)
     ]
 
 
@@ -155,6 +214,27 @@ def test_musicxml_syllables_ties_and_melismas(tmp_path):
     ]
     assert [round(n.start, 3) for n in notes] == [0.0, 0.6, 1.2, 3.0, 3.6]
     assert round(notes[2].dur, 3) == 1.2  # the tie
+
+
+def test_musicxml_skips_grace_notes_reads_one_voice_and_the_top_of_chords(tmp_path):
+    pytest.importorskip("music21")
+    grace = (
+        "<note><grace/><pitch><step>B</step><octave>3</octave></pitch>"
+        "<voice>1</voice><type>eighth</type></note>"
+    )
+    chord = (
+        xml_note("C", 4, 1, "oh")
+        + "<note><chord/><pitch><step>G</step><octave>4</octave></pitch>"
+        "<duration>1</duration><type>quarter</type></note>"
+    )
+    voice = lambda n, xml: xml.replace("<duration>", f"<voice>{n}</voice><duration>")  # noqa: E731
+    first = voice(1, grace + chord + xml_note("D", 4, 1, "my"))
+    second = voice(2, xml_note("C", 3, 2, "low"))
+    notes_xml = first + "<backup><duration>2</duration></backup>" + second
+    path = tmp_path / "v.musicxml"
+    path.write_text(MUSICXML.format(notes=notes_xml))
+    notes = notes_from_musicxml(path)
+    assert [(n.pitch, n.word) for n in notes] == [(67, "oh"), (62, "my")]
 
 
 def test_midi_and_musicxml_of_one_melody_give_the_same_metadata(tmp_path):
@@ -249,6 +329,20 @@ def test_prompt_metadata_keeps_the_clips_times():
     (prompt,) = soulx.soulx_prompt_metadata(notes)
     assert prompt["duration"] == "0.30 0.60 0.60"
     assert prompt["time"] == [0, 1500] and segment["time"] == [0, 1900]
+
+
+def test_long_lines_split_at_a_rest_when_there_is_one():
+    phrase = [(60, 1)] * 4 + [(0, 1)] + [(62, 1)] * 4
+    notes = sung(phrase * 2, " ".join(["la"] * 16), bpm=60)
+    segments = soulx.soulx_metadata(notes, max_segment_s=12)
+    assert [s["note_pitch"].split()[-1] for s in segments[:-1]] == ["0"] * (len(segments) - 1)
+    assert all(s["note_pitch"].split()[0] != "0" for s in segments[1:])
+
+
+@pytest.mark.parametrize("word", ["two words", "", "123"])
+def test_each_sung_note_needs_one_word(word):
+    with pytest.raises(ValueError, match="one word"):
+        soulx.soulx_metadata([Note(0, 1, 60, word)])
 
 
 def test_only_english_is_phonemized():
@@ -426,6 +520,44 @@ def test_adapter_sings_filling_phonemes_and_limiting_the_peak(adapter, tmp_path)
     assert reply["peak"] == 2.0 and abs(np.abs(samples).max() - 0.95) < 1e-3
 
 
+def test_adapter_places_segments_at_their_time_with_faded_joins(adapter, tmp_path):
+    state = adapter.load(repo_dir=str(adapter.repo), weights_dir="/w", device="cpu")
+    notes = [Note(0.0, 1.0, 60, "one"), Note(4.0, 1.0, 62, "two")]
+    meta = soulx.soulx_metadata(notes)
+    assert len(meta) == 2
+    prompt = soulx.soulx_prompt_metadata([Note(0.3, 0.5, 67, "la")])
+    out = tmp_path / "two.wav"
+    adapter.sing(
+        state, meta=meta, prompt_audio="p.wav", prompt_meta=prompt, out_path=str(out),
+        peak=None, pitch_shift=5,
+    )
+    assert [kw["pitch_shift"] for _, kw in FakeModel.calls] == [5, 5]
+    samples, sr = read_wav(out)  # each segment renders a ramp of 800 samples
+    first, second = (int(seg["time"][0] / 1000 * sr) for seg in meta)
+    assert second == int(4.3 * sr) and len(samples) == int(5.7 * sr)
+    fade = int(0.02 * sr)
+    assert samples[first] == pytest.approx(-1.0, abs=1e-3)  # first segment: no fade-in
+    assert abs(samples[second]) < 1e-3  # second segment fades in
+    assert abs(samples[first + 799]) < 0.1  # first fades out
+    halfway = fade // 2  # inside the fade-in: the ramp's value times the fade's
+    expected = (-2 + 4 * halfway / 799) * halfway / (fade - 1)
+    assert samples[second + halfway] == pytest.approx(expected, abs=0.01)
+
+
+def test_adapter_rejects_fields_of_different_lengths(adapter):
+    state = adapter.load(repo_dir=str(adapter.repo), weights_dir="/w", device="cpu")
+    (segment,) = soulx.soulx_metadata([Note(0, 1, 60, "hi")])
+    with pytest.raises(ValueError, match="different lengths"):
+        adapter.fill_phonemes(state, [{**segment, "text": "<SP> hi there <SP>"}])
+
+
+def test_loading_one_singer_frees_the_other(adapter):
+    state = adapter.load(repo_dir=str(adapter.repo), weights_dir="/w", device="cpu")
+    adapter._model(state, "svs")
+    adapter._model(state, "svc")
+    assert sorted(state["models"]) == ["svc"]
+
+
 def test_adapter_converts_with_rmvpe_f0_and_reports_the_shift(adapter, tmp_path):
     state = adapter.load(
         repo_dir=str(adapter.repo),
@@ -458,7 +590,10 @@ def test_adapter_runs_the_vocoder_on_the_cpu_on_mps(adapter):
 
 def test_adapter_refuses_to_guess_other_languages(adapter):
     state = adapter.load(repo_dir=str(adapter.repo), weights_dir="/w", device="cpu")
-    segment = {"language": "Mandarin", "text": "ni", "phoneme": ""}
+    segment = {
+        "language": "Mandarin", "text": "ni", "phoneme": "",
+        "duration": "0.5", "note_pitch": "60", "note_type": "2",
+    }
     with pytest.raises(NotImplementedError, match="Mandarin"):
         adapter.fill_phonemes(state, [segment])
     given = {**segment, "phoneme": "zh_n-i"}
@@ -519,8 +654,9 @@ def test_transpose_and_its_errors(cache):
     notes = sung([(60, 1)], "la")
     singing.sing(notes, model=model, voices={}, transpose="fit_voice")
     singing.sing(notes, model=model, voices={}, transpose=-3)
-    assert [r["pitch_shift"] for _, r in run.requests] == [0, -3]
-    assert [r["auto_shift"] for _, r in run.requests] == [True, False]
+    # the synthetic phrase's median note is D4 (62): C4 moves up 2, once for the song
+    assert [r["pitch_shift"] for _, r in run.requests] == [2, -3]
+    assert [r["auto_shift"] for _, r in run.requests] == [False, False]
     with pytest.raises(ValueError, match="semitones"):
         singing.sing(notes, model=model, voices={}, transpose="up")
     with pytest.raises(TypeError, match="set by voxy"):
@@ -620,23 +756,68 @@ def test_the_worker_gets_the_fetched_source(monkeypatch, tmp_path):
     assert init["weights"] == soulx.SOULX_WEIGHTS
 
 
-def test_ensure_git_source_fetches_one_commit_once(tmp_path):
-    commands = []
+class FakeGit:
+    """``run`` for git: records commands, answers rev-parse and status."""
 
-    def run(command, check):
-        commands.append(command[3:])
-        return None
+    def __init__(self, head, *, edits=""):
+        self.head, self.edits, self.commands = head, edits, []
 
+    def __call__(self, command, check, capture_output, text, env):
+        assert not any(k.startswith("GIT_") for k in env)
+        args = command[3:]
+        self.commands.append(args)
+        out = {"rev-parse": self.head + "\n", "status": self.edits}.get(args[0], "")
+        return types.SimpleNamespace(stdout=out)
+
+
+def test_ensure_git_source_fetches_one_commit_once_and_checks_it(tmp_path, monkeypatch):
+    monkeypatch.setenv("GIT_DIR", "/elsewhere")  # never reaches git
     source = GitSource("https://example.org/r.git", "a" * 40)
+    run = FakeGit(source.commit)
     path = ensure_git_source(source, "b", rootdir=tmp_path, run=run, log=lambda m: None)
     assert path == git_source_dir(source, "b", rootdir=tmp_path) and path.is_dir()
-    assert commands == [
-        ["init", "--quiet"],
-        ["fetch", "--quiet", "--depth", "1", source.url, source.commit],
-        ["checkout", "--quiet", "--detach", "FETCH_HEAD"],
+    assert [c[0] for c in run.commands] == [
+        "init", "fetch", "checkout", "rev-parse", "status", "rev-parse", "status"
     ]
+    assert run.commands[1] == ["fetch", "--quiet", "--depth", "1", source.url, source.commit]
+    run.commands.clear()
     ensure_git_source(source, "b", rootdir=tmp_path, run=run)
-    assert len(commands) == 3
+    assert [c[0] for c in run.commands] == ["rev-parse", "status"]  # reused, checked
+    with pytest.raises(RuntimeError, match="local edits"):
+        ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit(source.commit, edits=" M x.py"))
+    with pytest.raises(RuntimeError, match="not aaaaaaaaaaaa"):
+        ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit("b" * 40))
+
+
+def test_an_interrupted_fetch_is_started_afresh(tmp_path):
+    source = GitSource("https://example.org/r.git", "c" * 40)
+    final = git_source_dir(source, "b", rootdir=tmp_path)
+    partial = final.with_name(final.name + ".partial")
+    partial.mkdir(parents=True)
+    (partial / "half-written").write_text("x")
+    path = ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit(source.commit), log=lambda m: None)
+    assert path == final and not partial.exists() and not (path / "half-written").exists()
+    assert not final.with_name(final.name + ".lock").exists()
+
+
+def test_a_held_lock_times_out_with_a_hint(tmp_path):
+    source = GitSource("https://example.org/r.git", "d" * 40)
+    final = git_source_dir(source, "b", rootdir=tmp_path)
+    final.with_name(final.name + ".lock").mkdir(parents=True)
+    with pytest.raises(TimeoutError, match="delete it"):
+        ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit(source.commit), lock_timeout_s=0)
+
+
+def test_a_source_needs_a_full_sha():
+    with pytest.raises(ValueError, match="40-character"):
+        GitSource("https://example.org/r.git", "81aeb3a")
+
+
+def test_voice_bytes_are_kept_in_the_samples_store(tmp_path):
+    clip = write_wav(np.zeros(2400), 24000)
+    voice = singing.singing_voice(clip, rootdir=tmp_path)
+    path = Path(voice.segment["prompt_audio"])
+    assert path.read_bytes() == clip and path.parent == (tmp_path / "samples" / "singing-voices").resolve()
 
 
 def test_the_setup_command_knows_the_singing_env(monkeypatch, capsys):
