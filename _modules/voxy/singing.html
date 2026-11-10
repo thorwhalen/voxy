@@ -213,428 +213,470 @@
 </span><span id="line-17"><span class="sd">Only clone a singing voice with its owner's consent; each backend records its own</span>
 </span><span id="line-18"><span class="sd">usage restrictions in ``singing_backends()[name].consent``.</span>
 </span><span id="line-19">
-</span><span id="line-20"><span class="sd">Scores are MIDI or MusicXML files, music21 streams, or lists of ``voxy.score.Note``</span>
-</span><span id="line-21"><span class="sd">(``voxy.score.read_score``); lyrics are one token per note (``can-dle`` spreads a</span>
-</span><span id="line-22"><span class="sd">word over two notes, ``-`` holds it one more).</span>
-</span><span id="line-23">
-</span><span id="line-24"><span class="sd">Backends are ``SingingBackend`` records (``singing_backends()``), each running in</span>
-</span><span id="line-25"><span class="sd">its own environment (``python -m voxy setup soulx``); ``soulx`` (SoulX-Singer,</span>
-</span><span id="line-26"><span class="sd">Apache-2.0) is the built-in one. A model is the seam: ``sing(..., model=...)``</span>
-</span><span id="line-27"><span class="sd">takes any object with ``sing(notes, voice, *, transpose, language, **params)`` and</span>
-</span><span id="line-28"><span class="sd">``convert(audio_path, voice, *, transpose, **params)`` returning a ``Speech``.</span>
-</span><span id="line-29">
-</span><span id="line-30"><span class="sd">&gt;&gt;&gt; class Echo:</span>
-</span><span id="line-31"><span class="sd">...     name = "echo"</span>
-</span><span id="line-32"><span class="sd">...     def sing(self, notes, voice, **kw):</span>
-</span><span id="line-33"><span class="sd">...         return Speech(b"RIFF", "wav", "echo", text=" ".join(n.word for n in notes))</span>
-</span><span id="line-34"><span class="sd">&gt;&gt;&gt; from voxy.score import notes_from_pitches</span>
-</span><span id="line-35"><span class="sd">&gt;&gt;&gt; sing(notes_from_pitches([(60, 1), (62, 1)]), "do re", voice=VoiceProfile(</span>
-</span><span id="line-36"><span class="sd">...     {"prompt_audio": "v.wav", "prompt_notes": []}, 0, "echo", 24000), model=Echo()).text</span>
-</span><span id="line-37"><span class="sd">'do re'</span>
-</span><span id="line-38"><span class="sd">"""</span>
-</span><span id="line-39">
-</span><span id="line-40"><span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
-</span><span id="line-41"><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-</span><span id="line-42"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-</span><span id="line-43"><span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
-</span><span id="line-44"><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
-</span><span id="line-45"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">MutableMapping</span>
-</span><span id="line-46"><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-</span><span id="line-47"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="line-48"><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Protocol</span>
-</span><span id="line-49">
-</span><span id="line-50"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stores</span>
-</span><span id="line-51"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Speech</span><span class="p">,</span> <span class="n">VoiceProfile</span>
-</span><span id="line-52"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="n">GitSource</span><span class="p">,</span> <span class="n">ensure_git_source</span>
-</span><span id="line-53"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.library</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_voice</span><span class="p">,</span> <span class="n">profile_from_record</span>
-</span><span id="line-54"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorkerGenerate</span>
-</span><span id="line-55"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.score</span><span class="w"> </span><span class="kn">import</span> <span class="n">Note</span><span class="p">,</span> <span class="n">notes_from_pitches</span><span class="p">,</span> <span class="n">read_score</span>
-</span><span id="line-56"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_wav</span>
-</span><span id="line-57"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worker</span>
-</span><span id="line-58">
-</span><span id="line-59"><span class="n">DFLT_SINGING_BACKEND</span> <span class="o">=</span> <span class="s2">"soulx"</span>
-</span><span id="line-60"><span class="c1">#: The samples store that keeps singing clips given as bytes.</span>
-</span><span id="line-61"><span class="n">DFLT_SINGING_SAMPLES</span> <span class="o">=</span> <span class="s2">"singing-voices"</span>
-</span><span id="line-62"><span class="n">DFLT_LANGUAGE</span> <span class="o">=</span> <span class="s2">"English"</span>
-</span><span id="line-63"><span class="c1">#: ``transpose`` value meaning "move the melody into the voice's register".</span>
-</span><span id="line-64"><span class="n">FIT_VOICE</span> <span class="o">=</span> <span class="s2">"fit_voice"</span>
-</span><span id="line-65"><span class="n">Transpose</span> <span class="o">=</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"fit_voice"</span><span class="p">]</span>
-</span><span id="line-66"><span class="c1">#: Modules that register a built-in singing backend when imported.</span>
-</span><span id="line-67"><span class="n">BUILTIN_SINGING_MODULES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"voxy.soulx"</span><span class="p">,)</span>
-</span><span id="line-68"><span class="n">SYNTHETIC_PROMPT_LEAD_S</span> <span class="o">=</span> <span class="mf">0.3</span>
-</span><span id="line-69"><span class="n">SYNTHETIC_PROMPT_TAIL_S</span> <span class="o">=</span> <span class="mf">0.4</span>
-</span><span id="line-70"><span class="n">SYNTHETIC_PROMPT_BPM</span> <span class="o">=</span> <span class="mi">100</span>
-</span><span id="line-71"><span class="c1">#: The phrase the synthetic voices sing ("la" on each note): ``(midi, beats)``.</span>
-</span><span id="line-72"><span class="n">SYNTHETIC_PROMPT_PHRASE</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-73">    <span class="p">(</span><span class="mi">67</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-74">    <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-75">    <span class="p">(</span><span class="mi">65</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-76">    <span class="p">(</span><span class="mi">62</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-77">    <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-78">    <span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-79">    <span class="p">(</span><span class="mi">62</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-</span><span id="line-80">    <span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
-</span><span id="line-81"><span class="p">)</span>
-</span><span id="line-82"><span class="c1">#: Semitones each synthetic voice preset sings the phrase at, from as written.</span>
-</span><span id="line-83"><span class="n">SYNTHETIC_PRESET_TRANSPOSE</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"high"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="o">-</span><span class="mi">12</span><span class="p">}</span>
-</span><span id="line-84"><span class="n">SYNTHETIC_SAMPLE_RATE</span> <span class="o">=</span> <span class="mi">24000</span>
-</span><span id="line-85">
+</span><span id="line-20"><span class="sd">Scores are MIDI or MusicXML files, music21 streams, or lists of notes</span>
+</span><span id="line-21"><span class="sd">(``voxy.score.read_score``, which reads files with ``audiate.sung_line``); lyrics</span>
+</span><span id="line-22"><span class="sd">are one token per note (``can-dle`` spreads a word over two notes, ``-`` holds it</span>
+</span><span id="line-23"><span class="sd">one more).</span>
+</span><span id="line-24">
+</span><span id="line-25"><span class="sd">Backends are ``SingingBackend`` records (``singing_backends()``), each running in</span>
+</span><span id="line-26"><span class="sd">its own environment (``python -m voxy setup soulx``); ``soulx`` (SoulX-Singer,</span>
+</span><span id="line-27"><span class="sd">Apache-2.0) is the built-in one. A model is the seam: ``sing(..., model=...)``</span>
+</span><span id="line-28"><span class="sd">takes any object with ``sing(notes, voice, *, transpose, language, **params)`` and</span>
+</span><span id="line-29"><span class="sd">``convert(audio_path, voice, *, transpose, **params)`` returning a ``Speech``.</span>
+</span><span id="line-30">
+</span><span id="line-31"><span class="sd">&gt;&gt;&gt; class Echo:</span>
+</span><span id="line-32"><span class="sd">...     name = "echo"</span>
+</span><span id="line-33"><span class="sd">...     def sing(self, notes, voice, **kw):</span>
+</span><span id="line-34"><span class="sd">...         return Speech(b"RIFF", "wav", "echo", text=" ".join(n.word for n in notes))</span>
+</span><span id="line-35"><span class="sd">&gt;&gt;&gt; from voxy.score import notes_from_pitches</span>
+</span><span id="line-36"><span class="sd">&gt;&gt;&gt; sing(notes_from_pitches([(60, 1), (62, 1)]), "do re", voice=VoiceProfile(</span>
+</span><span id="line-37"><span class="sd">...     {"prompt_audio": "v.wav", "prompt_notes": []}, 0, "echo", 24000), model=Echo()).text</span>
+</span><span id="line-38"><span class="sd">'do re'</span>
+</span><span id="line-39"><span class="sd">"""</span>
+</span><span id="line-40">
+</span><span id="line-41"><span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+</span><span id="line-42"><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+</span><span id="line-43"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+</span><span id="line-44"><span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+</span><span id="line-45"><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+</span><span id="line-46"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">MutableMapping</span>
+</span><span id="line-47"><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+</span><span id="line-48"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="line-49"><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Protocol</span>
+</span><span id="line-50">
+</span><span id="line-51"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stores</span>
+</span><span id="line-52"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Speech</span><span class="p">,</span> <span class="n">VoiceProfile</span>
+</span><span id="line-53"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="n">GitSource</span><span class="p">,</span> <span class="n">ensure_git_source</span>
+</span><span id="line-54"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.library</span><span class="w"> </span><span class="kn">import</span> <span class="n">find_voice</span><span class="p">,</span> <span class="n">profile_from_record</span>
+</span><span id="line-55"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.local_clone</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorkerGenerate</span>
+</span><span id="line-56"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.score</span><span class="w"> </span><span class="kn">import</span> <span class="n">Note</span><span class="p">,</span> <span class="n">notes_from_pitches</span><span class="p">,</span> <span class="n">read_score</span>
+</span><span id="line-57"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_wav</span>
+</span><span id="line-58"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worker</span>
+</span><span id="line-59">
+</span><span id="line-60"><span class="n">DFLT_SINGING_BACKEND</span> <span class="o">=</span> <span class="s2">"soulx"</span>
+</span><span id="line-61"><span class="c1">#: The samples store that keeps singing clips given as bytes.</span>
+</span><span id="line-62"><span class="n">DFLT_SINGING_SAMPLES</span> <span class="o">=</span> <span class="s2">"singing-voices"</span>
+</span><span id="line-63"><span class="n">DFLT_LANGUAGE</span> <span class="o">=</span> <span class="s2">"English"</span>
+</span><span id="line-64"><span class="c1">#: ``transpose`` value meaning "move the melody into the voice's register".</span>
+</span><span id="line-65"><span class="n">FIT_VOICE</span> <span class="o">=</span> <span class="s2">"fit_voice"</span>
+</span><span id="line-66"><span class="n">Transpose</span> <span class="o">=</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"fit_voice"</span><span class="p">]</span>
+</span><span id="line-67"><span class="c1">#: Modules that register a built-in singing backend when imported.</span>
+</span><span id="line-68"><span class="n">BUILTIN_SINGING_MODULES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"voxy.soulx"</span><span class="p">,)</span>
+</span><span id="line-69"><span class="n">SYNTHETIC_PROMPT_LEAD_S</span> <span class="o">=</span> <span class="mf">0.3</span>
+</span><span id="line-70"><span class="n">SYNTHETIC_PROMPT_TAIL_S</span> <span class="o">=</span> <span class="mf">0.4</span>
+</span><span id="line-71"><span class="n">SYNTHETIC_PROMPT_BPM</span> <span class="o">=</span> <span class="mi">100</span>
+</span><span id="line-72"><span class="c1">#: The phrase the synthetic voices sing ("la" on each note): ``(midi, beats)``.</span>
+</span><span id="line-73"><span class="n">SYNTHETIC_PROMPT_PHRASE</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-74">    <span class="p">(</span><span class="mi">67</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-75">    <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-76">    <span class="p">(</span><span class="mi">65</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-77">    <span class="p">(</span><span class="mi">62</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-78">    <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-79">    <span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-80">    <span class="p">(</span><span class="mi">62</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+</span><span id="line-81">    <span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+</span><span id="line-82"><span class="p">)</span>
+</span><span id="line-83"><span class="c1">#: Semitones each synthetic voice preset sings the phrase at, from as written.</span>
+</span><span id="line-84"><span class="n">SYNTHETIC_PRESET_TRANSPOSE</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"high"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"low"</span><span class="p">:</span> <span class="o">-</span><span class="mi">12</span><span class="p">}</span>
+</span><span id="line-85"><span class="n">SYNTHETIC_SAMPLE_RATE</span> <span class="o">=</span> <span class="mi">24000</span>
 </span><span id="line-86">
+</span><span id="line-87">
 <div class="viewcode-block" id="SingingModel">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.SingingModel">[docs]</a>
-</span><span id="line-87"><span class="k">class</span><span class="w"> </span><span class="nc">SingingModel</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-</span><span id="line-88"><span class="w">    </span><span class="sd">"""What ``sing`` and ``convert_singing`` call."""</span>
-</span><span id="line-89">
-</span><span id="line-90">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="line-91">
-</span><span id="line-92">    <span class="k">def</span><span class="w"> </span><span class="nf">sing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">notes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="line-93">
-</span><span id="line-94">    <span class="k">def</span><span class="w"> </span><span class="nf">convert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span> <span class="o">...</span></div>
+</span><span id="line-88"><span class="k">class</span><span class="w"> </span><span class="nc">SingingModel</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span><span id="line-89"><span class="w">    </span><span class="sd">"""What ``sing`` and ``convert_singing`` call."""</span>
+</span><span id="line-90">
+</span><span id="line-91">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="line-92">
+</span><span id="line-93">    <span class="k">def</span><span class="w"> </span><span class="nf">sing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">notes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="line-94">
+</span><span id="line-95">    <span class="k">def</span><span class="w"> </span><span class="nf">convert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span> <span class="o">...</span></div>
 
-</span><span id="line-95">
 </span><span id="line-96">
+</span><span id="line-97">
 <div class="viewcode-block" id="SingingBackend">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.SingingBackend">[docs]</a>
-</span><span id="line-97"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-98"><span class="k">class</span><span class="w"> </span><span class="nc">SingingBackend</span><span class="p">:</span>
-</span><span id="line-99"><span class="w">    </span><span class="sd">"""What voxy knows about one singing model.</span>
-</span><span id="line-100">
-</span><span id="line-101"><span class="sd">    Args:</span>
-</span><span id="line-102"><span class="sd">        name: Registry name (also its adapter's, ``workers/{name}_adapter.py``).</span>
-</span><span id="line-103"><span class="sd">        env: The environment it runs in.</span>
-</span><span id="line-104"><span class="sd">        factory: ``(**kwargs) -&gt; SingingModel``.</span>
-</span><span id="line-105"><span class="sd">        init: Default keyword arguments of the adapter's ``load``.</span>
-</span><span id="line-106"><span class="sd">        params: Documented parameters and their defaults (pass any to ``sing``).</span>
-</span><span id="line-107"><span class="sd">        source: Code fetched at a pinned commit and handed to the adapter as</span>
-</span><span id="line-108"><span class="sd">            ``repo_dir`` (for a model that pip can't install), or None.</span>
-</span><span id="line-109"><span class="sd">        licence: Code and weights licences.</span>
-</span><span id="line-110"><span class="sd">        consent: The model's own restrictions on cloning and impersonation.</span>
-</span><span id="line-111"><span class="sd">        notes: One line on strengths and caveats.</span>
-</span><span id="line-112"><span class="sd">        sings, converts: Whether it does SVS, SVC.</span>
-</span><span id="line-113"><span class="sd">    """</span>
-</span><span id="line-114">
-</span><span id="line-115">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="line-116">    <span class="n">env</span><span class="p">:</span> <span class="n">EnvSpec</span>
-</span><span id="line-117">    <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">"SingingModel"</span><span class="p">]</span>
-</span><span id="line-118">    <span class="n">init</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
-</span><span id="line-119">    <span class="n">params</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
-</span><span id="line-120">    <span class="n">source</span><span class="p">:</span> <span class="n">GitSource</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-121">    <span class="n">licence</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
-</span><span id="line-122">    <span class="n">consent</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
-</span><span id="line-123">    <span class="n">notes</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
-</span><span id="line-124">    <span class="n">sings</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-</span><span id="line-125">    <span class="n">converts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></div>
+</span><span id="line-98"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-99"><span class="k">class</span><span class="w"> </span><span class="nc">SingingBackend</span><span class="p">:</span>
+</span><span id="line-100"><span class="w">    </span><span class="sd">"""What voxy knows about one singing model.</span>
+</span><span id="line-101">
+</span><span id="line-102"><span class="sd">    Args:</span>
+</span><span id="line-103"><span class="sd">        name: Registry name (also its adapter's, ``workers/{name}_adapter.py``).</span>
+</span><span id="line-104"><span class="sd">        env: The environment it runs in.</span>
+</span><span id="line-105"><span class="sd">        factory: ``(**kwargs) -&gt; SingingModel``.</span>
+</span><span id="line-106"><span class="sd">        init: Default keyword arguments of the adapter's ``load``.</span>
+</span><span id="line-107"><span class="sd">        params: Documented parameters and their defaults (pass any to ``sing``).</span>
+</span><span id="line-108"><span class="sd">        source: Code fetched at a pinned commit and handed to the adapter as</span>
+</span><span id="line-109"><span class="sd">            ``repo_dir`` (for a model that pip can't install), or None.</span>
+</span><span id="line-110"><span class="sd">        licence: Code and weights licences.</span>
+</span><span id="line-111"><span class="sd">        consent: The model's own restrictions on cloning and impersonation.</span>
+</span><span id="line-112"><span class="sd">        notes: One line on strengths and caveats.</span>
+</span><span id="line-113"><span class="sd">        sings, converts: Whether it does SVS, SVC.</span>
+</span><span id="line-114"><span class="sd">    """</span>
+</span><span id="line-115">
+</span><span id="line-116">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="line-117">    <span class="n">env</span><span class="p">:</span> <span class="n">EnvSpec</span>
+</span><span id="line-118">    <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">"SingingModel"</span><span class="p">]</span>
+</span><span id="line-119">    <span class="n">init</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+</span><span id="line-120">    <span class="n">params</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+</span><span id="line-121">    <span class="n">source</span><span class="p">:</span> <span class="n">GitSource</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-122">    <span class="n">licence</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+</span><span id="line-123">    <span class="n">consent</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+</span><span id="line-124">    <span class="n">notes</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+</span><span id="line-125">    <span class="n">sings</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span id="line-126">    <span class="n">converts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></div>
 
-</span><span id="line-126">
 </span><span id="line-127">
-</span><span id="line-128"><span class="n">_SINGING_BACKENDS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SingingBackend</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-129"><span class="c1">#: One model per backend, made on first use.</span>
-</span><span id="line-130"><span class="n">_singing_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">"SingingModel"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-131">
+</span><span id="line-128">
+</span><span id="line-129"><span class="n">_SINGING_BACKENDS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SingingBackend</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-130"><span class="c1">#: One model per backend, made on first use.</span>
+</span><span id="line-131"><span class="n">_singing_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">"SingingModel"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
 </span><span id="line-132">
+</span><span id="line-133">
 <div class="viewcode-block" id="register_singing_backend">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.register_singing_backend">[docs]</a>
-</span><span id="line-133"><span class="k">def</span><span class="w"> </span><span class="nf">register_singing_backend</span><span class="p">(</span>
-</span><span id="line-134">    <span class="n">backend</span><span class="p">:</span> <span class="n">SingingBackend</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">replace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-</span><span id="line-135"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SingingBackend</span><span class="p">:</span>
-</span><span id="line-136"><span class="w">    </span><span class="sd">"""Add a singing backend (``replace=False`` keeps one already registered)."""</span>
-</span><span id="line-137">    <span class="k">if</span> <span class="n">replace</span> <span class="ow">or</span> <span class="n">backend</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SINGING_BACKENDS</span><span class="p">:</span>
-</span><span id="line-138">        <span class="n">_SINGING_BACKENDS</span><span class="p">[</span><span class="n">backend</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">backend</span>
-</span><span id="line-139">    <span class="k">return</span> <span class="n">backend</span></div>
+</span><span id="line-134"><span class="k">def</span><span class="w"> </span><span class="nf">register_singing_backend</span><span class="p">(</span>
+</span><span id="line-135">    <span class="n">backend</span><span class="p">:</span> <span class="n">SingingBackend</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">replace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span id="line-136"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SingingBackend</span><span class="p">:</span>
+</span><span id="line-137"><span class="w">    </span><span class="sd">"""Add a singing backend (``replace=False`` keeps one already registered)."""</span>
+</span><span id="line-138">    <span class="k">if</span> <span class="n">replace</span> <span class="ow">or</span> <span class="n">backend</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SINGING_BACKENDS</span><span class="p">:</span>
+</span><span id="line-139">        <span class="n">_SINGING_BACKENDS</span><span class="p">[</span><span class="n">backend</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">backend</span>
+</span><span id="line-140">    <span class="k">return</span> <span class="n">backend</span></div>
 
-</span><span id="line-140">
 </span><span id="line-141">
+</span><span id="line-142">
 <div class="viewcode-block" id="singing_backends">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.singing_backends">[docs]</a>
-</span><span id="line-142"><span class="k">def</span><span class="w"> </span><span class="nf">singing_backends</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SingingBackend</span><span class="p">]:</span>
-</span><span id="line-143"><span class="w">    </span><span class="sd">"""Every singing backend, by name (the built-in ones registered first)."""</span>
-</span><span id="line-144">    <span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
-</span><span id="line-145">
-</span><span id="line-146">    <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">BUILTIN_SINGING_MODULES</span><span class="p">:</span>
-</span><span id="line-147">        <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
-</span><span id="line-148">    <span class="k">return</span> <span class="n">_SINGING_BACKENDS</span></div>
+</span><span id="line-143"><span class="k">def</span><span class="w"> </span><span class="nf">singing_backends</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">SingingBackend</span><span class="p">]:</span>
+</span><span id="line-144"><span class="w">    </span><span class="sd">"""Every singing backend, by name (the built-in ones registered first)."""</span>
+</span><span id="line-145">    <span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
+</span><span id="line-146">
+</span><span id="line-147">    <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">BUILTIN_SINGING_MODULES</span><span class="p">:</span>
+</span><span id="line-148">        <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
+</span><span id="line-149">    <span class="k">return</span> <span class="n">_SINGING_BACKENDS</span></div>
 
-</span><span id="line-149">
 </span><span id="line-150">
+</span><span id="line-151">
 <div class="viewcode-block" id="get_singing_model">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.get_singing_model">[docs]</a>
-</span><span id="line-151"><span class="k">def</span><span class="w"> </span><span class="nf">get_singing_model</span><span class="p">(</span>
-</span><span id="line-152">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-153"><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"SingingModel"</span><span class="p">:</span>
-</span><span id="line-154"><span class="w">    </span><span class="sd">"""The (cached) model of ``backend``; ``models`` replaces the shared cache."""</span>
-</span><span id="line-155">    <span class="n">cache</span> <span class="o">=</span> <span class="n">_singing_models</span> <span class="k">if</span> <span class="n">models</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">models</span>
-</span><span id="line-156">    <span class="k">if</span> <span class="n">backend</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cache</span><span class="p">:</span>
-</span><span id="line-157">        <span class="n">backends</span> <span class="o">=</span> <span class="n">singing_backends</span><span class="p">()</span>
-</span><span id="line-158">        <span class="k">if</span> <span class="n">backend</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">backends</span><span class="p">:</span>
-</span><span id="line-159">            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-</span><span id="line-160">                <span class="sa">f</span><span class="s2">"No singing backend </span><span class="si">{</span><span class="n">backend</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">backends</span><span class="p">))</span><span class="si">}</span><span class="s2">)"</span>
-</span><span id="line-161">            <span class="p">)</span>
-</span><span id="line-162">        <span class="n">cache</span><span class="p">[</span><span class="n">backend</span><span class="p">]</span> <span class="o">=</span> <span class="n">backends</span><span class="p">[</span><span class="n">backend</span><span class="p">]</span><span class="o">.</span><span class="n">factory</span><span class="p">()</span>
-</span><span id="line-163">    <span class="k">return</span> <span class="n">cache</span><span class="p">[</span><span class="n">backend</span><span class="p">]</span></div>
+</span><span id="line-152"><span class="k">def</span><span class="w"> </span><span class="nf">get_singing_model</span><span class="p">(</span>
+</span><span id="line-153">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-154"><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"SingingModel"</span><span class="p">:</span>
+</span><span id="line-155"><span class="w">    </span><span class="sd">"""The (cached) model of ``backend``; ``models`` replaces the shared cache."""</span>
+</span><span id="line-156">    <span class="n">cache</span> <span class="o">=</span> <span class="n">_singing_models</span> <span class="k">if</span> <span class="n">models</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">models</span>
+</span><span id="line-157">    <span class="k">if</span> <span class="n">backend</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cache</span><span class="p">:</span>
+</span><span id="line-158">        <span class="n">backends</span> <span class="o">=</span> <span class="n">singing_backends</span><span class="p">()</span>
+</span><span id="line-159">        <span class="k">if</span> <span class="n">backend</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">backends</span><span class="p">:</span>
+</span><span id="line-160">            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+</span><span id="line-161">                <span class="sa">f</span><span class="s2">"No singing backend </span><span class="si">{</span><span class="n">backend</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">backends</span><span class="p">))</span><span class="si">}</span><span class="s2">)"</span>
+</span><span id="line-162">            <span class="p">)</span>
+</span><span id="line-163">        <span class="n">cache</span><span class="p">[</span><span class="n">backend</span><span class="p">]</span> <span class="o">=</span> <span class="n">backends</span><span class="p">[</span><span class="n">backend</span><span class="p">]</span><span class="o">.</span><span class="n">factory</span><span class="p">()</span>
+</span><span id="line-164">    <span class="k">return</span> <span class="n">cache</span><span class="p">[</span><span class="n">backend</span><span class="p">]</span></div>
 
-</span><span id="line-164">
 </span><span id="line-165">
+</span><span id="line-166">
 <div class="viewcode-block" id="close_singing_models">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.close_singing_models">[docs]</a>
-</span><span id="line-166"><span class="k">def</span><span class="w"> </span><span class="nf">close_singing_models</span><span class="p">(</span><span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-167"><span class="w">    </span><span class="sd">"""Stop the cached singing models' workers and free their memory (a model stays</span>
-</span><span id="line-168"><span class="sd">    loaded, about 6 GB for SoulX, until this is called or the process ends)."""</span>
-</span><span id="line-169">    <span class="n">cache</span> <span class="o">=</span> <span class="n">_singing_models</span> <span class="k">if</span> <span class="n">models</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">models</span>
-</span><span id="line-170">    <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">cache</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
-</span><span id="line-171">        <span class="n">close</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"close"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-172">        <span class="k">if</span> <span class="n">close</span><span class="p">:</span>
-</span><span id="line-173">            <span class="n">close</span><span class="p">()</span>
-</span><span id="line-174">    <span class="n">cache</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+</span><span id="line-167"><span class="k">def</span><span class="w"> </span><span class="nf">close_singing_models</span><span class="p">(</span><span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-168"><span class="w">    </span><span class="sd">"""Stop the cached singing models' workers and free their memory (a model stays</span>
+</span><span id="line-169"><span class="sd">    loaded, about 6 GB for SoulX, until this is called or the process ends)."""</span>
+</span><span id="line-170">    <span class="n">cache</span> <span class="o">=</span> <span class="n">_singing_models</span> <span class="k">if</span> <span class="n">models</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">models</span>
+</span><span id="line-171">    <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">cache</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+</span><span id="line-172">        <span class="n">close</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"close"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-173">        <span class="k">if</span> <span class="n">close</span><span class="p">:</span>
+</span><span id="line-174">            <span class="n">close</span><span class="p">()</span>
+</span><span id="line-175">    <span class="n">cache</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
 
-</span><span id="line-175">
 </span><span id="line-176">
-</span><span id="line-177"><span class="c1"># --------------------------------------------------------------------------- worker</span>
-</span><span id="line-178">
+</span><span id="line-177">
+</span><span id="line-178"><span class="c1"># --------------------------------------------------------------------------- worker</span>
 </span><span id="line-179">
+</span><span id="line-180">
 <div class="viewcode-block" id="SingingWorker">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.SingingWorker">[docs]</a>
-</span><span id="line-180"><span class="k">class</span><span class="w"> </span><span class="nc">SingingWorker</span><span class="p">(</span><span class="n">WorkerGenerate</span><span class="p">):</span>
-</span><span id="line-181"><span class="w">    </span><span class="sd">"""The default model call of a singing backend: its adapter in its own</span>
-</span><span id="line-182"><span class="sd">    environment, given the backend's fetched ``source`` as ``repo_dir``.</span>
-</span><span id="line-183">
-</span><span id="line-184"><span class="sd">    ``worker(op, **request)`` runs operation ``op``, which writes a WAV to the</span>
-</span><span id="line-185"><span class="sd">    ``out_path`` it is given, and returns ``(samples, sample_rate)``.</span>
-</span><span id="line-186"><span class="sd">    """</span>
-</span><span id="line-187">
-</span><span id="line-188">    <span class="k">def</span><span class="w"> </span><span class="nf">_make_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Worker</span><span class="p">:</span>
-</span><span id="line-189">        <span class="n">source</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span> <span class="s2">"source"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-190">        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">"repo_dir"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">:</span>
-</span><span id="line-191">            <span class="n">path</span> <span class="o">=</span> <span class="n">ensure_git_source</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rootdir</span><span class="p">)</span>
-</span><span id="line-192">            <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">,</span> <span class="s2">"repo_dir"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)}</span>
-</span><span id="line-193">        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_make_worker</span><span class="p">()</span>
-</span><span id="line-194">
-</span><span id="line-195">    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">):</span>
-</span><span id="line-196">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">)</span></div>
+</span><span id="line-181"><span class="k">class</span><span class="w"> </span><span class="nc">SingingWorker</span><span class="p">(</span><span class="n">WorkerGenerate</span><span class="p">):</span>
+</span><span id="line-182"><span class="w">    </span><span class="sd">"""The default model call of a singing backend: its adapter in its own</span>
+</span><span id="line-183"><span class="sd">    environment, given the backend's fetched ``source`` as ``repo_dir``.</span>
+</span><span id="line-184">
+</span><span id="line-185"><span class="sd">    ``worker(op, **request)`` runs operation ``op``, which writes a WAV to the</span>
+</span><span id="line-186"><span class="sd">    ``out_path`` it is given, and returns ``(samples, sample_rate)``.</span>
+</span><span id="line-187"><span class="sd">    """</span>
+</span><span id="line-188">
+</span><span id="line-189">    <span class="k">def</span><span class="w"> </span><span class="nf">_make_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Worker</span><span class="p">:</span>
+</span><span id="line-190">        <span class="n">source</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span> <span class="s2">"source"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-191">        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">"repo_dir"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">:</span>
+</span><span id="line-192">            <span class="n">path</span> <span class="o">=</span> <span class="n">ensure_git_source</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rootdir</span><span class="p">)</span>
+</span><span id="line-193">            <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">,</span> <span class="s2">"repo_dir"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)}</span>
+</span><span id="line-194">        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_make_worker</span><span class="p">()</span>
+</span><span id="line-195">
+</span><span id="line-196">    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">):</span>
+</span><span id="line-197">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">)</span></div>
 
-</span><span id="line-197">
 </span><span id="line-198">
-</span><span id="line-199"><span class="c1"># --------------------------------------------------------------------------- voices</span>
-</span><span id="line-200">
+</span><span id="line-199">
+</span><span id="line-200"><span class="c1"># --------------------------------------------------------------------------- voices</span>
 </span><span id="line-201">
-</span><span id="line-202"><span class="k">def</span><span class="w"> </span><span class="nf">_notes_data</span><span class="p">(</span><span class="n">notes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-203">    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">notes</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">asdict</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">]</span>
-</span><span id="line-204">
+</span><span id="line-202">
+</span><span id="line-203"><span class="k">def</span><span class="w"> </span><span class="nf">_notes_data</span><span class="p">(</span><span class="n">notes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-204">    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">notes</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">asdict</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">]</span>
 </span><span id="line-205">
+</span><span id="line-206">
 <div class="viewcode-block" id="singing_voice">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.singing_voice">[docs]</a>
-</span><span id="line-206"><span class="k">def</span><span class="w"> </span><span class="nf">singing_voice</span><span class="p">(</span>
-</span><span id="line-207">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">,</span>
-</span><span id="line-208">    <span class="n">score</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="line-209">    <span class="n">lyrics</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-210">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-211">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span>
-</span><span id="line-212">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">SYNTHETIC_SAMPLE_RATE</span><span class="p">,</span>
-</span><span id="line-213">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_SAMPLES</span><span class="p">,</span>
-</span><span id="line-214">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-215">    <span class="o">**</span><span class="n">metadata</span><span class="p">,</span>
-</span><span id="line-216"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
-</span><span id="line-217"><span class="w">    </span><span class="sd">"""A singing voice: a sung clip, and (for synthesis) the score it sings.</span>
-</span><span id="line-218">
-</span><span id="line-219"><span class="sd">    Args:</span>
-</span><span id="line-220"><span class="sd">        audio: The clip, 5 to 30 s of one voice singing, without accompaniment: a</span>
-</span><span id="line-221"><span class="sd">            path, or WAV bytes (kept in the samples store of voice ``name``, under</span>
-</span><span id="line-222"><span class="sd">            the data root ``rootdir``, so the voice outlives the session).</span>
-</span><span id="line-223"><span class="sd">        score: What the clip sings, timed as in the clip (a MIDI or MusicXML file,</span>
-</span><span id="line-224"><span class="sd">            a music21 stream, or notes; see ``voxy.score.read_score``). Needed by</span>
-</span><span id="line-225"><span class="sd">            ``sing``; ``convert_singing`` needs only the clip.</span>
-</span><span id="line-226"><span class="sd">        lyrics: Its words, if the score has none.</span>
-</span><span id="line-227"><span class="sd">        backend: The backend the voice is for (its ``model_type``).</span>
-</span><span id="line-228"><span class="sd">        **metadata: Kept with the voice (e.g. ``consent=``, ``description=``).</span>
-</span><span id="line-229">
-</span><span id="line-230"><span class="sd">    The profile's ``segment`` is plain data (``prompt_audio`` path, ``prompt_notes``),</span>
-</span><span id="line-231"><span class="sd">    so it can be saved in the voice library: ``voxy.save_voice(name, voice,</span>
-</span><span id="line-232"><span class="sd">    consent=...)``.</span>
-</span><span id="line-233"><span class="sd">    """</span>
-</span><span id="line-234">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
-</span><span id="line-235">        <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"prompt-</span><span class="si">{</span><span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">16</span><span class="p">]</span><span class="si">}</span><span class="s2">.wav"</span>
-</span><span id="line-236">        <span class="n">stores</span><span class="o">.</span><span class="n">samples_store</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">audio</span>
-</span><span id="line-237">        <span class="n">audio</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">kind_dir</span><span class="p">(</span><span class="n">stores</span><span class="o">.</span><span class="n">SAMPLES_KIND</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span> <span class="o">/</span> <span class="n">key</span>
-</span><span id="line-238">    <span class="n">notes</span> <span class="o">=</span> <span class="n">read_score</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">lyrics</span><span class="p">)</span> <span class="k">if</span> <span class="n">score</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
-</span><span id="line-239">    <span class="k">return</span> <span class="n">VoiceProfile</span><span class="p">(</span>
-</span><span id="line-240">        <span class="p">{</span>
-</span><span id="line-241">            <span class="s2">"prompt_audio"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>
-</span><span id="line-242">            <span class="s2">"prompt_notes"</span><span class="p">:</span> <span class="n">_notes_data</span><span class="p">(</span><span class="n">notes</span><span class="p">),</span>
-</span><span id="line-243">        <span class="p">},</span>
-</span><span id="line-244">        <span class="mi">0</span><span class="p">,</span>
-</span><span id="line-245">        <span class="n">backend</span><span class="p">,</span>
-</span><span id="line-246">        <span class="n">sample_rate</span><span class="p">,</span>
-</span><span id="line-247">        <span class="n">metadata</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-248">    <span class="p">)</span></div>
+</span><span id="line-207"><span class="k">def</span><span class="w"> </span><span class="nf">singing_voice</span><span class="p">(</span>
+</span><span id="line-208">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">,</span>
+</span><span id="line-209">    <span class="n">score</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-210">    <span class="n">lyrics</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-211">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-212">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span>
+</span><span id="line-213">    <span class="n">sample_rate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">SYNTHETIC_SAMPLE_RATE</span><span class="p">,</span>
+</span><span id="line-214">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_SAMPLES</span><span class="p">,</span>
+</span><span id="line-215">    <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-216">    <span class="n">track</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-217">    <span class="n">channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-218">    <span class="n">part</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-219">    <span class="n">verse</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-220">    <span class="n">score_voice</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-221">    <span class="n">chords</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-222">    <span class="o">**</span><span class="n">metadata</span><span class="p">,</span>
+</span><span id="line-223"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-224"><span class="w">    </span><span class="sd">"""A singing voice: a sung clip, and (for synthesis) the score it sings.</span>
+</span><span id="line-225">
+</span><span id="line-226"><span class="sd">    Args:</span>
+</span><span id="line-227"><span class="sd">        audio: The clip, 5 to 30 s of one voice singing, without accompaniment: a</span>
+</span><span id="line-228"><span class="sd">            path, or WAV bytes (kept in the samples store of voice ``name``, under</span>
+</span><span id="line-229"><span class="sd">            the data root ``rootdir``, so the voice outlives the session).</span>
+</span><span id="line-230"><span class="sd">        score: What the clip sings, timed as in the clip (a MIDI or MusicXML file,</span>
+</span><span id="line-231"><span class="sd">            a music21 stream, or notes, such as ``audiate.sung_line`` returns for</span>
+</span><span id="line-232"><span class="sd">            a line its defaults don't pick; see ``voxy.score.read_score``). Needed by</span>
+</span><span id="line-233"><span class="sd">            ``sing``; ``convert_singing`` needs only the clip.</span>
+</span><span id="line-234"><span class="sd">        lyrics: Its words, if the score has none.</span>
+</span><span id="line-235"><span class="sd">        backend: The backend the voice is for (its ``model_type``).</span>
+</span><span id="line-236"><span class="sd">        track, channel, part, verse, score_voice, chords: Which line of the</span>
+</span><span id="line-237"><span class="sd">            score the clip sings, as in ``sing``.</span>
+</span><span id="line-238"><span class="sd">        **metadata: Kept with the voice (e.g. ``consent=``, ``description=``).</span>
+</span><span id="line-239">
+</span><span id="line-240"><span class="sd">    The profile's ``segment`` is plain data (``prompt_audio`` path, ``prompt_notes``),</span>
+</span><span id="line-241"><span class="sd">    so it can be saved in the voice library: ``voxy.save_voice(name, voice,</span>
+</span><span id="line-242"><span class="sd">    consent=...)``.</span>
+</span><span id="line-243"><span class="sd">    """</span>
+</span><span id="line-244">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+</span><span id="line-245">        <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"prompt-</span><span class="si">{</span><span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">16</span><span class="p">]</span><span class="si">}</span><span class="s2">.wav"</span>
+</span><span id="line-246">        <span class="n">stores</span><span class="o">.</span><span class="n">samples_store</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">audio</span>
+</span><span id="line-247">        <span class="n">audio</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">kind_dir</span><span class="p">(</span><span class="n">stores</span><span class="o">.</span><span class="n">SAMPLES_KIND</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">)</span> <span class="o">/</span> <span class="n">key</span>
+</span><span id="line-248">    <span class="n">line</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+</span><span id="line-249">        <span class="n">track</span><span class="o">=</span><span class="n">track</span><span class="p">,</span>
+</span><span id="line-250">        <span class="n">channel</span><span class="o">=</span><span class="n">channel</span><span class="p">,</span>
+</span><span id="line-251">        <span class="n">part</span><span class="o">=</span><span class="n">part</span><span class="p">,</span>
+</span><span id="line-252">        <span class="n">verse</span><span class="o">=</span><span class="n">verse</span><span class="p">,</span>
+</span><span id="line-253">        <span class="n">score_voice</span><span class="o">=</span><span class="n">score_voice</span><span class="p">,</span>
+</span><span id="line-254">        <span class="n">chords</span><span class="o">=</span><span class="n">chords</span><span class="p">,</span>
+</span><span id="line-255">    <span class="p">)</span>
+</span><span id="line-256">    <span class="n">notes</span> <span class="o">=</span> <span class="n">read_score</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">lyrics</span><span class="p">,</span> <span class="o">**</span><span class="n">line</span><span class="p">)</span> <span class="k">if</span> <span class="n">score</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+</span><span id="line-257">    <span class="k">return</span> <span class="n">VoiceProfile</span><span class="p">(</span>
+</span><span id="line-258">        <span class="p">{</span>
+</span><span id="line-259">            <span class="s2">"prompt_audio"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>
+</span><span id="line-260">            <span class="s2">"prompt_notes"</span><span class="p">:</span> <span class="n">_notes_data</span><span class="p">(</span><span class="n">notes</span><span class="p">),</span>
+</span><span id="line-261">        <span class="p">},</span>
+</span><span id="line-262">        <span class="mi">0</span><span class="p">,</span>
+</span><span id="line-263">        <span class="n">backend</span><span class="p">,</span>
+</span><span id="line-264">        <span class="n">sample_rate</span><span class="p">,</span>
+</span><span id="line-265">        <span class="n">metadata</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-266">    <span class="p">)</span></div>
 
-</span><span id="line-249">
-</span><span id="line-250">
+</span><span id="line-267">
+</span><span id="line-268">
 <div class="viewcode-block" id="synthetic_singing_voice">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.synthetic_singing_voice">[docs]</a>
-</span><span id="line-251"><span class="k">def</span><span class="w"> </span><span class="nf">synthetic_singing_voice</span><span class="p">(</span>
-</span><span id="line-252">    <span class="n">preset</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"high"</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span>
-</span><span id="line-253"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
-</span><span id="line-254"><span class="w">    </span><span class="sd">"""A voice that belongs to no one: a formant synthesiser singing "la" on a short</span>
-</span><span id="line-255"><span class="sd">    phrase (``voxy.formant_singer``), rendered once into voxy's cache (the file is</span>
-</span><span id="line-256"><span class="sd">    named by a hash of everything it is rendered from, so a change re-renders it).</span>
-</span><span id="line-257">
-</span><span id="line-258"><span class="sd">    ``preset`` is 'high' or 'low' (an octave down, darker vowels).</span>
-</span><span id="line-259"><span class="sd">    """</span>
-</span><span id="line-260">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.formant_singer</span><span class="w"> </span><span class="kn">import</span> <span class="n">FORMANT_PRESETS</span><span class="p">,</span> <span class="n">SYNTH_VERSION</span><span class="p">,</span> <span class="n">sing_la</span>
-</span><span id="line-261">
-</span><span id="line-262">    <span class="n">notes</span> <span class="o">=</span> <span class="n">notes_from_pitches</span><span class="p">(</span>
-</span><span id="line-263">        <span class="p">[</span>
-</span><span id="line-264">            <span class="p">(</span><span class="n">p</span> <span class="o">+</span> <span class="n">SYNTHETIC_PRESET_TRANSPOSE</span><span class="p">[</span><span class="n">preset</span><span class="p">],</span> <span class="n">b</span><span class="p">)</span>
-</span><span id="line-265">            <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">SYNTHETIC_PROMPT_PHRASE</span>
-</span><span id="line-266">        <span class="p">],</span>
-</span><span id="line-267">        <span class="n">bpm</span><span class="o">=</span><span class="n">SYNTHETIC_PROMPT_BPM</span><span class="p">,</span>
-</span><span id="line-268">        <span class="n">start</span><span class="o">=</span><span class="n">SYNTHETIC_PROMPT_LEAD_S</span><span class="p">,</span>
-</span><span id="line-269">    <span class="p">)</span>
-</span><span id="line-270">    <span class="n">notes</span> <span class="o">=</span> <span class="p">[</span><span class="n">Note</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">n</span><span class="o">.</span><span class="n">dur</span><span class="p">,</span> <span class="n">n</span><span class="o">.</span><span class="n">pitch</span><span class="p">,</span> <span class="s2">"la"</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">]</span>
-</span><span id="line-271">    <span class="n">settings</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
-</span><span id="line-272">        <span class="p">[</span>
-</span><span id="line-273">            <span class="n">SYNTH_VERSION</span><span class="p">,</span>
-</span><span id="line-274">            <span class="n">preset</span><span class="p">,</span>
-</span><span id="line-275">            <span class="n">FORMANT_PRESETS</span><span class="p">[</span><span class="n">preset</span><span class="p">],</span>
-</span><span id="line-276">            <span class="p">[</span><span class="n">asdict</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">],</span>
-</span><span id="line-277">            <span class="n">SYNTHETIC_PROMPT_TAIL_S</span><span class="p">,</span>
-</span><span id="line-278">            <span class="n">SYNTHETIC_SAMPLE_RATE</span><span class="p">,</span>
-</span><span id="line-279">        <span class="p">]</span>
-</span><span id="line-280">    <span class="p">)</span>
-</span><span id="line-281">    <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">12</span><span class="p">]</span>
-</span><span id="line-282">    <span class="n">path</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"singing"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"synthetic-</span><span class="si">{</span><span class="n">preset</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">digest</span><span class="si">}</span><span class="s2">.wav"</span><span class="p">)</span>
-</span><span id="line-283">    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="line-284">        <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-285">        <span class="n">samples</span> <span class="o">=</span> <span class="n">sing_la</span><span class="p">(</span>
-</span><span id="line-286">            <span class="n">notes</span><span class="p">,</span>
-</span><span id="line-287">            <span class="n">sample_rate</span><span class="o">=</span><span class="n">SYNTHETIC_SAMPLE_RATE</span><span class="p">,</span>
-</span><span id="line-288">            <span class="n">preset</span><span class="o">=</span><span class="n">preset</span><span class="p">,</span>
-</span><span id="line-289">            <span class="n">tail_s</span><span class="o">=</span><span class="n">SYNTHETIC_PROMPT_TAIL_S</span><span class="p">,</span>
-</span><span id="line-290">        <span class="p">)</span>
-</span><span id="line-291">        <span class="n">partial</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">threading</span><span class="o">.</span><span class="n">get_ident</span><span class="p">()</span><span class="si">}</span><span class="s2">.part"</span><span class="p">)</span>
-</span><span id="line-292">        <span class="n">partial</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">write_wav</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">SYNTHETIC_SAMPLE_RATE</span><span class="p">))</span>
-</span><span id="line-293">        <span class="n">partial</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="line-294">    <span class="k">return</span> <span class="n">singing_voice</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">notes</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">,</span> <span class="n">synthetic</span><span class="o">=</span><span class="n">preset</span><span class="p">)</span></div>
+</span><span id="line-269"><span class="k">def</span><span class="w"> </span><span class="nf">synthetic_singing_voice</span><span class="p">(</span>
+</span><span id="line-270">    <span class="n">preset</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"high"</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span>
+</span><span id="line-271"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-272"><span class="w">    </span><span class="sd">"""A voice that belongs to no one: a formant synthesiser singing "la" on a short</span>
+</span><span id="line-273"><span class="sd">    phrase (``voxy.formant_singer``), rendered once into voxy's cache (the file is</span>
+</span><span id="line-274"><span class="sd">    named by a hash of everything it is rendered from, so a change re-renders it).</span>
+</span><span id="line-275">
+</span><span id="line-276"><span class="sd">    ``preset`` is 'high' or 'low' (an octave down, darker vowels).</span>
+</span><span id="line-277"><span class="sd">    """</span>
+</span><span id="line-278">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.formant_singer</span><span class="w"> </span><span class="kn">import</span> <span class="n">FORMANT_PRESETS</span><span class="p">,</span> <span class="n">SYNTH_VERSION</span><span class="p">,</span> <span class="n">sing_la</span>
+</span><span id="line-279">
+</span><span id="line-280">    <span class="n">notes</span> <span class="o">=</span> <span class="n">notes_from_pitches</span><span class="p">(</span>
+</span><span id="line-281">        <span class="p">[</span>
+</span><span id="line-282">            <span class="p">(</span><span class="n">p</span> <span class="o">+</span> <span class="n">SYNTHETIC_PRESET_TRANSPOSE</span><span class="p">[</span><span class="n">preset</span><span class="p">],</span> <span class="n">b</span><span class="p">)</span>
+</span><span id="line-283">            <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">SYNTHETIC_PROMPT_PHRASE</span>
+</span><span id="line-284">        <span class="p">],</span>
+</span><span id="line-285">        <span class="n">bpm</span><span class="o">=</span><span class="n">SYNTHETIC_PROMPT_BPM</span><span class="p">,</span>
+</span><span id="line-286">        <span class="n">start</span><span class="o">=</span><span class="n">SYNTHETIC_PROMPT_LEAD_S</span><span class="p">,</span>
+</span><span id="line-287">    <span class="p">)</span>
+</span><span id="line-288">    <span class="n">notes</span> <span class="o">=</span> <span class="p">[</span><span class="n">Note</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">n</span><span class="o">.</span><span class="n">dur</span><span class="p">,</span> <span class="n">n</span><span class="o">.</span><span class="n">pitch</span><span class="p">,</span> <span class="s2">"la"</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">]</span>
+</span><span id="line-289">    <span class="n">settings</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+</span><span id="line-290">        <span class="p">[</span>
+</span><span id="line-291">            <span class="n">SYNTH_VERSION</span><span class="p">,</span>
+</span><span id="line-292">            <span class="n">preset</span><span class="p">,</span>
+</span><span id="line-293">            <span class="n">FORMANT_PRESETS</span><span class="p">[</span><span class="n">preset</span><span class="p">],</span>
+</span><span id="line-294">            <span class="p">[</span><span class="n">asdict</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">],</span>
+</span><span id="line-295">            <span class="n">SYNTHETIC_PROMPT_TAIL_S</span><span class="p">,</span>
+</span><span id="line-296">            <span class="n">SYNTHETIC_SAMPLE_RATE</span><span class="p">,</span>
+</span><span id="line-297">        <span class="p">]</span>
+</span><span id="line-298">    <span class="p">)</span>
+</span><span id="line-299">    <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">12</span><span class="p">]</span>
+</span><span id="line-300">    <span class="n">path</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voxy_cache_dir</span><span class="p">(</span><span class="s2">"singing"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"synthetic-</span><span class="si">{</span><span class="n">preset</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">digest</span><span class="si">}</span><span class="s2">.wav"</span><span class="p">)</span>
+</span><span id="line-301">    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="line-302">        <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-303">        <span class="n">samples</span> <span class="o">=</span> <span class="n">sing_la</span><span class="p">(</span>
+</span><span id="line-304">            <span class="n">notes</span><span class="p">,</span>
+</span><span id="line-305">            <span class="n">sample_rate</span><span class="o">=</span><span class="n">SYNTHETIC_SAMPLE_RATE</span><span class="p">,</span>
+</span><span id="line-306">            <span class="n">preset</span><span class="o">=</span><span class="n">preset</span><span class="p">,</span>
+</span><span id="line-307">            <span class="n">tail_s</span><span class="o">=</span><span class="n">SYNTHETIC_PROMPT_TAIL_S</span><span class="p">,</span>
+</span><span id="line-308">        <span class="p">)</span>
+</span><span id="line-309">        <span class="n">partial</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="sa">f</span><span class="s2">".</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">threading</span><span class="o">.</span><span class="n">get_ident</span><span class="p">()</span><span class="si">}</span><span class="s2">.part"</span><span class="p">)</span>
+</span><span id="line-310">        <span class="n">partial</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">write_wav</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">SYNTHETIC_SAMPLE_RATE</span><span class="p">))</span>
+</span><span id="line-311">        <span class="n">partial</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="line-312">    <span class="k">return</span> <span class="n">singing_voice</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">notes</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">,</span> <span class="n">synthetic</span><span class="o">=</span><span class="n">preset</span><span class="p">)</span></div>
 
-</span><span id="line-295">
-</span><span id="line-296">
+</span><span id="line-313">
+</span><span id="line-314">
 <div class="viewcode-block" id="resolve_singing_voice">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.resolve_singing_voice">[docs]</a>
-</span><span id="line-297"><span class="k">def</span><span class="w"> </span><span class="nf">resolve_singing_voice</span><span class="p">(</span>
-</span><span id="line-298">    <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-299">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-300">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span>
-</span><span id="line-301">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-302"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
-</span><span id="line-303"><span class="w">    </span><span class="sd">"""The singing voice ``voice`` names: a profile as is; a library name or alias</span>
-</span><span id="line-304"><span class="sd">    (its ``backend`` profile); a path to a sung clip (for conversion); None, the</span>
-</span><span id="line-305"><span class="sd">    synthetic voice."""</span>
-</span><span id="line-306">    <span class="k">if</span> <span class="n">voice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-307">        <span class="k">return</span> <span class="n">synthetic_singing_voice</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
-</span><span id="line-308">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">VoiceProfile</span><span class="p">):</span>
-</span><span id="line-309">        <span class="k">return</span> <span class="n">voice</span>
-</span><span id="line-310">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="line-311">        <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
-</span><span id="line-312">        <span class="n">key</span> <span class="o">=</span> <span class="n">find_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
-</span><span id="line-313">        <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-314">            <span class="k">return</span> <span class="n">profile_from_record</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">backend</span><span class="p">)</span>
-</span><span id="line-315">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">))</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-</span><span id="line-316">        <span class="k">return</span> <span class="n">singing_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
-</span><span id="line-317">    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-318">        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">voice</span><span class="si">!r}</span><span class="s2"> is neither a library voice nor a clip: make one with "</span>
-</span><span id="line-319">        <span class="s2">"voxy.singing_voice(audio, score, lyrics)"</span>
-</span><span id="line-320">    <span class="p">)</span></div>
+</span><span id="line-315"><span class="k">def</span><span class="w"> </span><span class="nf">resolve_singing_voice</span><span class="p">(</span>
+</span><span id="line-316">    <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-317">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-318">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span>
+</span><span id="line-319">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-320"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VoiceProfile</span><span class="p">:</span>
+</span><span id="line-321"><span class="w">    </span><span class="sd">"""The singing voice ``voice`` names: a profile as is; a library name or alias</span>
+</span><span id="line-322"><span class="sd">    (its ``backend`` profile); a path to a sung clip (for conversion); None, the</span>
+</span><span id="line-323"><span class="sd">    synthetic voice."""</span>
+</span><span id="line-324">    <span class="k">if</span> <span class="n">voice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-325">        <span class="k">return</span> <span class="n">synthetic_singing_voice</span><span class="p">(</span><span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
+</span><span id="line-326">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">VoiceProfile</span><span class="p">):</span>
+</span><span id="line-327">        <span class="k">return</span> <span class="n">voice</span>
+</span><span id="line-328">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="line-329">        <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
+</span><span id="line-330">        <span class="n">key</span> <span class="o">=</span> <span class="n">find_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
+</span><span id="line-331">        <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-332">            <span class="k">return</span> <span class="n">profile_from_record</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">backend</span><span class="p">)</span>
+</span><span id="line-333">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">))</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+</span><span id="line-334">        <span class="k">return</span> <span class="n">singing_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">)</span>
+</span><span id="line-335">    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-336">        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">voice</span><span class="si">!r}</span><span class="s2"> is neither a library voice nor a clip: make one with "</span>
+</span><span id="line-337">        <span class="s2">"voxy.singing_voice(audio, score, lyrics)"</span>
+</span><span id="line-338">    <span class="p">)</span></div>
 
-</span><span id="line-321">
-</span><span id="line-322">
-</span><span id="line-323"><span class="c1"># --------------------------------------------------------------------------- facade</span>
-</span><span id="line-324">
-</span><span id="line-325">
+</span><span id="line-339">
+</span><span id="line-340">
+</span><span id="line-341"><span class="c1"># --------------------------------------------------------------------------- facade</span>
+</span><span id="line-342">
+</span><span id="line-343">
 <div class="viewcode-block" id="sing">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.sing">[docs]</a>
-</span><span id="line-326"><span class="k">def</span><span class="w"> </span><span class="nf">sing</span><span class="p">(</span>
-</span><span id="line-327">    <span class="n">score</span><span class="p">,</span>
-</span><span id="line-328">    <span class="n">lyrics</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-329">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-330">    <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-331">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span>
-</span><span id="line-332">    <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-333">    <span class="n">transpose</span><span class="p">:</span> <span class="n">Transpose</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-</span><span id="line-334">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
-</span><span id="line-335">    <span class="n">track</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-336">    <span class="n">channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-337">    <span class="n">model</span><span class="p">:</span> <span class="s2">"SingingModel | None"</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-338">    <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-339">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-340">    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
-</span><span id="line-341"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-342"><span class="w">    </span><span class="sd">"""Sing ``score`` with ``lyrics`` in ``voice`` and return the audio (``.save(path)``).</span>
-</span><span id="line-343">
-</span><span id="line-344"><span class="sd">    Args:</span>
-</span><span id="line-345"><span class="sd">        score: A MIDI or MusicXML file, a music21 stream, or ``voxy.score.Note``s.</span>
-</span><span id="line-346"><span class="sd">        lyrics: One token per note (``can-dle``: a word over two notes; ``-``: hold</span>
-</span><span id="line-347"><span class="sd">            the word); default: the score's own lyrics.</span>
-</span><span id="line-348"><span class="sd">        voice: A singing voice (``singing_voice``), a library voice saved for</span>
-</span><span id="line-349"><span class="sd">            ``backend``, or None (the synthetic voice).</span>
-</span><span id="line-350"><span class="sd">        backend: The singing backend (``singing_backends()``).</span>
-</span><span id="line-351"><span class="sd">        output_path: Also save the audio there.</span>
-</span><span id="line-352"><span class="sd">        transpose: Semitones to move the melody (0: as written), or 'fit_voice'</span>
-</span><span id="line-353"><span class="sd">            (into the voice's register).</span>
-</span><span id="line-354"><span class="sd">        language: Of the lyrics (SoulX here: English).</span>
-</span><span id="line-355"><span class="sd">        track, channel: Which line of a MIDI file to sing, when it has several</span>
-</span><span id="line-356"><span class="sd">            (``voxy.score.notes_from_midi``).</span>
-</span><span id="line-357"><span class="sd">        model: A ready model (its backend is then the backend).</span>
-</span><span id="line-358"><span class="sd">        models: Model cache to use instead of the shared one.</span>
-</span><span id="line-359"><span class="sd">        voices: Voice library store (default ``voxy.voices_store()``).</span>
-</span><span id="line-360"><span class="sd">        **params: The backend's parameters (``singing_backends()[b].params``).</span>
-</span><span id="line-361"><span class="sd">    """</span>
-</span><span id="line-362">    <span class="n">notes</span> <span class="o">=</span> <span class="n">read_score</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">lyrics</span><span class="p">,</span> <span class="n">track</span><span class="o">=</span><span class="n">track</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel</span><span class="p">)</span>
-</span><span id="line-363">    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="n">get_singing_model</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">)</span>
-</span><span id="line-364">    <span class="n">voice</span> <span class="o">=</span> <span class="n">resolve_singing_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
-</span><span id="line-365">    <span class="n">speech</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">sing</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">transpose</span><span class="o">=</span><span class="n">transpose</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
-</span><span id="line-366">    <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
-</span><span id="line-367">        <span class="n">speech</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="p">))</span>
-</span><span id="line-368">    <span class="k">return</span> <span class="n">speech</span></div>
+</span><span id="line-344"><span class="k">def</span><span class="w"> </span><span class="nf">sing</span><span class="p">(</span>
+</span><span id="line-345">    <span class="n">score</span><span class="p">,</span>
+</span><span id="line-346">    <span class="n">lyrics</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-347">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-348">    <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-349">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span>
+</span><span id="line-350">    <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-351">    <span class="n">transpose</span><span class="p">:</span> <span class="n">Transpose</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+</span><span id="line-352">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
+</span><span id="line-353">    <span class="n">track</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-354">    <span class="n">channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-355">    <span class="n">part</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-356">    <span class="n">verse</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-357">    <span class="n">score_voice</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-358">    <span class="n">chords</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-359">    <span class="n">model</span><span class="p">:</span> <span class="s2">"SingingModel | None"</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-360">    <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-361">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-362">    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+</span><span id="line-363"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-364"><span class="w">    </span><span class="sd">"""Sing ``score`` with ``lyrics`` in ``voice`` and return the audio (``.save(path)``).</span>
+</span><span id="line-365">
+</span><span id="line-366"><span class="sd">    Args:</span>
+</span><span id="line-367"><span class="sd">        score: A MIDI or MusicXML file, a music21 stream, or notes</span>
+</span><span id="line-368"><span class="sd">            (``voxy.score.Note``, or ``audiate.SungNote``).</span>
+</span><span id="line-369"><span class="sd">        lyrics: One token per note (``can-dle``: a word over two notes; ``-``: hold</span>
+</span><span id="line-370"><span class="sd">            the word); default: the score's own lyrics.</span>
+</span><span id="line-371"><span class="sd">        voice: A singing voice (``singing_voice``), a library voice saved for</span>
+</span><span id="line-372"><span class="sd">            ``backend``, or None (the synthetic voice).</span>
+</span><span id="line-373"><span class="sd">        backend: The singing backend (``singing_backends()``).</span>
+</span><span id="line-374"><span class="sd">        output_path: Also save the audio there.</span>
+</span><span id="line-375"><span class="sd">        transpose: Semitones to move the melody (0: as written), or 'fit_voice'</span>
+</span><span id="line-376"><span class="sd">            (into the voice's register).</span>
+</span><span id="line-377"><span class="sd">        language: Of the lyrics (SoulX here: English).</span>
+</span><span id="line-378"><span class="sd">        track, channel: Which line of a MIDI file to sing (``track``: index in</span>
+</span><span id="line-379"><span class="sd">            the file; ``channel``: 1 to 16).</span>
+</span><span id="line-380"><span class="sd">        part, verse: Which part (an index, a name or an id) and lyric verse of a</span>
+</span><span id="line-381"><span class="sd">            MusicXML score to sing.</span>
+</span><span id="line-382"><span class="sd">        score_voice: Which voice of that part (its MusicXML voice number; named</span>
+</span><span id="line-383"><span class="sd">            so because ``voice`` is the singer).</span>
+</span><span id="line-384"><span class="sd">        chords: Two notes at once: an error (None), or sing the ``"top"`` or</span>
+</span><span id="line-385"><span class="sd">            ``"bottom"`` one.</span>
+</span><span id="line-386">
+</span><span id="line-387"><span class="sd">            When the score leaves one of these choices open, reading it raises</span>
+</span><span id="line-388"><span class="sd">            and names the candidates (see ``voxy.score.read_score`` and</span>
+</span><span id="line-389"><span class="sd">            ``audiate.sung``).</span>
+</span><span id="line-390"><span class="sd">        model: A ready model (its backend is then the backend).</span>
+</span><span id="line-391"><span class="sd">        models: Model cache to use instead of the shared one.</span>
+</span><span id="line-392"><span class="sd">        voices: Voice library store (default ``voxy.voices_store()``).</span>
+</span><span id="line-393"><span class="sd">        **params: The backend's parameters (``singing_backends()[b].params``).</span>
+</span><span id="line-394"><span class="sd">    """</span>
+</span><span id="line-395">    <span class="n">notes</span> <span class="o">=</span> <span class="n">read_score</span><span class="p">(</span>
+</span><span id="line-396">        <span class="n">score</span><span class="p">,</span>
+</span><span id="line-397">        <span class="n">lyrics</span><span class="p">,</span>
+</span><span id="line-398">        <span class="n">track</span><span class="o">=</span><span class="n">track</span><span class="p">,</span>
+</span><span id="line-399">        <span class="n">channel</span><span class="o">=</span><span class="n">channel</span><span class="p">,</span>
+</span><span id="line-400">        <span class="n">part</span><span class="o">=</span><span class="n">part</span><span class="p">,</span>
+</span><span id="line-401">        <span class="n">verse</span><span class="o">=</span><span class="n">verse</span><span class="p">,</span>
+</span><span id="line-402">        <span class="n">score_voice</span><span class="o">=</span><span class="n">score_voice</span><span class="p">,</span>
+</span><span id="line-403">        <span class="n">chords</span><span class="o">=</span><span class="n">chords</span><span class="p">,</span>
+</span><span id="line-404">    <span class="p">)</span>
+</span><span id="line-405">    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="n">get_singing_model</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">)</span>
+</span><span id="line-406">    <span class="n">voice</span> <span class="o">=</span> <span class="n">resolve_singing_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
+</span><span id="line-407">    <span class="n">speech</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">sing</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">transpose</span><span class="o">=</span><span class="n">transpose</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+</span><span id="line-408">    <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+</span><span id="line-409">        <span class="n">speech</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="p">))</span>
+</span><span id="line-410">    <span class="k">return</span> <span class="n">speech</span></div>
 
-</span><span id="line-369">
-</span><span id="line-370">
+</span><span id="line-411">
+</span><span id="line-412">
 <div class="viewcode-block" id="convert_singing">
 <a class="viewcode-back" href="../../_autosummary/voxy.singing.html#voxy.singing.convert_singing">[docs]</a>
-</span><span id="line-371"><span class="k">def</span><span class="w"> </span><span class="nf">convert_singing</span><span class="p">(</span>
-</span><span id="line-372">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">,</span>
-</span><span id="line-373">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-374">    <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-375">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span>
-</span><span id="line-376">    <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-377">    <span class="n">transpose</span><span class="p">:</span> <span class="n">Transpose</span> <span class="o">=</span> <span class="n">FIT_VOICE</span><span class="p">,</span>
-</span><span id="line-378">    <span class="n">model</span><span class="p">:</span> <span class="s2">"SingingModel | None"</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-379">    <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-380">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-381">    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
-</span><span id="line-382"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-383"><span class="w">    </span><span class="sd">"""Re-voice the sung ``audio`` in ``voice``, keeping its melody, words and timing.</span>
-</span><span id="line-384">
-</span><span id="line-385"><span class="sd">    Args:</span>
-</span><span id="line-386"><span class="sd">        audio: A sung clip without accompaniment (a path, or WAV bytes); separate a</span>
-</span><span id="line-387"><span class="sd">            song first (``voxy.separate.separate``).</span>
-</span><span id="line-388"><span class="sd">        voice: A singing voice, a library voice, a path to a clip of the target</span>
-</span><span id="line-389"><span class="sd">            voice, or None (the synthetic voice).</span>
-</span><span id="line-390"><span class="sd">        transpose: 'fit_voice' (default: move the melody into the voice's register)</span>
-</span><span id="line-391"><span class="sd">            or semitones (0: keep it).</span>
-</span><span id="line-392"><span class="sd">        Other arguments: as ``sing``.</span>
-</span><span id="line-393"><span class="sd">    """</span>
-</span><span id="line-394">    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="n">get_singing_model</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">)</span>
-</span><span id="line-395">    <span class="n">voice</span> <span class="o">=</span> <span class="n">resolve_singing_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
-</span><span id="line-396">    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
-</span><span id="line-397">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
-</span><span id="line-398">            <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"input.wav"</span>
-</span><span id="line-399">            <span class="n">path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
-</span><span id="line-400">            <span class="n">audio</span> <span class="o">=</span> <span class="n">path</span>
-</span><span id="line-401">        <span class="n">speech</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
-</span><span id="line-402">            <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span> <span class="n">voice</span><span class="p">,</span> <span class="n">transpose</span><span class="o">=</span><span class="n">transpose</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span>
-</span><span id="line-403">        <span class="p">)</span>
-</span><span id="line-404">    <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
-</span><span id="line-405">        <span class="n">speech</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="p">))</span>
-</span><span id="line-406">    <span class="k">return</span> <span class="n">speech</span></div>
+</span><span id="line-413"><span class="k">def</span><span class="w"> </span><span class="nf">convert_singing</span><span class="p">(</span>
+</span><span id="line-414">    <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="nb">bytes</span><span class="p">,</span>
+</span><span id="line-415">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-416">    <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-417">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_SINGING_BACKEND</span><span class="p">,</span>
+</span><span id="line-418">    <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-419">    <span class="n">transpose</span><span class="p">:</span> <span class="n">Transpose</span> <span class="o">=</span> <span class="n">FIT_VOICE</span><span class="p">,</span>
+</span><span id="line-420">    <span class="n">model</span><span class="p">:</span> <span class="s2">"SingingModel | None"</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-421">    <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-422">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-423">    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+</span><span id="line-424"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-425"><span class="w">    </span><span class="sd">"""Re-voice the sung ``audio`` in ``voice``, keeping its melody, words and timing.</span>
+</span><span id="line-426">
+</span><span id="line-427"><span class="sd">    Args:</span>
+</span><span id="line-428"><span class="sd">        audio: A sung clip without accompaniment (a path, or WAV bytes); separate a</span>
+</span><span id="line-429"><span class="sd">            song first (``voxy.separate.separate``).</span>
+</span><span id="line-430"><span class="sd">        voice: A singing voice, a library voice, a path to a clip of the target</span>
+</span><span id="line-431"><span class="sd">            voice, or None (the synthetic voice).</span>
+</span><span id="line-432"><span class="sd">        transpose: 'fit_voice' (default: move the melody into the voice's register)</span>
+</span><span id="line-433"><span class="sd">            or semitones (0: keep it).</span>
+</span><span id="line-434"><span class="sd">        Other arguments: as ``sing``.</span>
+</span><span id="line-435"><span class="sd">    """</span>
+</span><span id="line-436">    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="n">get_singing_model</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">)</span>
+</span><span id="line-437">    <span class="n">voice</span> <span class="o">=</span> <span class="n">resolve_singing_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
+</span><span id="line-438">    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+</span><span id="line-439">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+</span><span id="line-440">            <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"input.wav"</span>
+</span><span id="line-441">            <span class="n">path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span>
+</span><span id="line-442">            <span class="n">audio</span> <span class="o">=</span> <span class="n">path</span>
+</span><span id="line-443">        <span class="n">speech</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+</span><span id="line-444">            <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span> <span class="n">voice</span><span class="p">,</span> <span class="n">transpose</span><span class="o">=</span><span class="n">transpose</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span>
+</span><span id="line-445">        <span class="p">)</span>
+</span><span id="line-446">    <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+</span><span id="line-447">        <span class="n">speech</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="p">))</span>
+</span><span id="line-448">    <span class="k">return</span> <span class="n">speech</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -649,7 +691,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=8d9581ea"></script>
+    <script src="../../_static/documentation_options.js?v=ba6d0b80"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

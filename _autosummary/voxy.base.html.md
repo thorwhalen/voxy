@@ -84,7 +84,7 @@ Registry name of the backend (also each profile’s `model_type`).
 
 Sample rate of the generated audio (loads the model).
 
-### voxy.base.OPTIONAL_MODULE_EXTRAS *= {'huggingface_hub': 'local', 'mido': 'singing', 'music21': 'singing', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'}*
+### voxy.base.OPTIONAL_MODULE_EXTRAS *= {'audiate': 'singing', 'huggingface_hub': 'local', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'}*
 
 The extra that installs each optional module (for the error raised without it).
 
@@ -340,7 +340,7 @@ False
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
-### voxy.base.optional_import(module, , package='voxy', extra=None, extras={'huggingface_hub': 'local', 'mido': 'singing', 'music21': 'singing', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'})
+### voxy.base.optional_import(module, , package='voxy', extra=None, extras={'audiate': 'singing', 'huggingface_hub': 'local', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'})
 
 `optional_import(module)`: the module, or an ImportError naming the voxy extra.
 

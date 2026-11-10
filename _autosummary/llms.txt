@@ -25,7 +25,7 @@
 - [voxy.pronounce](voxy.pronounce.html.md): Checking, in the audio, which reading of a flagged word a render used.
 - [voxy.refprep](voxy.refprep.html.md): Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
 - [voxy.say_model](voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
-- [voxy.score](voxy.score.html.md): Scores for singing: the notes of a melody (pitch, timing, word) from MIDI, MusicXML
+- [voxy.score](voxy.score.html.md): Scores for singing: the notes of a melody (pitch, timing, word) in the form voxy’s
 - [voxy.script](voxy.script.html.md): Render a cast script: text segments, each read by its own voice, one audio file per section.
 - [voxy.separate](voxy.separate.html.md): Split a recording into the voice and the rest (music, noise) before using the voice.
 - [voxy.singing](voxy.singing.html.md): Singing: sing a score with lyrics in a voice (SVS), or re-voice a sung take (SVC).

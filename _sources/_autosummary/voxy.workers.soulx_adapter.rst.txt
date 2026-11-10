@@ -8,6 +8,7 @@ voxy.workers.soulx\_adapter
 
    .. autosummary::
    
+      WORD_JOINER
       DFLT_FADE_S
       SINGERS
       NOTE_FIELDS

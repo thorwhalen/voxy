@@ -20,9 +20,10 @@ synthesiser singing “la”, which belongs to no one). Conversion needs only th
 Only clone a singing voice with its owner’s consent; each backend records its own
 usage restrictions in `singing_backends()[name].consent`.
 
-Scores are MIDI or MusicXML files, music21 streams, or lists of `voxy.score.Note`
-(`voxy.score.read_score`); lyrics are one token per note (`can-dle` spreads a
-word over two notes, `-` holds it one more).
+Scores are MIDI or MusicXML files, music21 streams, or lists of notes
+(`voxy.score.read_score`, which reads files with `audiate.sung_line`); lyrics
+are one token per note (`can-dle` spreads a word over two notes, `-` holds it
+one more).
 
 Backends are `SingingBackend` records (`singing_backends()`), each running in
 its own environment (`python -m voxy setup soulx`); `soulx` (SoulX-Singer,
@@ -175,18 +176,13 @@ synthetic voice.
 * **Return type:**
   [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)
 
-### voxy.singing.sing(score, lyrics=None, , voice=None, backend='soulx', output_path=None, transpose=0, language='English', track=None, channel=None, model=None, models=None, voices=None, \*\*params)
+### voxy.singing.sing(score, lyrics=None, , voice=None, backend='soulx', output_path=None, transpose=0, language='English', track=None, channel=None, part=None, verse=None, score_voice=None, chords=None, model=None, models=None, voices=None, \*\*params)
 
 Sing `score` with `lyrics` in `voice` and return the audio (`.save(path)`).
 
 * **Parameters:**
-  * **score** – A MIDI or MusicXML file, a music21 stream, or 
-
-    ```
-    ``
-    ```
-
-    voxy.score.Note\`\`s.
+  * **score** – A MIDI or MusicXML file, a music21 stream, or notes
+    (`voxy.score.Note`, or `audiate.SungNote`).
   * **lyrics** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – One token per note (`can-dle`: a word over two notes; `-`: hold
     the word); default: the score’s own lyrics.
   * **voice** ([`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A singing voice (`singing_voice`), a library voice saved for
@@ -196,10 +192,24 @@ Sing `score` with `lyrics` in `voice` and return the audio (`.save(path)`).
   * **transpose** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'fit_voice'`]]) – Semitones to move the melody (0: as written), or ‘fit_voice’
     (into the voice’s register).
   * **language** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Of the lyrics (SoulX here: English).
-  * **track** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of a MIDI file to sing, when it has several
-    (`voxy.score.notes_from_midi`).
-  * **channel** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of a MIDI file to sing, when it has several
-    (`voxy.score.notes_from_midi`).
+  * **track** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of a MIDI file to sing (`track`: index in
+    the file; `channel`: 1 to 16).
+  * **channel** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of a MIDI file to sing (`track`: index in
+    the file; `channel`: 1 to 16).
+  * **part** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which part (an index, a name or an id) and lyric verse of a
+    MusicXML score to sing.
+  * **verse** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which part (an index, a name or an id) and lyric verse of a
+    MusicXML score to sing.
+  * **score_voice** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which voice of that part (its MusicXML voice number; named
+    so because `voice` is the singer).
+  * **chords** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – 
+
+    Two notes at once: an error (None), or sing the `"top"` or
+    `"bottom"` one.
+
+    When the score leaves one of these choices open, reading it raises
+    and names the candidates (see `voxy.score.read_score` and
+    `audiate.sung`).
   * **model** ([`SingingModel`](#voxy.singing.SingingModel) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready model (its backend is then the backend).
   * **models** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Model cache to use instead of the shared one.
   * **voices** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice library store (default `voxy.voices_store()`).
@@ -214,7 +224,7 @@ Every singing backend, by name (the built-in ones registered first).
 * **Return type:**
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`SingingBackend`](#voxy.singing.SingingBackend)]
 
-### voxy.singing.singing_voice(audio, score=None, lyrics=None, , backend='soulx', sample_rate=24000, name='singing-voices', rootdir=None, \*\*metadata)
+### voxy.singing.singing_voice(audio, score=None, lyrics=None, , backend='soulx', sample_rate=24000, name='singing-voices', rootdir=None, track=None, channel=None, part=None, verse=None, score_voice=None, chords=None, \*\*metadata)
 
 A singing voice: a sung clip, and (for synthesis) the score it sings.
 
@@ -223,10 +233,23 @@ A singing voice: a sung clip, and (for synthesis) the score it sings.
     path, or WAV bytes (kept in the samples store of voice `name`, under
     the data root `rootdir`, so the voice outlives the session).
   * **score** – What the clip sings, timed as in the clip (a MIDI or MusicXML file,
-    a music21 stream, or notes; see `voxy.score.read_score`). Needed by
+    a music21 stream, or notes, such as `audiate.sung_line` returns for
+    a line its defaults don’t pick; see `voxy.score.read_score`). Needed by
     `sing`; `convert_singing` needs only the clip.
   * **lyrics** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Its words, if the score has none.
   * **backend** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The backend the voice is for (its `model_type`).
+  * **track** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of the
+    score the clip sings, as in `sing`.
+  * **channel** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of the
+    score the clip sings, as in `sing`.
+  * **part** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of the
+    score the clip sings, as in `sing`.
+  * **verse** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of the
+    score the clip sings, as in `sing`.
+  * **score_voice** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of the
+    score the clip sings, as in `sing`.
+  * **chords** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of the
+    score the clip sings, as in `sing`.
   * **\*\*metadata** – Kept with the voice (e.g. `consent=`, `description=`).
 * **Return type:**
   [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile)

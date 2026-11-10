@@ -8,6 +8,7 @@ voxy.soulx
 
    .. autosummary::
    
+      WORD_JOINER
       DFLT_LEAD_S
       DFLT_MIN_REST_S
       DFLT_SPLIT_REST_S

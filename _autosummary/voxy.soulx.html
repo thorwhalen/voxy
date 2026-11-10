@@ -188,19 +188,22 @@ intellectual property, privacy and personal consent.</p>
 <p class="rubric">Module Attributes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.soulx.DFLT_LEAD_S" title="voxy.soulx.DFLT_LEAD_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_LEAD_S</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.soulx.WORD_JOINER" title="voxy.soulx.WORD_JOINER"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WORD_JOINER</span></code></a></p></td>
+<td><p>Joins the words of an elision (several words sung on one note) into the one <code class="docutils literal notranslate"><span class="pre">text</span></code> token of that note; the adapter phonemizes each word and joins their phones (the same constant is in <code class="docutils literal notranslate"><span class="pre">workers/soulx_adapter.py</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.soulx.DFLT_LEAD_S" title="voxy.soulx.DFLT_LEAD_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_LEAD_S</span></code></a></p></td>
 <td><p>Rest before the first note and after the last (upstream's examples start with &lt;SP&gt;).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.soulx.DFLT_MIN_REST_S" title="voxy.soulx.DFLT_MIN_REST_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_MIN_REST_S</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.soulx.DFLT_MIN_REST_S" title="voxy.soulx.DFLT_MIN_REST_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_MIN_REST_S</span></code></a></p></td>
 <td><p>A gap shorter than this joins the previous note (legato); a longer one is a rest.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.soulx.DFLT_SPLIT_REST_S" title="voxy.soulx.DFLT_SPLIT_REST_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_SPLIT_REST_S</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.soulx.DFLT_SPLIT_REST_S" title="voxy.soulx.DFLT_SPLIT_REST_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_SPLIT_REST_S</span></code></a></p></td>
 <td><p>A rest longer than this ends a segment.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.soulx.DFLT_MAX_SEGMENT_S" title="voxy.soulx.DFLT_MAX_SEGMENT_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_MAX_SEGMENT_S</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.soulx.DFLT_MAX_SEGMENT_S" title="voxy.soulx.DFLT_MAX_SEGMENT_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_MAX_SEGMENT_S</span></code></a></p></td>
 <td><p>No segment longer than this (upstream allows 60 s; shorter is safer on MPS).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.soulx.SOULX_ENV" title="voxy.soulx.SOULX_ENV"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SOULX_ENV</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.soulx.SOULX_ENV" title="voxy.soulx.SOULX_ENV"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SOULX_ENV</span></code></a></p></td>
 <td><p>Upstream's inference pins (its requirements.txt minus the preprocessing, web UI and training stacks).</p></td>
 </tr>
 </tbody>
@@ -305,6 +308,13 @@ source fetched, on first use). Tests inject a fake.</p></li>
 </dl>
 </dd></dl>
 </dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.soulx.WORD_JOINER">
+<span class="sig-prename descclassname"><span class="pre">voxy.soulx.</span></span><span class="sig-name descname"><span class="pre">WORD_JOINER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'+'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.soulx.WORD_JOINER" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.soulx.WORD_JOINER'">¶</a></dt>
+<dd><p>Joins the words of an elision (several words sung on one note) into the one
+<code class="docutils literal notranslate"><span class="pre">text</span></code> token of that note; the adapter phonemizes each word and joins their
+phones (the same constant is in <code class="docutils literal notranslate"><span class="pre">workers/soulx_adapter.py</span></code>).</p>
+</dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.soulx.fit_voice_shift">
 <span class="sig-prename descclassname"><span class="pre">voxy.soulx.</span></span><span class="sig-name descname"><span class="pre">fit_voice_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prompt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/soulx.html#fit_voice_shift"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.soulx.fit_voice_shift" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.soulx.fit_voice_shift'">¶</a></dt>
@@ -366,6 +376,7 @@ clip’s own times (SoulX crops the clip to the metadata’s length).</p>
 <li><a :data-current="activeSection === '#voxy.soulx.SoulXSingingModel.sing'" class="reference internal" href="#voxy.soulx.SoulXSingingModel.sing"><code class="docutils literal notranslate"><span class="pre">SoulXSingingModel.sing()</span></code></a></li>
 </ul>
 </li>
+<li><a :data-current="activeSection === '#voxy.soulx.WORD_JOINER'" class="reference internal" href="#voxy.soulx.WORD_JOINER"><code class="docutils literal notranslate"><span class="pre">WORD_JOINER</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.soulx.fit_voice_shift'" class="reference internal" href="#voxy.soulx.fit_voice_shift"><code class="docutils literal notranslate"><span class="pre">fit_voice_shift()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.soulx.soulx_metadata'" class="reference internal" href="#voxy.soulx.soulx_metadata"><code class="docutils literal notranslate"><span class="pre">soulx_metadata()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.soulx.soulx_prompt_metadata'" class="reference internal" href="#voxy.soulx.soulx_prompt_metadata"><code class="docutils literal notranslate"><span class="pre">soulx_prompt_metadata()</span></code></a></li>
@@ -382,7 +393,7 @@ clip’s own times (SoulX crops the clip to the metadata’s length).</p>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=8d9581ea"></script>
+<script src="../_static/documentation_options.js?v=ba6d0b80"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

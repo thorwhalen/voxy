@@ -251,407 +251,425 @@
 </span><span id="line-55"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.wavutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_wav</span>
 </span><span id="line-56">
 </span><span id="line-57"><span class="n">SP</span> <span class="o">=</span> <span class="s2">"&lt;SP&gt;"</span>
-</span><span id="line-58"><span class="n">REST_TYPE</span><span class="p">,</span> <span class="n">ONSET_TYPE</span><span class="p">,</span> <span class="n">CONTINUATION_TYPE</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span>
-</span><span id="line-59"><span class="c1">#: Rest before the first note and after the last (upstream's examples start with &lt;SP&gt;).</span>
-</span><span id="line-60"><span class="n">DFLT_LEAD_S</span> <span class="o">=</span> <span class="mf">0.3</span>
-</span><span id="line-61"><span class="n">DFLT_TAIL_S</span> <span class="o">=</span> <span class="mf">0.4</span>
-</span><span id="line-62"><span class="c1">#: A gap shorter than this joins the previous note (legato); a longer one is a rest.</span>
-</span><span id="line-63"><span class="n">DFLT_MIN_REST_S</span> <span class="o">=</span> <span class="mf">0.2</span>
-</span><span id="line-64"><span class="c1">#: A rest longer than this ends a segment.</span>
-</span><span id="line-65"><span class="n">DFLT_SPLIT_REST_S</span> <span class="o">=</span> <span class="mf">2.0</span>
-</span><span id="line-66"><span class="c1">#: No segment longer than this (upstream allows 60 s; shorter is safer on MPS).</span>
-</span><span id="line-67"><span class="n">DFLT_MAX_SEGMENT_S</span> <span class="o">=</span> <span class="mf">30.0</span>
-</span><span id="line-68"><span class="n">DURATION_DIGITS</span> <span class="o">=</span> <span class="mi">2</span>
-</span><span id="line-69">
-</span><span id="line-70"><span class="n">SOULX_SOURCE</span> <span class="o">=</span> <span class="n">GitSource</span><span class="p">(</span>
-</span><span id="line-71">    <span class="s2">"https://github.com/Soul-AILab/SoulX-Singer"</span><span class="p">,</span>
-</span><span id="line-72">    <span class="s2">"81aeb3ae772c70093c3de74dc23c92d983801ae4"</span><span class="p">,</span>
-</span><span id="line-73"><span class="p">)</span>
-</span><span id="line-74"><span class="n">SOULX_WEIGHTS</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-75">    <span class="s2">"repo_id"</span><span class="p">:</span> <span class="s2">"Soul-AILab/SoulX-Singer"</span><span class="p">,</span>
-</span><span id="line-76">    <span class="s2">"revision"</span><span class="p">:</span> <span class="s2">"40493ad90286056c7a9095035164434a79daa8c9"</span><span class="p">,</span>
-</span><span id="line-77"><span class="p">}</span>
-</span><span id="line-78"><span class="n">SOULX_PREPROCESS</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-79">    <span class="s2">"repo_id"</span><span class="p">:</span> <span class="s2">"Soul-AILab/SoulX-Singer-Preprocess"</span><span class="p">,</span>
-</span><span id="line-80">    <span class="s2">"revision"</span><span class="p">:</span> <span class="s2">"83dc50289d22a81b1e9998f5b9e111aef7c1fdcd"</span><span class="p">,</span>
+</span><span id="line-58"><span class="c1">#: Joins the words of an elision (several words sung on one note) into the one</span>
+</span><span id="line-59"><span class="c1">#: ``text`` token of that note; the adapter phonemizes each word and joins their</span>
+</span><span id="line-60"><span class="c1">#: phones (the same constant is in ``workers/soulx_adapter.py``).</span>
+</span><span id="line-61"><span class="n">WORD_JOINER</span> <span class="o">=</span> <span class="s2">"+"</span>
+</span><span id="line-62"><span class="n">REST_TYPE</span><span class="p">,</span> <span class="n">ONSET_TYPE</span><span class="p">,</span> <span class="n">CONTINUATION_TYPE</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span>
+</span><span id="line-63"><span class="c1">#: Rest before the first note and after the last (upstream's examples start with &lt;SP&gt;).</span>
+</span><span id="line-64"><span class="n">DFLT_LEAD_S</span> <span class="o">=</span> <span class="mf">0.3</span>
+</span><span id="line-65"><span class="n">DFLT_TAIL_S</span> <span class="o">=</span> <span class="mf">0.4</span>
+</span><span id="line-66"><span class="c1">#: A gap shorter than this joins the previous note (legato); a longer one is a rest.</span>
+</span><span id="line-67"><span class="n">DFLT_MIN_REST_S</span> <span class="o">=</span> <span class="mf">0.2</span>
+</span><span id="line-68"><span class="c1">#: A rest longer than this ends a segment.</span>
+</span><span id="line-69"><span class="n">DFLT_SPLIT_REST_S</span> <span class="o">=</span> <span class="mf">2.0</span>
+</span><span id="line-70"><span class="c1">#: No segment longer than this (upstream allows 60 s; shorter is safer on MPS).</span>
+</span><span id="line-71"><span class="n">DFLT_MAX_SEGMENT_S</span> <span class="o">=</span> <span class="mf">30.0</span>
+</span><span id="line-72"><span class="n">DURATION_DIGITS</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span id="line-73">
+</span><span id="line-74"><span class="n">SOULX_SOURCE</span> <span class="o">=</span> <span class="n">GitSource</span><span class="p">(</span>
+</span><span id="line-75">    <span class="s2">"https://github.com/Soul-AILab/SoulX-Singer"</span><span class="p">,</span>
+</span><span id="line-76">    <span class="s2">"81aeb3ae772c70093c3de74dc23c92d983801ae4"</span><span class="p">,</span>
+</span><span id="line-77"><span class="p">)</span>
+</span><span id="line-78"><span class="n">SOULX_WEIGHTS</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-79">    <span class="s2">"repo_id"</span><span class="p">:</span> <span class="s2">"Soul-AILab/SoulX-Singer"</span><span class="p">,</span>
+</span><span id="line-80">    <span class="s2">"revision"</span><span class="p">:</span> <span class="s2">"40493ad90286056c7a9095035164434a79daa8c9"</span><span class="p">,</span>
 </span><span id="line-81"><span class="p">}</span>
-</span><span id="line-82"><span class="c1">#: Upstream's inference pins (its requirements.txt minus the preprocessing, web UI</span>
-</span><span id="line-83"><span class="c1">#: and training stacks).</span>
-</span><span id="line-84"><span class="n">SOULX_ENV</span> <span class="o">=</span> <span class="n">EnvSpec</span><span class="p">(</span>
-</span><span id="line-85">    <span class="s2">"soulx"</span><span class="p">,</span>
-</span><span id="line-86">    <span class="p">(</span>
-</span><span id="line-87">        <span class="s2">"torch==2.2.0"</span><span class="p">,</span>
-</span><span id="line-88">        <span class="s2">"torchaudio==2.2.0"</span><span class="p">,</span>
-</span><span id="line-89">        <span class="s2">"numpy&lt;2"</span><span class="p">,</span>
-</span><span id="line-90">        <span class="s2">"transformers==4.41.2"</span><span class="p">,</span>
-</span><span id="line-91">        <span class="s2">"accelerate==1.11.0"</span><span class="p">,</span>
-</span><span id="line-92">        <span class="s2">"librosa==0.11.0"</span><span class="p">,</span>
-</span><span id="line-93">        <span class="s2">"soundfile"</span><span class="p">,</span>
-</span><span id="line-94">        <span class="s2">"omegaconf==2.3.0"</span><span class="p">,</span>
-</span><span id="line-95">        <span class="s2">"scipy"</span><span class="p">,</span>
-</span><span id="line-96">        <span class="s2">"tqdm"</span><span class="p">,</span>
-</span><span id="line-97">        <span class="s2">"huggingface_hub&gt;=0.20,&lt;1"</span><span class="p">,</span>
-</span><span id="line-98">        <span class="s2">"g2p_en==2.1.0"</span><span class="p">,</span>
-</span><span id="line-99">        <span class="s2">"nltk==3.9.2"</span><span class="p">,</span>
-</span><span id="line-100">    <span class="p">),</span>
-</span><span id="line-101">    <span class="n">env_vars</span><span class="o">=</span><span class="p">{</span><span class="s2">"PYTORCH_ENABLE_MPS_FALLBACK"</span><span class="p">:</span> <span class="s2">"1"</span><span class="p">,</span> <span class="s2">"NLTK_DATA"</span><span class="p">:</span> <span class="s2">"</span><span class="si">{models}</span><span class="s2">/nltk_data"</span><span class="p">},</span>
-</span><span id="line-102"><span class="p">)</span>
-</span><span id="line-103"><span class="n">SOULX_CONSENT</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-104">    <span class="s2">"Upstream usage disclaimer (not a licence term): do not use the model to "</span>
-</span><span id="line-105">    <span class="s2">"impersonate individuals without authorisation or to create deceptive audio; "</span>
-</span><span id="line-106">    <span class="s2">"respect intellectual property, privacy and personal consent. Clone only your own "</span>
-</span><span id="line-107">    <span class="s2">"voice, a consenting singer's, or a synthetic one."</span>
-</span><span id="line-108"><span class="p">)</span>
-</span><span id="line-109">
-</span><span id="line-110">
-</span><span id="line-111"><span class="c1"># --------------------------------------------------------------------------- metadata</span>
-</span><span id="line-112">
+</span><span id="line-82"><span class="n">SOULX_PREPROCESS</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-83">    <span class="s2">"repo_id"</span><span class="p">:</span> <span class="s2">"Soul-AILab/SoulX-Singer-Preprocess"</span><span class="p">,</span>
+</span><span id="line-84">    <span class="s2">"revision"</span><span class="p">:</span> <span class="s2">"83dc50289d22a81b1e9998f5b9e111aef7c1fdcd"</span><span class="p">,</span>
+</span><span id="line-85"><span class="p">}</span>
+</span><span id="line-86"><span class="c1">#: Upstream's inference pins (its requirements.txt minus the preprocessing, web UI</span>
+</span><span id="line-87"><span class="c1">#: and training stacks).</span>
+</span><span id="line-88"><span class="n">SOULX_ENV</span> <span class="o">=</span> <span class="n">EnvSpec</span><span class="p">(</span>
+</span><span id="line-89">    <span class="s2">"soulx"</span><span class="p">,</span>
+</span><span id="line-90">    <span class="p">(</span>
+</span><span id="line-91">        <span class="s2">"torch==2.2.0"</span><span class="p">,</span>
+</span><span id="line-92">        <span class="s2">"torchaudio==2.2.0"</span><span class="p">,</span>
+</span><span id="line-93">        <span class="s2">"numpy&lt;2"</span><span class="p">,</span>
+</span><span id="line-94">        <span class="s2">"transformers==4.41.2"</span><span class="p">,</span>
+</span><span id="line-95">        <span class="s2">"accelerate==1.11.0"</span><span class="p">,</span>
+</span><span id="line-96">        <span class="s2">"librosa==0.11.0"</span><span class="p">,</span>
+</span><span id="line-97">        <span class="s2">"soundfile"</span><span class="p">,</span>
+</span><span id="line-98">        <span class="s2">"omegaconf==2.3.0"</span><span class="p">,</span>
+</span><span id="line-99">        <span class="s2">"scipy"</span><span class="p">,</span>
+</span><span id="line-100">        <span class="s2">"tqdm"</span><span class="p">,</span>
+</span><span id="line-101">        <span class="s2">"huggingface_hub&gt;=0.20,&lt;1"</span><span class="p">,</span>
+</span><span id="line-102">        <span class="s2">"g2p_en==2.1.0"</span><span class="p">,</span>
+</span><span id="line-103">        <span class="s2">"nltk==3.9.2"</span><span class="p">,</span>
+</span><span id="line-104">    <span class="p">),</span>
+</span><span id="line-105">    <span class="n">env_vars</span><span class="o">=</span><span class="p">{</span><span class="s2">"PYTORCH_ENABLE_MPS_FALLBACK"</span><span class="p">:</span> <span class="s2">"1"</span><span class="p">,</span> <span class="s2">"NLTK_DATA"</span><span class="p">:</span> <span class="s2">"</span><span class="si">{models}</span><span class="s2">/nltk_data"</span><span class="p">},</span>
+</span><span id="line-106"><span class="p">)</span>
+</span><span id="line-107"><span class="n">SOULX_CONSENT</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-108">    <span class="s2">"Upstream usage disclaimer (not a licence term): do not use the model to "</span>
+</span><span id="line-109">    <span class="s2">"impersonate individuals without authorisation or to create deceptive audio; "</span>
+</span><span id="line-110">    <span class="s2">"respect intellectual property, privacy and personal consent. Clone only your own "</span>
+</span><span id="line-111">    <span class="s2">"voice, a consenting singer's, or a synthetic one."</span>
+</span><span id="line-112"><span class="p">)</span>
 </span><span id="line-113">
-</span><span id="line-114"><span class="k">def</span><span class="w"> </span><span class="nf">_with_rests</span><span class="p">(</span>
-</span><span id="line-115">    <span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">lead_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tail_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">min_rest_s</span><span class="p">:</span> <span class="nb">float</span>
-</span><span id="line-116"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
-</span><span id="line-117"><span class="w">    </span><span class="sd">"""The line with rests (pitch 0) in its gaps, a lead-in and a tail.</span>
-</span><span id="line-118">
-</span><span id="line-119"><span class="sd">    ``lead_s=None`` keeps the notes' own times (a rest from 0 to the first note),</span>
-</span><span id="line-120"><span class="sd">    which is what a prompt aligned to its clip needs.</span>
-</span><span id="line-121"><span class="sd">    """</span>
-</span><span id="line-122">    <span class="k">if</span> <span class="ow">not</span> <span class="n">notes</span><span class="p">:</span>
-</span><span id="line-123">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"No notes to sing"</span><span class="p">)</span>
-</span><span id="line-124">    <span class="n">notes</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
-</span><span id="line-125">    <span class="n">shift</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="n">lead_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">lead_s</span> <span class="o">-</span> <span class="n">notes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span>
-</span><span id="line-126">    <span class="n">line</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-127">    <span class="n">first</span> <span class="o">=</span> <span class="n">notes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="n">shift</span>
-</span><span id="line-128">    <span class="k">if</span> <span class="n">first</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-129">        <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Note</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SP</span><span class="p">))</span>
-</span><span id="line-130">    <span class="k">for</span> <span class="n">note</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">:</span>
-</span><span id="line-131">        <span class="n">note</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">note</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="n">shift</span><span class="p">)</span>
-</span><span id="line-132">        <span class="k">if</span> <span class="n">line</span> <span class="ow">and</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pitch</span><span class="p">:</span>
-</span><span id="line-133">            <span class="n">gap</span> <span class="o">=</span> <span class="n">note</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">end</span>
-</span><span id="line-134">            <span class="k">if</span> <span class="n">gap</span> <span class="o">&gt;=</span> <span class="n">min_rest_s</span><span class="p">:</span>
-</span><span id="line-135">                <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Note</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="n">gap</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SP</span><span class="p">))</span>
-</span><span id="line-136">            <span class="k">else</span><span class="p">:</span>  <span class="c1"># legato, or an overlap: the previous note lasts until this one</span>
-</span><span id="line-137">                <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dur</span><span class="o">=</span><span class="n">note</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
-</span><span id="line-138">        <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">note</span><span class="p">)</span>
-</span><span id="line-139">    <span class="k">if</span> <span class="n">tail_s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-140">        <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Note</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="n">tail_s</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SP</span><span class="p">))</span>
-</span><span id="line-141">    <span class="k">return</span> <span class="n">line</span>
-</span><span id="line-142">
-</span><span id="line-143">
-</span><span id="line-144"><span class="k">def</span><span class="w"> </span><span class="nf">_segments</span><span class="p">(</span>
-</span><span id="line-145">    <span class="n">line</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">split_rest_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">max_segment_s</span><span class="p">:</span> <span class="nb">float</span>
-</span><span id="line-146"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]]:</span>
-</span><span id="line-147"><span class="w">    </span><span class="sd">"""``line`` cut into segments: after a rest longer than ``split_rest_s``, and</span>
-</span><span id="line-148"><span class="sd">    before a segment would pass ``max_segment_s``, at its last rest if it has one</span>
-</span><span id="line-149"><span class="sd">    (so the join lands in silence), else at that note."""</span>
-</span><span id="line-150">    <span class="n">segments</span><span class="p">,</span> <span class="n">current</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
-</span><span id="line-151">    <span class="k">for</span> <span class="n">note</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
-</span><span id="line-152">        <span class="k">if</span> <span class="n">current</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">current</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pitch</span> <span class="ow">and</span> <span class="n">current</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">dur</span> <span class="o">&gt;</span> <span class="n">split_rest_s</span><span class="p">:</span>
-</span><span id="line-153">            <span class="n">segments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
-</span><span id="line-154">            <span class="n">current</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-155">        <span class="k">elif</span> <span class="n">current</span> <span class="ow">and</span> <span class="n">note</span><span class="o">.</span><span class="n">end</span> <span class="o">-</span> <span class="n">current</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">&gt;</span> <span class="n">max_segment_s</span><span class="p">:</span>
-</span><span id="line-156">            <span class="n">rests</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="p">))</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">pitch</span><span class="p">]</span>
-</span><span id="line-157">            <span class="n">cut</span> <span class="o">=</span> <span class="n">rests</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">rests</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
-</span><span id="line-158">            <span class="n">segments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">[:</span><span class="n">cut</span><span class="p">])</span>
-</span><span id="line-159">            <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="p">[</span><span class="n">cut</span><span class="p">:]</span>
-</span><span id="line-160">        <span class="n">current</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">note</span><span class="p">)</span>
-</span><span id="line-161">    <span class="k">return</span> <span class="n">segments</span> <span class="o">+</span> <span class="p">[</span><span class="n">current</span><span class="p">]</span> <span class="k">if</span> <span class="n">current</span> <span class="k">else</span> <span class="n">segments</span>
-</span><span id="line-162">
-</span><span id="line-163">
-</span><span id="line-164"><span class="k">def</span><span class="w"> </span><span class="nf">_check_word</span><span class="p">(</span><span class="n">note</span><span class="p">:</span> <span class="n">Note</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-165"><span class="w">    </span><span class="sd">"""One sung note, one word: no spaces, at least one letter (else the phonemes</span>
-</span><span id="line-166"><span class="sd">    and the notes would not line up)."""</span>
-</span><span id="line-167">    <span class="n">word</span> <span class="o">=</span> <span class="n">note</span><span class="o">.</span><span class="n">word</span>
-</span><span id="line-168">    <span class="k">if</span> <span class="ow">not</span> <span class="n">word</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">isspace</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">word</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">isalpha</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">word</span><span class="p">):</span>
-</span><span id="line-169">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-170">            <span class="sa">f</span><span class="s2">"The note at </span><span class="si">{</span><span class="n">note</span><span class="o">.</span><span class="n">start</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s sings </span><span class="si">{</span><span class="n">word</span><span class="si">!r}</span><span class="s2">: each sung note needs one "</span>
-</span><span id="line-171">            <span class="s2">"word, without spaces and with letters (hyphenate a word over notes: "</span>
-</span><span id="line-172">            <span class="s2">"'can-dle')"</span>
-</span><span id="line-173">        <span class="p">)</span>
-</span><span id="line-174">
-</span><span id="line-175">
-</span><span id="line-176"><span class="k">def</span><span class="w"> </span><span class="nf">_durations</span><span class="p">(</span><span class="n">segment</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
-</span><span id="line-177"><span class="w">    </span><span class="sd">"""Durations rounded on the cumulative grid, so rounding never drifts."""</span>
-</span><span id="line-178">    <span class="n">t0</span> <span class="o">=</span> <span class="n">segment</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span>
-</span><span id="line-179">    <span class="n">edges</span> <span class="o">=</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="n">t0</span><span class="p">,</span> <span class="n">DURATION_DIGITS</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">segment</span><span class="p">]</span>
-</span><span id="line-180">    <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">segment</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">end</span> <span class="o">-</span> <span class="n">t0</span><span class="p">,</span> <span class="n">DURATION_DIGITS</span><span class="p">))</span>
-</span><span id="line-181">    <span class="k">return</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">,</span> <span class="n">DURATION_DIGITS</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:])]</span>
-</span><span id="line-182">
+</span><span id="line-114">
+</span><span id="line-115"><span class="c1"># --------------------------------------------------------------------------- metadata</span>
+</span><span id="line-116">
+</span><span id="line-117">
+</span><span id="line-118"><span class="k">def</span><span class="w"> </span><span class="nf">_with_rests</span><span class="p">(</span>
+</span><span id="line-119">    <span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">lead_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tail_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">min_rest_s</span><span class="p">:</span> <span class="nb">float</span>
+</span><span id="line-120"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
+</span><span id="line-121"><span class="w">    </span><span class="sd">"""The line with rests (pitch 0) in its gaps, a lead-in and a tail.</span>
+</span><span id="line-122">
+</span><span id="line-123"><span class="sd">    ``lead_s=None`` keeps the notes' own times (a rest from 0 to the first note),</span>
+</span><span id="line-124"><span class="sd">    which is what a prompt aligned to its clip needs.</span>
+</span><span id="line-125"><span class="sd">    """</span>
+</span><span id="line-126">    <span class="k">if</span> <span class="ow">not</span> <span class="n">notes</span><span class="p">:</span>
+</span><span id="line-127">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"No notes to sing"</span><span class="p">)</span>
+</span><span id="line-128">    <span class="n">notes</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
+</span><span id="line-129">    <span class="n">shift</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="n">lead_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">lead_s</span> <span class="o">-</span> <span class="n">notes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span>
+</span><span id="line-130">    <span class="n">line</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-131">    <span class="n">first</span> <span class="o">=</span> <span class="n">notes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="n">shift</span>
+</span><span id="line-132">    <span class="k">if</span> <span class="n">first</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="line-133">        <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Note</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SP</span><span class="p">))</span>
+</span><span id="line-134">    <span class="k">for</span> <span class="n">note</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">:</span>
+</span><span id="line-135">        <span class="n">note</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">note</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="n">shift</span><span class="p">)</span>
+</span><span id="line-136">        <span class="k">if</span> <span class="n">line</span> <span class="ow">and</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pitch</span><span class="p">:</span>
+</span><span id="line-137">            <span class="n">gap</span> <span class="o">=</span> <span class="n">note</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">end</span>
+</span><span id="line-138">            <span class="k">if</span> <span class="n">gap</span> <span class="o">&gt;=</span> <span class="n">min_rest_s</span><span class="p">:</span>
+</span><span id="line-139">                <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Note</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="n">gap</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SP</span><span class="p">))</span>
+</span><span id="line-140">            <span class="k">else</span><span class="p">:</span>  <span class="c1"># legato, or an overlap: the previous note lasts until this one</span>
+</span><span id="line-141">                <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">dur</span><span class="o">=</span><span class="n">note</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
+</span><span id="line-142">        <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">note</span><span class="p">)</span>
+</span><span id="line-143">    <span class="k">if</span> <span class="n">tail_s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="line-144">        <span class="n">line</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Note</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="n">tail_s</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">SP</span><span class="p">))</span>
+</span><span id="line-145">    <span class="k">return</span> <span class="n">line</span>
+</span><span id="line-146">
+</span><span id="line-147">
+</span><span id="line-148"><span class="k">def</span><span class="w"> </span><span class="nf">_segments</span><span class="p">(</span>
+</span><span id="line-149">    <span class="n">line</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span> <span class="n">split_rest_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">max_segment_s</span><span class="p">:</span> <span class="nb">float</span>
+</span><span id="line-150"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]]:</span>
+</span><span id="line-151"><span class="w">    </span><span class="sd">"""``line`` cut into segments: after a rest longer than ``split_rest_s``, and</span>
+</span><span id="line-152"><span class="sd">    before a segment would pass ``max_segment_s``, at its last rest if it has one</span>
+</span><span id="line-153"><span class="sd">    (so the join lands in silence), else at that note."""</span>
+</span><span id="line-154">    <span class="n">segments</span><span class="p">,</span> <span class="n">current</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+</span><span id="line-155">    <span class="k">for</span> <span class="n">note</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+</span><span id="line-156">        <span class="k">if</span> <span class="n">current</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">current</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pitch</span> <span class="ow">and</span> <span class="n">current</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">dur</span> <span class="o">&gt;</span> <span class="n">split_rest_s</span><span class="p">:</span>
+</span><span id="line-157">            <span class="n">segments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+</span><span id="line-158">            <span class="n">current</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-159">        <span class="k">elif</span> <span class="n">current</span> <span class="ow">and</span> <span class="n">note</span><span class="o">.</span><span class="n">end</span> <span class="o">-</span> <span class="n">current</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">&gt;</span> <span class="n">max_segment_s</span><span class="p">:</span>
+</span><span id="line-160">            <span class="n">rests</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="p">))</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">pitch</span><span class="p">]</span>
+</span><span id="line-161">            <span class="n">cut</span> <span class="o">=</span> <span class="n">rests</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">rests</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+</span><span id="line-162">            <span class="n">segments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">[:</span><span class="n">cut</span><span class="p">])</span>
+</span><span id="line-163">            <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="p">[</span><span class="n">cut</span><span class="p">:]</span>
+</span><span id="line-164">        <span class="n">current</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">note</span><span class="p">)</span>
+</span><span id="line-165">    <span class="k">return</span> <span class="n">segments</span> <span class="o">+</span> <span class="p">[</span><span class="n">current</span><span class="p">]</span> <span class="k">if</span> <span class="n">current</span> <span class="k">else</span> <span class="n">segments</span>
+</span><span id="line-166">
+</span><span id="line-167">
+</span><span id="line-168"><span class="k">def</span><span class="w"> </span><span class="nf">_check_word</span><span class="p">(</span><span class="n">note</span><span class="p">:</span> <span class="n">Note</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-169"><span class="w">    </span><span class="sd">"""Each sung note needs a word with letters (else the phonemes and the notes</span>
+</span><span id="line-170"><span class="sd">    would not line up); several words on one note (an elision, ``"me and"``) are</span>
+</span><span id="line-171"><span class="sd">    sung together on it."""</span>
+</span><span id="line-172">    <span class="n">words</span> <span class="o">=</span> <span class="n">note</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+</span><span id="line-173">    <span class="k">if</span> <span class="ow">not</span> <span class="n">words</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">any</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">isalpha</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span><span class="p">):</span>
+</span><span id="line-174">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-175">            <span class="sa">f</span><span class="s2">"The note at </span><span class="si">{</span><span class="n">note</span><span class="o">.</span><span class="n">start</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s sings </span><span class="si">{</span><span class="n">note</span><span class="o">.</span><span class="n">word</span><span class="si">!r}</span><span class="s2">: each sung note "</span>
+</span><span id="line-176">            <span class="s2">"needs one word, with letters (hyphenate a word over notes: 'can-dle')"</span>
+</span><span id="line-177">        <span class="p">)</span>
+</span><span id="line-178">    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">WORD_JOINER</span> <span class="ow">in</span> <span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span><span class="p">):</span>
+</span><span id="line-179">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-180">            <span class="sa">f</span><span class="s2">"The note at </span><span class="si">{</span><span class="n">note</span><span class="o">.</span><span class="n">start</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s sings </span><span class="si">{</span><span class="n">note</span><span class="o">.</span><span class="n">word</span><span class="si">!r}</span><span class="s2">: "</span>
+</span><span id="line-181">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">WORD_JOINER</span><span class="si">!r}</span><span class="s2"> joins the words of an elision, so a word can't hold it"</span>
+</span><span id="line-182">        <span class="p">)</span>
 </span><span id="line-183">
-</span><span id="line-184"><span class="k">def</span><span class="w"> </span><span class="nf">_segment</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">segment</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="n">language</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-</span><span id="line-185">    <span class="n">durations</span> <span class="o">=</span> <span class="n">_durations</span><span class="p">(</span><span class="n">segment</span><span class="p">)</span>
-</span><span id="line-186">    <span class="n">start_ms</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">segment</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
-</span><span id="line-187">    <span class="k">return</span> <span class="p">{</span>
-</span><span id="line-188">        <span class="s2">"index"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-</span><span id="line-189">        <span class="s2">"language"</span><span class="p">:</span> <span class="n">language</span><span class="p">,</span>
-</span><span id="line-190">        <span class="s2">"time"</span><span class="p">:</span> <span class="p">[</span><span class="n">start_ms</span><span class="p">,</span> <span class="n">start_ms</span> <span class="o">+</span> <span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">durations</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)],</span>
-</span><span id="line-191">        <span class="s2">"duration"</span><span class="p">:</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">d</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">DURATION_DIGITS</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">durations</span><span class="p">),</span>
-</span><span id="line-192">        <span class="s2">"text"</span><span class="p">:</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">word</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">pitch</span> <span class="k">else</span> <span class="n">SP</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">segment</span><span class="p">),</span>
-</span><span id="line-193">        <span class="s2">"phoneme"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
-</span><span id="line-194">        <span class="s2">"note_pitch"</span><span class="p">:</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">pitch</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">segment</span><span class="p">),</span>
-</span><span id="line-195">        <span class="s2">"note_type"</span><span class="p">:</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-</span><span id="line-196">            <span class="nb">str</span><span class="p">(</span>
-</span><span id="line-197">                <span class="n">REST_TYPE</span>
-</span><span id="line-198">                <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="o">.</span><span class="n">pitch</span>
-</span><span id="line-199">                <span class="k">else</span> <span class="n">ONSET_TYPE</span>
-</span><span id="line-200">                <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">starts_word</span>
-</span><span id="line-201">                <span class="k">else</span> <span class="n">CONTINUATION_TYPE</span>
-</span><span id="line-202">            <span class="p">)</span>
-</span><span id="line-203">            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">segment</span>
-</span><span id="line-204">        <span class="p">),</span>
-</span><span id="line-205">        <span class="s2">"f0"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
-</span><span id="line-206">    <span class="p">}</span>
-</span><span id="line-207">
-</span><span id="line-208">
+</span><span id="line-184">
+</span><span id="line-185"><span class="k">def</span><span class="w"> </span><span class="nf">_text_token</span><span class="p">(</span><span class="n">note</span><span class="p">:</span> <span class="n">Note</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-186"><span class="w">    </span><span class="sd">"""The note's ``text`` token: its word, or the words of an elision joined.</span>
+</span><span id="line-187">
+</span><span id="line-188"><span class="sd">    &gt;&gt;&gt; _text_token(Note(0, 1, 60, "me and"))</span>
+</span><span id="line-189"><span class="sd">    'me+and'</span>
+</span><span id="line-190"><span class="sd">    """</span>
+</span><span id="line-191">    <span class="k">return</span> <span class="n">WORD_JOINER</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">note</span><span class="o">.</span><span class="n">word</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="k">if</span> <span class="n">note</span><span class="o">.</span><span class="n">pitch</span> <span class="k">else</span> <span class="n">SP</span>
+</span><span id="line-192">
+</span><span id="line-193">
+</span><span id="line-194"><span class="k">def</span><span class="w"> </span><span class="nf">_durations</span><span class="p">(</span><span class="n">segment</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+</span><span id="line-195"><span class="w">    </span><span class="sd">"""Durations rounded on the cumulative grid, so rounding never drifts."""</span>
+</span><span id="line-196">    <span class="n">t0</span> <span class="o">=</span> <span class="n">segment</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span>
+</span><span id="line-197">    <span class="n">edges</span> <span class="o">=</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="n">t0</span><span class="p">,</span> <span class="n">DURATION_DIGITS</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">segment</span><span class="p">]</span>
+</span><span id="line-198">    <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">segment</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">end</span> <span class="o">-</span> <span class="n">t0</span><span class="p">,</span> <span class="n">DURATION_DIGITS</span><span class="p">))</span>
+</span><span id="line-199">    <span class="k">return</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">,</span> <span class="n">DURATION_DIGITS</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:])]</span>
+</span><span id="line-200">
+</span><span id="line-201">
+</span><span id="line-202"><span class="k">def</span><span class="w"> </span><span class="nf">_segment</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">segment</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="n">language</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-203">    <span class="n">durations</span> <span class="o">=</span> <span class="n">_durations</span><span class="p">(</span><span class="n">segment</span><span class="p">)</span>
+</span><span id="line-204">    <span class="n">start_ms</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">segment</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+</span><span id="line-205">    <span class="k">return</span> <span class="p">{</span>
+</span><span id="line-206">        <span class="s2">"index"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="line-207">        <span class="s2">"language"</span><span class="p">:</span> <span class="n">language</span><span class="p">,</span>
+</span><span id="line-208">        <span class="s2">"time"</span><span class="p">:</span> <span class="p">[</span><span class="n">start_ms</span><span class="p">,</span> <span class="n">start_ms</span> <span class="o">+</span> <span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">durations</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)],</span>
+</span><span id="line-209">        <span class="s2">"duration"</span><span class="p">:</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">d</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">DURATION_DIGITS</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">durations</span><span class="p">),</span>
+</span><span id="line-210">        <span class="s2">"text"</span><span class="p">:</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_text_token</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">segment</span><span class="p">),</span>
+</span><span id="line-211">        <span class="s2">"phoneme"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+</span><span id="line-212">        <span class="s2">"note_pitch"</span><span class="p">:</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">pitch</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">segment</span><span class="p">),</span>
+</span><span id="line-213">        <span class="s2">"note_type"</span><span class="p">:</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+</span><span id="line-214">            <span class="nb">str</span><span class="p">(</span>
+</span><span id="line-215">                <span class="n">REST_TYPE</span>
+</span><span id="line-216">                <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="o">.</span><span class="n">pitch</span>
+</span><span id="line-217">                <span class="k">else</span> <span class="n">ONSET_TYPE</span>
+</span><span id="line-218">                <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">starts_word</span>
+</span><span id="line-219">                <span class="k">else</span> <span class="n">CONTINUATION_TYPE</span>
+</span><span id="line-220">            <span class="p">)</span>
+</span><span id="line-221">            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">segment</span>
+</span><span id="line-222">        <span class="p">),</span>
+</span><span id="line-223">        <span class="s2">"f0"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+</span><span id="line-224">    <span class="p">}</span>
+</span><span id="line-225">
+</span><span id="line-226">
 <div class="viewcode-block" id="soulx_metadata">
 <a class="viewcode-back" href="../../_autosummary/voxy.soulx.html#voxy.soulx.soulx_metadata">[docs]</a>
-</span><span id="line-209"><span class="k">def</span><span class="w"> </span><span class="nf">soulx_metadata</span><span class="p">(</span>
-</span><span id="line-210">    <span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span>
-</span><span id="line-211">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-212">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"target"</span><span class="p">,</span>
-</span><span id="line-213">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
-</span><span id="line-214">    <span class="n">lead_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_LEAD_S</span><span class="p">,</span>
-</span><span id="line-215">    <span class="n">tail_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_TAIL_S</span><span class="p">,</span>
-</span><span id="line-216">    <span class="n">min_rest_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_REST_S</span><span class="p">,</span>
-</span><span id="line-217">    <span class="n">split_rest_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_SPLIT_REST_S</span><span class="p">,</span>
-</span><span id="line-218">    <span class="n">max_segment_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MAX_SEGMENT_S</span><span class="p">,</span>
-</span><span id="line-219"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-220"><span class="w">    </span><span class="sd">"""SoulX-Singer metadata (segments, phonemes left empty) for sung ``notes``.</span>
-</span><span id="line-221">
-</span><span id="line-222"><span class="sd">    The line starts ``lead_s`` after a rest, gaps of ``min_rest_s`` or more become</span>
-</span><span id="line-223"><span class="sd">    rests (shorter ones join the previous note), and a segment ends at a rest</span>
-</span><span id="line-224"><span class="sd">    longer than ``split_rest_s`` or before it would pass ``max_segment_s``.</span>
-</span><span id="line-225"><span class="sd">    """</span>
-</span><span id="line-226">    <span class="k">if</span> <span class="n">language</span> <span class="o">!=</span> <span class="s2">"English"</span><span class="p">:</span>
-</span><span id="line-227">        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-</span><span id="line-228">            <span class="sa">f</span><span class="s2">"SoulX singing in </span><span class="si">{</span><span class="n">language</span><span class="si">}</span><span class="s2"> needs its phonemes (only English is done here)"</span>
-</span><span id="line-229">        <span class="p">)</span>
-</span><span id="line-230">    <span class="k">for</span> <span class="n">note</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">:</span>
-</span><span id="line-231">        <span class="n">_check_word</span><span class="p">(</span><span class="n">note</span><span class="p">)</span>
-</span><span id="line-232">    <span class="n">line</span> <span class="o">=</span> <span class="n">_with_rests</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">lead_s</span><span class="o">=</span><span class="n">lead_s</span><span class="p">,</span> <span class="n">tail_s</span><span class="o">=</span><span class="n">tail_s</span><span class="p">,</span> <span class="n">min_rest_s</span><span class="o">=</span><span class="n">min_rest_s</span><span class="p">)</span>
-</span><span id="line-233">    <span class="n">segments</span> <span class="o">=</span> <span class="n">_segments</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">split_rest_s</span><span class="o">=</span><span class="n">split_rest_s</span><span class="p">,</span> <span class="n">max_segment_s</span><span class="o">=</span><span class="n">max_segment_s</span><span class="p">)</span>
-</span><span id="line-234">    <span class="k">return</span> <span class="p">[</span><span class="n">_segment</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">language</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">segments</span><span class="p">)]</span></div>
+</span><span id="line-227"><span class="k">def</span><span class="w"> </span><span class="nf">soulx_metadata</span><span class="p">(</span>
+</span><span id="line-228">    <span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span>
+</span><span id="line-229">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-230">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"target"</span><span class="p">,</span>
+</span><span id="line-231">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
+</span><span id="line-232">    <span class="n">lead_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_LEAD_S</span><span class="p">,</span>
+</span><span id="line-233">    <span class="n">tail_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_TAIL_S</span><span class="p">,</span>
+</span><span id="line-234">    <span class="n">min_rest_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_REST_S</span><span class="p">,</span>
+</span><span id="line-235">    <span class="n">split_rest_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_SPLIT_REST_S</span><span class="p">,</span>
+</span><span id="line-236">    <span class="n">max_segment_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MAX_SEGMENT_S</span><span class="p">,</span>
+</span><span id="line-237"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-238"><span class="w">    </span><span class="sd">"""SoulX-Singer metadata (segments, phonemes left empty) for sung ``notes``.</span>
+</span><span id="line-239">
+</span><span id="line-240"><span class="sd">    The line starts ``lead_s`` after a rest, gaps of ``min_rest_s`` or more become</span>
+</span><span id="line-241"><span class="sd">    rests (shorter ones join the previous note), and a segment ends at a rest</span>
+</span><span id="line-242"><span class="sd">    longer than ``split_rest_s`` or before it would pass ``max_segment_s``.</span>
+</span><span id="line-243"><span class="sd">    """</span>
+</span><span id="line-244">    <span class="k">if</span> <span class="n">language</span> <span class="o">!=</span> <span class="s2">"English"</span><span class="p">:</span>
+</span><span id="line-245">        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+</span><span id="line-246">            <span class="sa">f</span><span class="s2">"SoulX singing in </span><span class="si">{</span><span class="n">language</span><span class="si">}</span><span class="s2"> needs its phonemes (only English is done here)"</span>
+</span><span id="line-247">        <span class="p">)</span>
+</span><span id="line-248">    <span class="k">for</span> <span class="n">note</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">:</span>
+</span><span id="line-249">        <span class="n">_check_word</span><span class="p">(</span><span class="n">note</span><span class="p">)</span>
+</span><span id="line-250">    <span class="n">line</span> <span class="o">=</span> <span class="n">_with_rests</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">lead_s</span><span class="o">=</span><span class="n">lead_s</span><span class="p">,</span> <span class="n">tail_s</span><span class="o">=</span><span class="n">tail_s</span><span class="p">,</span> <span class="n">min_rest_s</span><span class="o">=</span><span class="n">min_rest_s</span><span class="p">)</span>
+</span><span id="line-251">    <span class="n">segments</span> <span class="o">=</span> <span class="n">_segments</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">split_rest_s</span><span class="o">=</span><span class="n">split_rest_s</span><span class="p">,</span> <span class="n">max_segment_s</span><span class="o">=</span><span class="n">max_segment_s</span><span class="p">)</span>
+</span><span id="line-252">    <span class="k">return</span> <span class="p">[</span><span class="n">_segment</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">language</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">segments</span><span class="p">)]</span></div>
 
-</span><span id="line-235">
-</span><span id="line-236">
+</span><span id="line-253">
+</span><span id="line-254">
 <div class="viewcode-block" id="soulx_prompt_metadata">
 <a class="viewcode-back" href="../../_autosummary/voxy.soulx.html#voxy.soulx.soulx_prompt_metadata">[docs]</a>
-</span><span id="line-237"><span class="k">def</span><span class="w"> </span><span class="nf">soulx_prompt_metadata</span><span class="p">(</span>
-</span><span id="line-238">    <span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span>
-</span><span id="line-239">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-240">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
-</span><span id="line-241">    <span class="n">tail_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-</span><span id="line-242">    <span class="n">min_rest_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_REST_S</span><span class="p">,</span>
-</span><span id="line-243"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-244"><span class="w">    </span><span class="sd">"""The one-segment metadata of a prompt clip whose notes are ``notes``, at the</span>
-</span><span id="line-245"><span class="sd">    clip's own times (SoulX crops the clip to the metadata's length).</span>
-</span><span id="line-246">
-</span><span id="line-247"><span class="sd">    &gt;&gt;&gt; from voxy.score import Note</span>
-</span><span id="line-248"><span class="sd">    &gt;&gt;&gt; soulx_prompt_metadata([Note(0.3, 0.6, 67, "la")])[0]["duration"]</span>
-</span><span id="line-249"><span class="sd">    '0.30 0.60'</span>
-</span><span id="line-250"><span class="sd">    """</span>
-</span><span id="line-251">    <span class="n">infinite</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"inf"</span><span class="p">)</span>
-</span><span id="line-252">    <span class="k">return</span> <span class="n">soulx_metadata</span><span class="p">(</span>
-</span><span id="line-253">        <span class="n">notes</span><span class="p">,</span>
-</span><span id="line-254">        <span class="n">name</span><span class="o">=</span><span class="s2">"prompt"</span><span class="p">,</span>
-</span><span id="line-255">        <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span>
-</span><span id="line-256">        <span class="n">lead_s</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="line-257">        <span class="n">tail_s</span><span class="o">=</span><span class="n">tail_s</span><span class="p">,</span>
-</span><span id="line-258">        <span class="n">min_rest_s</span><span class="o">=</span><span class="n">min_rest_s</span><span class="p">,</span>
-</span><span id="line-259">        <span class="n">split_rest_s</span><span class="o">=</span><span class="n">infinite</span><span class="p">,</span>
-</span><span id="line-260">        <span class="n">max_segment_s</span><span class="o">=</span><span class="n">infinite</span><span class="p">,</span>
-</span><span id="line-261">    <span class="p">)</span></div>
+</span><span id="line-255"><span class="k">def</span><span class="w"> </span><span class="nf">soulx_prompt_metadata</span><span class="p">(</span>
+</span><span id="line-256">    <span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span>
+</span><span id="line-257">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-258">    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
+</span><span id="line-259">    <span class="n">tail_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-260">    <span class="n">min_rest_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MIN_REST_S</span><span class="p">,</span>
+</span><span id="line-261"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+</span><span id="line-262"><span class="w">    </span><span class="sd">"""The one-segment metadata of a prompt clip whose notes are ``notes``, at the</span>
+</span><span id="line-263"><span class="sd">    clip's own times (SoulX crops the clip to the metadata's length).</span>
+</span><span id="line-264">
+</span><span id="line-265"><span class="sd">    &gt;&gt;&gt; from voxy.score import Note</span>
+</span><span id="line-266"><span class="sd">    &gt;&gt;&gt; soulx_prompt_metadata([Note(0.3, 0.6, 67, "la")])[0]["duration"]</span>
+</span><span id="line-267"><span class="sd">    '0.30 0.60'</span>
+</span><span id="line-268"><span class="sd">    """</span>
+</span><span id="line-269">    <span class="n">infinite</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"inf"</span><span class="p">)</span>
+</span><span id="line-270">    <span class="k">return</span> <span class="n">soulx_metadata</span><span class="p">(</span>
+</span><span id="line-271">        <span class="n">notes</span><span class="p">,</span>
+</span><span id="line-272">        <span class="n">name</span><span class="o">=</span><span class="s2">"prompt"</span><span class="p">,</span>
+</span><span id="line-273">        <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span>
+</span><span id="line-274">        <span class="n">lead_s</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-275">        <span class="n">tail_s</span><span class="o">=</span><span class="n">tail_s</span><span class="p">,</span>
+</span><span id="line-276">        <span class="n">min_rest_s</span><span class="o">=</span><span class="n">min_rest_s</span><span class="p">,</span>
+</span><span id="line-277">        <span class="n">split_rest_s</span><span class="o">=</span><span class="n">infinite</span><span class="p">,</span>
+</span><span id="line-278">        <span class="n">max_segment_s</span><span class="o">=</span><span class="n">infinite</span><span class="p">,</span>
+</span><span id="line-279">    <span class="p">)</span></div>
 
-</span><span id="line-262">
-</span><span id="line-263">
-</span><span id="line-264"><span class="c1"># --------------------------------------------------------------------------- model</span>
-</span><span id="line-265">
-</span><span id="line-266">
-</span><span id="line-267"><span class="k">def</span><span class="w"> </span><span class="nf">_lower_median</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-</span><span id="line-268"><span class="w">    </span><span class="sd">"""The lower middle value (``torch.median``'s rule, which upstream uses)."""</span>
-</span><span id="line-269">    <span class="n">ordered</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
-</span><span id="line-270">    <span class="k">return</span> <span class="n">ordered</span><span class="p">[(</span><span class="nb">len</span><span class="p">(</span><span class="n">ordered</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span>
-</span><span id="line-271">
-</span><span id="line-272">
+</span><span id="line-280">
+</span><span id="line-281">
+</span><span id="line-282"><span class="c1"># --------------------------------------------------------------------------- model</span>
+</span><span id="line-283">
+</span><span id="line-284">
+</span><span id="line-285"><span class="k">def</span><span class="w"> </span><span class="nf">_lower_median</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="line-286"><span class="w">    </span><span class="sd">"""The lower middle value (``torch.median``'s rule, which upstream uses)."""</span>
+</span><span id="line-287">    <span class="n">ordered</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+</span><span id="line-288">    <span class="k">return</span> <span class="n">ordered</span><span class="p">[(</span><span class="nb">len</span><span class="p">(</span><span class="n">ordered</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span>
+</span><span id="line-289">
+</span><span id="line-290">
 <div class="viewcode-block" id="fit_voice_shift">
 <a class="viewcode-back" href="../../_autosummary/voxy.soulx.html#voxy.soulx.fit_voice_shift">[docs]</a>
-</span><span id="line-273"><span class="k">def</span><span class="w"> </span><span class="nf">fit_voice_shift</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="n">prompt</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-</span><span id="line-274"><span class="w">    </span><span class="sd">"""Semitones that move ``target`` into the register of the voice singing</span>
-</span><span id="line-275"><span class="sd">    ``prompt``: median prompt pitch minus median target pitch, over notes.</span>
-</span><span id="line-276">
-</span><span id="line-277"><span class="sd">    Upstream computes this per segment (and weights notes by their phoneme count),</span>
-</span><span id="line-278"><span class="sd">    so a long song would change key between segments; voxy computes it once.</span>
-</span><span id="line-279">
-</span><span id="line-280"><span class="sd">    &gt;&gt;&gt; fit_voice_shift([Note(0, 1, 60), Note(1, 1, 64)], [Note(0, 1, 55)])</span>
-</span><span id="line-281"><span class="sd">    -5</span>
-</span><span id="line-282"><span class="sd">    """</span>
-</span><span id="line-283">    <span class="k">return</span> <span class="n">_lower_median</span><span class="p">([</span><span class="n">n</span><span class="o">.</span><span class="n">pitch</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">prompt</span><span class="p">])</span> <span class="o">-</span> <span class="n">_lower_median</span><span class="p">(</span>
-</span><span id="line-284">        <span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">pitch</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">target</span><span class="p">]</span>
-</span><span id="line-285">    <span class="p">)</span></div>
+</span><span id="line-291"><span class="k">def</span><span class="w"> </span><span class="nf">fit_voice_shift</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="n">prompt</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="line-292"><span class="w">    </span><span class="sd">"""Semitones that move ``target`` into the register of the voice singing</span>
+</span><span id="line-293"><span class="sd">    ``prompt``: median prompt pitch minus median target pitch, over notes.</span>
+</span><span id="line-294">
+</span><span id="line-295"><span class="sd">    Upstream computes this per segment (and weights notes by their phoneme count),</span>
+</span><span id="line-296"><span class="sd">    so a long song would change key between segments; voxy computes it once.</span>
+</span><span id="line-297">
+</span><span id="line-298"><span class="sd">    &gt;&gt;&gt; fit_voice_shift([Note(0, 1, 60), Note(1, 1, 64)], [Note(0, 1, 55)])</span>
+</span><span id="line-299"><span class="sd">    -5</span>
+</span><span id="line-300"><span class="sd">    """</span>
+</span><span id="line-301">    <span class="k">return</span> <span class="n">_lower_median</span><span class="p">([</span><span class="n">n</span><span class="o">.</span><span class="n">pitch</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">prompt</span><span class="p">])</span> <span class="o">-</span> <span class="n">_lower_median</span><span class="p">(</span>
+</span><span id="line-302">        <span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">pitch</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">target</span><span class="p">]</span>
+</span><span id="line-303">    <span class="p">)</span></div>
 
-</span><span id="line-286">
-</span><span id="line-287">
-</span><span id="line-288"><span class="k">def</span><span class="w"> </span><span class="nf">_shift</span><span class="p">(</span><span class="n">transpose</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-</span><span id="line-289"><span class="w">    </span><span class="sd">"""The adapter's ``auto_shift`` / ``pitch_shift`` for a ``transpose`` value.</span>
-</span><span id="line-290">
-</span><span id="line-291"><span class="sd">    With ``target`` and ``prompt`` notes, 'fit_voice' is computed here, once for</span>
-</span><span id="line-292"><span class="sd">    every segment; without (conversion), the adapter fits it from the audio.</span>
-</span><span id="line-293">
-</span><span id="line-294"><span class="sd">    &gt;&gt;&gt; _shift(0), _shift(-12), _shift("fit_voice")</span>
-</span><span id="line-295"><span class="sd">    ({'auto_shift': False, 'pitch_shift': 0}, {'auto_shift': False, 'pitch_shift': -12}, {'auto_shift': True, 'pitch_shift': 0})</span>
-</span><span id="line-296"><span class="sd">    """</span>
-</span><span id="line-297">    <span class="k">if</span> <span class="n">transpose</span> <span class="o">==</span> <span class="n">FIT_VOICE</span><span class="p">:</span>
-</span><span id="line-298">        <span class="k">if</span> <span class="n">target</span> <span class="ow">and</span> <span class="n">prompt</span><span class="p">:</span>
-</span><span id="line-299">            <span class="k">return</span> <span class="p">{</span><span class="s2">"auto_shift"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"pitch_shift"</span><span class="p">:</span> <span class="n">fit_voice_shift</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">prompt</span><span class="p">)}</span>
-</span><span id="line-300">        <span class="k">return</span> <span class="p">{</span><span class="s2">"auto_shift"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"pitch_shift"</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
-</span><span id="line-301">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">transpose</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">transpose</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-</span><span id="line-302">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"transpose is semitones or </span><span class="si">{</span><span class="n">FIT_VOICE</span><span class="si">!r}</span><span class="s2">, not </span><span class="si">{</span><span class="n">transpose</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-303">    <span class="k">return</span> <span class="p">{</span><span class="s2">"auto_shift"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"pitch_shift"</span><span class="p">:</span> <span class="n">transpose</span><span class="p">}</span>
 </span><span id="line-304">
 </span><span id="line-305">
-</span><span id="line-306"><span class="k">def</span><span class="w"> </span><span class="nf">_prompt</span><span class="p">(</span><span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-</span><span id="line-307">    <span class="n">segment</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="s2">"segment"</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span>
-</span><span id="line-308">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">segment</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"prompt_audio"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">segment</span><span class="p">:</span>
-</span><span id="line-309">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-310">            <span class="s2">"A singing voice is a sung clip: voxy.singing_voice(audio, score, lyrics)"</span>
-</span><span id="line-311">        <span class="p">)</span>
-</span><span id="line-312">    <span class="n">notes</span> <span class="o">=</span> <span class="n">segment</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"prompt_notes"</span><span class="p">)</span>
-</span><span id="line-313">    <span class="n">audio</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">segment</span><span class="p">[</span><span class="s2">"prompt_audio"</span><span class="p">])</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
-</span><span id="line-314">    <span class="k">return</span> <span class="n">audio</span><span class="p">,</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">notes</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">Note</span><span class="p">(</span><span class="o">**</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">]</span>
-</span><span id="line-315">
-</span><span id="line-316">
+</span><span id="line-306"><span class="k">def</span><span class="w"> </span><span class="nf">_shift</span><span class="p">(</span><span class="n">transpose</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-307"><span class="w">    </span><span class="sd">"""The adapter's ``auto_shift`` / ``pitch_shift`` for a ``transpose`` value.</span>
+</span><span id="line-308">
+</span><span id="line-309"><span class="sd">    With ``target`` and ``prompt`` notes, 'fit_voice' is computed here, once for</span>
+</span><span id="line-310"><span class="sd">    every segment; without (conversion), the adapter fits it from the audio.</span>
+</span><span id="line-311">
+</span><span id="line-312"><span class="sd">    &gt;&gt;&gt; _shift(0), _shift(-12), _shift("fit_voice")</span>
+</span><span id="line-313"><span class="sd">    ({'auto_shift': False, 'pitch_shift': 0}, {'auto_shift': False, 'pitch_shift': -12}, {'auto_shift': True, 'pitch_shift': 0})</span>
+</span><span id="line-314"><span class="sd">    """</span>
+</span><span id="line-315">    <span class="k">if</span> <span class="n">transpose</span> <span class="o">==</span> <span class="n">FIT_VOICE</span><span class="p">:</span>
+</span><span id="line-316">        <span class="k">if</span> <span class="n">target</span> <span class="ow">and</span> <span class="n">prompt</span><span class="p">:</span>
+</span><span id="line-317">            <span class="k">return</span> <span class="p">{</span><span class="s2">"auto_shift"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"pitch_shift"</span><span class="p">:</span> <span class="n">fit_voice_shift</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">prompt</span><span class="p">)}</span>
+</span><span id="line-318">        <span class="k">return</span> <span class="p">{</span><span class="s2">"auto_shift"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"pitch_shift"</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+</span><span id="line-319">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">transpose</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">transpose</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+</span><span id="line-320">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"transpose is semitones or </span><span class="si">{</span><span class="n">FIT_VOICE</span><span class="si">!r}</span><span class="s2">, not </span><span class="si">{</span><span class="n">transpose</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-321">    <span class="k">return</span> <span class="p">{</span><span class="s2">"auto_shift"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"pitch_shift"</span><span class="p">:</span> <span class="n">transpose</span><span class="p">}</span>
+</span><span id="line-322">
+</span><span id="line-323">
+</span><span id="line-324"><span class="k">def</span><span class="w"> </span><span class="nf">_prompt</span><span class="p">(</span><span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+</span><span id="line-325">    <span class="n">segment</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="s2">"segment"</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span>
+</span><span id="line-326">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">segment</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"prompt_audio"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">segment</span><span class="p">:</span>
+</span><span id="line-327">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-328">            <span class="s2">"A singing voice is a sung clip: voxy.singing_voice(audio, score, lyrics)"</span>
+</span><span id="line-329">        <span class="p">)</span>
+</span><span id="line-330">    <span class="n">notes</span> <span class="o">=</span> <span class="n">segment</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"prompt_notes"</span><span class="p">)</span>
+</span><span id="line-331">    <span class="n">audio</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">segment</span><span class="p">[</span><span class="s2">"prompt_audio"</span><span class="p">])</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+</span><span id="line-332">    <span class="k">return</span> <span class="n">audio</span><span class="p">,</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">notes</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">Note</span><span class="p">(</span><span class="o">**</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">]</span>
+</span><span id="line-333">
+</span><span id="line-334">
 <div class="viewcode-block" id="SoulXSingingModel">
 <a class="viewcode-back" href="../../_autosummary/voxy.soulx.html#voxy.soulx.SoulXSingingModel">[docs]</a>
-</span><span id="line-317"><span class="k">class</span><span class="w"> </span><span class="nc">SoulXSingingModel</span><span class="p">:</span>
-</span><span id="line-318"><span class="w">    </span><span class="sd">"""SoulX-Singer as a singing model (``voxy.sing(..., backend="soulx")``).</span>
-</span><span id="line-319">
-</span><span id="line-320"><span class="sd">    Args:</span>
-</span><span id="line-321"><span class="sd">        run: ``(op, **request) -&gt; (samples, sample_rate)``, where ``op`` is the</span>
-</span><span id="line-322"><span class="sd">            adapter's 'sing' or 'convert'; default: a ``SingingWorker`` running</span>
-</span><span id="line-323"><span class="sd">            ``workers/soulx_adapter.py`` in the ``soulx`` environment (built, and the</span>
-</span><span id="line-324"><span class="sd">            source fetched, on first use). Tests inject a fake.</span>
-</span><span id="line-325"><span class="sd">        init: Keyword arguments of the adapter's ``load`` over the backend's</span>
-</span><span id="line-326"><span class="sd">            (``device='cpu'``, ``weights_dir=`` local weights, ``preload=``).</span>
-</span><span id="line-327"><span class="sd">        threads, rootdir, auto_setup, env_vars: As ``voxy.local_clone.WorkerGenerate``.</span>
-</span><span id="line-328"><span class="sd">    """</span>
-</span><span id="line-329">
-</span><span id="line-330">    <span class="n">name</span> <span class="o">=</span> <span class="s2">"soulx"</span>
-</span><span id="line-331">
-</span><span id="line-332">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="line-333">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-334">        <span class="o">*</span><span class="p">,</span>
-</span><span id="line-335">        <span class="n">run</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="line-336">        <span class="n">init</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-337">        <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-338">        <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-339">        <span class="n">auto_setup</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="line-340">        <span class="n">env_vars</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-341">    <span class="p">):</span>
-</span><span id="line-342">        <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">=</span> <span class="n">SOULX_BACKEND</span>
-</span><span id="line-343">        <span class="bp">self</span><span class="o">.</span><span class="n">_run</span> <span class="o">=</span> <span class="n">run</span> <span class="ow">or</span> <span class="n">SingingWorker</span><span class="p">(</span>
-</span><span id="line-344">            <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span>
-</span><span id="line-345">            <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span>
-</span><span id="line-346">            <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span>
-</span><span id="line-347">            <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">,</span>
-</span><span id="line-348">            <span class="n">env_vars</span><span class="o">=</span><span class="n">env_vars</span><span class="p">,</span>
-</span><span id="line-349">            <span class="n">auto_setup</span><span class="o">=</span><span class="n">auto_setup</span><span class="p">,</span>
-</span><span id="line-350">        <span class="p">)</span>
-</span><span id="line-351">
-</span><span id="line-352">    <span class="k">def</span><span class="w"> </span><span class="nf">_speech</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="line-353">        <span class="k">if</span> <span class="n">clash</span> <span class="o">:=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
-</span><span id="line-354">            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">clash</span><span class="si">}</span><span class="s2"> are set by voxy, not by params"</span><span class="p">)</span>
-</span><span id="line-355">        <span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
-</span><span id="line-356">        <span class="k">return</span> <span class="n">Speech</span><span class="p">(</span>
-</span><span id="line-357">            <span class="n">write_wav</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">),</span>
-</span><span id="line-358">            <span class="nb">format</span><span class="o">=</span><span class="s2">"wav"</span><span class="p">,</span>
-</span><span id="line-359">            <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-</span><span id="line-360">            <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span>
-</span><span id="line-361">            <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
-</span><span id="line-362">            <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
-</span><span id="line-363">        <span class="p">)</span>
-</span><span id="line-364">
+</span><span id="line-335"><span class="k">class</span><span class="w"> </span><span class="nc">SoulXSingingModel</span><span class="p">:</span>
+</span><span id="line-336"><span class="w">    </span><span class="sd">"""SoulX-Singer as a singing model (``voxy.sing(..., backend="soulx")``).</span>
+</span><span id="line-337">
+</span><span id="line-338"><span class="sd">    Args:</span>
+</span><span id="line-339"><span class="sd">        run: ``(op, **request) -&gt; (samples, sample_rate)``, where ``op`` is the</span>
+</span><span id="line-340"><span class="sd">            adapter's 'sing' or 'convert'; default: a ``SingingWorker`` running</span>
+</span><span id="line-341"><span class="sd">            ``workers/soulx_adapter.py`` in the ``soulx`` environment (built, and the</span>
+</span><span id="line-342"><span class="sd">            source fetched, on first use). Tests inject a fake.</span>
+</span><span id="line-343"><span class="sd">        init: Keyword arguments of the adapter's ``load`` over the backend's</span>
+</span><span id="line-344"><span class="sd">            (``device='cpu'``, ``weights_dir=`` local weights, ``preload=``).</span>
+</span><span id="line-345"><span class="sd">        threads, rootdir, auto_setup, env_vars: As ``voxy.local_clone.WorkerGenerate``.</span>
+</span><span id="line-346"><span class="sd">    """</span>
+</span><span id="line-347">
+</span><span id="line-348">    <span class="n">name</span> <span class="o">=</span> <span class="s2">"soulx"</span>
+</span><span id="line-349">
+</span><span id="line-350">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="line-351">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-352">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-353">        <span class="n">run</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-354">        <span class="n">init</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-355">        <span class="n">threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-356">        <span class="n">rootdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-357">        <span class="n">auto_setup</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="line-358">        <span class="n">env_vars</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-359">    <span class="p">):</span>
+</span><span id="line-360">        <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">=</span> <span class="n">SOULX_BACKEND</span>
+</span><span id="line-361">        <span class="bp">self</span><span class="o">.</span><span class="n">_run</span> <span class="o">=</span> <span class="n">run</span> <span class="ow">or</span> <span class="n">SingingWorker</span><span class="p">(</span>
+</span><span id="line-362">            <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span>
+</span><span id="line-363">            <span class="n">init</span><span class="o">=</span><span class="n">init</span><span class="p">,</span>
+</span><span id="line-364">            <span class="n">threads</span><span class="o">=</span><span class="n">threads</span><span class="p">,</span>
+</span><span id="line-365">            <span class="n">rootdir</span><span class="o">=</span><span class="n">rootdir</span><span class="p">,</span>
+</span><span id="line-366">            <span class="n">env_vars</span><span class="o">=</span><span class="n">env_vars</span><span class="p">,</span>
+</span><span id="line-367">            <span class="n">auto_setup</span><span class="o">=</span><span class="n">auto_setup</span><span class="p">,</span>
+</span><span id="line-368">        <span class="p">)</span>
+</span><span id="line-369">
+</span><span id="line-370">    <span class="k">def</span><span class="w"> </span><span class="nf">_speech</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+</span><span id="line-371">        <span class="k">if</span> <span class="n">clash</span> <span class="o">:=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+</span><span id="line-372">            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">clash</span><span class="si">}</span><span class="s2"> are set by voxy, not by params"</span><span class="p">)</span>
+</span><span id="line-373">        <span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+</span><span id="line-374">        <span class="k">return</span> <span class="n">Speech</span><span class="p">(</span>
+</span><span id="line-375">            <span class="n">write_wav</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">),</span>
+</span><span id="line-376">            <span class="nb">format</span><span class="o">=</span><span class="s2">"wav"</span><span class="p">,</span>
+</span><span id="line-377">            <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="line-378">            <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span>
+</span><span id="line-379">            <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">,</span>
+</span><span id="line-380">            <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+</span><span id="line-381">        <span class="p">)</span>
+</span><span id="line-382">
 <div class="viewcode-block" id="SoulXSingingModel.sing">
 <a class="viewcode-back" href="../../_autosummary/voxy.soulx.html#voxy.soulx.SoulXSingingModel.sing">[docs]</a>
-</span><span id="line-365">    <span class="k">def</span><span class="w"> </span><span class="nf">sing</span><span class="p">(</span>
-</span><span id="line-366">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-367">        <span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span>
-</span><span id="line-368">        <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">,</span>
-</span><span id="line-369">        <span class="o">*</span><span class="p">,</span>
-</span><span id="line-370">        <span class="n">transpose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-</span><span id="line-371">        <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
-</span><span id="line-372">        <span class="o">**</span><span class="n">params</span><span class="p">,</span>
-</span><span id="line-373">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-374"><span class="w">        </span><span class="sd">"""Sing ``notes`` (with words) in ``voice`` (a clip and the notes it sings)."""</span>
-</span><span id="line-375">        <span class="n">prompt_audio</span><span class="p">,</span> <span class="n">prompt_notes</span> <span class="o">=</span> <span class="n">_prompt</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
-</span><span id="line-376">        <span class="k">if</span> <span class="ow">not</span> <span class="n">prompt_notes</span><span class="p">:</span>
-</span><span id="line-377">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-378">                <span class="s2">"SoulX synthesis needs the notes and words of the voice's clip: "</span>
-</span><span id="line-379">                <span class="s2">"voxy.singing_voice(audio, score, lyrics)"</span>
-</span><span id="line-380">            <span class="p">)</span>
-</span><span id="line-381">        <span class="n">request</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-382">            <span class="s2">"meta"</span><span class="p">:</span> <span class="n">soulx_metadata</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">),</span>
-</span><span id="line-383">            <span class="s2">"prompt_audio"</span><span class="p">:</span> <span class="n">prompt_audio</span><span class="p">,</span>
-</span><span id="line-384">            <span class="s2">"prompt_meta"</span><span class="p">:</span> <span class="n">soulx_prompt_metadata</span><span class="p">(</span><span class="n">prompt_notes</span><span class="p">),</span>
-</span><span id="line-385">            <span class="o">**</span><span class="n">_shift</span><span class="p">(</span><span class="n">transpose</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">notes</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="n">prompt_notes</span><span class="p">),</span>
-</span><span id="line-386">        <span class="p">}</span>
-</span><span id="line-387">        <span class="n">text</span> <span class="o">=</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">word</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">starts_word</span><span class="p">)</span>
-</span><span id="line-388">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_speech</span><span class="p">(</span><span class="s2">"sing"</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">prompt_audio</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">)</span></div>
-
-</span><span id="line-389">
-<div class="viewcode-block" id="SoulXSingingModel.convert">
-<a class="viewcode-back" href="../../_autosummary/voxy.soulx.html#voxy.soulx.SoulXSingingModel.convert">[docs]</a>
-</span><span id="line-390">    <span class="k">def</span><span class="w"> </span><span class="nf">convert</span><span class="p">(</span>
-</span><span id="line-391">        <span class="bp">self</span><span class="p">,</span> <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">transpose</span><span class="o">=</span><span class="n">FIT_VOICE</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span>
-</span><span id="line-392">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-393"><span class="w">        </span><span class="sd">"""Re-voice the sung clip at ``audio`` with ``voice``'s timbre."""</span>
-</span><span id="line-394">        <span class="n">prompt_audio</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_prompt</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
-</span><span id="line-395">        <span class="n">request</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-396">            <span class="s2">"audio"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>
-</span><span id="line-397">            <span class="s2">"prompt_audio"</span><span class="p">:</span> <span class="n">prompt_audio</span><span class="p">,</span>
-</span><span id="line-398">            <span class="o">**</span><span class="n">_shift</span><span class="p">(</span><span class="n">transpose</span><span class="p">),</span>
-</span><span id="line-399">        <span class="p">}</span>
-</span><span id="line-400">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_speech</span><span class="p">(</span><span class="s2">"convert"</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">prompt_audio</span><span class="p">)</span></div>
-
-</span><span id="line-401">
-<div class="viewcode-block" id="SoulXSingingModel.close">
-<a class="viewcode-back" href="../../_autosummary/voxy.soulx.html#voxy.soulx.SoulXSingingModel.close">[docs]</a>
-</span><span id="line-402">    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-403"><span class="w">        </span><span class="sd">"""Stop the worker (free the weights)."""</span>
-</span><span id="line-404">        <span class="n">close</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">,</span> <span class="s2">"close"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-405">        <span class="k">if</span> <span class="n">close</span><span class="p">:</span>
-</span><span id="line-406">            <span class="n">close</span><span class="p">()</span></div>
-</div>
+</span><span id="line-383">    <span class="k">def</span><span class="w"> </span><span class="nf">sing</span><span class="p">(</span>
+</span><span id="line-384">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-385">        <span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span>
+</span><span id="line-386">        <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">,</span>
+</span><span id="line-387">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-388">        <span class="n">transpose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="line-389">        <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_LANGUAGE</span><span class="p">,</span>
+</span><span id="line-390">        <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+</span><span id="line-391">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-392"><span class="w">        </span><span class="sd">"""Sing ``notes`` (with words) in ``voice`` (a clip and the notes it sings)."""</span>
+</span><span id="line-393">        <span class="n">prompt_audio</span><span class="p">,</span> <span class="n">prompt_notes</span> <span class="o">=</span> <span class="n">_prompt</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
+</span><span id="line-394">        <span class="k">if</span> <span class="ow">not</span> <span class="n">prompt_notes</span><span class="p">:</span>
+</span><span id="line-395">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-396">                <span class="s2">"SoulX synthesis needs the notes and words of the voice's clip: "</span>
+</span><span id="line-397">                <span class="s2">"voxy.singing_voice(audio, score, lyrics)"</span>
+</span><span id="line-398">            <span class="p">)</span>
+</span><span id="line-399">        <span class="n">request</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-400">            <span class="s2">"meta"</span><span class="p">:</span> <span class="n">soulx_metadata</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">),</span>
+</span><span id="line-401">            <span class="s2">"prompt_audio"</span><span class="p">:</span> <span class="n">prompt_audio</span><span class="p">,</span>
+</span><span id="line-402">            <span class="s2">"prompt_meta"</span><span class="p">:</span> <span class="n">soulx_prompt_metadata</span><span class="p">(</span><span class="n">prompt_notes</span><span class="p">),</span>
+</span><span id="line-403">            <span class="o">**</span><span class="n">_shift</span><span class="p">(</span><span class="n">transpose</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="n">notes</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="n">prompt_notes</span><span class="p">),</span>
+</span><span id="line-404">        <span class="p">}</span>
+</span><span id="line-405">        <span class="n">text</span> <span class="o">=</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">word</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">starts_word</span><span class="p">)</span>
+</span><span id="line-406">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_speech</span><span class="p">(</span><span class="s2">"sing"</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">prompt_audio</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">)</span></div>
 
 </span><span id="line-407">
-</span><span id="line-408">
-</span><span id="line-409"><span class="n">SOULX_BACKEND</span> <span class="o">=</span> <span class="n">register_singing_backend</span><span class="p">(</span>
-</span><span id="line-410">    <span class="n">SingingBackend</span><span class="p">(</span>
-</span><span id="line-411">        <span class="s2">"soulx"</span><span class="p">,</span>
-</span><span id="line-412">        <span class="n">SOULX_ENV</span><span class="p">,</span>
-</span><span id="line-413">        <span class="n">SoulXSingingModel</span><span class="p">,</span>
-</span><span id="line-414">        <span class="n">init</span><span class="o">=</span><span class="p">{</span>
-</span><span id="line-415">            <span class="s2">"weights"</span><span class="p">:</span> <span class="n">SOULX_WEIGHTS</span><span class="p">,</span>
-</span><span id="line-416">            <span class="s2">"preprocess"</span><span class="p">:</span> <span class="n">SOULX_PREPROCESS</span><span class="p">,</span>
-</span><span id="line-417">            <span class="s2">"device"</span><span class="p">:</span> <span class="s2">"auto"</span><span class="p">,</span>
-</span><span id="line-418">        <span class="p">},</span>
-</span><span id="line-419">        <span class="n">params</span><span class="o">=</span><span class="p">{</span>
-</span><span id="line-420">            <span class="s2">"n_steps"</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span>
-</span><span id="line-421">            <span class="s2">"cfg"</span><span class="p">:</span> <span class="mf">3.0</span><span class="p">,</span>
-</span><span id="line-422">            <span class="s2">"control"</span><span class="p">:</span> <span class="s2">"score"</span><span class="p">,</span>
-</span><span id="line-423">            <span class="s2">"seed"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-424">            <span class="s2">"peak"</span><span class="p">:</span> <span class="mf">0.95</span><span class="p">,</span>
-</span><span id="line-425">            <span class="s2">"fade_s"</span><span class="p">:</span> <span class="mf">0.02</span><span class="p">,</span>
-</span><span id="line-426">        <span class="p">},</span>
-</span><span id="line-427">        <span class="n">source</span><span class="o">=</span><span class="n">SOULX_SOURCE</span><span class="p">,</span>
-</span><span id="line-428">        <span class="n">licence</span><span class="o">=</span><span class="s2">"code and weights Apache-2.0 (RMVPE and whisper-base: Apache-2.0)"</span><span class="p">,</span>
-</span><span id="line-429">        <span class="n">consent</span><span class="o">=</span><span class="n">SOULX_CONSENT</span><span class="p">,</span>
-</span><span id="line-430">        <span class="n">notes</span><span class="o">=</span><span class="p">(</span>
-</span><span id="line-431">            <span class="s2">"Zero-shot SVS (score control: exact pitch) and SVC; 24 kHz; English, "</span>
-</span><span id="line-432">            <span class="s2">"Mandarin, Cantonese upstream (English only here); ~1.4x real time on "</span>
-</span><span id="line-433">            <span class="s2">"an M1 Max, 6 GB; n_steps=16 halves the time but blurs words."</span>
-</span><span id="line-434">        <span class="p">),</span>
-</span><span id="line-435">    <span class="p">),</span>
-</span><span id="line-436">    <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="line-437"><span class="p">)</span>
+<div class="viewcode-block" id="SoulXSingingModel.convert">
+<a class="viewcode-back" href="../../_autosummary/voxy.soulx.html#voxy.soulx.SoulXSingingModel.convert">[docs]</a>
+</span><span id="line-408">    <span class="k">def</span><span class="w"> </span><span class="nf">convert</span><span class="p">(</span>
+</span><span id="line-409">        <span class="bp">self</span><span class="p">,</span> <span class="n">audio</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">transpose</span><span class="o">=</span><span class="n">FIT_VOICE</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span>
+</span><span id="line-410">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-411"><span class="w">        </span><span class="sd">"""Re-voice the sung clip at ``audio`` with ``voice``'s timbre."""</span>
+</span><span id="line-412">        <span class="n">prompt_audio</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_prompt</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span>
+</span><span id="line-413">        <span class="n">request</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-414">            <span class="s2">"audio"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">audio</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()),</span>
+</span><span id="line-415">            <span class="s2">"prompt_audio"</span><span class="p">:</span> <span class="n">prompt_audio</span><span class="p">,</span>
+</span><span id="line-416">            <span class="o">**</span><span class="n">_shift</span><span class="p">(</span><span class="n">transpose</span><span class="p">),</span>
+</span><span id="line-417">        <span class="p">}</span>
+</span><span id="line-418">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_speech</span><span class="p">(</span><span class="s2">"convert"</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">prompt_audio</span><span class="p">)</span></div>
+
+</span><span id="line-419">
+<div class="viewcode-block" id="SoulXSingingModel.close">
+<a class="viewcode-back" href="../../_autosummary/voxy.soulx.html#voxy.soulx.SoulXSingingModel.close">[docs]</a>
+</span><span id="line-420">    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-421"><span class="w">        </span><span class="sd">"""Stop the worker (free the weights)."""</span>
+</span><span id="line-422">        <span class="n">close</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">,</span> <span class="s2">"close"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-423">        <span class="k">if</span> <span class="n">close</span><span class="p">:</span>
+</span><span id="line-424">            <span class="n">close</span><span class="p">()</span></div>
+</div>
+
+</span><span id="line-425">
+</span><span id="line-426">
+</span><span id="line-427"><span class="n">SOULX_BACKEND</span> <span class="o">=</span> <span class="n">register_singing_backend</span><span class="p">(</span>
+</span><span id="line-428">    <span class="n">SingingBackend</span><span class="p">(</span>
+</span><span id="line-429">        <span class="s2">"soulx"</span><span class="p">,</span>
+</span><span id="line-430">        <span class="n">SOULX_ENV</span><span class="p">,</span>
+</span><span id="line-431">        <span class="n">SoulXSingingModel</span><span class="p">,</span>
+</span><span id="line-432">        <span class="n">init</span><span class="o">=</span><span class="p">{</span>
+</span><span id="line-433">            <span class="s2">"weights"</span><span class="p">:</span> <span class="n">SOULX_WEIGHTS</span><span class="p">,</span>
+</span><span id="line-434">            <span class="s2">"preprocess"</span><span class="p">:</span> <span class="n">SOULX_PREPROCESS</span><span class="p">,</span>
+</span><span id="line-435">            <span class="s2">"device"</span><span class="p">:</span> <span class="s2">"auto"</span><span class="p">,</span>
+</span><span id="line-436">        <span class="p">},</span>
+</span><span id="line-437">        <span class="n">params</span><span class="o">=</span><span class="p">{</span>
+</span><span id="line-438">            <span class="s2">"n_steps"</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span>
+</span><span id="line-439">            <span class="s2">"cfg"</span><span class="p">:</span> <span class="mf">3.0</span><span class="p">,</span>
+</span><span id="line-440">            <span class="s2">"control"</span><span class="p">:</span> <span class="s2">"score"</span><span class="p">,</span>
+</span><span id="line-441">            <span class="s2">"seed"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-442">            <span class="s2">"peak"</span><span class="p">:</span> <span class="mf">0.95</span><span class="p">,</span>
+</span><span id="line-443">            <span class="s2">"fade_s"</span><span class="p">:</span> <span class="mf">0.02</span><span class="p">,</span>
+</span><span id="line-444">        <span class="p">},</span>
+</span><span id="line-445">        <span class="n">source</span><span class="o">=</span><span class="n">SOULX_SOURCE</span><span class="p">,</span>
+</span><span id="line-446">        <span class="n">licence</span><span class="o">=</span><span class="s2">"code and weights Apache-2.0 (RMVPE and whisper-base: Apache-2.0)"</span><span class="p">,</span>
+</span><span id="line-447">        <span class="n">consent</span><span class="o">=</span><span class="n">SOULX_CONSENT</span><span class="p">,</span>
+</span><span id="line-448">        <span class="n">notes</span><span class="o">=</span><span class="p">(</span>
+</span><span id="line-449">            <span class="s2">"Zero-shot SVS (score control: exact pitch) and SVC; 24 kHz; English, "</span>
+</span><span id="line-450">            <span class="s2">"Mandarin, Cantonese upstream (English only here); ~1.4x real time on "</span>
+</span><span id="line-451">            <span class="s2">"an M1 Max, 6 GB; n_steps=16 halves the time but blurs words."</span>
+</span><span id="line-452">        <span class="p">),</span>
+</span><span id="line-453">    <span class="p">),</span>
+</span><span id="line-454">    <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="line-455"><span class="p">)</span>
 </span></code></pre></div>
     </div></div>
           </main>
@@ -665,7 +683,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=8d9581ea"></script>
+    <script src="../../_static/documentation_options.js?v=ba6d0b80"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

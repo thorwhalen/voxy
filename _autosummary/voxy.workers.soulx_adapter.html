@@ -177,16 +177,19 @@ or make deceptive audio; respect intellectual property, privacy and consent.</p>
 <p class="rubric">Module Attributes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.soulx_adapter.DFLT_FADE_S" title="voxy.workers.soulx_adapter.DFLT_FADE_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_FADE_S</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.soulx_adapter.WORD_JOINER" title="voxy.workers.soulx_adapter.WORD_JOINER"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WORD_JOINER</span></code></a></p></td>
+<td><p>Joins the words sung on one note (an elision) in a <code class="docutils literal notranslate"><span class="pre">text</span></code> token; voxy.soulx writes it (its <code class="docutils literal notranslate"><span class="pre">WORD_JOINER</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.workers.soulx_adapter.DFLT_FADE_S" title="voxy.workers.soulx_adapter.DFLT_FADE_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_FADE_S</span></code></a></p></td>
 <td><p>Fade-out and fade-in length where segments meet (they are rendered separately and added, not overlapped).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.workers.soulx_adapter.SINGERS" title="voxy.workers.soulx_adapter.SINGERS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SINGERS</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.soulx_adapter.SINGERS" title="voxy.workers.soulx_adapter.SINGERS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SINGERS</span></code></a></p></td>
 <td><p>The two singers; loading one frees the other (2.8 GB each, about 6 GB in use).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.soulx_adapter.NOTE_FIELDS" title="voxy.workers.soulx_adapter.NOTE_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NOTE_FIELDS</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.workers.soulx_adapter.NOTE_FIELDS" title="voxy.workers.soulx_adapter.NOTE_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NOTE_FIELDS</span></code></a></p></td>
 <td><p>Per-note fields of a segment, which must all have one token per note.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.workers.soulx_adapter.NLTK_RESOURCES" title="voxy.workers.soulx_adapter.NLTK_RESOURCES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NLTK_RESOURCES</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.workers.soulx_adapter.NLTK_RESOURCES" title="voxy.workers.soulx_adapter.NLTK_RESOURCES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NLTK_RESOURCES</span></code></a></p></td>
 <td><p>g2p_en's NLTK resources (nltk 3.9 tags with the <code class="docutils literal notranslate"><span class="pre">_eng</span></code> tagger).</p></td>
 </tr>
 </tbody>
@@ -238,6 +241,12 @@ and added, not overlapped).</p>
 <span class="sig-prename descclassname"><span class="pre">voxy.workers.soulx_adapter.</span></span><span class="sig-name descname"><span class="pre">SINGERS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('svs',</span> <span class="pre">'svc')</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.soulx_adapter.SINGERS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.soulx_adapter.SINGERS'">¶</a></dt>
 <dd><p>The two singers; loading one frees the other (2.8 GB each, about 6 GB in use).</p>
 </dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.workers.soulx_adapter.WORD_JOINER">
+<span class="sig-prename descclassname"><span class="pre">voxy.workers.soulx_adapter.</span></span><span class="sig-name descname"><span class="pre">WORD_JOINER</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'+'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.soulx_adapter.WORD_JOINER" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.soulx_adapter.WORD_JOINER'">¶</a></dt>
+<dd><p>Joins the words sung on one note (an elision) in a <code class="docutils literal notranslate"><span class="pre">text</span></code> token; voxy.soulx
+writes it (its <code class="docutils literal notranslate"><span class="pre">WORD_JOINER</span></code>).</p>
+</dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.workers.soulx_adapter.convert">
 <span class="sig-prename descclassname"><span class="pre">voxy.workers.soulx_adapter.</span></span><span class="sig-name descname"><span class="pre">convert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">audio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prompt_audio</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pitch_shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cfg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peak</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.95</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/workers/soulx_adapter.html#convert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.soulx_adapter.convert" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.soulx_adapter.convert'">¶</a></dt>
@@ -277,6 +286,8 @@ used is returned); <code class="docutils literal notranslate"><span class="pre">
 <dt class="sig sig-object py" id="voxy.workers.soulx_adapter.phonemize_en">
 <span class="sig-prename descclassname"><span class="pre">voxy.workers.soulx_adapter.</span></span><span class="sig-name descname"><span class="pre">phonemize_en</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">word</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g2p</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/workers/soulx_adapter.html#phonemize_en"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.workers.soulx_adapter.phonemize_en" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.workers.soulx_adapter.phonemize_en'">¶</a></dt>
 <dd><p>SoulX’s token for an English word: <code class="docutils literal notranslate"><span class="pre">en_</span></code> and its ARPAbet phones joined by ‘-‘.</p>
+<p>The words of an elision (<code class="docutils literal notranslate"><span class="pre">me+and</span></code>, sung on one note) are phonemized one by
+one and their phones joined into the one token.</p>
 </dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.workers.soulx_adapter.sing">
@@ -301,6 +312,7 @@ score of several segments. Each segment is placed at its <code class="docutils l
 <li><a :data-current="activeSection === '#voxy.workers.soulx_adapter.NLTK_RESOURCES'" class="reference internal" href="#voxy.workers.soulx_adapter.NLTK_RESOURCES"><code class="docutils literal notranslate"><span class="pre">NLTK_RESOURCES</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.workers.soulx_adapter.NOTE_FIELDS'" class="reference internal" href="#voxy.workers.soulx_adapter.NOTE_FIELDS"><code class="docutils literal notranslate"><span class="pre">NOTE_FIELDS</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.workers.soulx_adapter.SINGERS'" class="reference internal" href="#voxy.workers.soulx_adapter.SINGERS"><code class="docutils literal notranslate"><span class="pre">SINGERS</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.workers.soulx_adapter.WORD_JOINER'" class="reference internal" href="#voxy.workers.soulx_adapter.WORD_JOINER"><code class="docutils literal notranslate"><span class="pre">WORD_JOINER</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.workers.soulx_adapter.convert'" class="reference internal" href="#voxy.workers.soulx_adapter.convert"><code class="docutils literal notranslate"><span class="pre">convert()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.workers.soulx_adapter.f0'" class="reference internal" href="#voxy.workers.soulx_adapter.f0"><code class="docutils literal notranslate"><span class="pre">f0()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.workers.soulx_adapter.fill_phonemes'" class="reference internal" href="#voxy.workers.soulx_adapter.fill_phonemes"><code class="docutils literal notranslate"><span class="pre">fill_phonemes()</span></code></a></li>
@@ -321,7 +333,7 @@ score of several segments. Each segment is placed at its <code class="docutils l
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=8d9581ea"></script>
+<script src="../_static/documentation_options.js?v=ba6d0b80"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

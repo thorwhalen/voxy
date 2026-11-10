@@ -31,11 +31,12 @@ or make deceptive audio; respect intellectual property, privacy and consent.
 
 ### Module Attributes
 
-| [`DFLT_FADE_S`](#voxy.workers.soulx_adapter.DFLT_FADE_S)    | Fade-out and fade-in length where segments meet (they are rendered separately and added, not overlapped).   |
-|-----------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| [`SINGERS`](#voxy.workers.soulx_adapter.SINGERS)        | The two singers; loading one frees the other (2.8 GB each, about 6 GB in use).                              |
-| [`NOTE_FIELDS`](#voxy.workers.soulx_adapter.NOTE_FIELDS)    | Per-note fields of a segment, which must all have one token per note.                                       |
-| [`NLTK_RESOURCES`](#voxy.workers.soulx_adapter.NLTK_RESOURCES) | g2p_en's NLTK resources (nltk 3.9 tags with the `_eng` tagger).                                             |
+| [`WORD_JOINER`](#voxy.workers.soulx_adapter.WORD_JOINER)    | Joins the words sung on one note (an elision) in a `text` token; voxy.soulx writes it (its `WORD_JOINER`).   |
+|-----------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| [`DFLT_FADE_S`](#voxy.workers.soulx_adapter.DFLT_FADE_S)    | Fade-out and fade-in length where segments meet (they are rendered separately and added, not overlapped).    |
+| [`SINGERS`](#voxy.workers.soulx_adapter.SINGERS)        | The two singers; loading one frees the other (2.8 GB each, about 6 GB in use).                               |
+| [`NOTE_FIELDS`](#voxy.workers.soulx_adapter.NOTE_FIELDS)    | Per-note fields of a segment, which must all have one token per note.                                        |
+| [`NLTK_RESOURCES`](#voxy.workers.soulx_adapter.NLTK_RESOURCES) | g2p_en's NLTK resources (nltk 3.9 tags with the `_eng` tagger).                                              |
 
 ### Functions
 
@@ -64,6 +65,11 @@ Per-note fields of a segment, which must all have one token per note.
 ### voxy.workers.soulx_adapter.SINGERS *= ('svs', 'svc')*
 
 The two singers; loading one frees the other (2.8 GB each, about 6 GB in use).
+
+### voxy.workers.soulx_adapter.WORD_JOINER *= '+'*
+
+Joins the words sung on one note (an elision) in a `text` token; voxy.soulx
+writes it (its `WORD_JOINER`).
 
 ### voxy.workers.soulx_adapter.convert(state, , audio, prompt_audio, out_path, auto_shift=True, pitch_shift=0, n_steps=None, cfg=None, seed=None, peak=0.95)
 
@@ -96,6 +102,9 @@ Get ready to sing (models load on first use, or now for those in `preload`).
 ### voxy.workers.soulx_adapter.phonemize_en(word, g2p)
 
 SoulX’s token for an English word: `en_` and its ARPAbet phones joined by ‘-‘.
+
+The words of an elision (`me+and`, sung on one note) are phonemized one by
+one and their phones joined into the one token.
 
 ### voxy.workers.soulx_adapter.sing(state, , meta, prompt_audio, prompt_meta, out_path, control='score', auto_shift=False, pitch_shift=0, n_steps=None, cfg=None, seed=None, peak=0.95, fade_s=0.02)
 

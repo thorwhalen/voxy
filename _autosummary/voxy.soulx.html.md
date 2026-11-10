@@ -43,12 +43,13 @@ intellectual property, privacy and personal consent.
 
 ### Module Attributes
 
-| [`DFLT_LEAD_S`](#voxy.soulx.DFLT_LEAD_S)        | Rest before the first note and after the last (upstream's examples start with <SP>).                  |
-|---------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| [`DFLT_MIN_REST_S`](#voxy.soulx.DFLT_MIN_REST_S)    | A gap shorter than this joins the previous note (legato); a longer one is a rest.                     |
-| [`DFLT_SPLIT_REST_S`](#voxy.soulx.DFLT_SPLIT_REST_S)  | A rest longer than this ends a segment.                                                               |
-| [`DFLT_MAX_SEGMENT_S`](#voxy.soulx.DFLT_MAX_SEGMENT_S) | No segment longer than this (upstream allows 60 s; shorter is safer on MPS).                          |
-| [`SOULX_ENV`](#voxy.soulx.SOULX_ENV)          | Upstream's inference pins (its requirements.txt minus the preprocessing, web UI and training stacks). |
+| [`WORD_JOINER`](#voxy.soulx.WORD_JOINER)        | Joins the words of an elision (several words sung on one note) into the one `text` token of that note; the adapter phonemizes each word and joins their phones (the same constant is in `workers/soulx_adapter.py`).   |
+|---------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`DFLT_LEAD_S`](#voxy.soulx.DFLT_LEAD_S)        | Rest before the first note and after the last (upstream's examples start with <SP>).                                                                                                                                   |
+| [`DFLT_MIN_REST_S`](#voxy.soulx.DFLT_MIN_REST_S)    | A gap shorter than this joins the previous note (legato); a longer one is a rest.                                                                                                                                      |
+| [`DFLT_SPLIT_REST_S`](#voxy.soulx.DFLT_SPLIT_REST_S)  | A rest longer than this ends a segment.                                                                                                                                                                                |
+| [`DFLT_MAX_SEGMENT_S`](#voxy.soulx.DFLT_MAX_SEGMENT_S) | No segment longer than this (upstream allows 60 s; shorter is safer on MPS).                                                                                                                                           |
+| [`SOULX_ENV`](#voxy.soulx.SOULX_ENV)          | Upstream's inference pins (its requirements.txt minus the preprocessing, web UI and training stacks).                                                                                                                  |
 
 ### Functions
 
@@ -121,6 +122,12 @@ Sing `notes` (with words) in `voice` (a clip and the notes it sings).
 
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)
+
+### voxy.soulx.WORD_JOINER *= '+'*
+
+Joins the words of an elision (several words sung on one note) into the one
+`text` token of that note; the adapter phonemizes each word and joins their
+phones (the same constant is in `workers/soulx_adapter.py`).
 
 ### voxy.soulx.fit_voice_shift(target, prompt)
 

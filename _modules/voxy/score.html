@@ -195,8 +195,8 @@
     <div id="content" role="main">
       <h1>Source code for voxy.score</h1><div class="highlight"><pre>
 <span></span><code><span id="line-1"><span class="sd">"""</span>
-</span><span id="line-2"><span class="sd">Scores for singing: the notes of a melody (pitch, timing, word) from MIDI, MusicXML</span>
-</span><span id="line-3"><span class="sd">or plain code, with lyrics attached.</span>
+</span><span id="line-2"><span class="sd">Scores for singing: the notes of a melody (pitch, timing, word) in the form voxy's</span>
+</span><span id="line-3"><span class="sd">singing backends take, read from MIDI, MusicXML or plain code.</span>
 </span><span id="line-4">
 </span><span id="line-5"><span class="sd">A ``Note`` is one sung note in absolute seconds: its MIDI pitch, the word sung on it,</span>
 </span><span id="line-6"><span class="sd">and whether the word starts on it (``starts_word``) or continues from the note</span>
@@ -208,483 +208,238 @@
 </span><span id="line-12"><span class="sd">    &gt;&gt;&gt; notes = read_score("melody.mid", "Light a can-dle in the win-dow")  # doctest: +SKIP</span>
 </span><span id="line-13"><span class="sd">    &gt;&gt;&gt; notes = read_score("song.musicxml")         # the score's own lyrics  # doctest: +SKIP</span>
 </span><span id="line-14">
-</span><span id="line-15"><span class="sd">Lyrics are a line of whitespace-separated tokens, one per sung note:</span>
-</span><span id="line-16"><span class="sd">``can-dle`` spreads one word over two notes, a bare ``-`` (or ``_``) holds the</span>
-</span><span id="line-17"><span class="sd">previous word one more note.</span>
-</span><span id="line-18">
-</span><span id="line-19"><span class="sd">&gt;&gt;&gt; notes = notes_from_pitches([(64, 1), (67, 1), (60, 2)], bpm=120)</span>
-</span><span id="line-20"><span class="sd">&gt;&gt;&gt; [(n.start, n.dur, n.pitch) for n in notes]</span>
-</span><span id="line-21"><span class="sd">[(0.0, 0.5, 64), (0.5, 0.5, 67), (1.0, 1.0, 60)]</span>
-</span><span id="line-22"><span class="sd">&gt;&gt;&gt; [(n.word, n.starts_word) for n in attach_lyrics(notes, "hel-lo you")]</span>
-</span><span id="line-23"><span class="sd">[('hello', True), ('hello', False), ('you', True)]</span>
-</span><span id="line-24">
-</span><span id="line-25"><span class="sd">MIDI is read with ``mido`` (every tempo change honoured, lyric meta-events kept),</span>
-</span><span id="line-26"><span class="sd">MusicXML (and anything else music21 parses) with ``music21``: both are in the</span>
-</span><span id="line-27"><span class="sd">``voxy[singing]`` extra and imported only when a score of that kind is read.</span>
-</span><span id="line-28"><span class="sd">"""</span>
+</span><span id="line-15"><span class="sd">Reading a score is audiate's job: ``read_score`` takes the sung line from</span>
+</span><span id="line-16"><span class="sd">``audiate.sung_line`` (its module docstring states the reading rules: which line,</span>
+</span><span id="line-17"><span class="sd">which verse, repeats, melismas, karaoke files) and makes ``Note``s of it. When</span>
+</span><span id="line-18"><span class="sd">audiate is not sure (several candidate lines, a chord, a lyric on no note), it</span>
+</span><span id="line-19"><span class="sd">raises and names the choices. ``read_score`` (and ``voxy.sing``) take them as</span>
+</span><span id="line-20"><span class="sd">``track=``, ``channel=``, ``part=``, ``verse=``, ``chords=`` and ``score_voice=``</span>
+</span><span id="line-21"><span class="sd">(audiate's ``voice=``: in voxy, ``voice=`` is the singer), and audiate's errors</span>
+</span><span id="line-22"><span class="sd">are reworded to match; for audiate's other options read the line with</span>
+</span><span id="line-23"><span class="sd">``audiate.sung_line`` and pass the notes it returns. audiate is in the</span>
+</span><span id="line-24"><span class="sd">``voxy[singing]`` extra and imported only when a score is read or lyrics attached.</span>
+</span><span id="line-25">
+</span><span id="line-26"><span class="sd">Lyrics given by hand are one whitespace-separated token per sung note: ``can-dle``</span>
+</span><span id="line-27"><span class="sd">spreads one word over two notes, a bare ``-`` (or ``_``, ``~``) holds the previous</span>
+</span><span id="line-28"><span class="sd">word one more note (``audiate.sung.lyric_tokens``).</span>
 </span><span id="line-29">
-</span><span id="line-30"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-</span><span id="line-31"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Sequence</span>
-</span><span id="line-32"><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">replace</span>
-</span><span id="line-33"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="line-30"><span class="sd">&gt;&gt;&gt; notes = notes_from_pitches([(64, 1), (67, 1), (60, 2)], bpm=120)</span>
+</span><span id="line-31"><span class="sd">&gt;&gt;&gt; [(n.start, n.dur, n.pitch) for n in notes]</span>
+</span><span id="line-32"><span class="sd">[(0.0, 0.5, 64), (0.5, 0.5, 67), (1.0, 1.0, 60)]</span>
+</span><span id="line-33"><span class="sd">"""</span>
 </span><span id="line-34">
-</span><span id="line-35"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">optional_import</span>
-</span><span id="line-36">
-</span><span id="line-37"><span class="n">MIDI_SUFFIXES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">".mid"</span><span class="p">,</span> <span class="s2">".midi"</span><span class="p">)</span>
-</span><span id="line-38"><span class="c1">#: Tokens of a lyric line that hold the previous word one more note.</span>
-</span><span id="line-39"><span class="n">HOLD_TOKENS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">})</span>
-</span><span id="line-40"><span class="c1">#: The word given to sung notes that have none (a score without lyrics on every note).</span>
-</span><span id="line-41"><span class="n">DFLT_FILLER_WORD</span> <span class="o">=</span> <span class="s2">"la"</span>
-</span><span id="line-42"><span class="n">DFLT_BPM</span> <span class="o">=</span> <span class="mi">100</span>
-</span><span id="line-43"><span class="c1">#: MIDI tempo before any ``set_tempo`` event: 500 000 microseconds a beat (120 BPM).</span>
-</span><span id="line-44"><span class="n">DFLT_MIDI_TEMPO</span> <span class="o">=</span> <span class="mi">500_000</span>
-</span><span id="line-45"><span class="c1">#: MIDI channel 10 (index 9): percussion, never a melody.</span>
-</span><span id="line-46"><span class="n">DRUM_CHANNEL</span> <span class="o">=</span> <span class="mi">9</span>
-</span><span id="line-47"><span class="c1">#: A note may overlap the next by this much (legato) before the line counts as polyphonic.</span>
-</span><span id="line-48"><span class="n">DFLT_MAX_OVERLAP_S</span> <span class="o">=</span> <span class="mf">0.1</span>
-</span><span id="line-49"><span class="c1">#: A gap this long between notes ends a word: a note after it without a lyric of</span>
-</span><span id="line-50"><span class="c1">#: its own starts a new word instead of continuing (melisma).</span>
-</span><span id="line-51"><span class="n">WORD_BREAK_REST_S</span> <span class="o">=</span> <span class="mf">0.2</span>
-</span><span id="line-52">
+</span><span id="line-35"><span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+</span><span id="line-36"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+</span><span id="line-37"><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+</span><span id="line-38"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Sequence</span>
+</span><span id="line-39"><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">replace</span>
+</span><span id="line-40"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="line-41">
+</span><span id="line-42"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">optional_import</span>
+</span><span id="line-43">
+</span><span id="line-44"><span class="c1">#: The module that reads scores (``sung_line``) and attaches lyrics (``attach_lyrics``).</span>
+</span><span id="line-45"><span class="n">SCORE_READER</span> <span class="o">=</span> <span class="s2">"audiate.sung"</span>
+</span><span id="line-46"><span class="c1">#: The first audiate release that has ``SCORE_READER`` (keep in step with pyproject).</span>
+</span><span id="line-47"><span class="n">MIN_AUDIATE</span> <span class="o">=</span> <span class="s2">"0.0.4"</span>
+</span><span id="line-48"><span class="c1">#: ``read_score``'s name for each ``audiate.sung_line`` option it renames.</span>
+</span><span id="line-49"><span class="n">SUNG_LINE_NAMES</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"score_voice"</span><span class="p">:</span> <span class="s2">"voice"</span><span class="p">}</span>
+</span><span id="line-50"><span class="c1">#: The word given to sung notes that have none (a score without lyrics on every note).</span>
+</span><span id="line-51"><span class="n">DFLT_FILLER_WORD</span> <span class="o">=</span> <span class="s2">"la"</span>
+</span><span id="line-52"><span class="n">DFLT_BPM</span> <span class="o">=</span> <span class="mi">100</span>
 </span><span id="line-53">
+</span><span id="line-54">
 <div class="viewcode-block" id="Note">
 <a class="viewcode-back" href="../../_autosummary/voxy.score.html#voxy.score.Note">[docs]</a>
-</span><span id="line-54"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-55"><span class="k">class</span><span class="w"> </span><span class="nc">Note</span><span class="p">:</span>
-</span><span id="line-56"><span class="w">    </span><span class="sd">"""One sung note, in absolute seconds.</span>
-</span><span id="line-57">
-</span><span id="line-58"><span class="sd">    Args:</span>
-</span><span id="line-59"><span class="sd">        start: Onset (seconds from the start of the score).</span>
-</span><span id="line-60"><span class="sd">        dur: Duration in seconds.</span>
-</span><span id="line-61"><span class="sd">        pitch: MIDI note number (60 is middle C).</span>
-</span><span id="line-62"><span class="sd">        word: The word sung on it ('' until lyrics are attached).</span>
-</span><span id="line-63"><span class="sd">        starts_word: True if the word starts here; False if it continues the</span>
-</span><span id="line-64"><span class="sd">            previous note's word (melisma, later syllable).</span>
-</span><span id="line-65"><span class="sd">    """</span>
-</span><span id="line-66">
-</span><span id="line-67">    <span class="n">start</span><span class="p">:</span> <span class="nb">float</span>
-</span><span id="line-68">    <span class="n">dur</span><span class="p">:</span> <span class="nb">float</span>
-</span><span id="line-69">    <span class="n">pitch</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="line-70">    <span class="n">word</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
-</span><span id="line-71">    <span class="n">starts_word</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-</span><span id="line-72">
-</span><span id="line-73">    <span class="nd">@property</span>
-</span><span id="line-74">    <span class="k">def</span><span class="w"> </span><span class="nf">end</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-</span><span id="line-75"><span class="w">        </span><span class="sd">"""Where the note stops (seconds)."""</span>
-</span><span id="line-76">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">dur</span></div>
+</span><span id="line-55"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-56"><span class="k">class</span><span class="w"> </span><span class="nc">Note</span><span class="p">:</span>
+</span><span id="line-57"><span class="w">    </span><span class="sd">"""One sung note, in absolute seconds.</span>
+</span><span id="line-58">
+</span><span id="line-59"><span class="sd">    Args:</span>
+</span><span id="line-60"><span class="sd">        start: Onset (seconds from the start of the score).</span>
+</span><span id="line-61"><span class="sd">        dur: Duration in seconds.</span>
+</span><span id="line-62"><span class="sd">        pitch: MIDI note number (60 is middle C).</span>
+</span><span id="line-63"><span class="sd">        word: The word sung on it ('' until lyrics are attached).</span>
+</span><span id="line-64"><span class="sd">        starts_word: True if the word starts here; False if it continues the</span>
+</span><span id="line-65"><span class="sd">            previous note's word (melisma, later syllable).</span>
+</span><span id="line-66"><span class="sd">    """</span>
+</span><span id="line-67">
+</span><span id="line-68">    <span class="n">start</span><span class="p">:</span> <span class="nb">float</span>
+</span><span id="line-69">    <span class="n">dur</span><span class="p">:</span> <span class="nb">float</span>
+</span><span id="line-70">    <span class="n">pitch</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="line-71">    <span class="n">word</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+</span><span id="line-72">    <span class="n">starts_word</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+</span><span id="line-73">
+</span><span id="line-74">    <span class="nd">@property</span>
+</span><span id="line-75">    <span class="k">def</span><span class="w"> </span><span class="nf">end</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+</span><span id="line-76"><span class="w">        </span><span class="sd">"""Where the note stops (seconds)."""</span>
+</span><span id="line-77">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">dur</span></div>
 
-</span><span id="line-77">
 </span><span id="line-78">
-</span><span id="line-79"><span class="c1"># --------------------------------------------------------------------------- readers</span>
-</span><span id="line-80">
-</span><span id="line-81">
+</span><span id="line-79">
 <div class="viewcode-block" id="notes_from_pitches">
 <a class="viewcode-back" href="../../_autosummary/voxy.score.html#voxy.score.notes_from_pitches">[docs]</a>
-</span><span id="line-82"><span class="k">def</span><span class="w"> </span><span class="nf">notes_from_pitches</span><span class="p">(</span>
-</span><span id="line-83">    <span class="n">pitches</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
-</span><span id="line-84">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-85">    <span class="n">bpm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_BPM</span><span class="p">,</span>
-</span><span id="line-86">    <span class="n">start</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-</span><span id="line-87"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
-</span><span id="line-88"><span class="w">    </span><span class="sd">"""Notes from ``(midi_pitch, beats)`` pairs, back to back; a pitch of 0 or None is a rest.</span>
-</span><span id="line-89">
-</span><span id="line-90"><span class="sd">    &gt;&gt;&gt; [(n.start, n.pitch) for n in notes_from_pitches([(60, 1), (0, 1), (62, 1)], bpm=60)]</span>
-</span><span id="line-91"><span class="sd">    [(0.0, 60), (2.0, 62)]</span>
-</span><span id="line-92"><span class="sd">    """</span>
-</span><span id="line-93">    <span class="n">beat</span> <span class="o">=</span> <span class="mf">60.0</span> <span class="o">/</span> <span class="n">bpm</span>
-</span><span id="line-94">    <span class="n">notes</span><span class="p">,</span> <span class="n">t</span> <span class="o">=</span> <span class="p">[],</span> <span class="nb">float</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
-</span><span id="line-95">    <span class="k">for</span> <span class="n">pitch</span><span class="p">,</span> <span class="n">beats</span> <span class="ow">in</span> <span class="n">pitches</span><span class="p">:</span>
-</span><span id="line-96">        <span class="n">dur</span> <span class="o">=</span> <span class="n">beats</span> <span class="o">*</span> <span class="n">beat</span>
-</span><span id="line-97">        <span class="k">if</span> <span class="n">pitch</span><span class="p">:</span>
-</span><span id="line-98">            <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Note</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">dur</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">pitch</span><span class="p">)))</span>
-</span><span id="line-99">        <span class="n">t</span> <span class="o">+=</span> <span class="n">dur</span>
-</span><span id="line-100">    <span class="k">return</span> <span class="n">notes</span></div>
+</span><span id="line-80"><span class="k">def</span><span class="w"> </span><span class="nf">notes_from_pitches</span><span class="p">(</span>
+</span><span id="line-81">    <span class="n">pitches</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+</span><span id="line-82">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-83">    <span class="n">bpm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_BPM</span><span class="p">,</span>
+</span><span id="line-84">    <span class="n">start</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-85"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
+</span><span id="line-86"><span class="w">    </span><span class="sd">"""Notes from ``(midi_pitch, beats)`` pairs, back to back; a pitch of 0 or None is a rest.</span>
+</span><span id="line-87">
+</span><span id="line-88"><span class="sd">    &gt;&gt;&gt; [(n.start, n.pitch) for n in notes_from_pitches([(60, 1), (0, 1), (62, 1)], bpm=60)]</span>
+</span><span id="line-89"><span class="sd">    [(0.0, 60), (2.0, 62)]</span>
+</span><span id="line-90"><span class="sd">    """</span>
+</span><span id="line-91">    <span class="n">beat</span> <span class="o">=</span> <span class="mf">60.0</span> <span class="o">/</span> <span class="n">bpm</span>
+</span><span id="line-92">    <span class="n">notes</span><span class="p">,</span> <span class="n">t</span> <span class="o">=</span> <span class="p">[],</span> <span class="nb">float</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+</span><span id="line-93">    <span class="k">for</span> <span class="n">pitch</span><span class="p">,</span> <span class="n">beats</span> <span class="ow">in</span> <span class="n">pitches</span><span class="p">:</span>
+</span><span id="line-94">        <span class="n">dur</span> <span class="o">=</span> <span class="n">beats</span> <span class="o">*</span> <span class="n">beat</span>
+</span><span id="line-95">        <span class="k">if</span> <span class="n">pitch</span><span class="p">:</span>
+</span><span id="line-96">            <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Note</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">dur</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">pitch</span><span class="p">)))</span>
+</span><span id="line-97">        <span class="n">t</span> <span class="o">+=</span> <span class="n">dur</span>
+</span><span id="line-98">    <span class="k">return</span> <span class="n">notes</span></div>
 
-</span><span id="line-101">
-</span><span id="line-102">
-<div class="viewcode-block" id="notes_from_midi">
-<a class="viewcode-back" href="../../_autosummary/voxy.score.html#voxy.score.notes_from_midi">[docs]</a>
-</span><span id="line-103"><span class="k">def</span><span class="w"> </span><span class="nf">notes_from_midi</span><span class="p">(</span>
-</span><span id="line-104">    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
-</span><span id="line-105">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-106">    <span class="n">track</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-107">    <span class="n">channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-108">    <span class="n">max_overlap_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_MAX_OVERLAP_S</span><span class="p">,</span>
-</span><span id="line-109">    <span class="n">with_lyrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="line-110"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
-</span><span id="line-111"><span class="w">    </span><span class="sd">"""The melody of a MIDI file: the notes of one track and channel, with its lyric</span>
-</span><span id="line-112"><span class="sd">    events joined into words.</span>
-</span><span id="line-113">
-</span><span id="line-114"><span class="sd">    The line is the one track and channel that has notes, drums (channel 10) aside;</span>
-</span><span id="line-115"><span class="sd">    with several, pass ``track=`` (its index in the file) and, for a file that mixes</span>
-</span><span id="line-116"><span class="sd">    channels in one track, ``channel=`` (1 to 16); the error lists the candidates.</span>
-</span><span id="line-117"><span class="sd">    Times follow the file's tempo map. A note overlapping the next by up to</span>
-</span><span id="line-118"><span class="sd">    ``max_overlap_s`` (legato) is cut at the next onset; more, or two notes starting</span>
-</span><span id="line-119"><span class="sd">    together, is polyphony, and an error.</span>
-</span><span id="line-120">
-</span><span id="line-121"><span class="sd">    Words come from ``lyrics`` meta-events only (never ``text`` events, so a label</span>
-</span><span id="line-122"><span class="sd">    is never sung), on the melody's track, else on the one other track that has</span>
-</span><span id="line-123"><span class="sd">    them (type-1 files often keep them in track 0). Each is a syllable on the note</span>
-</span><span id="line-124"><span class="sd">    sounding at its tick (from a little before its onset to its end); one that</span>
-</span><span id="line-125"><span class="sd">    falls on no note, or a second one on a note, is an error. A trailing ``-``</span>
-</span><span id="line-126"><span class="sd">    (``can-``) or a leading one (``-dle``) joins syllables into one word; a note</span>
-</span><span id="line-127"><span class="sd">    without a syllable continues the word before it (a melisma), unless a rest</span>
-</span><span id="line-128"><span class="sd">    separates them. ``with_lyrics=False`` reads no lyrics (words come from</span>
-</span><span id="line-129"><span class="sd">    elsewhere). Karaoke files (``.kar``, lyrics in ``text`` events) are not</span>
-</span><span id="line-130"><span class="sd">    supported yet: full score reading is planned in audiate</span>
-</span><span id="line-131"><span class="sd">    (https://github.com/thorwhalen/audiate/issues/2).</span>
-</span><span id="line-132"><span class="sd">    """</span>
-</span><span id="line-133">    <span class="n">mido</span> <span class="o">=</span> <span class="n">optional_import</span><span class="p">(</span><span class="s2">"mido"</span><span class="p">)</span>
-</span><span id="line-134">    <span class="n">mid</span> <span class="o">=</span> <span class="n">mido</span><span class="o">.</span><span class="n">MidiFile</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
-</span><span id="line-135">    <span class="n">tempo_map</span> <span class="o">=</span> <span class="n">_midi_tempo_map</span><span class="p">(</span><span class="n">mido</span><span class="o">.</span><span class="n">merge_tracks</span><span class="p">(</span><span class="n">mid</span><span class="o">.</span><span class="n">tracks</span><span class="p">))</span>
-</span><span id="line-136">    <span class="n">groups</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-137">    <span class="n">syllables</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-138">    <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">trk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mid</span><span class="o">.</span><span class="n">tracks</span><span class="p">):</span>
-</span><span id="line-139">        <span class="n">tick</span><span class="p">,</span> <span class="n">active</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="p">{}</span>
-</span><span id="line-140">        <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">trk</span><span class="p">:</span>
-</span><span id="line-141">            <span class="n">tick</span> <span class="o">+=</span> <span class="n">msg</span><span class="o">.</span><span class="n">time</span>
-</span><span id="line-142">            <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">"lyrics"</span> <span class="ow">and</span> <span class="n">msg</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-</span><span id="line-143">                <span class="n">syllables</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tick</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">text</span><span class="p">))</span>
-</span><span id="line-144">            <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">"note_on"</span> <span class="ow">and</span> <span class="n">msg</span><span class="o">.</span><span class="n">velocity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-145">                <span class="n">active</span><span class="p">[(</span><span class="n">msg</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">note</span><span class="p">)]</span> <span class="o">=</span> <span class="n">tick</span>
-</span><span id="line-146">            <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"note_off"</span><span class="p">,</span> <span class="s2">"note_on"</span><span class="p">):</span>
-</span><span id="line-147">                <span class="n">begin</span> <span class="o">=</span> <span class="n">active</span><span class="o">.</span><span class="n">pop</span><span class="p">((</span><span class="n">msg</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">note</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-148">                <span class="k">if</span> <span class="n">begin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tick</span> <span class="o">&gt;</span> <span class="n">begin</span><span class="p">:</span>
-</span><span id="line-149">                    <span class="n">groups</span><span class="o">.</span><span class="n">setdefault</span><span class="p">((</span><span class="n">t</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">channel</span><span class="p">),</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="line-150">                        <span class="p">(</span><span class="n">begin</span><span class="p">,</span> <span class="n">tick</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">note</span><span class="p">)</span>
-</span><span id="line-151">                    <span class="p">)</span>
-</span><span id="line-152">    <span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">ch</span><span class="p">),</span> <span class="n">raw</span> <span class="o">=</span> <span class="n">_midi_line</span><span class="p">(</span><span class="n">groups</span><span class="p">,</span> <span class="n">track</span><span class="o">=</span><span class="n">track</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
-</span><span id="line-153">
-</span><span id="line-154">    <span class="k">def</span><span class="w"> </span><span class="nf">seconds</span><span class="p">(</span><span class="n">ticks</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-</span><span id="line-155">        <span class="k">return</span> <span class="n">_midi_ticks_to_seconds</span><span class="p">(</span><span class="n">ticks</span><span class="p">,</span> <span class="n">tempo_map</span><span class="p">,</span> <span class="n">mid</span><span class="o">.</span><span class="n">ticks_per_beat</span><span class="p">)</span>
-</span><span id="line-156">
-</span><span id="line-157">    <span class="n">raw</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
-</span><span id="line-158">    <span class="n">notes</span><span class="p">,</span> <span class="n">spans</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
-</span><span id="line-159">    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">begin</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">pitch</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">raw</span><span class="p">):</span>
-</span><span id="line-160">        <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw</span><span class="p">):</span>
-</span><span id="line-161">            <span class="n">following</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-162">            <span class="k">if</span> <span class="n">following</span> <span class="o">==</span> <span class="n">begin</span> <span class="ow">or</span> <span class="n">seconds</span><span class="p">(</span><span class="n">end</span><span class="p">)</span> <span class="o">-</span> <span class="n">seconds</span><span class="p">(</span><span class="n">following</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_overlap_s</span><span class="p">:</span>
-</span><span id="line-163">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-164">                    <span class="sa">f</span><span class="s2">"Track </span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2"> channel </span><span class="si">{</span><span class="n">ch</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is polyphonic at "</span>
-</span><span id="line-165">                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">seconds</span><span class="p">(</span><span class="n">following</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s: pick a one-voice line (track=, "</span>
-</span><span id="line-166">                    <span class="s2">"channel=) or reduce it to its melody"</span>
-</span><span id="line-167">                <span class="p">)</span>
-</span><span id="line-168">            <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="n">following</span><span class="p">)</span>
-</span><span id="line-169">        <span class="n">onset</span> <span class="o">=</span> <span class="n">seconds</span><span class="p">(</span><span class="n">begin</span><span class="p">)</span>
-</span><span id="line-170">        <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Note</span><span class="p">(</span><span class="n">onset</span><span class="p">,</span> <span class="n">seconds</span><span class="p">(</span><span class="n">end</span><span class="p">)</span> <span class="o">-</span> <span class="n">onset</span><span class="p">,</span> <span class="n">pitch</span><span class="p">))</span>
-</span><span id="line-171">        <span class="n">spans</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">begin</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
-</span><span id="line-172">    <span class="n">lyric_at</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-173">    <span class="k">if</span> <span class="n">with_lyrics</span><span class="p">:</span>
-</span><span id="line-174">        <span class="n">events</span> <span class="o">=</span> <span class="n">_midi_lyric_events</span><span class="p">(</span><span class="n">syllables</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
-</span><span id="line-175">        <span class="n">lyric_at</span> <span class="o">=</span> <span class="n">_midi_syllables</span><span class="p">(</span>
-</span><span id="line-176">            <span class="n">events</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">mid</span><span class="o">.</span><span class="n">ticks_per_beat</span> <span class="o">//</span> <span class="mi">16</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="n">seconds</span>
-</span><span id="line-177">        <span class="p">)</span>
-</span><span id="line-178">    <span class="k">return</span> <span class="n">_join_words</span><span class="p">(</span>
-</span><span id="line-179">        <span class="p">[</span>
-</span><span id="line-180">            <span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="o">*</span><span class="n">_hyphenated</span><span class="p">(</span><span class="n">lyric_at</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
-</span><span id="line-181">            <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">lyric_at</span>
-</span><span id="line-182">            <span class="k">else</span> <span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-</span><span id="line-183">            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">note</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">notes</span><span class="p">)</span>
-</span><span id="line-184">        <span class="p">]</span>
-</span><span id="line-185">    <span class="p">)</span></div>
+</span><span id="line-99">
+</span><span id="line-100">
+<div class="viewcode-block" id="to_note">
+<a class="viewcode-back" href="../../_autosummary/voxy.score.html#voxy.score.to_note">[docs]</a>
+</span><span id="line-101"><span class="k">def</span><span class="w"> </span><span class="nf">to_note</span><span class="p">(</span><span class="n">note</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Note</span><span class="p">:</span>
+</span><span id="line-102"><span class="w">    </span><span class="sd">"""A ``Note`` from any note with ``start``, ``dur``, ``pitch`` (and optionally</span>
+</span><span id="line-103"><span class="sd">    ``word``, ``starts_word``): an ``audiate.SungNote``, or a ``Note`` itself.</span>
+</span><span id="line-104">
+</span><span id="line-105"><span class="sd">    &gt;&gt;&gt; to_note(Note(0.0, 0.5, 60, "la"))</span>
+</span><span id="line-106"><span class="sd">    Note(start=0.0, dur=0.5, pitch=60, word='la', starts_word=True)</span>
+</span><span id="line-107"><span class="sd">    """</span>
+</span><span id="line-108">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="n">Note</span><span class="p">):</span>
+</span><span id="line-109">        <span class="k">return</span> <span class="n">note</span>
+</span><span id="line-110">    <span class="k">return</span> <span class="n">Note</span><span class="p">(</span>
+</span><span id="line-111">        <span class="nb">float</span><span class="p">(</span><span class="n">note</span><span class="o">.</span><span class="n">start</span><span class="p">),</span>
+</span><span id="line-112">        <span class="nb">float</span><span class="p">(</span><span class="n">note</span><span class="o">.</span><span class="n">dur</span><span class="p">),</span>
+</span><span id="line-113">        <span class="nb">int</span><span class="p">(</span><span class="n">note</span><span class="o">.</span><span class="n">pitch</span><span class="p">),</span>
+</span><span id="line-114">        <span class="nb">getattr</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="s2">"word"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+</span><span id="line-115">        <span class="nb">getattr</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="s2">"starts_word"</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span>
+</span><span id="line-116">    <span class="p">)</span></div>
 
-</span><span id="line-186">
-</span><span id="line-187">
-</span><span id="line-188"><span class="k">def</span><span class="w"> </span><span class="nf">_midi_lyric_events</span><span class="p">(</span><span class="n">syllables</span><span class="p">,</span> <span class="n">track</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-</span><span id="line-189"><span class="w">    </span><span class="sd">"""The lyric events of the melody's ``track``, else of the one other track with</span>
-</span><span id="line-190"><span class="sd">    some; lyrics on several other tracks are an error (which one is sung?)."""</span>
-</span><span id="line-191">    <span class="k">if</span> <span class="n">syllables</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">track</span><span class="p">):</span>
-</span><span id="line-192">        <span class="k">return</span> <span class="n">syllables</span><span class="p">[</span><span class="n">track</span><span class="p">]</span>
-</span><span id="line-193">    <span class="n">others</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">events</span> <span class="ow">in</span> <span class="n">syllables</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">events</span><span class="p">)</span>
-</span><span id="line-194">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">others</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="line-195">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-196">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: the melody (track </span><span class="si">{</span><span class="n">track</span><span class="si">}</span><span class="s2">) has no lyrics, and tracks </span><span class="si">{</span><span class="n">others</span><span class="si">}</span><span class="s2"> "</span>
-</span><span id="line-197">            <span class="s2">"have some: pass the words with lyrics="</span>
-</span><span id="line-198">        <span class="p">)</span>
-</span><span id="line-199">    <span class="k">return</span> <span class="n">syllables</span><span class="p">[</span><span class="n">others</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="k">if</span> <span class="n">others</span> <span class="k">else</span> <span class="p">[]</span>
-</span><span id="line-200">
-</span><span id="line-201">
-</span><span id="line-202"><span class="k">def</span><span class="w"> </span><span class="nf">_midi_line</span><span class="p">(</span><span class="n">groups</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">track</span><span class="p">,</span> <span class="n">channel</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
-</span><span id="line-203"><span class="w">    </span><span class="sd">"""The one ``((track, channel), notes)`` the melody is, or an error naming the choices."""</span>
-</span><span id="line-204">    <span class="n">wanted</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-205">        <span class="n">key</span><span class="p">:</span> <span class="n">notes</span>
-</span><span id="line-206">        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">notes</span> <span class="ow">in</span> <span class="n">groups</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-</span><span id="line-207">        <span class="k">if</span> <span class="p">(</span><span class="n">track</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">track</span><span class="p">)</span>
-</span><span id="line-208">        <span class="ow">and</span> <span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">channel</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">channel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DRUM_CHANNEL</span><span class="p">)</span>
-</span><span id="line-209">    <span class="p">}</span>
-</span><span id="line-210">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">wanted</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="line-211">        <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">wanted</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
-</span><span id="line-212">    <span class="k">if</span> <span class="ow">not</span> <span class="n">wanted</span><span class="p">:</span>
-</span><span id="line-213">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No notes in </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> (track=</span><span class="si">{</span><span class="n">track</span><span class="si">}</span><span class="s2">, channel=</span><span class="si">{</span><span class="n">channel</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-</span><span id="line-214">    <span class="n">choices</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-</span><span id="line-215">        <span class="sa">f</span><span class="s2">"track=</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2"> channel=</span><span class="si">{</span><span class="n">c</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="si">}</span><span class="s2"> notes)"</span>
-</span><span id="line-216">        <span class="k">for</span> <span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">c</span><span class="p">),</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">wanted</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
-</span><span id="line-217">    <span class="p">)</span>
-</span><span id="line-218">    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> has several lines; pick one: </span><span class="si">{</span><span class="n">choices</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-219">
-</span><span id="line-220">
-</span><span id="line-221"><span class="k">def</span><span class="w"> </span><span class="nf">_midi_syllables</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="n">spans</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">,</span> <span class="n">seconds</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-222"><span class="w">    </span><span class="sd">"""``{note index: syllable}``: each lyric event on the note sounding at its tick</span>
-</span><span id="line-223"><span class="sd">    (``begin - tolerance &lt;= tick &lt; end``). An event on no note, or two on one, is</span>
-</span><span id="line-224"><span class="sd">    an error rather than a word sung in the wrong place."""</span>
-</span><span id="line-225">    <span class="n">found</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-226">    <span class="k">for</span> <span class="n">tick</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">events</span><span class="p">):</span>
-</span><span id="line-227">        <span class="n">i</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
-</span><span id="line-228">            <span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">spans</span><span class="p">)</span> <span class="k">if</span> <span class="n">b</span> <span class="o">-</span> <span class="n">tolerance</span> <span class="o">&lt;=</span> <span class="n">tick</span> <span class="o">&lt;</span> <span class="n">e</span><span class="p">),</span> <span class="kc">None</span>
-</span><span id="line-229">        <span class="p">)</span>
-</span><span id="line-230">        <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-231">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-232">                <span class="sa">f</span><span class="s2">"The lyric </span><span class="si">{</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">!r}</span><span class="s2"> at </span><span class="si">{</span><span class="n">seconds</span><span class="p">(</span><span class="n">tick</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s falls on no note "</span>
-</span><span id="line-233">                <span class="s2">"of the melody: fix the file, or pass the words with lyrics="</span>
-</span><span id="line-234">            <span class="p">)</span>
-</span><span id="line-235">        <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">found</span><span class="p">:</span>
-</span><span id="line-236">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-237">                <span class="sa">f</span><span class="s2">"Two lyrics (</span><span class="si">{</span><span class="n">found</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">!r}</span><span class="s2">, </span><span class="si">{</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">!r}</span><span class="s2">) on the note at "</span>
-</span><span id="line-238">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">seconds</span><span class="p">(</span><span class="n">spans</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s: fix the file, or pass lyrics="</span>
-</span><span id="line-239">            <span class="p">)</span>
-</span><span id="line-240">        <span class="n">found</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">text</span>
-</span><span id="line-241">    <span class="k">return</span> <span class="n">found</span>
-</span><span id="line-242">
-</span><span id="line-243">
-</span><span id="line-244"><span class="k">def</span><span class="w"> </span><span class="nf">_hyphenated</span><span class="p">(</span><span class="n">syllable</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
-</span><span id="line-245"><span class="w">    </span><span class="sd">"""``(text, continues_a_word, leaves_the_word_open)`` of a MIDI lyric syllable.</span>
-</span><span id="line-246">
-</span><span id="line-247"><span class="sd">    &gt;&gt;&gt; _hyphenated("can-"), _hyphenated("-dle"), _hyphenated("light ")</span>
-</span><span id="line-248"><span class="sd">    (('can', False, True), ('dle', True, False), ('light', False, False))</span>
-</span><span id="line-249"><span class="sd">    """</span>
-</span><span id="line-250">    <span class="n">text</span> <span class="o">=</span> <span class="n">syllable</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-</span><span id="line-251">    <span class="k">return</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"-"</span><span class="p">),</span> <span class="n">text</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
-</span><span id="line-252">
-</span><span id="line-253">
-</span><span id="line-254"><span class="k">def</span><span class="w"> </span><span class="nf">_join_words</span><span class="p">(</span><span class="n">items</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">rest_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">WORD_BREAK_REST_S</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
-</span><span id="line-255"><span class="w">    </span><span class="sd">"""Notes named with whole words, from ``(note, syllable, continues, open_after)``</span>
-</span><span id="line-256"><span class="sd">    items (``syllable`` None for a note without one; an item None for a rest).</span>
-</span><span id="line-257">
-</span><span id="line-258"><span class="sd">    A syllable continues the current word when it says so or the one before left</span>
-</span><span id="line-259"><span class="sd">    the word open; a note without a syllable continues the current word (melisma)</span>
-</span><span id="line-260"><span class="sd">    unless a rest (an item None, or a gap of ``rest_s``) came between.</span>
-</span><span id="line-261"><span class="sd">    """</span>
-</span><span id="line-262">    <span class="n">notes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-263">    <span class="n">word</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-264">    <span class="n">parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-265">    <span class="n">open_word</span><span class="p">,</span> <span class="n">previous</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">None</span>
-</span><span id="line-266">    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
-</span><span id="line-267">        <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-268">            <span class="n">word</span><span class="p">,</span> <span class="n">open_word</span><span class="p">,</span> <span class="n">previous</span> <span class="o">=</span> <span class="p">[],</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">None</span>
-</span><span id="line-269">            <span class="k">continue</span>
-</span><span id="line-270">        <span class="n">note</span><span class="p">,</span> <span class="n">syllable</span><span class="p">,</span> <span class="n">continues</span><span class="p">,</span> <span class="n">open_after</span> <span class="o">=</span> <span class="n">item</span>
-</span><span id="line-271">        <span class="n">after_rest</span> <span class="o">=</span> <span class="n">previous</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">note</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="n">previous</span><span class="o">.</span><span class="n">end</span> <span class="o">&gt;=</span> <span class="n">rest_s</span>
-</span><span id="line-272">        <span class="k">if</span> <span class="n">syllable</span><span class="p">:</span>
-</span><span id="line-273">            <span class="k">if</span> <span class="p">(</span><span class="n">continues</span> <span class="ow">or</span> <span class="n">open_word</span><span class="p">)</span> <span class="ow">and</span> <span class="n">word</span><span class="p">:</span>
-</span><span id="line-274">                <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">syllable</span><span class="p">)</span>
-</span><span id="line-275">                <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="n">starts_word</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
-</span><span id="line-276">            <span class="k">else</span><span class="p">:</span>
-</span><span id="line-277">                <span class="n">parts</span><span class="p">,</span> <span class="n">word</span> <span class="o">=</span> <span class="p">[</span><span class="n">syllable</span><span class="p">],</span> <span class="p">[]</span>
-</span><span id="line-278">                <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="n">starts_word</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-</span><span id="line-279">            <span class="n">word</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">notes</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-</span><span id="line-280">            <span class="n">open_word</span> <span class="o">=</span> <span class="n">open_after</span>
-</span><span id="line-281">        <span class="k">elif</span> <span class="n">word</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">after_rest</span><span class="p">:</span>
-</span><span id="line-282">            <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="n">starts_word</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
-</span><span id="line-283">            <span class="n">word</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">notes</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-</span><span id="line-284">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-285">            <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="n">word</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span> <span class="n">starts_word</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-</span><span id="line-286">            <span class="n">word</span><span class="p">,</span> <span class="n">open_word</span> <span class="o">=</span> <span class="p">[],</span> <span class="kc">False</span>
-</span><span id="line-287">        <span class="k">if</span> <span class="n">word</span><span class="p">:</span>
-</span><span id="line-288">            <span class="n">_name_word</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">))</span>
-</span><span id="line-289">        <span class="n">previous</span> <span class="o">=</span> <span class="n">note</span>
-</span><span id="line-290">    <span class="k">return</span> <span class="n">notes</span>
-</span><span id="line-291">
-</span><span id="line-292">
-</span><span id="line-293"><span class="k">def</span><span class="w"> </span><span class="nf">_midi_tempo_map</span><span class="p">(</span><span class="n">merged</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
-</span><span id="line-294"><span class="w">    </span><span class="sd">"""``[(tick, microseconds_per_beat), ...]`` from a merged track, starting at tick 0."""</span>
-</span><span id="line-295">    <span class="n">changes</span><span class="p">,</span> <span class="n">tick</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="n">DFLT_MIDI_TEMPO</span><span class="p">},</span> <span class="mi">0</span>
-</span><span id="line-296">    <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">merged</span><span class="p">:</span>
-</span><span id="line-297">        <span class="n">tick</span> <span class="o">+=</span> <span class="n">msg</span><span class="o">.</span><span class="n">time</span>
-</span><span id="line-298">        <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">"set_tempo"</span><span class="p">:</span>
-</span><span id="line-299">            <span class="n">changes</span><span class="p">[</span><span class="n">tick</span><span class="p">]</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">tempo</span>
-</span><span id="line-300">    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">changes</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
-</span><span id="line-301">
-</span><span id="line-302">
-</span><span id="line-303"><span class="k">def</span><span class="w"> </span><span class="nf">_midi_ticks_to_seconds</span><span class="p">(</span><span class="n">ticks</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">tempo_map</span><span class="p">,</span> <span class="n">ticks_per_beat</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-</span><span id="line-304"><span class="w">    </span><span class="sd">"""Seconds at ``ticks``, through every tempo change before it.</span>
-</span><span id="line-305">
-</span><span id="line-306"><span class="sd">    &gt;&gt;&gt; _midi_ticks_to_seconds(960, [(0, 500_000), (480, 1_000_000)], 480)</span>
-</span><span id="line-307"><span class="sd">    1.5</span>
-</span><span id="line-308"><span class="sd">    """</span>
-</span><span id="line-309">    <span class="n">secs</span><span class="p">,</span> <span class="n">prev_tick</span><span class="p">,</span> <span class="n">prev_tempo</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tempo_map</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
-</span><span id="line-310">    <span class="k">for</span> <span class="n">tick</span><span class="p">,</span> <span class="n">tempo</span> <span class="ow">in</span> <span class="n">tempo_map</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
-</span><span id="line-311">        <span class="k">if</span> <span class="n">tick</span> <span class="o">&gt;=</span> <span class="n">ticks</span><span class="p">:</span>
-</span><span id="line-312">            <span class="k">break</span>
-</span><span id="line-313">        <span class="n">secs</span> <span class="o">+=</span> <span class="p">(</span><span class="n">tick</span> <span class="o">-</span> <span class="n">prev_tick</span><span class="p">)</span> <span class="o">*</span> <span class="n">prev_tempo</span> <span class="o">/</span> <span class="n">ticks_per_beat</span> <span class="o">/</span> <span class="mf">1e6</span>
-</span><span id="line-314">        <span class="n">prev_tick</span><span class="p">,</span> <span class="n">prev_tempo</span> <span class="o">=</span> <span class="n">tick</span><span class="p">,</span> <span class="n">tempo</span>
-</span><span id="line-315">    <span class="k">return</span> <span class="n">secs</span> <span class="o">+</span> <span class="p">(</span><span class="n">ticks</span> <span class="o">-</span> <span class="n">prev_tick</span><span class="p">)</span> <span class="o">*</span> <span class="n">prev_tempo</span> <span class="o">/</span> <span class="n">ticks_per_beat</span> <span class="o">/</span> <span class="mf">1e6</span>
-</span><span id="line-316">
-</span><span id="line-317">
-<div class="viewcode-block" id="notes_from_musicxml">
-<a class="viewcode-back" href="../../_autosummary/voxy.score.html#voxy.score.notes_from_musicxml">[docs]</a>
-</span><span id="line-318"><span class="k">def</span><span class="w"> </span><span class="nf">notes_from_musicxml</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">part</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
-</span><span id="line-319"><span class="w">    </span><span class="sd">"""The notes of one part of a MusicXML file (or any score music21 reads, or a</span>
-</span><span id="line-320"><span class="sd">    music21 stream), with its lyrics as words.</span>
-</span><span id="line-321">
-</span><span id="line-322"><span class="sd">    Only the part's first voice is read (timed by the part's own tempo marks), and</span>
-</span><span id="line-323"><span class="sd">    only its first verse of lyrics; grace notes and zero-length notes are skipped;</span>
-</span><span id="line-324"><span class="sd">    a chord sings its highest note. Tied notes become one. Syllables are</span>
-</span><span id="line-325"><span class="sd">    joined into words with MusicXML's ``syllabic`` (begin, middle, end), so</span>
-</span><span id="line-326"><span class="sd">    ``can-dle`` on two notes is ``candle`` on both, the second continuing the</span>
-</span><span id="line-327"><span class="sd">    word. A note without a lyric continues the word before it (a melisma under a</span>
-</span><span id="line-328"><span class="sd">    slur), unless a rest came between.</span>
-</span><span id="line-329"><span class="sd">    """</span>
-</span><span id="line-330">    <span class="n">music21</span> <span class="o">=</span> <span class="n">optional_import</span><span class="p">(</span><span class="s2">"music21"</span><span class="p">)</span>
-</span><span id="line-331">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">)):</span>
-</span><span id="line-332">        <span class="n">score</span> <span class="o">=</span> <span class="n">music21</span><span class="o">.</span><span class="n">converter</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">score</span><span class="p">))</span>
-</span><span id="line-333">    <span class="n">stream</span> <span class="o">=</span> <span class="n">score</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="n">part</span><span class="p">]</span> <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="s2">"parts"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">score</span>
-</span><span id="line-334">    <span class="n">stream</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">stripTies</span><span class="p">()</span>
-</span><span id="line-335">    <span class="n">other_voices</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-336">        <span class="nb">id</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
-</span><span id="line-337">        <span class="k">for</span> <span class="n">measure</span> <span class="ow">in</span> <span class="n">stream</span><span class="o">.</span><span class="n">getElementsByClass</span><span class="p">(</span><span class="n">music21</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">Measure</span><span class="p">)</span>
-</span><span id="line-338">        <span class="k">for</span> <span class="n">voice</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">measure</span><span class="o">.</span><span class="n">voices</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
-</span><span id="line-339">        <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">voice</span><span class="o">.</span><span class="n">recurse</span><span class="p">()</span><span class="o">.</span><span class="n">notesAndRests</span>
-</span><span id="line-340">    <span class="p">}</span>
-</span><span id="line-341">    <span class="n">verse</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span>
-</span><span id="line-342">        <span class="p">(</span><span class="n">lyric</span><span class="o">.</span><span class="n">number</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">stream</span><span class="o">.</span><span class="n">recurse</span><span class="p">()</span><span class="o">.</span><span class="n">notes</span> <span class="k">for</span> <span class="n">lyric</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">lyrics</span><span class="p">),</span>
-</span><span id="line-343">        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-</span><span id="line-344">    <span class="p">)</span>
-</span><span id="line-345">    <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-346">    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">stream</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">secondsMap</span><span class="p">:</span>
-</span><span id="line-347">        <span class="n">element</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">"element"</span><span class="p">]</span>
-</span><span id="line-348">        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="n">music21</span><span class="o">.</span><span class="n">note</span><span class="o">.</span><span class="n">GeneralNote</span><span class="p">):</span>
-</span><span id="line-349">            <span class="k">continue</span>
-</span><span id="line-350">        <span class="k">if</span> <span class="nb">id</span><span class="p">(</span><span class="n">element</span><span class="p">)</span> <span class="ow">in</span> <span class="n">other_voices</span><span class="p">:</span>
-</span><span id="line-351">            <span class="k">continue</span>
-</span><span id="line-352">        <span class="k">if</span> <span class="n">element</span><span class="o">.</span><span class="n">isRest</span><span class="p">:</span>
-</span><span id="line-353">            <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="line-354">            <span class="k">continue</span>
-</span><span id="line-355">        <span class="n">start</span><span class="p">,</span> <span class="n">dur</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"offsetSeconds"</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"durationSeconds"</span><span class="p">])</span>
-</span><span id="line-356">        <span class="k">if</span> <span class="n">element</span><span class="o">.</span><span class="n">duration</span><span class="o">.</span><span class="n">isGrace</span> <span class="ow">or</span> <span class="n">dur</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-357">            <span class="k">continue</span>
-</span><span id="line-358">        <span class="n">note</span> <span class="o">=</span> <span class="n">Note</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">dur</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">midi</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">element</span><span class="o">.</span><span class="n">pitches</span><span class="p">))</span>
-</span><span id="line-359">        <span class="n">lyric</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">ly</span> <span class="k">for</span> <span class="n">ly</span> <span class="ow">in</span> <span class="n">element</span><span class="o">.</span><span class="n">lyrics</span> <span class="k">if</span> <span class="n">ly</span><span class="o">.</span><span class="n">number</span> <span class="o">==</span> <span class="n">verse</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-360">        <span class="k">if</span> <span class="n">lyric</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">(</span><span class="n">lyric</span><span class="o">.</span><span class="n">text</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-</span><span id="line-361">            <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">note</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
-</span><span id="line-362">            <span class="k">continue</span>
-</span><span id="line-363">        <span class="n">syllabic</span> <span class="o">=</span> <span class="n">lyric</span><span class="o">.</span><span class="n">syllabic</span> <span class="ow">or</span> <span class="s2">"single"</span>
-</span><span id="line-364">        <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="line-365">            <span class="p">(</span>
-</span><span id="line-366">                <span class="n">note</span><span class="p">,</span>
-</span><span id="line-367">                <span class="n">lyric</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
-</span><span id="line-368">                <span class="n">syllabic</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"middle"</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">),</span>
-</span><span id="line-369">                <span class="n">syllabic</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"begin"</span><span class="p">,</span> <span class="s2">"middle"</span><span class="p">),</span>
-</span><span id="line-370">            <span class="p">)</span>
-</span><span id="line-371">        <span class="p">)</span>
-</span><span id="line-372">    <span class="k">return</span> <span class="n">_join_words</span><span class="p">(</span><span class="n">items</span><span class="p">)</span></div>
-
-</span><span id="line-373">
-</span><span id="line-374">
-</span><span id="line-375"><span class="k">def</span><span class="w"> </span><span class="nf">_name_word</span><span class="p">(</span><span class="n">notes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="n">indices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">word</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-376">    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
-</span><span id="line-377">        <span class="n">notes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">notes</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">word</span><span class="o">=</span><span class="n">word</span><span class="p">)</span>
-</span><span id="line-378">
-</span><span id="line-379">
-</span><span id="line-380"><span class="c1"># --------------------------------------------------------------------------- lyrics</span>
-</span><span id="line-381">
-</span><span id="line-382">
-<div class="viewcode-block" id="lyric_tokens">
-<a class="viewcode-back" href="../../_autosummary/voxy.score.html#voxy.score.lyric_tokens">[docs]</a>
-</span><span id="line-383"><span class="k">def</span><span class="w"> </span><span class="nf">lyric_tokens</span><span class="p">(</span><span class="n">lyrics</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]]:</span>
-</span><span id="line-384"><span class="w">    </span><span class="sd">"""``(word, starts_word)`` per sung note, from a lyric line.</span>
-</span><span id="line-385">
-</span><span id="line-386"><span class="sd">    &gt;&gt;&gt; lyric_tokens("Light a can-dle - in")</span>
-</span><span id="line-387"><span class="sd">    [('Light', True), ('a', True), ('candle', True), ('candle', False), ('candle', False), ('in', True)]</span>
-</span><span id="line-388"><span class="sd">    """</span>
-</span><span id="line-389">    <span class="n">tokens</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-390">    <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">lyrics</span><span class="o">.</span><span class="n">split</span><span class="p">():</span>
-</span><span id="line-391">        <span class="k">if</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">HOLD_TOKENS</span><span class="p">:</span>
-</span><span id="line-392">            <span class="k">if</span> <span class="ow">not</span> <span class="n">tokens</span><span class="p">:</span>
-</span><span id="line-393">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A hold token (</span><span class="si">{</span><span class="n">token</span><span class="si">!r}</span><span class="s2">) can't come first"</span><span class="p">)</span>
-</span><span id="line-394">            <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tokens</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="kc">False</span><span class="p">))</span>
-</span><span id="line-395">            <span class="k">continue</span>
-</span><span id="line-396">        <span class="n">syllables</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">token</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span> <span class="k">if</span> <span class="n">s</span><span class="p">]</span>
-</span><span id="line-397">        <span class="n">word</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">syllables</span><span class="p">)</span>
-</span><span id="line-398">        <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">word</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
-</span><span id="line-399">        <span class="n">tokens</span><span class="o">.</span><span class="n">extend</span><span class="p">((</span><span class="n">word</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">syllables</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
-</span><span id="line-400">    <span class="k">return</span> <span class="n">tokens</span></div>
-
-</span><span id="line-401">
-</span><span id="line-402">
-<div class="viewcode-block" id="attach_lyrics">
-<a class="viewcode-back" href="../../_autosummary/voxy.score.html#voxy.score.attach_lyrics">[docs]</a>
-</span><span id="line-403"><span class="k">def</span><span class="w"> </span><span class="nf">attach_lyrics</span><span class="p">(</span><span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="n">lyrics</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
-</span><span id="line-404"><span class="w">    </span><span class="sd">"""``notes`` with the words of ``lyrics`` (see ``lyric_tokens``), one token per note.</span>
-</span><span id="line-405">
-</span><span id="line-406"><span class="sd">    &gt;&gt;&gt; attach_lyrics(notes_from_pitches([(60, 1)]), "two words")</span>
-</span><span id="line-407"><span class="sd">    Traceback (most recent call last):</span>
-</span><span id="line-408"><span class="sd">      ...</span>
-</span><span id="line-409"><span class="sd">    ValueError: 2 lyric syllables for 1 notes: write 'can-dle' for one word over two notes, '-' to hold a word</span>
-</span><span id="line-410"><span class="sd">    """</span>
-</span><span id="line-411">    <span class="n">tokens</span> <span class="o">=</span> <span class="n">lyric_tokens</span><span class="p">(</span><span class="n">lyrics</span><span class="p">)</span>
-</span><span id="line-412">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">notes</span><span class="p">):</span>
-</span><span id="line-413">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-414">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span><span class="si">}</span><span class="s2"> lyric syllables for </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">notes</span><span class="p">)</span><span class="si">}</span><span class="s2"> notes: write 'can-dle' "</span>
-</span><span id="line-415">            <span class="s2">"for one word over two notes, '-' to hold a word"</span>
-</span><span id="line-416">        <span class="p">)</span>
-</span><span id="line-417">    <span class="k">return</span> <span class="p">[</span>
-</span><span id="line-418">        <span class="n">replace</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">word</span><span class="o">=</span><span class="n">word</span><span class="p">,</span> <span class="n">starts_word</span><span class="o">=</span><span class="n">starts</span><span class="p">)</span>
-</span><span id="line-419">        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">starts</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">tokens</span><span class="p">)</span>
-</span><span id="line-420">    <span class="p">]</span></div>
-
-</span><span id="line-421">
-</span><span id="line-422">
+</span><span id="line-117">
+</span><span id="line-118">
+</span><span id="line-119"><span class="k">def</span><span class="w"> </span><span class="nf">_is_notes</span><span class="p">(</span><span class="n">score</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-120">    <span class="k">return</span> <span class="p">(</span>
+</span><span id="line-121">        <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span>
+</span><span id="line-122">        <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">))</span>
+</span><span id="line-123">        <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s2">"pitch"</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">score</span><span class="p">)</span>
+</span><span id="line-124">    <span class="p">)</span>
+</span><span id="line-125">
+</span><span id="line-126">
+</span><span id="line-127"><span class="k">def</span><span class="w"> </span><span class="nf">_score_reader</span><span class="p">():</span>
+</span><span id="line-128"><span class="w">    </span><span class="sd">"""The score reader module, or an error saying how to get it."""</span>
+</span><span id="line-129">    <span class="k">try</span><span class="p">:</span>
+</span><span id="line-130">        <span class="k">return</span> <span class="n">optional_import</span><span class="p">(</span><span class="n">SCORE_READER</span><span class="p">)</span>
+</span><span id="line-131">    <span class="k">except</span> <span class="ne">ModuleNotFoundError</span><span class="p">:</span>
+</span><span id="line-132">        <span class="k">if</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">SCORE_READER</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-133">            <span class="k">raise</span>
+</span><span id="line-134">        <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">PackageNotFoundError</span><span class="p">,</span> <span class="n">version</span>
+</span><span id="line-135">
+</span><span id="line-136">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-137">            <span class="n">have</span> <span class="o">=</span> <span class="n">version</span><span class="p">(</span><span class="s2">"audiate"</span><span class="p">)</span>
+</span><span id="line-138">        <span class="k">except</span> <span class="n">PackageNotFoundError</span><span class="p">:</span>
+</span><span id="line-139">            <span class="n">have</span> <span class="o">=</span> <span class="s2">"unknown"</span>
+</span><span id="line-140">        <span class="k">raise</span> <span class="ne">ModuleNotFoundError</span><span class="p">(</span>
+</span><span id="line-141">            <span class="sa">f</span><span class="s2">"Reading scores needs audiate&gt;=</span><span class="si">{</span><span class="n">MIN_AUDIATE</span><span class="si">}</span><span class="s2"> (it has </span><span class="si">{</span><span class="n">SCORE_READER</span><span class="si">}</span><span class="s2">); "</span>
+</span><span id="line-142">            <span class="sa">f</span><span class="s2">"the installed audiate (</span><span class="si">{</span><span class="n">have</span><span class="si">}</span><span class="s2">) predates it: upgrade it to "</span>
+</span><span id="line-143">            <span class="sa">f</span><span class="s2">"'audiate[symbolic]&gt;=</span><span class="si">{</span><span class="n">MIN_AUDIATE</span><span class="si">}</span><span class="s2">', or update a local checkout of it"</span><span class="p">,</span>
+</span><span id="line-144">            <span class="n">name</span><span class="o">=</span><span class="n">SCORE_READER</span><span class="p">,</span>
+</span><span id="line-145">        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+</span><span id="line-146">
+</span><span id="line-147">
+</span><span id="line-148"><span class="k">def</span><span class="w"> </span><span class="nf">_in_voxy_terms</span><span class="p">(</span><span class="n">error</span><span class="p">:</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="ne">ValueError</span><span class="p">:</span>
+</span><span id="line-149"><span class="w">    </span><span class="sd">"""audiate's error, with its option names as ``read_score`` spells them."""</span>
+</span><span id="line-150">    <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+</span><span id="line-151">    <span class="k">for</span> <span class="n">ours</span><span class="p">,</span> <span class="n">theirs</span> <span class="ow">in</span> <span class="n">SUNG_LINE_NAMES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+</span><span id="line-152">        <span class="n">message</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">rf</span><span class="s2">"(?&lt;![\w_])</span><span class="si">{</span><span class="n">theirs</span><span class="si">}</span><span class="s2">="</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">ours</span><span class="si">}</span><span class="s2">="</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+</span><span id="line-153">    <span class="k">return</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</span><span id="line-154">
+</span><span id="line-155">
+</span><span id="line-156"><span class="k">def</span><span class="w"> </span><span class="nf">_with_lyrics</span><span class="p">(</span><span class="n">notes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Note</span><span class="p">],</span> <span class="n">lyrics</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
+</span><span id="line-157"><span class="w">    </span><span class="sd">"""``notes`` with the words of the lyric line ``lyrics``, through audiate's</span>
+</span><span id="line-158"><span class="sd">    ``attach_lyrics`` (one token per note)."""</span>
+</span><span id="line-159">    <span class="n">reader</span> <span class="o">=</span> <span class="n">_score_reader</span><span class="p">()</span>
+</span><span id="line-160">    <span class="n">sung</span> <span class="o">=</span> <span class="p">[</span><span class="n">reader</span><span class="o">.</span><span class="n">SungNote</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">n</span><span class="o">.</span><span class="n">dur</span><span class="p">,</span> <span class="n">n</span><span class="o">.</span><span class="n">pitch</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">]</span>
+</span><span id="line-161">    <span class="k">return</span> <span class="p">[</span><span class="n">to_note</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">reader</span><span class="o">.</span><span class="n">attach_lyrics</span><span class="p">(</span><span class="n">sung</span><span class="p">,</span> <span class="n">lyrics</span><span class="p">)]</span>
+</span><span id="line-162">
+</span><span id="line-163">
 <div class="viewcode-block" id="read_score">
 <a class="viewcode-back" href="../../_autosummary/voxy.score.html#voxy.score.read_score">[docs]</a>
-</span><span id="line-423"><span class="k">def</span><span class="w"> </span><span class="nf">read_score</span><span class="p">(</span>
-</span><span id="line-424">    <span class="n">score</span><span class="p">,</span>
-</span><span id="line-425">    <span class="n">lyrics</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-426">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-427">    <span class="n">filler</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_FILLER_WORD</span><span class="p">,</span>
-</span><span id="line-428">    <span class="n">track</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-429">    <span class="n">channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-430">    <span class="n">part</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-</span><span id="line-431"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
-</span><span id="line-432"><span class="w">    </span><span class="sd">"""The notes of ``score``, with words: from ``lyrics`` if given, else the score's own.</span>
-</span><span id="line-433">
-</span><span id="line-434"><span class="sd">    Args:</span>
-</span><span id="line-435"><span class="sd">        score: A MIDI file (``.mid``, ``.midi``), a MusicXML file (``.musicxml``,</span>
-</span><span id="line-436"><span class="sd">            ``.xml``, ``.mxl``, or anything music21 parses), a music21 stream, or</span>
-</span><span id="line-437"><span class="sd">            a sequence of ``Note``.</span>
-</span><span id="line-438"><span class="sd">        lyrics: A lyric line (one token per note, see ``lyric_tokens``); replaces</span>
-</span><span id="line-439"><span class="sd">            the score's own words.</span>
-</span><span id="line-440"><span class="sd">        filler: The word for sung notes that still have none and continue no word</span>
-</span><span id="line-441"><span class="sd">            (a note after a rest, in a score with lyrics on only some notes); a</span>
-</span><span id="line-442"><span class="sd">            score with no words at all, and no ``lyrics``, is an error.</span>
-</span><span id="line-443"><span class="sd">        track, channel: The MIDI line to sing (see ``notes_from_midi``).</span>
-</span><span id="line-444"><span class="sd">        part: The MusicXML part to sing.</span>
-</span><span id="line-445">
-</span><span id="line-446"><span class="sd">    &gt;&gt;&gt; [n.word for n in read_score(notes_from_pitches([(60, 1), (62, 1)]), "do re")]</span>
-</span><span id="line-447"><span class="sd">    ['do', 're']</span>
-</span><span id="line-448"><span class="sd">    """</span>
-</span><span id="line-449">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">)):</span>
-</span><span id="line-450">        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
-</span><span id="line-451">        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="line-452">            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No score at </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-453">        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">MIDI_SUFFIXES</span><span class="p">:</span>
-</span><span id="line-454">            <span class="n">notes</span> <span class="o">=</span> <span class="n">notes_from_midi</span><span class="p">(</span>
-</span><span id="line-455">                <span class="n">path</span><span class="p">,</span> <span class="n">track</span><span class="o">=</span><span class="n">track</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="n">channel</span><span class="p">,</span> <span class="n">with_lyrics</span><span class="o">=</span><span class="n">lyrics</span> <span class="ow">is</span> <span class="kc">None</span>
-</span><span id="line-456">            <span class="p">)</span>
-</span><span id="line-457">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-458">            <span class="n">notes</span> <span class="o">=</span> <span class="n">notes_from_musicxml</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">part</span><span class="o">=</span><span class="n">part</span><span class="p">)</span>
-</span><span id="line-459">    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">Note</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">score</span><span class="p">):</span>
-</span><span id="line-460">        <span class="n">notes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
-</span><span id="line-461">    <span class="k">else</span><span class="p">:</span>
-</span><span id="line-462">        <span class="n">notes</span> <span class="o">=</span> <span class="n">notes_from_musicxml</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">part</span><span class="o">=</span><span class="n">part</span><span class="p">)</span>
-</span><span id="line-463">    <span class="n">notes</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">dur</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
-</span><span id="line-464">    <span class="k">if</span> <span class="ow">not</span> <span class="n">notes</span><span class="p">:</span>
-</span><span id="line-465">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The score has no notes"</span><span class="p">)</span>
-</span><span id="line-466">    <span class="n">notes</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
-</span><span id="line-467">    <span class="k">if</span> <span class="n">lyrics</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-468">        <span class="k">return</span> <span class="n">attach_lyrics</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">lyrics</span><span class="p">)</span>
-</span><span id="line-469">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">word</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">):</span>
-</span><span id="line-470">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The score has no lyrics: pass lyrics='...'"</span><span class="p">)</span>
-</span><span id="line-471">    <span class="k">return</span> <span class="p">[</span><span class="n">n</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">word</span> <span class="k">else</span> <span class="n">replace</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">word</span><span class="o">=</span><span class="n">filler</span><span class="p">,</span> <span class="n">starts_word</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">]</span></div>
+</span><span id="line-164"><span class="k">def</span><span class="w"> </span><span class="nf">read_score</span><span class="p">(</span>
+</span><span id="line-165">    <span class="n">score</span><span class="p">,</span>
+</span><span id="line-166">    <span class="n">lyrics</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-167">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-168">    <span class="n">filler</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_FILLER_WORD</span><span class="p">,</span>
+</span><span id="line-169">    <span class="n">track</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-170">    <span class="n">channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-171">    <span class="n">part</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-172">    <span class="n">verse</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-173">    <span class="n">score_voice</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-174">    <span class="n">chords</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-175"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Note</span><span class="p">]:</span>
+</span><span id="line-176"><span class="w">    </span><span class="sd">"""The notes of ``score``, with words: from ``lyrics`` if given, else the score's own.</span>
+</span><span id="line-177">
+</span><span id="line-178"><span class="sd">    Args:</span>
+</span><span id="line-179"><span class="sd">        score: A MIDI file (``.mid``, ``.midi``, ``.kar``), a MusicXML file (or</span>
+</span><span id="line-180"><span class="sd">            anything music21 parses), its bytes, a music21 stream (all read with</span>
+</span><span id="line-181"><span class="sd">            ``audiate.sung_line``), or a sequence of notes (``Note``, or</span>
+</span><span id="line-182"><span class="sd">            ``audiate.SungNote`` as ``audiate.sung_line`` returns them).</span>
+</span><span id="line-183"><span class="sd">        lyrics: A lyric line (one token per note, see ``audiate.sung.lyric_tokens``);</span>
+</span><span id="line-184"><span class="sd">            replaces the score's own words, which are then not read.</span>
+</span><span id="line-185"><span class="sd">        filler: The word for sung notes that still have none and continue no word</span>
+</span><span id="line-186"><span class="sd">            (a note after a rest, in a score with lyrics on only some notes); a</span>
+</span><span id="line-187"><span class="sd">            score with no words at all, and no ``lyrics``, is an error.</span>
+</span><span id="line-188"><span class="sd">        track, channel: The MIDI line to sing (``track``: index in the file;</span>
+</span><span id="line-189"><span class="sd">            ``channel``: 1 to 16).</span>
+</span><span id="line-190"><span class="sd">        part, verse: The music21 part (an index, or a name or id) and the lyric</span>
+</span><span id="line-191"><span class="sd">            verse to sing.</span>
+</span><span id="line-192"><span class="sd">        score_voice: The voice of that part (its MusicXML voice number; the</span>
+</span><span id="line-193"><span class="sd">            ``voice=`` of ``audiate.sung_line``).</span>
+</span><span id="line-194"><span class="sd">        chords: Two notes at once: an error (None, the default), or sing the</span>
+</span><span id="line-195"><span class="sd">            ``"top"`` or ``"bottom"`` one.</span>
+</span><span id="line-196">
+</span><span id="line-197"><span class="sd">    Which line and verse are sung by default, and when the reading raises</span>
+</span><span id="line-198"><span class="sd">    instead of guessing, is audiate's to say: see ``audiate.sung``.</span>
+</span><span id="line-199">
+</span><span id="line-200"><span class="sd">    &gt;&gt;&gt; [n.word for n in read_score([Note(0, 1, 60, "do"), Note(1, 1, 62, "re")])]</span>
+</span><span id="line-201"><span class="sd">    ['do', 're']</span>
+</span><span id="line-202"><span class="sd">    """</span>
+</span><span id="line-203">    <span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-204">        <span class="s2">"track"</span><span class="p">:</span> <span class="n">track</span><span class="p">,</span>
+</span><span id="line-205">        <span class="s2">"channel"</span><span class="p">:</span> <span class="n">channel</span><span class="p">,</span>
+</span><span id="line-206">        <span class="s2">"part"</span><span class="p">:</span> <span class="n">part</span><span class="p">,</span>
+</span><span id="line-207">        <span class="s2">"verse"</span><span class="p">:</span> <span class="n">verse</span><span class="p">,</span>
+</span><span id="line-208">        <span class="s2">"score_voice"</span><span class="p">:</span> <span class="n">score_voice</span><span class="p">,</span>
+</span><span id="line-209">        <span class="s2">"chords"</span><span class="p">:</span> <span class="n">chords</span><span class="p">,</span>
+</span><span id="line-210">    <span class="p">}</span>
+</span><span id="line-211">    <span class="n">options</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">}</span>
+</span><span id="line-212">    <span class="k">if</span> <span class="n">_is_notes</span><span class="p">(</span><span class="n">score</span><span class="p">):</span>
+</span><span id="line-213">        <span class="k">if</span> <span class="n">options</span><span class="p">:</span>
+</span><span id="line-214">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-215">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">options</span><span class="p">)</span><span class="si">}</span><span class="s2">: pick a line of a score, not of notes"</span>
+</span><span id="line-216">            <span class="p">)</span>
+</span><span id="line-217">        <span class="n">notes</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">to_note</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">score</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">start</span><span class="p">)</span>
+</span><span id="line-218">    <span class="k">else</span><span class="p">:</span>
+</span><span id="line-219">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">))</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">score</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="line-220">            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No score at </span><span class="si">{</span><span class="n">score</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-221">        <span class="n">reader</span> <span class="o">=</span> <span class="n">_score_reader</span><span class="p">()</span>
+</span><span id="line-222">        <span class="n">options</span> <span class="o">=</span> <span class="p">{</span><span class="n">SUNG_LINE_NAMES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+</span><span id="line-223">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-224">            <span class="n">line</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">sung_line</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="n">with_lyrics</span><span class="o">=</span><span class="n">lyrics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+</span><span id="line-225">        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+</span><span id="line-226">            <span class="k">raise</span> <span class="n">_in_voxy_terms</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">error</span>
+</span><span id="line-227">        <span class="n">notes</span> <span class="o">=</span> <span class="p">[</span><span class="n">to_note</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">line</span><span class="p">]</span>
+</span><span id="line-228">    <span class="n">notes</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">dur</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+</span><span id="line-229">    <span class="k">if</span> <span class="ow">not</span> <span class="n">notes</span><span class="p">:</span>
+</span><span id="line-230">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The score has no notes"</span><span class="p">)</span>
+</span><span id="line-231">    <span class="k">if</span> <span class="n">lyrics</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-232">        <span class="k">return</span> <span class="n">_with_lyrics</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="n">lyrics</span><span class="p">)</span>
+</span><span id="line-233">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">word</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">):</span>
+</span><span id="line-234">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The score has no lyrics: pass lyrics='...'"</span><span class="p">)</span>
+</span><span id="line-235">    <span class="k">return</span> <span class="p">[</span><span class="n">n</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">word</span> <span class="k">else</span> <span class="n">replace</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">word</span><span class="o">=</span><span class="n">filler</span><span class="p">,</span> <span class="n">starts_word</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">notes</span><span class="p">]</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -699,7 +454,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=8d9581ea"></script>
+    <script src="../../_static/documentation_options.js?v=ba6d0b80"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
