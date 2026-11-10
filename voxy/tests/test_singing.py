@@ -439,7 +439,7 @@ def test_adapter_converts_with_rmvpe_f0_and_reports_the_shift(adapter, tmp_path)
     assert reply["pitch_shift"] == -7 and reply["duration"] == 0.1
     ((meta, kwargs),) = FakeModel.calls
     assert kwargs["auto_shift"] is True and kwargs["gt_f0"].shape == (1, 4)
-    assert state["models"]["rmvpe"].path == "/pre/rmvpe/rmvpe.pt"
+    assert state["models"]["rmvpe"].path == os.path.join("/pre", "rmvpe/rmvpe.pt")
     assert adapter.unload(state, component="svc") == {"loaded": ["rmvpe"]}
 
 
