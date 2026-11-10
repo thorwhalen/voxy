@@ -48,7 +48,7 @@ dependencies = [
     # voxy.base.optional_import: the shared optional-dependency helper
     "i2>=0.1.92",
     # voxy.envs / voxy.worker: building isolated environments and running adapters
-    "ps>=0.1.15",
+    "ps>=0.1.17",
 ]
 
 [project.urls]
