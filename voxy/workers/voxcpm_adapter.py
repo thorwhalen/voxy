@@ -4,6 +4,10 @@
 def load(
     *, model_id="openbmb/VoxCPM2", device="cpu", optimize=False, lora_weights_path=None
 ):
+    from _worker_threads import cap_torch_threads
+
+    cap_torch_threads()
+
     from voxcpm import VoxCPM
 
     return VoxCPM.from_pretrained(

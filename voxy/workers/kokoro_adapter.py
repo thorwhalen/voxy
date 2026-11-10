@@ -6,8 +6,6 @@ the caller's ``init`` (``voxy.kokoro_model.KOKORO``). onnxruntime ignores
 ``OMP_NUM_THREADS``, so its thread pool is capped here from ``$VOXY_NUM_THREADS``.
 """
 
-import os
-
 
 def load(*, repo_id, revision, model_file, voices_file):
     import onnxruntime
@@ -18,10 +16,12 @@ def load(*, repo_id, revision, model_file, voices_file):
         hf_hub_download(repo_id, filename, revision=revision)
         for filename in (model_file, voices_file)
     )
+    from _worker_threads import thread_cap
+
     options = onnxruntime.SessionOptions()
-    threads = os.environ.get("VOXY_NUM_THREADS")
+    threads = thread_cap()
     if threads:
-        options.intra_op_num_threads = int(threads)
+        options.intra_op_num_threads = threads
         options.inter_op_num_threads = 1
     session = onnxruntime.InferenceSession(
         model_path, options, providers=["CPUExecutionProvider"]

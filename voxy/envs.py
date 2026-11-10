@@ -10,8 +10,11 @@ interpreter, which ``voxy.worker`` then runs the model in:
     models/hf/              model weights (``HF_HOME`` of every worker)
     models/{name}/          a backend's other weights (e.g. Coqui's ``TTS_HOME``)
 
-Nothing here is downloaded at import time; building an environment is explicit
-(``ensure_env``, or ``python -m voxy setup <backend>``).
+Building and checking an environment is ``ps.isolated``'s (``ensure_env``,
+``is_env_ready``); this module adds voxy's layout (where an environment and its
+weights live), the ``cpu`` torch default, a backend's own environment variables,
+and the thread cap. Nothing here is downloaded at import time; building an
+environment is explicit (``ensure_env``, or ``python -m voxy setup <backend>``).
 
 >>> spec = EnvSpec("demo", ("numpy",))
 >>> spec.digest() == EnvSpec("demo", ("numpy",)).digest()
@@ -20,24 +23,27 @@ True
 '/data/envs/demo'
 """
 
-import hashlib
-import json
 import os
 import shutil
 import subprocess
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 
+from ps import isolated
+
 from voxy.stores import voxy_data_dir
+from voxy.workers._worker_threads import THREADS_ENVVAR
 
 ENVS_KIND = "envs"
 MODELS_KIND = "models"
 HF_SUBDIR = "hf"
+#: voxy's marker file (environments built before ps.isolated carry it).
 ENV_MARKER = ".voxy-env.json"
 DFLT_ENV_PYTHON = "3.11"
 DFLT_TORCH_BACKEND = "cpu"
-VOXY_NUM_THREADS_ENVVAR = "VOXY_NUM_THREADS"
+#: ``$VOXY_NUM_THREADS``: spelled once, in the helper the adapters share.
+VOXY_NUM_THREADS_ENVVAR = THREADS_ENVVAR
 #: Torch/ONNX threads per worker: a shared machine keeps headroom for others.
 DFLT_NUM_THREADS = 8
 THREAD_ENVVARS = (
@@ -45,13 +51,13 @@ THREAD_ENVVARS = (
     "MKL_NUM_THREADS",
     "OPENBLAS_NUM_THREADS",
     "NUMEXPR_NUM_THREADS",
-    "VOXY_NUM_THREADS",
+    VOXY_NUM_THREADS_ENVVAR,
 )
 
 
 @dataclass(frozen=True)
-class EnvSpec:
-    """What a backend's environment holds.
+class EnvSpec(isolated.EnvSpec):
+    """What a backend's environment holds (``ps.isolated.EnvSpec`` with voxy's defaults).
 
     Args:
         name: Folder name under ``envs/`` (usually the backend name).
@@ -60,21 +66,13 @@ class EnvSpec:
         torch_backend: ``uv``'s ``--torch-backend`` ('cpu' keeps CUDA wheels out;
             None leaves the index alone).
         env_vars: Extra environment variables for the worker process (values may
-            use ``{models}``, the backend's own weights folder).
+            use ``{models}``, the backend's own weights folder). Not part of the
+            digest: changing them needs no rebuild.
     """
 
-    name: str
-    requirements: tuple[str, ...]
     python: str = DFLT_ENV_PYTHON
     torch_backend: str | None = DFLT_TORCH_BACKEND
     env_vars: Mapping[str, str] = field(default_factory=dict)
-
-    def digest(self) -> str:
-        """A short hash of what is installed (env vars excluded: they don't need a rebuild)."""
-        content = {k: v for k, v in asdict(self).items() if k != "env_vars"}
-        return hashlib.sha256(json.dumps(content, sort_keys=True).encode()).hexdigest()[
-            :12
-        ]
 
 
 def env_dir(spec: EnvSpec, *, rootdir: str | os.PathLike | None = None) -> Path:
@@ -89,27 +87,14 @@ def models_dir(*parts: str, rootdir: str | os.PathLike | None = None) -> Path:
 
 def env_python(spec: EnvSpec, *, rootdir: str | os.PathLike | None = None) -> Path:
     """The interpreter of ``spec``'s environment (it may not exist yet)."""
-    return env_dir(spec, rootdir=rootdir) / "bin" / "python"
+    return isolated.venv_python(env_dir(spec, rootdir=rootdir))
 
 
 def is_env_ready(spec: EnvSpec, *, rootdir: str | os.PathLike | None = None) -> bool:
     """True if the environment exists and was built from this exact spec."""
-    marker = env_dir(spec, rootdir=rootdir) / ENV_MARKER
-    try:
-        return json.loads(marker.read_text()).get("digest") == spec.digest()
-    except (OSError, ValueError):
-        return False
-
-
-def _uv() -> str:
-    uv = shutil.which("uv")
-    if uv is None:
-        raise RuntimeError(
-            "Building a backend environment needs uv: "
-            "curl -LsSf https://astral.sh/uv/install.sh | sh "
-            "(see https://docs.astral.sh/uv/)"
-        )
-    return uv
+    return isolated.is_env_ready(
+        spec, env_dir(spec, rootdir=rootdir), marker=ENV_MARKER
+    )
 
 
 def ensure_env(
@@ -121,27 +106,31 @@ def ensure_env(
 ) -> Path:
     """Build ``spec``'s environment if missing or stale, and return its interpreter.
 
-    The host's ``UV_CONSTRAINT`` is cleared for the install: its pins are for the
-    host environment, and an isolated environment exists precisely to differ.
+    A stale one (built from another spec) is rebuilt from scratch; the host's uv
+    pins (``UV_CONSTRAINT`` and co.) are cleared for the build: they are for the
+    host, and an isolated environment exists precisely to differ.
     """
-    python = env_python(spec, rootdir=rootdir)
-    if is_env_ready(spec, rootdir=rootdir):
-        return python
     path = env_dir(spec, rootdir=rootdir)
-    uv = _uv()
-    env = {**os.environ, "UV_CONSTRAINT": ""}
-    log(f"voxy: building the {spec.name!r} environment in {path} (one-time)")
-    if not python.exists():
-        run([uv, "venv", "--python", spec.python, str(path)], check=True, env=env)
-    install = [uv, "pip", "install", "--python", str(python)]
-    if spec.torch_backend:
-        install += ["--torch-backend", spec.torch_backend]
-    run(install + list(spec.requirements), check=True, env=env)
-    path.mkdir(parents=True, exist_ok=True)
-    (path / ENV_MARKER).write_text(
-        json.dumps({"digest": spec.digest(), "spec": asdict(spec)}, indent=2)
-    )
-    return python
+    if not is_env_ready(spec, rootdir=rootdir):
+        _remove_unmarked_voxy_env(path, rootdir=rootdir, log=log)
+    return isolated.ensure_env(spec, path, run=run, log=log, marker=ENV_MARKER)
+
+
+def _remove_unmarked_voxy_env(path: Path, *, rootdir, log) -> None:
+    """Remove a half-built environment an older voxy left in its own ``envs/`` folder.
+
+    voxy wrote its marker only once a build finished, so an interrupted build left a
+    venv with no marker, which ``ps.isolated`` (rightly, in general) refuses to
+    delete. Under voxy's own ``envs/`` such a folder is voxy's: it is removed so the
+    build can start afresh. Anywhere else, or without a venv interpreter, it is left
+    for ps to refuse.
+    """
+    envs_root = (Path(rootdir or voxy_data_dir()) / ENVS_KIND).resolve()
+    if path.resolve().parent != envs_root or (path / ENV_MARKER).exists():
+        return
+    if isolated.venv_python(path).exists():
+        log(f"voxy: removing the half-built environment in {path}")
+        shutil.rmtree(path)
 
 
 def num_threads(threads: int | None = None) -> int:
@@ -162,15 +151,16 @@ def worker_environ(
 ) -> dict[str, str]:
     """Environment variables for a worker: weights under the data root, threads capped.
 
+    The whole environment (``base``, default ``os.environ``, minus the variables that
+    leak the host's packages), so a one-shot command (``subprocess.run``) can use it too.
+
     >>> env = worker_environ(EnvSpec("x", (), env_vars={"TTS_HOME": "{models}"}),
     ...                      threads=2, rootdir="/d", base={})
     >>> from pathlib import Path
     >>> env["OMP_NUM_THREADS"], Path(env["HF_HOME"]).as_posix(), Path(env["TTS_HOME"]).as_posix()
     ('2', '/d/models/hf', '/d/models/x')
     """
-    env = dict(os.environ if base is None else base)
-    for name in ("VIRTUAL_ENV", "PYTHONPATH", "PYTHONHOME"):
-        env.pop(name, None)
+    env = isolated.clean_environ(base)  # no host PYTHONPATH, VIRTUAL_ENV, ...
     n = str(num_threads(threads))
     env.update({var: n for var in THREAD_ENVVARS})
     env["HF_HOME"] = str(models_dir(HF_SUBDIR, rootdir=rootdir))

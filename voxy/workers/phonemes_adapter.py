@@ -21,6 +21,10 @@ def _vocab_file(model):
 
 
 def load(*, model="facebook/wav2vec2-lv-60-espeak-cv-ft", device="cpu"):
+    from _worker_threads import cap_torch_threads
+
+    cap_torch_threads()
+
     import json
 
     import torch

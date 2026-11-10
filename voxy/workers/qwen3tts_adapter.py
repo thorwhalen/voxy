@@ -26,6 +26,10 @@ def load(
     device="cpu",
     dtype="float32",
 ):
+    from _worker_threads import cap_torch_threads
+
+    cap_torch_threads()
+
     return {
         "model": _from_pretrained(model_id, device, dtype),
         "prompts": {},
