@@ -91,12 +91,12 @@ fal = [
 voicestudio = [
     "voicestudio",
 ]
-# Reading scores to sing (voxy.score, voxy.sing): MIDI with mido, MusicXML with
-# music21; imported only when a score of that kind is read. The singing models
-# themselves run in their own environments (python -m voxy setup soulx).
+# Reading scores to sing (voxy.score, voxy.sing): audiate reads the sung line of
+# MIDI (pretty_midi, mido) and MusicXML (music21, its "symbolic" extra); imported
+# only when a score is read. The singing models themselves run in their own
+# environments (python -m voxy setup soulx).
 singing = [
-    "mido",
-    "music21",
+    "audiate[symbolic]>=0.0.4",
 ]
 # The part-of-speech heteronym detector (voxy.speechtext.pos_detector); imported
 # lazily. Also needs the model: python -m spacy download fr_core_news_sm
@@ -182,7 +182,7 @@ format = []
 
 [tool.wads.ci.install]
 # The tests exercise the tensor paths, the ElevenLabs request building against
-# the real (latest) SDK, offline, and the MIDI/MusicXML score readers.
+# the real (latest) SDK, offline, and reading MIDI/MusicXML scores through audiate.
 extras = ["local", "elevenlabs", "singing"]
 
 [tool.wads.ci.env]

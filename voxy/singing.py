@@ -17,9 +17,10 @@ synthesiser singing "la", which belongs to no one). Conversion needs only the cl
 Only clone a singing voice with its owner's consent; each backend records its own
 usage restrictions in ``singing_backends()[name].consent``.
 
-Scores are MIDI or MusicXML files, music21 streams, or lists of ``voxy.score.Note``
-(``voxy.score.read_score``); lyrics are one token per note (``can-dle`` spreads a
-word over two notes, ``-`` holds it one more).
+Scores are MIDI or MusicXML files, music21 streams, or lists of notes
+(``voxy.score.read_score``, which reads files with ``audiate.sung_line``); lyrics
+are one token per note (``can-dle`` spreads a word over two notes, ``-`` holds it
+one more).
 
 Backends are ``SingingBackend`` records (``singing_backends()``), each running in
 its own environment (``python -m voxy setup soulx``); ``soulx`` (SoulX-Singer,
@@ -212,6 +213,12 @@ def singing_voice(
     sample_rate: int = SYNTHETIC_SAMPLE_RATE,
     name: str = DFLT_SINGING_SAMPLES,
     rootdir: str | os.PathLike | None = None,
+    track: int | None = None,
+    channel: int | None = None,
+    part: int | str | None = None,
+    verse: int | str | None = None,
+    score_voice: int | str | None = None,
+    chords: str | None = None,
     **metadata,
 ) -> VoiceProfile:
     """A singing voice: a sung clip, and (for synthesis) the score it sings.
@@ -221,10 +228,13 @@ def singing_voice(
             path, or WAV bytes (kept in the samples store of voice ``name``, under
             the data root ``rootdir``, so the voice outlives the session).
         score: What the clip sings, timed as in the clip (a MIDI or MusicXML file,
-            a music21 stream, or notes; see ``voxy.score.read_score``). Needed by
+            a music21 stream, or notes, such as ``audiate.sung_line`` returns for
+            a line its defaults don't pick; see ``voxy.score.read_score``). Needed by
             ``sing``; ``convert_singing`` needs only the clip.
         lyrics: Its words, if the score has none.
         backend: The backend the voice is for (its ``model_type``).
+        track, channel, part, verse, score_voice, chords: Which line of the
+            score the clip sings, as in ``sing``.
         **metadata: Kept with the voice (e.g. ``consent=``, ``description=``).
 
     The profile's ``segment`` is plain data (``prompt_audio`` path, ``prompt_notes``),
@@ -235,7 +245,15 @@ def singing_voice(
         key = f"prompt-{hashlib.sha256(audio).hexdigest()[:16]}.wav"
         stores.samples_store(name, rootdir=rootdir)[key] = audio
         audio = stores.kind_dir(stores.SAMPLES_KIND, name, rootdir=rootdir) / key
-    notes = read_score(score, lyrics) if score is not None else None
+    line = dict(
+        track=track,
+        channel=channel,
+        part=part,
+        verse=verse,
+        score_voice=score_voice,
+        chords=chords,
+    )
+    notes = read_score(score, lyrics, **line) if score is not None else None
     return VoiceProfile(
         {
             "prompt_audio": str(Path(audio).resolve()),
@@ -334,6 +352,10 @@ def sing(
     language: str = DFLT_LANGUAGE,
     track: int | None = None,
     channel: int | None = None,
+    part: int | str | None = None,
+    verse: int | str | None = None,
+    score_voice: int | str | None = None,
+    chords: str | None = None,
     model: "SingingModel | None" = None,
     models: MutableMapping | None = None,
     voices: Mapping | None = None,
@@ -342,7 +364,8 @@ def sing(
     """Sing ``score`` with ``lyrics`` in ``voice`` and return the audio (``.save(path)``).
 
     Args:
-        score: A MIDI or MusicXML file, a music21 stream, or ``voxy.score.Note``s.
+        score: A MIDI or MusicXML file, a music21 stream, or notes
+            (``voxy.score.Note``, or ``audiate.SungNote``).
         lyrics: One token per note (``can-dle``: a word over two notes; ``-``: hold
             the word); default: the score's own lyrics.
         voice: A singing voice (``singing_voice``), a library voice saved for
@@ -352,14 +375,33 @@ def sing(
         transpose: Semitones to move the melody (0: as written), or 'fit_voice'
             (into the voice's register).
         language: Of the lyrics (SoulX here: English).
-        track, channel: Which line of a MIDI file to sing, when it has several
-            (``voxy.score.notes_from_midi``).
+        track, channel: Which line of a MIDI file to sing (``track``: index in
+            the file; ``channel``: 1 to 16).
+        part, verse: Which part (an index, a name or an id) and lyric verse of a
+            MusicXML score to sing.
+        score_voice: Which voice of that part (its MusicXML voice number; named
+            so because ``voice`` is the singer).
+        chords: Two notes at once: an error (None), or sing the ``"top"`` or
+            ``"bottom"`` one.
+
+            When the score leaves one of these choices open, reading it raises
+            and names the candidates (see ``voxy.score.read_score`` and
+            ``audiate.sung``).
         model: A ready model (its backend is then the backend).
         models: Model cache to use instead of the shared one.
         voices: Voice library store (default ``voxy.voices_store()``).
         **params: The backend's parameters (``singing_backends()[b].params``).
     """
-    notes = read_score(score, lyrics, track=track, channel=channel)
+    notes = read_score(
+        score,
+        lyrics,
+        track=track,
+        channel=channel,
+        part=part,
+        verse=verse,
+        score_voice=score_voice,
+        chords=chords,
+    )
     model = model or get_singing_model(backend, models=models)
     voice = resolve_singing_voice(voice, backend=model.name, voices=voices)
     speech = model.sing(notes, voice, transpose=transpose, language=language, **params)

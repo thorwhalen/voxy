@@ -38,6 +38,9 @@ CONFIG = os.path.join("soulxsinger", "config", "soulxsinger.yaml")
 PHONESET = os.path.join("soulxsinger", "utils", "phoneme", "phone_set.json")
 F0_EXTRACTION = os.path.join("preprocess", "tools", "f0_extraction.py")
 SP = "<SP>"
+#: Joins the words sung on one note (an elision) in a ``text`` token; voxy.soulx
+#: writes it (its ``WORD_JOINER``).
+WORD_JOINER = "+"
 DFLT_PEAK = 0.95
 #: Fade-out and fade-in length where segments meet (they are rendered separately
 #: and added, not overlapped).
@@ -232,12 +235,17 @@ def _g2p(state):
 
 
 def phonemize_en(word, g2p):
-    """SoulX's token for an English word: ``en_`` and its ARPAbet phones joined by '-'."""
-    letters = "".join(c for c in word if c.isalpha() or c == "'").lower()
-    if not letters:
-        return SP
-    phones = [p for p in g2p(letters) if p.strip() and p.isalnum()]
-    return "en_" + "-".join(phones)
+    """SoulX's token for an English word: ``en_`` and its ARPAbet phones joined by '-'.
+
+    The words of an elision (``me+and``, sung on one note) are phonemized one by
+    one and their phones joined into the one token.
+    """
+    phones = []
+    for part in word.split(WORD_JOINER):
+        letters = "".join(c for c in part if c.isalpha() or c == "'").lower()
+        if letters:
+            phones += [p for p in g2p(letters) if p.strip() and p.isalnum()]
+    return "en_" + "-".join(phones) if phones else SP
 
 
 def fill_phonemes(state, meta):

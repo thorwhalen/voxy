@@ -1,9 +1,10 @@
-"""Tests for singing: the score readers, SoulX metadata, the adapter (fake model
+"""Tests for singing: reading scores through audiate, SoulX metadata, the adapter (fake model
 libraries), the facade (fake worker), and an opt-in real run."""
 
 import importlib.util
 import json
 import os
+import re
 import sys
 import types
 from pathlib import Path
@@ -11,18 +12,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from voxy import score as score_module
 from voxy import singing, soulx
 from voxy.base import VoiceProfile
 from voxy.envs import GitSource, ensure_git_source, git_source_dir, is_env_ready
-from voxy.score import (
-    Note,
-    attach_lyrics,
-    lyric_tokens,
-    notes_from_midi,
-    notes_from_musicxml,
-    notes_from_pitches,
-    read_score,
-)
+from voxy.score import Note, notes_from_pitches, read_score
 from voxy.wavutil import read_wav, write_wav
 from voxy.workers import WORKERS_DIR, adapter_path
 
@@ -64,28 +58,6 @@ def write_midi(path, notes, *, bpm=100, lyrics=(), tempo_change=None, gate=1.0):
     return path
 
 
-def test_midi_notes_follow_the_tempo_map(tmp_path):
-    path = write_midi(
-        tmp_path / "m.mid", [(60, 1), (62, 1), (64, 2)], bpm=120, tempo_change=(1, 60)
-    )
-    notes = notes_from_midi(path)
-    assert [n.pitch for n in notes] == [60, 62, 64]
-    assert [round(n.start, 6) for n in notes] == [0.0, 0.5, 1.5]
-    assert [round(n.dur, 6) for n in notes] == [0.5, 1.0, 2.0]
-
-
-def test_midi_lyric_events_become_words(tmp_path):
-    path = write_midi(tmp_path / "m.mid", [(60, 1), (62, 1)], lyrics=["sing", "on"])
-    assert [n.word for n in read_score(path)] == ["sing", "on"]
-
-
-def test_a_midi_without_lyrics_needs_them(tmp_path):
-    path = write_midi(tmp_path / "m.mid", [(60, 1)])
-    with pytest.raises(ValueError, match="no lyrics"):
-        read_score(path)
-    assert [n.word for n in read_score(path, "hey")] == ["hey"]
-
-
 def raw_midi(path, tracks, *, tpb=480):
     """A MIDI file from ``[[(kind, delta_ticks, fields), ...], ...]`` per track."""
     mido = pytest.importorskip("mido")
@@ -110,81 +82,8 @@ def off(note, delta, channel=0):
     return ("note_off", delta, {"note": note, "velocity": 0, "channel": channel})
 
 
-def test_a_slight_overlap_is_legato_a_large_one_is_polyphony(tmp_path):
-    legato = raw_midi(tmp_path / "l.mid", [[on(60), on(64, 470), off(60, 10), off(64, 480)]])
-    notes = notes_from_midi(legato)
-    assert [(n.pitch, round(n.dur, 3)) for n in notes] == [(60, 0.49), (64, 0.51)]
-    chords = raw_midi(tmp_path / "p.mid", [[on(60), on(64, 240), off(60, 240), off(64, 480)]])
-    with pytest.raises(ValueError, match="polyphonic at 0.25 s"):
-        notes_from_midi(chords)
-
-
-def test_the_melody_track_is_found_and_drums_ignored(tmp_path):
-    melody = [on(72), off(72, 480), on(74), off(74, 480)]
-    drums = [on(36, channel=9), off(36, 120, channel=9)] * 4
-    path = raw_midi(tmp_path / "d.mid", [melody, drums])
-    assert [n.pitch for n in notes_from_midi(path)] == [72, 74]
-    bass = [on(36, channel=1), off(36, 960, channel=1)]
-    several = raw_midi(tmp_path / "s.mid", [melody, bass, drums])
-    with pytest.raises(ValueError, match=r"several lines.*track=0 channel=1.*track=1 channel=2"):
-        notes_from_midi(several)
-    assert [n.pitch for n in notes_from_midi(several, track=1)] == [36]
-    assert [n.pitch for n in read_score(several, "la", track=1)] == [36]
-
-
-def test_embedded_syllables_join_into_words_and_melismas_hold_them(tmp_path):
-    lyric = lambda text, delta=0: ("lyrics", delta, {"text": text})  # noqa: E731
-    events = [
-        lyric("can-"), on(60), off(60, 480),
-        lyric("dle"), on(62), off(62, 480),
-        on(64), off(64, 480),  # no syllable: holds "candle"
-        lyric("light"), on(65), off(65, 480),
-        on(67, 480), off(67, 480),  # after a rest: a new word, the filler
-    ]
-    path = raw_midi(tmp_path / "w.mid", [events])
-    notes = read_score(path)
-    assert [(n.word, n.starts_word) for n in notes] == [
-        ("candle", True), ("candle", False), ("candle", False),
-        ("light", True), ("la", True),
-    ]
-    soulx.soulx_metadata(notes)  # one word per note: the metadata accepts it
-
-
 def lyric(text, delta=0):
     return ("lyrics", delta, {"text": text})
-
-
-def test_text_events_are_never_sung(tmp_path):
-    text = ("text", 0, {"text": "Melody"})
-    path = raw_midi(tmp_path / "t.mid", [[text, on(60), off(60, 480)]])
-    assert [n.word for n in notes_from_midi(path)] == [""]
-    with pytest.raises(ValueError, match="no lyrics"):
-        read_score(path)
-
-
-def test_lyrics_on_another_track_and_a_late_lyric(tmp_path):
-    words = [lyric("hel-"), lyric("lo", 600)]  # "lo" comes 120 ticks into note 2
-    melody = [on(60), off(60, 480), on(62), off(62, 480)]
-    path = raw_midi(tmp_path / "two.mid", [words, melody])
-    assert [(n.word, n.starts_word) for n in read_score(path)] == [
-        ("hello", True), ("hello", False)
-    ]
-
-
-def test_a_lyric_on_no_note_or_two_on_one_note_is_an_error(tmp_path):
-    melody = [on(60), off(60, 480)]
-    late = raw_midi(tmp_path / "late.mid", [[*melody, lyric("lost", 960)]])
-    with pytest.raises(ValueError, match="'lost' at 1.50 s falls on no note"):
-        read_score(late)
-    assert [n.word for n in read_score(late, "found")] == ["found"]  # lyrics= wins
-    two = raw_midi(tmp_path / "two.mid", [[lyric("a"), lyric("b"), *melody]])
-    with pytest.raises(ValueError, match="Two lyrics"):
-        read_score(two)
-    spread = raw_midi(
-        tmp_path / "spread.mid", [[lyric("x")], [lyric("y")], [*melody]]
-    )
-    with pytest.raises(ValueError, match=r"tracks \[0, 1\] have some"):
-        read_score(spread)
 
 
 MUSICXML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -214,87 +113,8 @@ def xml_note(step, octave, beats, lyric=None, syllabic="single", tie=None):
     )
 
 
-def test_musicxml_syllables_ties_and_melismas(tmp_path):
-    pytest.importorskip("music21")
-    notes_xml = "".join(
-        [
-            xml_note("C", 4, 1, "can", "begin"),
-            xml_note("D", 4, 1, "dle", "end"),
-            xml_note("E", 4, 1, "light", "single", tie="start"),
-            xml_note("E", 4, 1, tie="stop"),  # tied: one note
-            "<note><rest/><duration>1</duration><type>quarter</type></note>",
-            xml_note("F", 4, 1, "oh"),
-            xml_note("G", 4, 1),  # melisma: holds "oh"
-        ]
-    )
-    path = tmp_path / "s.musicxml"
-    path.write_text(MUSICXML.format(notes=notes_xml))
-    notes = notes_from_musicxml(path)
-    assert [(n.pitch, n.word, n.starts_word) for n in notes] == [
-        (60, "candle", True),
-        (62, "candle", False),
-        (64, "light", True),
-        (65, "oh", True),
-        (67, "oh", False),
-    ]
-    assert [round(n.start, 3) for n in notes] == [0.0, 0.6, 1.2, 3.0, 3.6]
-    assert round(notes[2].dur, 3) == 1.2  # the tie
-
-
-def test_musicxml_skips_grace_notes_reads_one_voice_and_the_top_of_chords(tmp_path):
-    pytest.importorskip("music21")
-    grace = (
-        "<note><grace/><pitch><step>B</step><octave>3</octave></pitch>"
-        "<voice>1</voice><type>eighth</type></note>"
-    )
-    chord = (
-        xml_note("C", 4, 1, "oh")
-        + "<note><chord/><pitch><step>G</step><octave>4</octave></pitch>"
-        "<duration>1</duration><type>quarter</type></note>"
-    )
-    voice = lambda n, xml: xml.replace("<duration>", f"<voice>{n}</voice><duration>")  # noqa: E731
-    first = voice(1, grace + chord + xml_note("D", 4, 1, "my"))
-    second = voice(2, xml_note("C", 3, 2, "low"))
-    notes_xml = first + "<backup><duration>2</duration></backup>" + second
-    path = tmp_path / "v.musicxml"
-    path.write_text(MUSICXML.format(notes=notes_xml))
-    notes = notes_from_musicxml(path)
-    assert [(n.pitch, n.word) for n in notes] == [(67, "oh"), (62, "my")]
-
-
-def test_two_voices_keep_the_parts_tempo(tmp_path):
-    pytest.importorskip("music21")
-    voice = lambda n, xml: xml.replace("<duration>", f"<voice>{n}</voice><duration>")  # noqa: E731
-    first = voice(1, xml_note("C", 4, 1, "one") + xml_note("D", 4, 1, "two"))
-    second = voice(2, xml_note("C", 3, 2, "low"))
-    xml = MUSICXML.replace('tempo="100"', 'tempo="60"').format(
-        notes=first + "<backup><duration>2</duration></backup>" + second
-    )
-    (tmp_path / "t.musicxml").write_text(xml)
-    notes = notes_from_musicxml(tmp_path / "t.musicxml")
-    assert [(n.pitch, n.word, n.start, n.dur) for n in notes] == [
-        (60, "one", 0.0, 1.0), (62, "two", 1.0, 1.0)
-    ]
-
-
-def test_only_the_first_verse_is_sung(tmp_path):
-    pytest.importorskip("music21")
-    def verses(step, *texts):
-        lyrics = "".join(
-            f'<lyric number="{i}"><syllabic>single</syllabic><text>{t}</text></lyric>'
-            for i, t in texts
-        )
-        return (
-            f"<note><pitch><step>{step}</step><octave>4</octave></pitch>"
-            f"<duration>1</duration><type>quarter</type>{lyrics}</note>"
-        )
-    notes_xml = verses("C", (2, "second"), (1, "first")) + verses("D", (2, "only2"))
-    (tmp_path / "v.musicxml").write_text(MUSICXML.format(notes=notes_xml))
-    notes = notes_from_musicxml(tmp_path / "v.musicxml")
-    assert [(n.word, n.starts_word) for n in notes] == [("first", True), ("first", False)]
-
-
 def test_midi_and_musicxml_of_one_melody_give_the_same_metadata(tmp_path):
+    pytest.importorskip("audiate")
     pytest.importorskip("music21")
     midi = write_midi(tmp_path / "t.mid", MELODY)
     steps = {64: ("E", 4), 67: ("G", 4), 69: ("A", 4), 62: ("D", 4), 60: ("C", 4)}
@@ -319,17 +139,74 @@ def test_midi_and_musicxml_of_one_melody_give_the_same_metadata(tmp_path):
     assert from_midi[0]["note_type"] == "1 2 2 2 3 2 2 2 3 1"
 
 
-def test_lyrics_tokens_and_counts():
-    assert lyric_tokens("a be-cause _") == [
-        ("a", True),
-        ("because", True),
-        ("because", False),
-        ("because", False),
+def test_a_score_s_own_lyrics_and_the_filler(tmp_path):
+    pytest.importorskip("audiate")
+    # "hey" on the first note; the second, after a rest, has no word: the filler
+    path = raw_midi(
+        tmp_path / "f.mid", [[lyric("hey"), on(60), off(60, 480), on(62, 480), off(62, 480)]]
+    )
+    assert [(n.word, n.starts_word) for n in read_score(path)] == [
+        ("hey", True), ("la", True)
     ]
-    with pytest.raises(ValueError, match="can't come first"):
-        lyric_tokens("- a")
+    assert [n.word for n in read_score(path, filler="oh")] == ["hey", "oh"]
+
+
+def test_a_midi_without_lyrics_needs_them(tmp_path):
+    pytest.importorskip("audiate")
+    path = write_midi(tmp_path / "m.mid", [(60, 1)])
+    with pytest.raises(ValueError, match="no lyrics"):
+        read_score(path)
+    assert [n.word for n in read_score(path, "hey")] == ["hey"]
+
+
+def test_given_lyrics_replace_the_score_s_own_which_are_not_read(tmp_path):
+    pytest.importorskip("audiate")
+    melody = [on(60), off(60, 480)]
+    late = raw_midi(tmp_path / "late.mid", [[*melody, lyric("lost", 960)]])
+    with pytest.raises(ValueError, match="lost"):
+        read_score(late)  # a lyric on no note: audiate refuses to guess
+    assert [n.word for n in read_score(late, "found")] == ["found"]
+
+
+def test_an_ambiguous_score_raises_naming_the_choices(tmp_path):
+    pytest.importorskip("audiate")
+    melody = [on(72), off(72, 480), on(74), off(74, 480)]
+    bass = [on(36, channel=1), off(36, 960, channel=1)]
+    several = raw_midi(tmp_path / "s.mid", [melody, bass])
+    with pytest.raises(ValueError, match="track="):
+        read_score(several, "la la")
+    assert [n.pitch for n in read_score(several, "la", track=1)] == [36]
+
+
+def test_notes_are_sung_as_given():
+    audiate = pytest.importorskip("audiate")
+    line = [audiate.SungNote(0.5, 0.5, 62, "re"), audiate.SungNote(0.0, 0.5, 60, "do")]
+    assert read_score(line) == [Note(0.0, 0.5, 60, "do"), Note(0.5, 0.5, 62, "re")]
+    with pytest.raises(ValueError, match="track"):
+        read_score(line, track=0)
     with pytest.raises(ValueError, match="3 lyric syllables for 2 notes"):
-        attach_lyrics(notes_from_pitches([(60, 1), (62, 1)]), "one two three")
+        read_score(notes_from_pitches([(60, 1), (62, 1)]), "one two three")
+
+
+ELISION = (
+    "<note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration>"
+    "<type>quarter</type><lyric><syllabic>single</syllabic><text>me</text><elision/>"
+    "<syllabic>single</syllabic><text>and</text></lyric></note>"
+)
+
+
+def test_an_elision_sings_its_words_on_one_note(tmp_path):
+    pytest.importorskip("audiate")
+    pytest.importorskip("music21")
+    path = tmp_path / "elision.musicxml"
+    path.write_text(MUSICXML.format(notes=ELISION + xml_note("D", 5, 1, "you")))
+    notes = read_score(path)  # audiate's own output: two words on the first note
+    assert [n.word for n in notes] == ["me and", "you"]
+    (segment,) = soulx.soulx_metadata(notes)
+    assert segment["text"] == "<SP> me+and you <SP>"
+    assert segment["note_type"] == "1 2 2 1"
+    with pytest.raises(ValueError, match="joins the words"):
+        soulx.soulx_metadata([Note(0, 1, 60, "a+b")])
 
 
 def test_a_missing_score_file_is_named():
@@ -341,7 +218,9 @@ def test_a_missing_score_file_is_named():
 
 
 def sung(pitches, lyrics, **kw):
-    return attach_lyrics(notes_from_pitches(pitches, **kw), lyrics)
+    """Notes with one word each (no score reading: SoulX metadata only)."""
+    notes = notes_from_pitches(pitches, **kw)
+    return [Note(n.start, n.dur, n.pitch, w) for n, w in zip(notes, lyrics.split(), strict=True)]
 
 
 def test_metadata_rests_legato_and_overlaps():
@@ -396,7 +275,7 @@ def test_long_lines_split_at_a_rest_when_there_is_one():
     assert all(s["note_pitch"].split()[0] != "0" for s in segments[1:])
 
 
-@pytest.mark.parametrize("word", ["two words", "", "123"])
+@pytest.mark.parametrize("word", ["la 12", "", "123"])
 def test_each_sung_note_needs_one_word(word):
     with pytest.raises(ValueError, match="one word"):
         soulx.soulx_metadata([Note(0, 1, 60, word)])
@@ -599,6 +478,13 @@ def test_adapter_places_segments_at_their_time_with_faded_joins(adapter, tmp_pat
     halfway = fade // 2  # inside the fade-in: the ramp's value times the fade's
     expected = (-2 + 4 * halfway / 799) * halfway / (fade - 1)
     assert samples[second + halfway] == pytest.approx(expected, abs=0.01)
+
+
+def test_adapter_phonemizes_each_word_of_an_elision_onto_its_note(adapter):
+    state = adapter.load(repo_dir=str(adapter.repo), weights_dir="/w", device="cpu")
+    (segment,) = soulx.soulx_metadata([Note(0, 1, 60, "me and"), Note(1, 1, 62, "you")])
+    (filled,) = adapter.fill_phonemes(state, [segment])
+    assert filled["phoneme"] == "<SP> en_M-E-A-N-D en_Y-O-U <SP>"
 
 
 def test_adapter_rejects_fields_of_different_lengths(adapter):
@@ -813,7 +699,8 @@ def test_the_worker_gets_the_fetched_source(monkeypatch, tmp_path):
     assert init["weights"] == soulx.SOULX_WEIGHTS
 
 
-def test_sing_passes_track_and_channel_to_the_score(tmp_path, cache, monkeypatch):
+def test_sing_passes_the_line_choice_to_the_score(tmp_path, cache, monkeypatch):
+    pytest.importorskip("audiate")
     seen = []
     real = singing.read_score
     monkeypatch.setattr(
@@ -826,8 +713,43 @@ def test_sing_passes_track_and_channel_to_the_score(tmp_path, cache, monkeypatch
     path = raw_midi(tmp_path / "m.mid", [[*melody, *bass]])
     run = FakeRun()
     singing.sing(path, "hi", track=0, channel=3, model=soulx.SoulXSingingModel(run=run), voices={})
-    assert seen[0] == {"track": 0, "channel": 3}  # then the synthetic voice's own
+    assert seen[0] == {
+        "track": 0, "channel": 3, "part": None, "verse": None,
+        "score_voice": None, "chords": None,
+    }
     assert run.requests[0][1]["meta"][0]["note_pitch"] == "0 72 0"
+    # a singing voice's clip: its score's line is chosen the same way
+    voice = singing.singing_voice(tmp_path / "clip.wav", path, "hi", track=0, channel=2)
+    assert [n["pitch"] for n in voice.segment["prompt_notes"]] == [36]
+
+
+def test_a_chord_names_voxy_s_keywords_and_chords_picks_one(tmp_path, cache):
+    pytest.importorskip("audiate")
+    pytest.importorskip("music21")
+    chord = (
+        xml_note("C", 5, 1, "oh")
+        + "<note><chord/><pitch><step>E</step><octave>5</octave></pitch>"
+        "<duration>1</duration><type>quarter</type></note>"
+    )
+    path = tmp_path / "chord.musicxml"
+    path.write_text(MUSICXML.format(notes=chord + xml_note("D", 5, 1, "my")))
+    model = soulx.SoulXSingingModel(run=FakeRun())
+    with pytest.raises(ValueError, match="chords=") as raised:
+        singing.sing(path, model=model, voices={})
+    assert "score_voice=" in str(raised.value)
+    assert not re.search(r"(?<![\w])voice=", str(raised.value))  # voice= is the singer
+    assert [n.pitch for n in read_score(path, chords="top")] == [76, 74]
+    assert [n.pitch for n in read_score(path, chords="bottom", score_voice=1)] == [72, 74]
+
+
+def test_an_old_audiate_is_named_with_the_version_it_needs(monkeypatch):
+    def old_audiate(module):
+        raise ModuleNotFoundError(f"No module named {module!r}", name=module)
+
+    monkeypatch.setattr(score_module, "optional_import", old_audiate)
+    monkeypatch.setattr(score_module.importlib.util, "find_spec", lambda name: object())
+    with pytest.raises(ModuleNotFoundError, match=r"audiate>=0\.0\.4"):
+        read_score(notes_from_pitches([(60, 1)]), "la")
 
 
 def test_ensure_git_source_is_ps_s_in_voxy_s_models_folder(tmp_path, monkeypatch):

@@ -55,6 +55,10 @@ from voxy.singing import (
 from voxy.wavutil import write_wav
 
 SP = "<SP>"
+#: Joins the words of an elision (several words sung on one note) into the one
+#: ``text`` token of that note; the adapter phonemizes each word and joins their
+#: phones (the same constant is in ``workers/soulx_adapter.py``).
+WORD_JOINER = "+"
 REST_TYPE, ONSET_TYPE, CONTINUATION_TYPE = 1, 2, 3
 #: Rest before the first note and after the last (upstream's examples start with <SP>).
 DFLT_LEAD_S = 0.3
@@ -162,15 +166,29 @@ def _segments(
 
 
 def _check_word(note: Note) -> None:
-    """One sung note, one word: no spaces, at least one letter (else the phonemes
-    and the notes would not line up)."""
-    word = note.word
-    if not word or any(c.isspace() for c in word) or not any(c.isalpha() for c in word):
+    """Each sung note needs a word with letters (else the phonemes and the notes
+    would not line up); several words on one note (an elision, ``"me and"``) are
+    sung together on it."""
+    words = note.word.split()
+    if not words or not all(any(c.isalpha() for c in w) for w in words):
         raise ValueError(
-            f"The note at {note.start:.2f} s sings {word!r}: each sung note needs one "
-            "word, without spaces and with letters (hyphenate a word over notes: "
-            "'can-dle')"
+            f"The note at {note.start:.2f} s sings {note.word!r}: each sung note "
+            "needs one word, with letters (hyphenate a word over notes: 'can-dle')"
         )
+    if any(WORD_JOINER in w for w in words):
+        raise ValueError(
+            f"The note at {note.start:.2f} s sings {note.word!r}: "
+            f"{WORD_JOINER!r} joins the words of an elision, so a word can't hold it"
+        )
+
+
+def _text_token(note: Note) -> str:
+    """The note's ``text`` token: its word, or the words of an elision joined.
+
+    >>> _text_token(Note(0, 1, 60, "me and"))
+    'me+and'
+    """
+    return WORD_JOINER.join(note.word.split()) if note.pitch else SP
 
 
 def _durations(segment: Sequence[Note]) -> list[float]:
@@ -189,7 +207,7 @@ def _segment(name: str, i: int, segment: Sequence[Note], language: str) -> dict:
         "language": language,
         "time": [start_ms, start_ms + round(sum(durations) * 1000)],
         "duration": " ".join(f"{d:.{DURATION_DIGITS}f}" for d in durations),
-        "text": " ".join(n.word if n.pitch else SP for n in segment),
+        "text": " ".join(_text_token(n) for n in segment),
         "phoneme": "",
         "note_pitch": " ".join(str(n.pitch) for n in segment),
         "note_type": " ".join(
