@@ -293,8 +293,12 @@ import voxy
 
 # lyrics: one token per note; "can-dle" spreads a word over two notes, "-" holds it one more
 voxy.sing("melody.mid", "Light a can-dle in the win-dow").save("sung.wav")
-voxy.sing("song.musicxml", transpose=-2).save("song.wav")  # the score's own lyrics, 2 semitones down
-voxy.sing("arrangement.mid", track=2)  # a MIDI file with several lines: say which one sings
+voxy.sing("song.musicxml", transpose=-2).save(
+    "song.wav"
+)  # the score's own lyrics, 2 semitones down
+voxy.sing(
+    "arrangement.mid", track=2
+)  # a MIDI file with several lines: say which one sings
 
 # a voice: a sung clip and the score it sings, timed as in the clip
 voice = voxy.singing_voice("phrase-take.wav", "phrase.mid", "la la la la la la la la")

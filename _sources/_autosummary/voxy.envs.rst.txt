@@ -12,6 +12,7 @@ voxy.envs
       VOXY_NUM_THREADS_ENVVAR
       DFLT_NUM_THREADS
       DFLT_SOURCE_LOCK_TIMEOUT_S
+      GitSource
    
    .. rubric:: Functions
 
@@ -33,5 +34,4 @@ voxy.envs
    .. autosummary::
    
       EnvSpec
-      GitSource
    

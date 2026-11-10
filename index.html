@@ -404,13 +404,17 @@ to install the CSM model and its dependencies.</p>
 </span><span id="line-2">
 </span><span id="line-3"><span class="c1"># lyrics: one token per note; "can-dle" spreads a word over two notes, "-" holds it one more</span>
 </span><span id="line-4"><span class="n">voxy</span><span class="o">.</span><span class="n">sing</span><span class="p">(</span><span class="s2">"melody.mid"</span><span class="p">,</span> <span class="s2">"Light a can-dle in the win-dow"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"sung.wav"</span><span class="p">)</span>
-</span><span id="line-5"><span class="n">voxy</span><span class="o">.</span><span class="n">sing</span><span class="p">(</span><span class="s2">"song.musicxml"</span><span class="p">,</span> <span class="n">transpose</span><span class="o">=-</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"song.wav"</span><span class="p">)</span>  <span class="c1"># the score's own lyrics, 2 semitones down</span>
-</span><span id="line-6"><span class="n">voxy</span><span class="o">.</span><span class="n">sing</span><span class="p">(</span><span class="s2">"arrangement.mid"</span><span class="p">,</span> <span class="n">track</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># a MIDI file with several lines: say which one sings</span>
-</span><span id="line-7">
-</span><span id="line-8"><span class="c1"># a voice: a sung clip and the score it sings, timed as in the clip</span>
-</span><span id="line-9"><span class="n">voice</span> <span class="o">=</span> <span class="n">voxy</span><span class="o">.</span><span class="n">singing_voice</span><span class="p">(</span><span class="s2">"phrase-take.wav"</span><span class="p">,</span> <span class="s2">"phrase.mid"</span><span class="p">,</span> <span class="s2">"la la la la la la la la"</span><span class="p">)</span>
-</span><span id="line-10"><span class="n">voxy</span><span class="o">.</span><span class="n">sing</span><span class="p">(</span><span class="s2">"melody.mid"</span><span class="p">,</span> <span class="s2">"Light a can-dle in the win-dow"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="line-11"><span class="n">voxy</span><span class="o">.</span><span class="n">convert_singing</span><span class="p">(</span><span class="s2">"take.wav"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"take-revoiced.wav"</span><span class="p">)</span>
+</span><span id="line-5"><span class="n">voxy</span><span class="o">.</span><span class="n">sing</span><span class="p">(</span><span class="s2">"song.musicxml"</span><span class="p">,</span> <span class="n">transpose</span><span class="o">=-</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
+</span><span id="line-6">    <span class="s2">"song.wav"</span>
+</span><span id="line-7"><span class="p">)</span>  <span class="c1"># the score's own lyrics, 2 semitones down</span>
+</span><span id="line-8"><span class="n">voxy</span><span class="o">.</span><span class="n">sing</span><span class="p">(</span>
+</span><span id="line-9">    <span class="s2">"arrangement.mid"</span><span class="p">,</span> <span class="n">track</span><span class="o">=</span><span class="mi">2</span>
+</span><span id="line-10"><span class="p">)</span>  <span class="c1"># a MIDI file with several lines: say which one sings</span>
+</span><span id="line-11">
+</span><span id="line-12"><span class="c1"># a voice: a sung clip and the score it sings, timed as in the clip</span>
+</span><span id="line-13"><span class="n">voice</span> <span class="o">=</span> <span class="n">voxy</span><span class="o">.</span><span class="n">singing_voice</span><span class="p">(</span><span class="s2">"phrase-take.wav"</span><span class="p">,</span> <span class="s2">"phrase.mid"</span><span class="p">,</span> <span class="s2">"la la la la la la la la"</span><span class="p">)</span>
+</span><span id="line-14"><span class="n">voxy</span><span class="o">.</span><span class="n">sing</span><span class="p">(</span><span class="s2">"melody.mid"</span><span class="p">,</span> <span class="s2">"Light a can-dle in the win-dow"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="line-15"><span class="n">voxy</span><span class="o">.</span><span class="n">convert_singing</span><span class="p">(</span><span class="s2">"take.wav"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"take-revoiced.wav"</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 <p><strong>Making a voice.</strong> Synthesis copies the timbre of a sung clip and aligns that clip with its notes and phonemes, so a voice is a clip plus its score. The simplest way to get both: record the voice singing a short phrase written beforehand (a MIDI or MusicXML file with its lyrics, sung in time, 5 to 30 s, no accompaniment), and pass the recording with that score. Conversion needs only the clip. Without <code class="docutils literal notranslate"><span class="pre">voice=</span></code>, a synthetic voice is used (<code class="docutils literal notranslate"><span class="pre">voxy.synthetic_singing_voice("high"</span> <span class="pre">|</span> <span class="pre">"low")</span></code>: a formant synthesiser singing “la”, which belongs to no one); words sung in it are less clear than with a real voice. A voice is plain data, so <code class="docutils literal notranslate"><span class="pre">voxy.save_voice(name,</span> <span class="pre">voice,</span> <span class="pre">consent="...")</span></code> keeps it in the library and <code class="docutils literal notranslate"><span class="pre">voice=name</span></code> finds it again.</p>
@@ -518,7 +522,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-10 12:09 UTC from <a href="https://github.com/thorwhalen/voxy/commit/9a49bf34e58a3111e89a0de6e3a07f8de94c0add">9a49bf3</a> (main) · voxy 0.0.69 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-10 14:43 UTC from <a href="https://github.com/thorwhalen/voxy/commit/1ce0a4cd281cb1c35ea3ada252b6cd056e1f4871">1ce0a4c</a> (main) · voxy 0.0.70 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -568,7 +572,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=cac962a1"></script>
+<script src="_static/documentation_options.js?v=29ed05f3"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

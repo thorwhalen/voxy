@@ -28,31 +28,31 @@ True
 
 ### Module Attributes
 
-| [`ENV_MARKER`](#voxy.envs.ENV_MARKER)                 | voxy's marker file (environments built before ps.isolated carry it).   |
-|-----------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`VOXY_NUM_THREADS_ENVVAR`](#voxy.envs.VOXY_NUM_THREADS_ENVVAR)    | spelled once, in the helper the adapters share.                        |
-| [`DFLT_NUM_THREADS`](#voxy.envs.DFLT_NUM_THREADS)           | a shared machine keeps headroom for others.                            |
-| [`DFLT_SOURCE_LOCK_TIMEOUT_S`](#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S) | How long to wait for another process fetching the same source.         |
+| [`ENV_MARKER`](#voxy.envs.ENV_MARKER)                 | voxy's marker file (environments built before ps.isolated carry it).                                                                                                                                                              |
+|-----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`VOXY_NUM_THREADS_ENVVAR`](#voxy.envs.VOXY_NUM_THREADS_ENVVAR)    | spelled once, in the helper the adapters share.                                                                                                                                                                                   |
+| [`DFLT_NUM_THREADS`](#voxy.envs.DFLT_NUM_THREADS)           | a shared machine keeps headroom for others.                                                                                                                                                                                       |
+| [`DFLT_SOURCE_LOCK_TIMEOUT_S`](#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S) | How long to wait for another process fetching the same source.                                                                                                                                                                    |
+| [`GitSource`](#voxy.envs.GitSource)(url, commit)     | Code a backend runs that is not pip-installable, at a pinned commit (a full commit SHA): [`ensure_git_source()`](#voxy.envs.ensure_git_source) fetches it once, and the adapter puts the folder on its `sys.path`. |
 
 ### Functions
 
-| [`ensure_env`](#voxy.envs.ensure_env)(spec, \*[, rootdir, run, log])          | Build `spec`'s environment if missing or stale, and return its interpreter.                                                                     |
-|-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`ensure_git_source`](#voxy.envs.ensure_git_source)(source, name, \*[, ...])         | Check out `source` for backend `name` once (only that commit, no history), and return its folder, checked: at that commit, with no local edits. |
-| [`env_dir`](#voxy.envs.env_dir)(spec, \*[, rootdir])                       | The folder of `spec`'s environment (not created here).                                                                                          |
-| [`env_python`](#voxy.envs.env_python)(spec, \*[, rootdir])                    | The interpreter of `spec`'s environment (it may not exist yet).                                                                                 |
-| [`git_source_dir`](#voxy.envs.git_source_dir)(source, name, \*[, rootdir])        | Where `source` is checked out for backend `name` (not created here).                                                                            |
-| [`is_env_ready`](#voxy.envs.is_env_ready)(spec, \*[, rootdir])                  | True if the environment exists and was built from this exact spec.                                                                              |
-| [`models_dir`](#voxy.envs.models_dir)(\*parts[, rootdir])                     | Where weights live (`models/`, or a subfolder of it).                                                                                           |
-| [`num_threads`](#voxy.envs.num_threads)([threads])                             | `threads`, else `$VOXY_NUM_THREADS`, else `DFLT_NUM_THREADS`.                                                                                   |
-| [`remove_env`](#voxy.envs.remove_env)(spec, \*[, rootdir])                    | Delete `spec`'s environment (weights are kept).                                                                                                 |
-| [`worker_environ`](#voxy.envs.worker_environ)(spec, \*[, threads, rootdir, base]) | Environment variables for a worker: weights under the data root, threads capped.                                                                |
+| [`ensure_env`](#voxy.envs.ensure_env)(spec, \*[, rootdir, run, log])          | Build `spec`'s environment if missing or stale, and return its interpreter.                                                                                                                                                                           |
+|-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`ensure_git_source`](#voxy.envs.ensure_git_source)(source, name, \*[, ...])         | Check out `source` for backend `name` once and return its folder, checked (at that commit, no edits to tracked files): `ps.isolated.ensure_git_source()` in voxy's models folder ([`git_source_dir()`](#voxy.envs.git_source_dir)). |
+| [`env_dir`](#voxy.envs.env_dir)(spec, \*[, rootdir])                       | The folder of `spec`'s environment (not created here).                                                                                                                                                                                                |
+| [`env_python`](#voxy.envs.env_python)(spec, \*[, rootdir])                    | The interpreter of `spec`'s environment (it may not exist yet).                                                                                                                                                                                       |
+| [`git_source_dir`](#voxy.envs.git_source_dir)(source, name, \*[, rootdir])        | Where `source` is checked out for backend `name` (not created here).                                                                                                                                                                                  |
+| [`is_env_ready`](#voxy.envs.is_env_ready)(spec, \*[, rootdir])                  | True if the environment exists and was built from this exact spec.                                                                                                                                                                                    |
+| [`models_dir`](#voxy.envs.models_dir)(\*parts[, rootdir])                     | Where weights live (`models/`, or a subfolder of it).                                                                                                                                                                                                 |
+| [`num_threads`](#voxy.envs.num_threads)([threads])                             | `threads`, else `$VOXY_NUM_THREADS`, else `DFLT_NUM_THREADS`.                                                                                                                                                                                         |
+| [`remove_env`](#voxy.envs.remove_env)(spec, \*[, rootdir])                    | Delete `spec`'s environment (weights are kept).                                                                                                                                                                                                       |
+| [`worker_environ`](#voxy.envs.worker_environ)(spec, \*[, threads, rootdir, base]) | Environment variables for a worker: weights under the data root, threads capped.                                                                                                                                                                      |
 
 ### Classes
 
-| [`EnvSpec`](#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds (`ps.isolated.EnvSpec` with voxy's defaults).                                                                                                   |
-|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`GitSource`](#voxy.envs.GitSource)(url, commit)                       | Code a backend runs that is not pip-installable (no `pyproject.toml`), at a pinned commit: `ensure_git_source` fetches it once, and the adapter puts the folder on its `sys.path`. |
+| [`EnvSpec`](#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds (`ps.isolated.EnvSpec` with voxy's defaults).   |
+|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
 
 ### voxy.envs.DFLT_NUM_THREADS *= 8*
 
@@ -89,21 +89,22 @@ What a backend’s environment holds (`ps.isolated.EnvSpec` with voxy’s defaul
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
-Code a backend runs that is not pip-installable (no `pyproject.toml`), at a
-pinned commit: `ensure_git_source` fetches it once, and the adapter puts the
-folder on its `sys.path`.
+Code a backend runs that is not pip-installable, at a pinned commit (a full commit
+SHA): [`ensure_git_source()`](#voxy.envs.ensure_git_source) fetches it once, and the adapter puts
+the folder on its `sys.path`. The mechanism is [`ps.isolated.GitSource`](#voxy.envs.GitSource).
 
-* **Parameters:**
-  * **url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The repository (anything `git fetch` takes).
-  * **commit** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The full 40-character commit SHA (a branch, tag or short SHA would
-    not pin it).
+#### fetch_commands(path)
+
+The git commands that check this commit out (only it, no history) into `path`.
 
 ```pycon
->>> GitSource("https://x/y", "main")
-Traceback (most recent call last):
-  ...
-ValueError: GitSource needs a full 40-character commit SHA, not 'main'
+>>> src = GitSource("https://example.org/r.git", "0" * 40)
+>>> [c[:4] for c in src.fetch_commands("/x")]
+[('git', 'init', '--quiet', '/x'), ('git', '-C', '/x', 'fetch'), ('git', '-C', '/x', 'checkout')]
 ```
+
+* **Return type:**
+  [`Tuple`](https://docs.python.org/3/library/typing.html#typing.Tuple)[[`Tuple`](https://docs.python.org/3/library/typing.html#typing.Tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)], [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]
 
 ### voxy.envs.VOXY_NUM_THREADS_ENVVAR *= 'VOXY_NUM_THREADS'*
 
@@ -123,14 +124,11 @@ host, and an isolated environment exists precisely to differ.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### voxy.envs.ensure_git_source(source, name, \*, rootdir=None, run=<function run>, log=<built-in function print>, lock_timeout_s=900)
+### voxy.envs.ensure_git_source(source, name, \*, rootdir=None, run=<function run>, log=None, lock_timeout_s=900)
 
-Check out `source` for backend `name` once (only that commit, no history),
-and return its folder, checked: at that commit, with no local edits.
-
-The fetch holds a lock (another process fetching the same source waits), goes
-into a `.partial` folder (an interrupted one is started afresh), and is renamed
-into place when complete. git runs without the caller’s `GIT_*` variables.
+Check out `source` for backend `name` once and return its folder, checked
+(at that commit, no edits to tracked files): `ps.isolated.ensure_git_source()`
+in voxy’s models folder ([`git_source_dir()`](#voxy.envs.git_source_dir)).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)

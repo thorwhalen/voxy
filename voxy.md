@@ -1,4 +1,4 @@
-> built 2026-11-10 12:09 UTC from 9a49bf3 (main) · voxy 0.0.69. Details: build_info.json
+> built 2026-11-10 14:43 UTC from 1ce0a4c (main) · voxy 0.0.70. Details: build_info.json
 
 # index.html.md
 
@@ -297,8 +297,12 @@ import voxy
 
 # lyrics: one token per note; "can-dle" spreads a word over two notes, "-" holds it one more
 voxy.sing("melody.mid", "Light a can-dle in the win-dow").save("sung.wav")
-voxy.sing("song.musicxml", transpose=-2).save("song.wav")  # the score's own lyrics, 2 semitones down
-voxy.sing("arrangement.mid", track=2)  # a MIDI file with several lines: say which one sings
+voxy.sing("song.musicxml", transpose=-2).save(
+    "song.wav"
+)  # the score's own lyrics, 2 semitones down
+voxy.sing(
+    "arrangement.mid", track=2
+)  # a MIDI file with several lines: say which one sings
 
 # a voice: a sung clip and the score it sings, timed as in the clip
 voice = voxy.singing_voice("phrase-take.wav", "phrase.mid", "la la la la la la la la")
@@ -1615,31 +1619,31 @@ True
 
 ### Module Attributes
 
-| [`ENV_MARKER`](_autosummary/voxy.envs.html.md#voxy.envs.ENV_MARKER)                 | voxy's marker file (environments built before ps.isolated carry it).   |
-|-----------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`VOXY_NUM_THREADS_ENVVAR`](_autosummary/voxy.envs.html.md#voxy.envs.VOXY_NUM_THREADS_ENVVAR)    | spelled once, in the helper the adapters share.                        |
-| [`DFLT_NUM_THREADS`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_NUM_THREADS)           | a shared machine keeps headroom for others.                            |
-| [`DFLT_SOURCE_LOCK_TIMEOUT_S`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S) | How long to wait for another process fetching the same source.         |
+| [`ENV_MARKER`](_autosummary/voxy.envs.html.md#voxy.envs.ENV_MARKER)                 | voxy's marker file (environments built before ps.isolated carry it).                                                                                                                                                              |
+|-----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`VOXY_NUM_THREADS_ENVVAR`](_autosummary/voxy.envs.html.md#voxy.envs.VOXY_NUM_THREADS_ENVVAR)    | spelled once, in the helper the adapters share.                                                                                                                                                                                   |
+| [`DFLT_NUM_THREADS`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_NUM_THREADS)           | a shared machine keeps headroom for others.                                                                                                                                                                                       |
+| [`DFLT_SOURCE_LOCK_TIMEOUT_S`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S) | How long to wait for another process fetching the same source.                                                                                                                                                                    |
+| [`GitSource`](_autosummary/voxy.envs.html.md#voxy.envs.GitSource)(url, commit)     | Code a backend runs that is not pip-installable, at a pinned commit (a full commit SHA): [`ensure_git_source()`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_git_source) fetches it once, and the adapter puts the folder on its `sys.path`. |
 
 ### Functions
 
-| [`ensure_env`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_env)(spec, \*[, rootdir, run, log])          | Build `spec`'s environment if missing or stale, and return its interpreter.                                                                     |
-|-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`ensure_git_source`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_git_source)(source, name, \*[, ...])         | Check out `source` for backend `name` once (only that commit, no history), and return its folder, checked: at that commit, with no local edits. |
-| [`env_dir`](_autosummary/voxy.envs.html.md#voxy.envs.env_dir)(spec, \*[, rootdir])                       | The folder of `spec`'s environment (not created here).                                                                                          |
-| [`env_python`](_autosummary/voxy.envs.html.md#voxy.envs.env_python)(spec, \*[, rootdir])                    | The interpreter of `spec`'s environment (it may not exist yet).                                                                                 |
-| [`git_source_dir`](_autosummary/voxy.envs.html.md#voxy.envs.git_source_dir)(source, name, \*[, rootdir])        | Where `source` is checked out for backend `name` (not created here).                                                                            |
-| [`is_env_ready`](_autosummary/voxy.envs.html.md#voxy.envs.is_env_ready)(spec, \*[, rootdir])                  | True if the environment exists and was built from this exact spec.                                                                              |
-| [`models_dir`](_autosummary/voxy.envs.html.md#voxy.envs.models_dir)(\*parts[, rootdir])                     | Where weights live (`models/`, or a subfolder of it).                                                                                           |
-| [`num_threads`](_autosummary/voxy.envs.html.md#voxy.envs.num_threads)([threads])                             | `threads`, else `$VOXY_NUM_THREADS`, else `DFLT_NUM_THREADS`.                                                                                   |
-| [`remove_env`](_autosummary/voxy.envs.html.md#voxy.envs.remove_env)(spec, \*[, rootdir])                    | Delete `spec`'s environment (weights are kept).                                                                                                 |
-| [`worker_environ`](_autosummary/voxy.envs.html.md#voxy.envs.worker_environ)(spec, \*[, threads, rootdir, base]) | Environment variables for a worker: weights under the data root, threads capped.                                                                |
+| [`ensure_env`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_env)(spec, \*[, rootdir, run, log])          | Build `spec`'s environment if missing or stale, and return its interpreter.                                                                                                                                                                           |
+|-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`ensure_git_source`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_git_source)(source, name, \*[, ...])         | Check out `source` for backend `name` once and return its folder, checked (at that commit, no edits to tracked files): `ps.isolated.ensure_git_source()` in voxy's models folder ([`git_source_dir()`](_autosummary/voxy.envs.html.md#voxy.envs.git_source_dir)). |
+| [`env_dir`](_autosummary/voxy.envs.html.md#voxy.envs.env_dir)(spec, \*[, rootdir])                       | The folder of `spec`'s environment (not created here).                                                                                                                                                                                                |
+| [`env_python`](_autosummary/voxy.envs.html.md#voxy.envs.env_python)(spec, \*[, rootdir])                    | The interpreter of `spec`'s environment (it may not exist yet).                                                                                                                                                                                       |
+| [`git_source_dir`](_autosummary/voxy.envs.html.md#voxy.envs.git_source_dir)(source, name, \*[, rootdir])        | Where `source` is checked out for backend `name` (not created here).                                                                                                                                                                                  |
+| [`is_env_ready`](_autosummary/voxy.envs.html.md#voxy.envs.is_env_ready)(spec, \*[, rootdir])                  | True if the environment exists and was built from this exact spec.                                                                                                                                                                                    |
+| [`models_dir`](_autosummary/voxy.envs.html.md#voxy.envs.models_dir)(\*parts[, rootdir])                     | Where weights live (`models/`, or a subfolder of it).                                                                                                                                                                                                 |
+| [`num_threads`](_autosummary/voxy.envs.html.md#voxy.envs.num_threads)([threads])                             | `threads`, else `$VOXY_NUM_THREADS`, else `DFLT_NUM_THREADS`.                                                                                                                                                                                         |
+| [`remove_env`](_autosummary/voxy.envs.html.md#voxy.envs.remove_env)(spec, \*[, rootdir])                    | Delete `spec`'s environment (weights are kept).                                                                                                                                                                                                       |
+| [`worker_environ`](_autosummary/voxy.envs.html.md#voxy.envs.worker_environ)(spec, \*[, threads, rootdir, base]) | Environment variables for a worker: weights under the data root, threads capped.                                                                                                                                                                      |
 
 ### Classes
 
-| [`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds (`ps.isolated.EnvSpec` with voxy's defaults).                                                                                                   |
-|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`GitSource`](_autosummary/voxy.envs.html.md#voxy.envs.GitSource)(url, commit)                       | Code a backend runs that is not pip-installable (no `pyproject.toml`), at a pinned commit: `ensure_git_source` fetches it once, and the adapter puts the folder on its `sys.path`. |
+| [`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds (`ps.isolated.EnvSpec` with voxy's defaults).   |
+|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
 
 ### voxy.envs.DFLT_NUM_THREADS *= 8*
 
@@ -1676,21 +1680,22 @@ What a backend’s environment holds (`ps.isolated.EnvSpec` with voxy’s defaul
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
-Code a backend runs that is not pip-installable (no `pyproject.toml`), at a
-pinned commit: `ensure_git_source` fetches it once, and the adapter puts the
-folder on its `sys.path`.
+Code a backend runs that is not pip-installable, at a pinned commit (a full commit
+SHA): [`ensure_git_source()`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_git_source) fetches it once, and the adapter puts
+the folder on its `sys.path`. The mechanism is [`ps.isolated.GitSource`](_autosummary/voxy.envs.html.md#voxy.envs.GitSource).
 
-* **Parameters:**
-  * **url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The repository (anything `git fetch` takes).
-  * **commit** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The full 40-character commit SHA (a branch, tag or short SHA would
-    not pin it).
+#### fetch_commands(path)
+
+The git commands that check this commit out (only it, no history) into `path`.
 
 ```pycon
->>> GitSource("https://x/y", "main")
-Traceback (most recent call last):
-  ...
-ValueError: GitSource needs a full 40-character commit SHA, not 'main'
+>>> src = GitSource("https://example.org/r.git", "0" * 40)
+>>> [c[:4] for c in src.fetch_commands("/x")]
+[('git', 'init', '--quiet', '/x'), ('git', '-C', '/x', 'fetch'), ('git', '-C', '/x', 'checkout')]
 ```
+
+* **Return type:**
+  [`Tuple`](https://docs.python.org/3/library/typing.html#typing.Tuple)[[`Tuple`](https://docs.python.org/3/library/typing.html#typing.Tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)], [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]
 
 ### voxy.envs.VOXY_NUM_THREADS_ENVVAR *= 'VOXY_NUM_THREADS'*
 
@@ -1710,14 +1715,11 @@ host, and an isolated environment exists precisely to differ.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
-### voxy.envs.ensure_git_source(source, name, \*, rootdir=None, run=<function run>, log=<built-in function print>, lock_timeout_s=900)
+### voxy.envs.ensure_git_source(source, name, \*, rootdir=None, run=<function run>, log=None, lock_timeout_s=900)
 
-Check out `source` for backend `name` once (only that commit, no history),
-and return its folder, checked: at that commit, with no local edits.
-
-The fetch holds a lock (another process fetching the same source waits), goes
-into a `.partial` folder (an interrupted one is started afresh), and is renamed
-into place when complete. git runs without the caller’s `GIT_*` variables.
+Check out `source` for backend `name` once and return its folder, checked
+(at that commit, no edits to tracked files): `ps.isolated.ensure_git_source()`
+in voxy’s models folder ([`git_source_dir()`](_autosummary/voxy.envs.html.md#voxy.envs.git_source_dir)).
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -7557,16 +7559,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-10 12:09 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/9a49bf34e58a3111e89a0de6e3a07f8de94c0add"><code>9a49bf3</code></a> on branch <code>main</code>, for **voxy 0.0.69** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-10 14:43 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/1ce0a4cd281cb1c35ea3ada252b6cd056e1f4871"><code>1ce0a4c</code></a> on branch <code>main</code>, for **voxy 0.0.70** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.70) is behind the latest release on PyPI (0.0.71): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/9a49bf34e58a3111e89a0de6e3a07f8de94c0add"><code>9a49bf34e58a3111e89a0de6e3a07f8de94c0add</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/1ce0a4cd281cb1c35ea3ada252b6cd056e1f4871"><code>1ce0a4cd281cb1c35ea3ada252b6cd056e1f4871</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -7577,9 +7581,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42813059654">42813059654</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42836571484">42836571484</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>9a49bf34e58a3111e89a0de6e3a07f8de94c0add</code> (in the history of the built commit) |
+| Event commit | <code>1ce0a4cd281cb1c35ea3ada252b6cd056e1f4871</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -7604,13 +7608,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.69/">0.0.69</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.71/">0.0.71</a>, newer than the documented version (0.0.70).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 9a49bf34e58a3111e89a0de6e3a07f8de94c0add
+git checkout 1ce0a4cd281cb1c35ea3ada252b6cd056e1f4871
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
