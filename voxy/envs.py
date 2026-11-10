@@ -79,8 +79,8 @@ class EnvSpec(isolated.EnvSpec):
 #: How long to wait for another process fetching the same source.
 DFLT_SOURCE_LOCK_TIMEOUT_S = isolated.DFLT_SOURCE_LOCK_TIMEOUT_S
 
-#: Code a backend runs that is not pip-installable, at a pinned commit (a full
-#: 40-character SHA): :func:`ensure_git_source` fetches it once, and the adapter puts
+#: Code a backend runs that is not pip-installable, at a pinned commit (a full commit
+#: SHA): :func:`ensure_git_source` fetches it once, and the adapter puts
 #: the folder on its ``sys.path``. The mechanism is :class:`ps.isolated.GitSource`.
 GitSource = isolated.GitSource
 
@@ -102,7 +102,7 @@ def ensure_git_source(
     *,
     rootdir: str | os.PathLike | None = None,
     run=subprocess.run,
-    log=print,
+    log=None,
     lock_timeout_s: float = DFLT_SOURCE_LOCK_TIMEOUT_S,
 ) -> Path:
     """Check out ``source`` for backend ``name`` once and return its folder, checked

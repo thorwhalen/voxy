@@ -847,7 +847,7 @@ def test_ensure_git_source_is_ps_s_in_voxy_s_models_folder(tmp_path, monkeypatch
 
 
 def test_a_source_needs_a_full_sha():
-    with pytest.raises(ValueError, match="40-character"):
+    with pytest.raises(ValueError, match="full commit SHA"):
         GitSource("https://example.org/r.git", "81aeb3a")
 
 
