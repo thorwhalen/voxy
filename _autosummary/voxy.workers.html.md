@@ -2,10 +2,11 @@
 
 Backend adapters run by `voxy.worker` inside each backend’s own environment.
 
-`serve.py` is the entry point; each `*_adapter.py` wraps one model library
-with `load(**init)` and `synthesize(state, *, text, ref_audio, ref_text,
-out_path, \*\*params)`. These files are executed by other interpreters, so they
-import nothing from voxy.
+Each `*_adapter.py` wraps one model library with `load(**init)` and operations
+such as `synthesize(state, *, text, ref_audio, ref_text, out_path, **params)`;
+`ps.isolated.Worker` serves it. These files are executed by other interpreters,
+so they import nothing from voxy; this folder is on their `sys.path`, so they
+share helpers by plain import (`from _worker_threads import cap_torch_threads`).
 
 ### Functions
 
@@ -35,7 +36,6 @@ The adapter file for `name` (e.g. ‘f5tts’ -> `f5tts_adapter.py`).
 | [`kokoro_adapter`](voxy.workers.kokoro_adapter.html.md#module-voxy.workers.kokoro_adapter)         | Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.                                                                  |
 | [`phonemes_adapter`](voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.                                       |
 | [`qwen3tts_adapter`](voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).                    |
-| [`serve`](voxy.workers.serve.html.md#module-voxy.workers.serve)                           | Worker entry point: run a backend adapter inside its own environment.                                                                              |
 | [`speaker_adapter`](voxy.workers.speaker_adapter.html.md#module-voxy.workers.speaker_adapter)       | Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.                                                             |
 | [`voxcpm_adapter`](voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.                                                                 |
 | [`xtts_adapter`](voxy.workers.xtts_adapter.html.md#module-voxy.workers.xtts_adapter)             | XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.                                                            |

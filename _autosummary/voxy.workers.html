@@ -145,10 +145,11 @@
 <section id="module-voxy.workers">
 <span id="voxy-workers"></span><h1>voxy.workers<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#module-voxy.workers">¶</a></h1>
 <p>Backend adapters run by <code class="docutils literal notranslate"><span class="pre">voxy.worker</span></code> inside each backend’s own environment.</p>
-<p><code class="docutils literal notranslate"><span class="pre">serve.py</span></code> is the entry point; each <code class="docutils literal notranslate"><span class="pre">*_adapter.py</span></code> wraps one model library
-with <code class="docutils literal notranslate"><span class="pre">load(**init)</span></code> and <code class="docutils literal notranslate"><span class="pre">synthesize(state,</span> <span class="pre">*,</span> <span class="pre">text,</span> <span class="pre">ref_audio,</span> <span class="pre">ref_text,</span>
-<span class="pre">out_path,</span> <span class="pre">\*\*params)</span></code>. These files are executed by other interpreters, so they
-import nothing from voxy.</p>
+<p>Each <code class="docutils literal notranslate"><span class="pre">*_adapter.py</span></code> wraps one model library with <code class="docutils literal notranslate"><span class="pre">load(**init)</span></code> and operations
+such as <code class="docutils literal notranslate"><span class="pre">synthesize(state,</span> <span class="pre">*,</span> <span class="pre">text,</span> <span class="pre">ref_audio,</span> <span class="pre">ref_text,</span> <span class="pre">out_path,</span> <span class="pre">**params)</span></code>;
+<code class="docutils literal notranslate"><span class="pre">ps.isolated.Worker</span></code> serves it. These files are executed by other interpreters,
+so they import nothing from voxy; this folder is on their <code class="docutils literal notranslate"><span class="pre">sys.path</span></code>, so they
+share helpers by plain import (<code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">_worker_threads</span> <span class="pre">import</span> <span class="pre">cap_torch_threads</span></code>).</p>
 <p class="rubric">Functions</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -198,16 +199,13 @@ import nothing from voxy.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.qwen3tts_adapter.html#module-voxy.workers.qwen3tts_adapter" title="voxy.workers.qwen3tts_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">qwen3tts_adapter</span></code></a></p></td>
 <td><p>Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.serve.html#module-voxy.workers.serve" title="voxy.workers.serve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">serve</span></code></a></p></td>
-<td><p>Worker entry point: run a backend adapter inside its own environment.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.speaker_adapter.html#module-voxy.workers.speaker_adapter" title="voxy.workers.speaker_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speaker_adapter</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.speaker_adapter.html#module-voxy.workers.speaker_adapter" title="voxy.workers.speaker_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speaker_adapter</span></code></a></p></td>
 <td><p>Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.voxcpm_adapter.html#module-voxy.workers.voxcpm_adapter" title="voxy.workers.voxcpm_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voxcpm_adapter</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.voxcpm_adapter.html#module-voxy.workers.voxcpm_adapter" title="voxy.workers.voxcpm_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">voxcpm_adapter</span></code></a></p></td>
 <td><p>VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="voxy.workers.xtts_adapter.html#module-voxy.workers.xtts_adapter" title="voxy.workers.xtts_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">xtts_adapter</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="voxy.workers.xtts_adapter.html#module-voxy.workers.xtts_adapter" title="voxy.workers.xtts_adapter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">xtts_adapter</span></code></a></p></td>
 <td><p>XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.</p></td>
 </tr>
 </tbody>
@@ -230,7 +228,7 @@ import nothing from voxy.</p>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=86ab457a"></script>
+<script src="../_static/documentation_options.js?v=6eb1e6b8"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

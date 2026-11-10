@@ -8,6 +8,8 @@ voxy.envs
 
    .. autosummary::
    
+      ENV_MARKER
+      VOXY_NUM_THREADS_ENVVAR
       DFLT_NUM_THREADS
    
    .. rubric:: Functions

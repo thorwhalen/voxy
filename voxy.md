@@ -1,4 +1,4 @@
-> built 2026-11-09 17:58 UTC from 18f6378 (main) · voxy 0.0.67. Details: build_info.json
+> built 2026-11-10 11:13 UTC from 170f02a (main) · voxy 0.0.68. Details: build_info.json
 
 # index.html.md
 
@@ -1572,8 +1572,11 @@ interpreter, which `voxy.worker` then runs the model in:
 > models/hf/              model weights (`HF_HOME` of every worker)
 > models/{name}/          a backend’s other weights (e.g. Coqui’s `TTS_HOME`)
 
-Nothing here is downloaded at import time; building an environment is explicit
-(`ensure_env`, or `python -m voxy setup <backend>`).
+Building and checking an environment is `ps.isolated`’s (`ensure_env`,
+`is_env_ready`); this module adds voxy’s layout (where an environment and its
+weights live), the `cpu` torch default, a backend’s own environment variables,
+and the thread cap. Nothing here is downloaded at import time; building an
+environment is explicit (`ensure_env`, or `python -m voxy setup <backend>`).
 
 ```pycon
 >>> spec = EnvSpec("demo", ("numpy",))
@@ -1585,8 +1588,10 @@ True
 
 ### Module Attributes
 
-| [`DFLT_NUM_THREADS`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_NUM_THREADS)   | a shared machine keeps headroom for others.   |
-|---------------------------------------------------------------------|-----------------------------------------------|
+| [`ENV_MARKER`](_autosummary/voxy.envs.html.md#voxy.envs.ENV_MARKER)              | voxy's marker file (environments built before ps.isolated carry it).   |
+|--------------------------------------------------------------------------|------------------------------------------------------------------------|
+| [`VOXY_NUM_THREADS_ENVVAR`](_autosummary/voxy.envs.html.md#voxy.envs.VOXY_NUM_THREADS_ENVVAR) | spelled once, in the helper the adapters share.                        |
+| [`DFLT_NUM_THREADS`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_NUM_THREADS)        | a shared machine keeps headroom for others.                            |
 
 ### Functions
 
@@ -1602,8 +1607,8 @@ True
 
 ### Classes
 
-| [`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds.   |
-|-----------------------------------------------------------------------------------------------|---------------------------------------|
+| [`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds (`ps.isolated.EnvSpec` with voxy's defaults).   |
+|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
 
 ### voxy.envs.DFLT_NUM_THREADS *= 8*
 
@@ -1612,34 +1617,40 @@ a shared machine keeps headroom for others.
 * **Type:**
   Torch/ONNX threads per worker
 
+### voxy.envs.ENV_MARKER *= '.voxy-env.json'*
+
+voxy’s marker file (environments built before ps.isolated carry it).
+
 ### *class* voxy.envs.EnvSpec(name, requirements, python='3.11', torch_backend='cpu', env_vars=dict())
 
-Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+Bases: `EnvSpec`
 
-What a backend’s environment holds.
+What a backend’s environment holds (`ps.isolated.EnvSpec` with voxy’s defaults).
 
 * **Parameters:**
   * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Folder name under `envs/` (usually the backend name).
-  * **requirements** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – `uv pip install` arguments (packages, pins, extras).
+  * **requirements** (Tuple[str, …]) – `uv pip install` arguments (packages, pins, extras).
   * **python** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Python version for `uv venv`.
   * **torch_backend** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `uv`’s `--torch-backend` (‘cpu’ keeps CUDA wheels out;
     None leaves the index alone).
   * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – Extra environment variables for the worker process (values may
-    use `{models}`, the backend’s own weights folder).
+    use `{models}`, the backend’s own weights folder). Not part of the
+    digest: changing them needs no rebuild.
 
-#### digest()
+### voxy.envs.VOXY_NUM_THREADS_ENVVAR *= 'VOXY_NUM_THREADS'*
 
-A short hash of what is installed (env vars excluded: they don’t need a rebuild).
+spelled once, in the helper the adapters share.
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+* **Type:**
+  `$VOXY_NUM_THREADS`
 
 ### voxy.envs.ensure_env(spec, \*, rootdir=None, run=<function run>, log=<built-in function print>)
 
 Build `spec`’s environment if missing or stale, and return its interpreter.
 
-The host’s `UV_CONSTRAINT` is cleared for the install: its pins are for the
-host environment, and an isolated environment exists precisely to differ.
+A stale one (built from another spec) is rebuilt from scratch; the host’s uv
+pins (`UV_CONSTRAINT` and co.) are cleared for the build: they are for the
+host, and an isolated environment exists precisely to differ.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -1694,6 +1705,9 @@ Delete `spec`’s environment (weights are kept).
 ### voxy.envs.worker_environ(spec, , threads=None, rootdir=None, base=None)
 
 Environment variables for a worker: weights under the data root, threads capped.
+
+The whole environment (`base`, default `os.environ`, minus the variables that
+leak the host’s packages), so a one-shot command (`subprocess.run`) can use it too.
 
 ```pycon
 >>> env = worker_environ(EnvSpec("x", (), env_vars={"TTS_HOME": "{models}"}),
@@ -6231,10 +6245,13 @@ lossless, for handing audio to another process.
 
 Talk to a model running in another Python environment, as if it were local.
 
-`Worker` starts `voxy/workers/serve.py` with an environment’s interpreter,
-keeps it alive (weights load once), and turns each call into one JSON line each
-way. Its stderr (model logs, progress bars) goes to a log file, so a chatty
-library can’t fill a pipe and hang the call.
+The worker itself is `ps.isolated.Worker` (`Worker` here, which also takes the
+former `log_path=`; `WorkerError` is ps’s):
+it starts an adapter file (`voxy/workers/<name>_adapter.py`) with an environment’s
+interpreter, keeps it alive (weights load once), and turns each call into one JSON
+line each way. This module adds what is voxy’s: `env_worker`, the one place an
+environment and an adapter become a worker (voxy’s thread cap, weights folders and
+log file), and `WorkerPool`, workers shared across threads.
 
 ```pycon
 >>> import sys, tempfile, pathlib
@@ -6252,56 +6269,26 @@ library can’t fill a pipe and hang the call.
 
 ### Classes
 
-| [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)(python, adapter, \*[, init, env, ...])   | A long-lived adapter process: `call(op, **request) -> dict`.                                                                                                                        |
-|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`WorkerPool`](_autosummary/voxy.worker.html.md#voxy.worker.WorkerPool)(spec, adapter, \*[, make])           | Shared workers of one adapter, one per `(model, threads, rootdir)`, each made once even when threads ask for it at the same time (so its environment is never built twice at once). |
+| [`Worker`](_autosummary/voxy.worker.html.md#voxy.worker.Worker)(python, adapter, \*[, log_path])   | `ps.isolated.Worker`, still accepting voxy's former `log_path=` (now `stderr=`).                                                                                                    |
+|--------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`WorkerPool`](_autosummary/voxy.worker.html.md#voxy.worker.WorkerPool)(spec, adapter, \*[, make])     | Shared workers of one adapter, one per `(model, threads, rootdir)`, each made once even when threads ask for it at the same time (so its environment is never built twice at once). |
 
 ### Exceptions
 
-| [`WorkerError`](_autosummary/voxy.worker.html.md#voxy.worker.WorkerError)   | An operation failed inside the worker (the message carries its traceback tail).   |
-|----------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [`WorkerError`](_autosummary/voxy.worker.html.md#voxy.worker.WorkerError)   | The worker failed a request (its traceback is in the message) or died (its log tail is).   |
+|----------------------------------------------------------------|--------------------------------------------------------------------------------------------|
 
-### *class* voxy.worker.Worker(python, adapter, , init=None, env=None, log_path=None, cwd=None)
+### *class* voxy.worker.Worker(python, adapter, , log_path=None, \*\*kwargs)
 
-Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+Bases: `Worker`
 
-A long-lived adapter process: `call(op, **request) -> dict`.
-
-* **Parameters:**
-  * **python** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike)) – Interpreter of the environment to run in.
-  * **adapter** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike)) – The adapter file (`load` plus operations).
-  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments for the adapter’s `load` (sent on start).
-  * **env** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Environment variables of the process (default: inherited).
-  * **log_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Where the process’s stderr goes (default: a temp file).
-  * **cwd** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Working directory (default: a neutral temp dir, so nothing in the
-    caller’s folder shadows the environment’s imports).
-
-#### call(op, \*\*request)
-
-Run `op` in the worker (starting it, and loading the model, on first use).
-
-* **Return type:**
-  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
-
-#### close()
-
-Stop the process (its memory goes back to the machine).
-
-From another thread, this waits for a call in flight to finish first, so it
-cannot abort a hung call (a separate `kill` would be needed for that).
-
-* **Return type:**
-  [`None`](https://docs.python.org/3/builtins/constants.html#None)
-
-#### *property* running *: [bool](https://docs.python.org/3/builtins/functions.html#bool)*
-
-True while the process is alive.
+`ps.isolated.Worker`, still accepting voxy’s former `log_path=` (now `stderr=`).
 
 ### *exception* voxy.worker.WorkerError
 
 Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
 
-An operation failed inside the worker (the message carries its traceback tail).
+The worker failed a request (its traceback is in the message) or died (its log tail is).
 
 ### *class* voxy.worker.WorkerPool(spec, adapter, \*, make=<function env_worker>)
 
@@ -6505,10 +6492,11 @@ F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).
 
 Backend adapters run by `voxy.worker` inside each backend’s own environment.
 
-`serve.py` is the entry point; each `*_adapter.py` wraps one model library
-with `load(**init)` and `synthesize(state, *, text, ref_audio, ref_text,
-out_path, \*\*params)`. These files are executed by other interpreters, so they
-import nothing from voxy.
+Each `*_adapter.py` wraps one model library with `load(**init)` and operations
+such as `synthesize(state, *, text, ref_audio, ref_text, out_path, **params)`;
+`ps.isolated.Worker` serves it. These files are executed by other interpreters,
+so they import nothing from voxy; this folder is on their `sys.path`, so they
+share helpers by plain import (`from _worker_threads import cap_torch_threads`).
 
 ### Functions
 
@@ -6538,7 +6526,6 @@ The adapter file for `name` (e.g. ‘f5tts’ -> `f5tts_adapter.py`).
 | [`kokoro_adapter`](_autosummary/voxy.workers.kokoro_adapter.html.md#module-voxy.workers.kokoro_adapter)         | Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.                                                                  |
 | [`phonemes_adapter`](_autosummary/voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.                                       |
 | [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).                    |
-| [`serve`](_autosummary/voxy.workers.serve.html.md#module-voxy.workers.serve)                           | Worker entry point: run a backend adapter inside its own environment.                                                                              |
 | [`speaker_adapter`](_autosummary/voxy.workers.speaker_adapter.html.md#module-voxy.workers.speaker_adapter)       | Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.                                                             |
 | [`voxcpm_adapter`](_autosummary/voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.                                                                 |
 | [`xtts_adapter`](_autosummary/voxy.workers.xtts_adapter.html.md#module-voxy.workers.xtts_adapter)             | XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.                                                            |
@@ -6612,30 +6599,6 @@ The VoiceDesign model is loaded on the first `design` call, apart from Base.
 Speak `text` in a voice described by `instruct` (a new voice per seed).
 
 
-# _autosummary/voxy.workers.serve.html.md
-
-# voxy.workers.serve
-
-Worker entry point: run a backend adapter inside its own environment.
-
-Started by `voxy.worker.Worker` with the environment’s interpreter, as
-`python serve.py <adapter.py>`. It imports nothing from voxy (the environment
-need not have voxy installed), loads the adapter file, then answers one JSON
-request per stdin line with one JSON reply per line on the original stdout.
-Everything the model libraries print goes to stderr (the worker’s log), so it
-can’t corrupt the replies.
-
-An adapter is a plain module with `load(**init) -> state` and any number of
-operations `op(state, **request) -> dict` (JSON-ready), e.g. `synthesize`.
-Request: `{"op": "load", ...}` or `{"op": "<name>", ...}`.
-Reply: `{"ok": true, "result": {...}}` or `{"ok": false, "error": "...", "traceback": "..."}`.
-
-### Functions
-
-| `main`([argv])   |    |
-|------------------|----|
-
-
 # _autosummary/voxy.workers.speaker_adapter.html.md
 
 # voxy.workers.speaker_adapter
@@ -6693,18 +6656,16 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-09 17:58 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/18f63783ee7100f180ba94268bd34923da4993b5"><code>18f6378</code></a> on branch <code>main</code>, for **voxy 0.0.67** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-10 11:13 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/170f02a78fd686d8557e0d72af4144a175855b99"><code>170f02a</code></a> on branch <code>main</code>, for **voxy 0.0.68** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.67) is behind the latest release on PyPI (0.0.68): `pip install voxy` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/18f63783ee7100f180ba94268bd34923da4993b5"><code>18f63783ee7100f180ba94268bd34923da4993b5</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/170f02a78fd686d8557e0d72af4144a175855b99"><code>170f02a78fd686d8557e0d72af4144a175855b99</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6715,9 +6676,9 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42669318085">42669318085</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42805357665">42805357665</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>18f63783ee7100f180ba94268bd34923da4993b5</code> (in the history of the built commit) |
+| Event commit | <code>170f02a78fd686d8557e0d72af4144a175855b99</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6742,13 +6703,13 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.68/">0.0.68</a>, newer than the documented version (0.0.67).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.68/">0.0.68</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 18f63783ee7100f180ba94268bd34923da4993b5
+git checkout 170f02a78fd686d8557e0d72af4144a175855b99
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

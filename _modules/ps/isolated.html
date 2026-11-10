@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en" data-content_root="../../"
+  x-data="{ darkMode: $persist(window.matchMedia('(prefers-color-scheme: dark)').matches), activeSection: ''}"
+  :class="{ 'dark' : darkMode === true }">
+
+<head>
+  <script>
+    (function () {
+      // Set initial color scheme
+      if ((localStorage.getItem("_x_darkMode") === "true") || (window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+        document.documentElement.classList.add("dark");
+      }
+
+      // Watch for media preference changes
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (event) => {
+        localStorage.setItem("_x_darkMode", event.matches);
+        document.documentElement.classList.toggle("dark", event.matches);
+      });
+    })();
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#030711" />
+  
+<link rel="alternate" type="text/markdown" href="isolated.html.md">
+<link rel="describedby" href="../../llms.txt" type="text/markdown">
+  <title>ps.isolated | voxy</title>
+  <meta property="og:title" content="ps.isolated | voxy" />
+  <meta name="twitter:title" content="ps.isolated | voxy" />
+  <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d75fae25" />
+  <link rel="stylesheet" type="text/css" href="../../_static/theme.css?v=009055c6" />
+  <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
+  <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+  <link rel="stylesheet" type="text/css" href="../../_static/epythet.css?v=22887b56" />
+  <link rel="search" title="Search" href="../../search.html" />
+  <link rel="index" title="Index" href="../../genindex.html" />
+</head>
+
+<body x-data="{ showSidebar: false, showScrollTop: false }"
+  class="min-h-screen font-sans antialiased bg-background text-foreground" :class="{ 'overflow-hidden': showSidebar }">
+  <div x-cloak x-show="showSidebar"
+    class="fixed inset-0 z-50 overflow-hidden bg-background/80 backdrop-blur-sm md:hidden"
+    @click.self="showSidebar = false"></div><div id="page" class="relative flex flex-col min-h-screen"><a href="#content"
+      class="absolute top-0 left-0 z-[100] block bg-background p-4 text-xl transition -translate-x-full opacity-0 focus:translate-x-0 focus:opacity-100">
+      Skip to content
+    </a><header class="sticky top-0 z-40 w-full border-b shadow-xs border-border bg-background/90 backdrop-blur"><div class="container flex items-center h-14">
+    <div class="hidden mr-4 md:flex">
+      <a href="../../index.html" class="flex items-center mr-6"><span class="hidden font-bold sm:inline-block text-clip whitespace-nowrap">voxy</span>
+      </a><nav class="flex items-center gap-6 text-sm font-medium">
+        <a href="https://github.com/thorwhalen/voxy" class="transition-colors hover:text-foreground/80 text-foreground/60" rel="noopener nofollow">GitHub</a>
+      </nav></div><button
+      class="inline-flex items-center justify-center h-10 px-0 py-2 mr-2 text-base font-medium transition-colors rounded-md hover:text-accent-foreground hover:bg-transparent md:hidden"
+      type="button" @click="showSidebar = true">
+      <svg xmlns="http://www.w3.org/2000/svg" height="24" width="24" viewBox="0 96 960 960" aria-hidden="true"
+        fill="currentColor">
+        <path
+          d="M152.587 825.087q-19.152 0-32.326-13.174t-13.174-32.326q0-19.152 13.174-32.326t32.326-13.174h440q19.152 0 32.326 13.174t13.174 32.326q0 19.152-13.174 32.326t-32.326 13.174h-440Zm0-203.587q-19.152 0-32.326-13.174T107.087 576q0-19.152 13.174-32.326t32.326-13.174h320q19.152 0 32.326 13.174T518.087 576q0 19.152-13.174 32.326T472.587 621.5h-320Zm0-203.587q-19.152 0-32.326-13.174t-13.174-32.326q0-19.152 13.174-32.326t32.326-13.174h440q19.152 0 32.326 13.174t13.174 32.326q0 19.152-13.174 32.326t-32.326 13.174h-440ZM708.913 576l112.174 112.174q12.674 12.674 12.674 31.826t-12.674 31.826Q808.413 764.5 789.261 764.5t-31.826-12.674l-144-144Q600 594.391 600 576t13.435-31.826l144-144q12.674-12.674 31.826-12.674t31.826 12.674q12.674 12.674 12.674 31.826t-12.674 31.826L708.913 576Z" />
+      </svg>
+      <span class="sr-only">Toggle navigation menu</span>
+    </button>
+    <div class="flex items-center justify-between flex-1 gap-2 sm:gap-4 md:justify-end">
+      <div class="flex-1 w-full md:w-auto md:flex-none"><form id="searchbox"
+      action="../../search.html"
+      method="get"
+      class="relative flex items-center group"
+      @keydown.k.window.meta="$refs.search.focus()">
+  <input x-ref="search"
+          name="q"
+          id="search-input"
+          type="search"
+          aria-label="Search the docs"
+          placeholder="Search ..."
+          class="inline-flex items-center font-medium transition-colors bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background border border-input hover:bg-accent focus:bg-accent hover:text-accent-foreground focus:text-accent-foreground hover:placeholder-accent-foreground py-2 px-4 relative h-9 w-full justify-start rounded-[0.5rem] text-sm text-muted-foreground sm:pr-12 md:w-40 lg:w-64" />
+  <kbd class="pointer-events-none absolute right-1.5 top-2 hidden h-5 select-none text-muted-foreground items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex group-hover:bg-accent group-hover:text-accent-foreground">
+    <span class="text-xs">⌘</span>
+    K
+  </kbd>
+</form>
+      </div>
+      <nav class="flex items-center gap-1">
+        <button @click="darkMode = !darkMode"
+          class="relative inline-flex items-center justify-center px-0 text-sm font-medium transition-colors rounded-md hover:bg-accent hover:text-accent-foreground h-9 w-9"
+          type="button"
+          title="Toggle color scheme">
+          <svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 96 960 960" fill="currentColor"
+            class="absolute transition-all scale-100 rotate-0 dark:-rotate-90 dark:scale-0">
+            <path
+              d="M480 685q45.456 0 77.228-31.772Q589 621.456 589 576q0-45.456-31.772-77.228Q525.456 467 480 467q-45.456 0-77.228 31.772Q371 530.544 371 576q0 45.456 31.772 77.228Q434.544 685 480 685Zm0 91q-83 0-141.5-58.5T280 576q0-83 58.5-141.5T480 376q83 0 141.5 58.5T680 576q0 83-58.5 141.5T480 776ZM80 621.5q-19.152 0-32.326-13.174T34.5 576q0-19.152 13.174-32.326T80 530.5h80q19.152 0 32.326 13.174T205.5 576q0 19.152-13.174 32.326T160 621.5H80Zm720 0q-19.152 0-32.326-13.174T754.5 576q0-19.152 13.174-32.326T800 530.5h80q19.152 0 32.326 13.174T925.5 576q0 19.152-13.174 32.326T880 621.5h-80Zm-320-320q-19.152 0-32.326-13.174T434.5 256v-80q0-19.152 13.174-32.326T480 130.5q19.152 0 32.326 13.174T525.5 176v80q0 19.152-13.174 32.326T480 301.5Zm0 720q-19.152 0-32.326-13.17Q434.5 995.152 434.5 976v-80q0-19.152 13.174-32.326T480 850.5q19.152 0 32.326 13.174T525.5 896v80q0 19.152-13.174 32.33-13.174 13.17-32.326 13.17ZM222.174 382.065l-43-42Q165.5 327.391 166 308.239t13.174-33.065q13.435-13.674 32.587-13.674t32.065 13.674l42.239 43q12.674 13.435 12.555 31.706-.12 18.272-12.555 31.946-12.674 13.674-31.445 13.413-18.772-.261-32.446-13.174Zm494 494.761-42.239-43q-12.674-13.435-12.674-32.087t12.674-31.565Q686.609 756.5 705.38 757q18.772.5 32.446 13.174l43 41.761Q794.5 824.609 794 843.761t-13.174 33.065Q767.391 890.5 748.239 890.5t-32.065-13.674Zm-42-494.761Q660.5 369.391 661 350.62q.5-18.772 13.174-32.446l41.761-43Q728.609 261.5 747.761 262t33.065 13.174q13.674 13.435 13.674 32.587t-13.674 32.065l-43 42.239q-13.435 12.674-31.706 12.555-18.272-.12-31.946-12.555Zm-495 494.761Q165.5 863.391 165.5 844.239t13.674-32.065l43-42.239q13.435-12.674 32.087-12.674t31.565 12.674Q299.5 782.609 299 801.38q-.5 18.772-13.174 32.446l-41.761 43Q231.391 890.5 212.239 890t-33.065-13.174ZM480 576Z" />
+          </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 96 960 960" fill="currentColor"
+            class="absolute transition-all scale-0 rotate-90 dark:rotate-0 dark:scale-100">
+            <path
+              d="M480 936q-151 0-255.5-104.5T120 576q0-138 90-239.5T440 218q25-3 39 18t-1 44q-17 26-25.5 55t-8.5 61q0 90 63 153t153 63q31 0 61.5-9t54.5-25q21-14 43-1.5t19 39.5q-14 138-117.5 229T480 936Zm0-80q88 0 158-48.5T740 681q-20 5-40 8t-40 3q-123 0-209.5-86.5T364 396q0-20 3-40t8-40q-78 32-126.5 102T200 576q0 116 82 198t198 82Zm-10-270Z" />
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </div>
+</header>
+
+    <div class="flex-1"><div
+        class="container md:grid md:grid-cols-[220px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10"><aside id="left-sidebar"
+  class="fixed inset-y-0 left-0 md:top-14 z-50 md:z-30 bg-background md:bg-transparent transition-all duration-100 -translate-x-full md:translate-x-0 ml-0 p-6 md:p-0 md:-ml-2 md:h-[calc(100vh-3.5rem)] w-5/6 md:w-full overflow-y-auto border-r border-border md:sticky"
+  :aria-hidden="!showSidebar" :class="{ 'translate-x-0': showSidebar }">
+
+    <a href="../../index.html" class="justify-start text-sm md:!hidden bg-background"><span class="font-bold text-clip whitespace-nowrap">voxy</span>
+    </a>
+
+    <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0">
+      <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="flex md:hidden flex-col font-medium mt-4">
+  <a href="https://github.com/thorwhalen/voxy" rel="nofollow noopener">GitHub</a>
+</nav><nav class="table w-full min-w-full my-6 lg:my-8">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../_autosummary/voxy.html">voxy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.aix_model.html">voxy.aix_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.align.html">voxy.align</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.base.html">voxy.base</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.benchmarks.html">voxy.benchmarks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.diagnosis.html">voxy.diagnosis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.envs.html">voxy.envs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.facade.html">voxy.facade</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.fal_model.html">voxy.fal_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.finetune.html">voxy.finetune</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.kokoro_model.html">voxy.kokoro_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.lexique.html">voxy.lexique</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.library.html">voxy.library</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.local_clone.html">voxy.local_clone</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.pauses.html">voxy.pauses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.pronounce.html">voxy.pronounce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.refprep.html">voxy.refprep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.say_model.html">voxy.say_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.script.html">voxy.script</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.separate.html">voxy.separate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.speakers.html">voxy.speakers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.speechtext.html">voxy.speechtext</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.splice.html">voxy.splice</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.stores.html">voxy.stores</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.textsplit.html">voxy.textsplit</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.voicestudio_model.html">voxy.voicestudio_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.wavutil.html">voxy.wavutil</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.worker.html">voxy.worker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.workers.html">voxy.workers</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../ai-agents.html">For AI agents</a></li>
+</ul>
+
+</nav>
+      </div>
+    </div>
+    <button type="button" @click="showSidebar = false"
+      class="absolute md:hidden right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100">
+      <svg xmlns="http://www.w3.org/2000/svg" height="24" width="24" viewBox="0 96 960 960" fill="currentColor"
+        stroke="none" class="h-4 w-4">
+        <path
+          d="M480 632 284 828q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536 576l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480 632Z" />
+      </svg>
+    </button>
+  </aside>
+          <main class="relative py-6 lg:gap-10 lg:py-8 xl:grid xl:grid-cols-[1fr_300px]">
+<div class="w-full min-w-0 mx-auto">
+<nav aria-label="breadcrumbs"
+     class="flex items-center mb-4 space-x-1 text-sm text-muted-foreground">
+  <a class="overflow-hidden text-ellipsis whitespace-nowrap hover:text-foreground"
+     href="../../index.html">
+    <span class="hidden md:inline">voxy</span>
+    <svg xmlns="http://www.w3.org/2000/svg"
+         height="18"
+         width="18"
+         viewBox="0 96 960 960"
+         aria-label="Home"
+         fill="currentColor"
+         stroke="none"
+         class="md:hidden">
+      <path d="M240 856h120V616h240v240h120V496L480 316 240 496v360Zm-80 80V456l320-240 320 240v480H520V696h-80v240H160Zm320-350Z" />
+    </svg>
+  </a>
+  
+<div class="mr-1">/</div><a class="hover:text-foreground overflow-hidden text-ellipsis whitespace-nowrap"
+       href="../index.html">Module code</a>
+    
+<div class="mr-1">/</div><span aria-current="page"
+        class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">ps.isolated</span>
+</nav>
+
+    <div id="content" role="main">
+      <h1>Source code for ps.isolated</h1><div class="highlight"><pre>
+<span></span><code><span id="line-1"><span class="sd">"""Run Python code inside another Python environment, from this one.</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="sd">Some libraries cannot share an environment with yours (or with each other): a model</span>
+</span><span id="line-4"><span class="sd">pins its own torch, numpy or MLX, an evaluation toolkit wants ``numpy&lt;2``. This module</span>
+</span><span id="line-5"><span class="sd">lets a host process drive such code anyway, with the standard library only.</span>
+</span><span id="line-6">
+</span><span id="line-7"><span class="sd">Two ways to get the environment, and one way to talk to it:</span>
+</span><span id="line-8">
+</span><span id="line-9"><span class="sd">- :class:`Runtime` *locates* an environment someone installed by hand (a checkout with</span>
+</span><span id="line-10"><span class="sd">  its own venv): ``$&lt;env_var&gt;``, else ``$&lt;base_dir_var&gt;/&lt;name&gt;``, else</span>
+</span><span id="line-11"><span class="sd">  ``&lt;default_dir&gt;/&lt;name&gt;``. ps never installs it; a missing one raises</span>
+</span><span id="line-12"><span class="sd">  :class:`RuntimeNotInstalled` carrying the setup commands.</span>
+</span><span id="line-13"><span class="sd">- :class:`EnvSpec` describes an environment ps *builds* with ``uv`` from a list of</span>
+</span><span id="line-14"><span class="sd">  requirements: :func:`ensure_env` builds it once, and rebuilds it from scratch when</span>
+</span><span id="line-15"><span class="sd">  the spec changes (a marker records the spec's digest).</span>
+</span><span id="line-16"><span class="sd">- :class:`Worker` keeps one process of an environment alive, running an **adapter</span>
+</span><span id="line-17"><span class="sd">  file**, and talks to it in JSON lines, so a model loads once instead of once per</span>
+</span><span id="line-18"><span class="sd">  call. :func:`run_process` is the one-shot alternative: run a command, get</span>
+</span><span id="line-19"><span class="sd">  ``(returncode, output)``.</span>
+</span><span id="line-20">
+</span><span id="line-21"><span class="sd">An adapter file is a plain ``.py`` file that imports nothing from the host: it defines</span>
+</span><span id="line-22"><span class="sd">``load(**init) -&gt; state`` and operations ``op(state, **request) -&gt; result``. The worker</span>
+</span><span id="line-23"><span class="sd">loads this module file standalone in the environment (``ps`` need not be installed</span>
+</span><span id="line-24"><span class="sd">there; this side loads on Python 3.8+), with the adapter's own folder on ``sys.path``</span>
+</span><span id="line-25"><span class="sd">(so adapters can share a helper module), sends ``{"op": "load", **init}``, and</span>
+</span><span id="line-26"><span class="sd">``call("op", **kw)`` returns ``op(state, **kw)`` (``None`` becomes ``{}``).</span>
+</span><span id="line-27">
+</span><span id="line-28"><span class="sd">&gt;&gt;&gt; import sys, tempfile, pathlib</span>
+</span><span id="line-29"><span class="sd">&gt;&gt;&gt; adapter = pathlib.Path(tempfile.mkdtemp()) / "echo_adapter.py"</span>
+</span><span id="line-30"><span class="sd">&gt;&gt;&gt; _ = adapter.write_text(</span>
+</span><span id="line-31"><span class="sd">...     "def load(**kw): return kw\\n"</span>
+</span><span id="line-32"><span class="sd">...     "def echo(state, **kw): print('noise'); return {**state, **kw}\\n"</span>
+</span><span id="line-33"><span class="sd">... )</span>
+</span><span id="line-34"><span class="sd">&gt;&gt;&gt; with Worker(sys.executable, adapter, init={"a": 1}) as w:</span>
+</span><span id="line-35"><span class="sd">...     w.call("echo", b=2)</span>
+</span><span id="line-36"><span class="sd">{'a': 1, 'b': 2}</span>
+</span><span id="line-37">
+</span><span id="line-38"><span class="sd">How a worker behaves:</span>
+</span><span id="line-39">
+</span><span id="line-40"><span class="sd">- Protocol: one JSON request per line on its stdin, one reply per line on its stdout,</span>
+</span><span id="line-41"><span class="sd">  ``{"ok": true, "result": ...}`` or ``{"ok": false, "error": "Type: message",</span>
+</span><span id="line-42"><span class="sd">  "traceback": "..."}``. Everything else written to stdout (Python or C level, at</span>
+</span><span id="line-43"><span class="sd">  import time too) goes to stderr, so it cannot corrupt the replies.</span>
+</span><span id="line-44"><span class="sd">- stderr goes to a log file (a temporary one by default, deleted on close) whose tail</span>
+</span><span id="line-45"><span class="sd">  is put into the error when the process dies; ``stderr=None`` leaves it on the</span>
+</span><span id="line-46"><span class="sd">  host's terminal instead.</span>
+</span><span id="line-47"><span class="sd">- The environment is the host's (``PATH`` included) minus ``PYTHONPATH``,</span>
+</span><span id="line-48"><span class="sd">  ``PYTHONHOME`` and ``VIRTUAL_ENV``, plus ``env=``. The default working directory is</span>
+</span><span id="line-49"><span class="sd">  an empty folder, so nothing shadows the environment's imports.</span>
+</span><span id="line-50"><span class="sd">- A failed request leaves the worker serving; a failed ``load`` stops it; an</span>
+</span><span id="line-51"><span class="sd">  interrupted or garbled exchange kills it (a stale reply must never be read by the</span>
+</span><span id="line-52"><span class="sd">  next call), and the next call starts a fresh one. :meth:`Worker.close` waits for a</span>
+</span><span id="line-53"><span class="sd">  call in flight; :meth:`Worker.kill` does not, and is what runs at interpreter exit.</span>
+</span><span id="line-54">
+</span><span id="line-55"><span class="sd">What the copies this module merges map to</span>
+</span><span id="line-56"><span class="sd">-----------------------------------------</span>
+</span><span id="line-57">
+</span><span id="line-58"><span class="sd">arioso (``arioso._isolated``):</span>
+</span><span id="line-59">
+</span><span id="line-60"><span class="sd">- ``Runtime(name=, env_var=, setup=, python=, cwd=)`` -&gt; :class:`Runtime`, arioso</span>
+</span><span id="line-61"><span class="sd">  supplying ``base_dir_var="ARIOSO_RUNTIMES_DIR"`` and its ``default_dir``.</span>
+</span><span id="line-62"><span class="sd">- ``RuntimeNotInstalled``, ``WorkerError``, ``Runner``, ``run_process`` -&gt; same names</span>
+</span><span id="line-63"><span class="sd">  (``run_process`` now kills the process tree on timeout).</span>
+</span><span id="line-64"><span class="sd">- ``Worker(python, module)`` + ``serve(handle)`` drivers -&gt; :class:`Worker` with adapter</span>
+</span><span id="line-65"><span class="sd">  files: each ``_driver`` module becomes an adapter file (``load`` + an operation).</span>
+</span><span id="line-66"><span class="sd">- ``draw_seed``, ``read_wav``, ``is_apple_silicon``, ``song_from_wav``: arioso's own.</span>
+</span><span id="line-67">
+</span><span id="line-68"><span class="sd">voxy (``voxy.envs``, ``voxy.worker``, ``voxy/workers/serve.py``):</span>
+</span><span id="line-69">
+</span><span id="line-70"><span class="sd">- ``EnvSpec(name, requirements, python, torch_backend)`` -&gt; :class:`EnvSpec` (same</span>
+</span><span id="line-71"><span class="sd">  digest, so built environments are not rebuilt); voxy subclasses it to keep</span>
+</span><span id="line-72"><span class="sd">  ``env_vars`` and its ``torch_backend="cpu"`` default.</span>
+</span><span id="line-73"><span class="sd">- ``env_python(spec, rootdir=)`` -&gt; ``venv_python(env_dir(spec, rootdir=rootdir))``;</span>
+</span><span id="line-74"><span class="sd">  ``is_env_ready`` / ``ensure_env`` -&gt; :func:`is_env_ready` / :func:`ensure_env` with</span>
+</span><span id="line-75"><span class="sd">  ``path=env_dir(...)`` and ``marker=".voxy-env.json"``.</span>
+</span><span id="line-76"><span class="sd">- ``worker_environ``'s stripping -&gt; :func:`clean_environ` (every worker does it);</span>
+</span><span id="line-77"><span class="sd">  threads, ``HF_HOME``, ``env_dir``, ``models_dir``, ``env_worker``, ``WorkerPool``</span>
+</span><span id="line-78"><span class="sd">  stay voxy's.</span>
+</span><span id="line-79"><span class="sd">- ``Worker(python, adapter, init=, env=, log_path=, cwd=)`` -&gt; :class:`Worker`</span>
+</span><span id="line-80"><span class="sd">  (``log_path=`` is ``stderr=``); ``.call(op, **kw)``, ``.running``, ``.close()`` same.</span>
+</span><span id="line-81"><span class="sd">- ``WorkerError``, ``LOG_TAIL_CHARS`` -&gt; same names; ``workers/serve.py`` -&gt;</span>
+</span><span id="line-82"><span class="sd">  :func:`serve_adapter` (its torch thread cap moves into the adapters' ``load``).</span>
+</span><span id="line-83">
+</span><span id="line-84"><span class="sd">foley (``foley/sources/stable_audio_3/adapter.py``): ``_run_process`` -&gt;</span>
+</span><span id="line-85"><span class="sd">:func:`run_process` (stdout and stderr together, in order); ``_venv_python`` -&gt;</span>
+</span><span id="line-86"><span class="sd">:func:`venv_python`. Its ``setup_hint`` and ``runtime_ready`` stay foley's.</span>
+</span><span id="line-87"><span class="sd">"""</span>
+</span><span id="line-88">
+</span><span id="line-89"><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="line-90">
+</span><span id="line-91"><span class="kn">import</span><span class="w"> </span><span class="nn">atexit</span>
+</span><span id="line-92"><span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+</span><span id="line-93"><span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+</span><span id="line-94"><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+</span><span id="line-95"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+</span><span id="line-96"><span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
+</span><span id="line-97"><span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+</span><span id="line-98"><span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+</span><span id="line-99"><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+</span><span id="line-100"><span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+</span><span id="line-101"><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+</span><span id="line-102"><span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+</span><span id="line-103"><span class="kn">import</span><span class="w"> </span><span class="nn">weakref</span>
+</span><span id="line-104"><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span>
+</span><span id="line-105"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="line-106"><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+</span><span id="line-107">
+</span><span id="line-108"><span class="c1">#: How much of a worker's log (or a failed request's traceback) goes into an error.</span>
+</span><span id="line-109"><span class="n">LOG_TAIL_CHARS</span> <span class="o">=</span> <span class="mi">2000</span>
+</span><span id="line-110"><span class="c1">#: Seconds :meth:`Worker.close` waits for a process to end before killing it.</span>
+</span><span id="line-111"><span class="n">DFLT_CLOSE_TIMEOUT</span> <span class="o">=</span> <span class="mi">10</span>
+</span><span id="line-112"><span class="c1">#: The file, in a built environment, recording the digest of the spec it was built from.</span>
+</span><span id="line-113"><span class="n">DFLT_ENV_MARKER</span> <span class="o">=</span> <span class="s2">".ps-env.json"</span>
+</span><span id="line-114"><span class="c1">#: Variables that point a Python at the host's packages, never passed to another env.</span>
+</span><span id="line-115"><span class="n">HOST_ONLY_VARS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"PYTHONPATH"</span><span class="p">,</span> <span class="s2">"PYTHONHOME"</span><span class="p">,</span> <span class="s2">"VIRTUAL_ENV"</span><span class="p">)</span>
+</span><span id="line-116"><span class="c1">#: uv settings holding the host's pins, cleared when building an environment.</span>
+</span><span id="line-117"><span class="n">HOST_UV_VARS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"UV_CONSTRAINT"</span><span class="p">,</span> <span class="s2">"UV_OVERRIDE"</span><span class="p">,</span> <span class="s2">"UV_BUILD_CONSTRAINT"</span><span class="p">)</span>
+</span><span id="line-118"><span class="c1">#: The :class:`EnvSpec` fields that decide what is installed (hence the digest).</span>
+</span><span id="line-119"><span class="n">DIGEST_FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"requirements"</span><span class="p">,</span> <span class="s2">"python"</span><span class="p">,</span> <span class="s2">"torch_backend"</span><span class="p">)</span>
+</span><span id="line-120">
+</span><span id="line-121"><span class="c1">#: ``runner(cmd, *, cwd, env, timeout) -&gt; (returncode, output_text)``.</span>
+</span><span id="line-122"><span class="n">Runner</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
+</span><span id="line-123"><span class="n">PathLike</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">"os.PathLike[str]"</span><span class="p">]</span>
+</span><span id="line-124">
+</span><span id="line-125"><span class="n">_UV_INSTALL</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-126">    <span class="s1">'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"'</span>
+</span><span id="line-127">    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span>
+</span><span id="line-128">    <span class="k">else</span> <span class="s2">"curl -LsSf https://astral.sh/uv/install.sh | sh"</span>
+</span><span id="line-129"><span class="p">)</span>
+</span><span id="line-130">
+</span><span id="line-131">
+</span><span id="line-132"><span class="k">class</span><span class="w"> </span><span class="nc">RuntimeNotInstalled</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+</span><span id="line-133"><span class="w">    </span><span class="sd">"""An environment (or the tool that builds it) is missing; the message says how to install it."""</span>
+</span><span id="line-134">
+</span><span id="line-135">
+<div class="viewcode-block" id="WorkerError">
+<a class="viewcode-back" href="../../_autosummary/voxy.worker.html#voxy.worker.WorkerError">[docs]</a>
+</span><span id="line-136"><span class="k">class</span><span class="w"> </span><span class="nc">WorkerError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+</span><span id="line-137"><span class="w">    </span><span class="sd">"""The worker failed a request (its traceback is in the message) or died (its log tail is)."""</span></div>
+
+</span><span id="line-138">
+</span><span id="line-139">
+</span><span id="line-140"><span class="c1"># --------------------------------------------------------------------------------------</span>
+</span><span id="line-141"><span class="c1"># Environments</span>
+</span><span id="line-142">
+</span><span id="line-143">
+</span><span id="line-144"><span class="k">def</span><span class="w"> </span><span class="nf">venv_python</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="line-145"><span class="w">    </span><span class="sd">"""The interpreter of the virtual environment at ``path`` (POSIX or Windows layout).</span>
+</span><span id="line-146">
+</span><span id="line-147"><span class="sd">    The layout that exists wins; when neither does, this platform's.</span>
+</span><span id="line-148">
+</span><span id="line-149"><span class="sd">    &gt;&gt;&gt; venv_python("/nowhere/.venv").relative_to("/nowhere/.venv").as_posix() in (</span>
+</span><span id="line-150"><span class="sd">    ...     "bin/python", "Scripts/python.exe")</span>
+</span><span id="line-151"><span class="sd">    True</span>
+</span><span id="line-152"><span class="sd">    """</span>
+</span><span id="line-153">    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="line-154">    <span class="n">posix</span><span class="p">,</span> <span class="n">windows</span> <span class="o">=</span> <span class="n">path</span> <span class="o">/</span> <span class="s2">"bin"</span> <span class="o">/</span> <span class="s2">"python"</span><span class="p">,</span> <span class="n">path</span> <span class="o">/</span> <span class="s2">"Scripts"</span> <span class="o">/</span> <span class="s2">"python.exe"</span>
+</span><span id="line-155">    <span class="n">candidates</span> <span class="o">=</span> <span class="p">(</span><span class="n">windows</span><span class="p">,</span> <span class="n">posix</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span> <span class="k">else</span> <span class="p">(</span><span class="n">posix</span><span class="p">,</span> <span class="n">windows</span><span class="p">)</span>
+</span><span id="line-156">    <span class="k">return</span> <span class="nb">next</span><span class="p">((</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">candidates</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">()),</span> <span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span id="line-157">
+</span><span id="line-158">
+</span><span id="line-159"><span class="k">def</span><span class="w"> </span><span class="nf">clean_environ</span><span class="p">(</span><span class="n">base</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-160"><span class="w">    </span><span class="sd">"""``base`` (default ``os.environ``) without the variables that leak the host's packages.</span>
+</span><span id="line-161">
+</span><span id="line-162"><span class="sd">    &gt;&gt;&gt; clean_environ({"PYTHONPATH": "/host", "VIRTUAL_ENV": "/v", "HOME": "/h"})</span>
+</span><span id="line-163"><span class="sd">    {'HOME': '/h'}</span>
+</span><span id="line-164"><span class="sd">    """</span>
+</span><span id="line-165">    <span class="n">env</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="k">if</span> <span class="n">base</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">base</span><span class="p">)</span>
+</span><span id="line-166">    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">HOST_ONLY_VARS</span><span class="p">:</span>
+</span><span id="line-167">        <span class="n">env</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-168">    <span class="k">return</span> <span class="n">env</span>
+</span><span id="line-169">
+</span><span id="line-170">
+</span><span id="line-171"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-172"><span class="k">class</span><span class="w"> </span><span class="nc">Runtime</span><span class="p">:</span>
+</span><span id="line-173"><span class="w">    </span><span class="sd">"""Where a hand-installed environment (a checkout with its venv) lives, and how to install it.</span>
+</span><span id="line-174">
+</span><span id="line-175"><span class="sd">    Pass the fields as keywords. The root is ``$&lt;env_var&gt;``, else</span>
+</span><span id="line-176"><span class="sd">    ``$&lt;base_dir_var&gt;/&lt;name&gt;``, else ``&lt;default_dir&gt;/&lt;name&gt;``.</span>
+</span><span id="line-177">
+</span><span id="line-178"><span class="sd">    Attributes:</span>
+</span><span id="line-179"><span class="sd">        name: Folder name under the base or default directory.</span>
+</span><span id="line-180"><span class="sd">        setup: Shell commands that install it; ``{root}`` and ``{python}`` are replaced.</span>
+</span><span id="line-181"><span class="sd">        default_dir: The folder holding runtimes when no variable says otherwise.</span>
+</span><span id="line-182"><span class="sd">        env_var: Variable naming this runtime's root (optional).</span>
+</span><span id="line-183"><span class="sd">        base_dir_var: Variable naming the folder holding runtimes (optional).</span>
+</span><span id="line-184"><span class="sd">        venv: The virtual environment, relative to the root (either OS layout).</span>
+</span><span id="line-185"><span class="sd">        python: The interpreter relative to the root, overriding ``venv``.</span>
+</span><span id="line-186"><span class="sd">        cwd: The processes' working directory, relative to the root.</span>
+</span><span id="line-187">
+</span><span id="line-188"><span class="sd">    &gt;&gt;&gt; rt = Runtime(name="toy", setup="install {root}", default_dir="/rt")</span>
+</span><span id="line-189"><span class="sd">    &gt;&gt;&gt; rt.root().as_posix(), rt.installed()</span>
+</span><span id="line-190"><span class="sd">    ('/rt/toy', False)</span>
+</span><span id="line-191"><span class="sd">    """</span>
+</span><span id="line-192">
+</span><span id="line-193">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="line-194">    <span class="n">setup</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="line-195">    <span class="n">default_dir</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="line-196">    <span class="n">env_var</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-197">    <span class="n">base_dir_var</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-198">    <span class="n">venv</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">".venv"</span>
+</span><span id="line-199">    <span class="n">python</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-200">    <span class="n">cwd</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"."</span>
+</span><span id="line-201">
+</span><span id="line-202">    <span class="k">def</span><span class="w"> </span><span class="nf">root</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="line-203"><span class="w">        </span><span class="sd">"""The runtime's root directory (it may not exist yet)."""</span>
+</span><span id="line-204">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_var</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="p">):</span>
+</span><span id="line-205">            <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="p">])</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+</span><span id="line-206">        <span class="n">base</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-207">            <span class="bp">self</span><span class="o">.</span><span class="n">base_dir_var</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_dir_var</span><span class="p">)</span>
+</span><span id="line-208">        <span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_dir</span>
+</span><span id="line-209">        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">base</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+</span><span id="line-210">
+</span><span id="line-211">    <span class="k">def</span><span class="w"> </span><span class="nf">_python</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="line-212">        <span class="n">root</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">()</span>
+</span><span id="line-213">        <span class="k">return</span> <span class="n">root</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">python</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">python</span> <span class="k">else</span> <span class="n">venv_python</span><span class="p">(</span><span class="n">root</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">venv</span><span class="p">)</span>
+</span><span id="line-214">
+</span><span id="line-215">    <span class="k">def</span><span class="w"> </span><span class="nf">installed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-216"><span class="w">        </span><span class="sd">"""Whether the runtime's interpreter exists."""</span>
+</span><span id="line-217">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_python</span><span class="p">()</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+</span><span id="line-218">
+</span><span id="line-219">    <span class="k">def</span><span class="w"> </span><span class="nf">interpreter</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="line-220"><span class="w">        </span><span class="sd">"""The runtime's Python, or :class:`RuntimeNotInstalled` with the setup commands."""</span>
+</span><span id="line-221">        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">installed</span><span class="p">():</span>
+</span><span id="line-222">            <span class="k">raise</span> <span class="n">RuntimeNotInstalled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">())</span>
+</span><span id="line-223">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_python</span><span class="p">()</span>
+</span><span id="line-224">
+</span><span id="line-225">    <span class="k">def</span><span class="w"> </span><span class="nf">workdir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="line-226"><span class="w">        </span><span class="sd">"""The directory the runtime's processes run in."""</span>
+</span><span id="line-227">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">()</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">cwd</span>
+</span><span id="line-228">
+</span><span id="line-229">    <span class="k">def</span><span class="w"> </span><span class="nf">hint</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-230"><span class="w">        </span><span class="sd">"""How to install this runtime, or point to an existing one."""</span>
+</span><span id="line-231">        <span class="n">root</span><span class="p">,</span> <span class="n">python</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_python</span><span class="p">()</span>
+</span><span id="line-232">        <span class="n">text</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-233">            <span class="sa">f</span><span class="s2">"The </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> runtime is not installed at </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2"> (no </span><span class="si">{</span><span class="n">python</span><span class="si">}</span><span class="s2">). "</span>
+</span><span id="line-234">            <span class="s2">"Install it with:</span><span class="se">\n\n</span><span class="s2">"</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">setup</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">root</span><span class="p">,</span> <span class="n">python</span><span class="o">=</span><span class="n">python</span><span class="p">)</span>
+</span><span id="line-235">        <span class="p">)</span>
+</span><span id="line-236">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="p">:</span>
+</span><span id="line-237">            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n\n</span><span class="s2">or set $</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="si">}</span><span class="s2"> to an existing installation."</span>
+</span><span id="line-238">        <span class="k">return</span> <span class="n">text</span>
+</span><span id="line-239">
+</span><span id="line-240">
+</span><span id="line-241"><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-242"><span class="k">class</span><span class="w"> </span><span class="nc">EnvSpec</span><span class="p">:</span>
+</span><span id="line-243"><span class="w">    </span><span class="sd">"""What an environment built by :func:`ensure_env` holds.</span>
+</span><span id="line-244">
+</span><span id="line-245"><span class="sd">    Attributes:</span>
+</span><span id="line-246"><span class="sd">        name: A name for messages (and usually the environment's folder).</span>
+</span><span id="line-247"><span class="sd">        requirements: ``uv pip install`` arguments (packages, pins, extras).</span>
+</span><span id="line-248"><span class="sd">        python: Python version (or interpreter) for ``uv venv``; default: this one's.</span>
+</span><span id="line-249"><span class="sd">        torch_backend: ``uv``'s ``--torch-backend`` (``"cpu"`` keeps CUDA wheels out);</span>
+</span><span id="line-250"><span class="sd">            None leaves the index alone.</span>
+</span><span id="line-251">
+</span><span id="line-252"><span class="sd">    &gt;&gt;&gt; EnvSpec("demo", ("numpy",)).digest() == EnvSpec("demo", ("numpy",)).digest()</span>
+</span><span id="line-253"><span class="sd">    True</span>
+</span><span id="line-254"><span class="sd">    """</span>
+</span><span id="line-255">
+</span><span id="line-256">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="line-257">    <span class="n">requirements</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span><span id="line-258">    <span class="n">python</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"</span><span class="si">{}</span><span class="s2">.</span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+</span><span id="line-259">    <span class="n">torch_backend</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-260">
+</span><span id="line-261">    <span class="k">def</span><span class="w"> </span><span class="nf">digest</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-262"><span class="w">        </span><span class="sd">"""A short hash of what is installed (only the :data:`DIGEST_FIELDS`)."""</span>
+</span><span id="line-263">        <span class="n">content</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">DIGEST_FIELDS</span><span class="p">}</span>
+</span><span id="line-264">        <span class="n">blob</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+</span><span id="line-265">        <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">blob</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">12</span><span class="p">]</span>
+</span><span id="line-266">
+</span><span id="line-267">
+</span><span id="line-268"><span class="k">def</span><span class="w"> </span><span class="nf">is_env_ready</span><span class="p">(</span>
+</span><span id="line-269">    <span class="n">spec</span><span class="p">:</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">marker</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_ENV_MARKER</span>
+</span><span id="line-270"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-271"><span class="w">    </span><span class="sd">"""True if the environment at ``path`` (``~`` expanded) was built from this exact spec."""</span>
+</span><span id="line-272">    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+</span><span id="line-273">    <span class="k">try</span><span class="p">:</span>
+</span><span id="line-274">        <span class="n">built</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">((</span><span class="n">path</span> <span class="o">/</span> <span class="n">marker</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"digest"</span><span class="p">)</span>
+</span><span id="line-275">    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+</span><span id="line-276">        <span class="k">return</span> <span class="kc">False</span>
+</span><span id="line-277">    <span class="k">return</span> <span class="n">built</span> <span class="o">==</span> <span class="n">spec</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span> <span class="ow">and</span> <span class="n">venv_python</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+</span><span id="line-278">
+</span><span id="line-279">
+</span><span id="line-280"><span class="k">def</span><span class="w"> </span><span class="nf">_env_commands</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">uv</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+</span><span id="line-281">    <span class="n">commands</span> <span class="o">=</span> <span class="p">[[</span><span class="n">uv</span><span class="p">,</span> <span class="s2">"venv"</span><span class="p">,</span> <span class="s2">"--python"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">python</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)]]</span>
+</span><span id="line-282">    <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">requirements</span><span class="p">:</span>
+</span><span id="line-283">        <span class="n">install</span> <span class="o">=</span> <span class="p">[</span><span class="n">uv</span><span class="p">,</span> <span class="s2">"pip"</span><span class="p">,</span> <span class="s2">"install"</span><span class="p">,</span> <span class="s2">"--python"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">venv_python</span><span class="p">(</span><span class="n">path</span><span class="p">))]</span>
+</span><span id="line-284">        <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">torch_backend</span><span class="p">:</span>
+</span><span id="line-285">            <span class="n">install</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">"--torch-backend"</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">torch_backend</span><span class="p">]</span>
+</span><span id="line-286">        <span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">install</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">requirements</span><span class="p">))</span>
+</span><span id="line-287">    <span class="k">return</span> <span class="n">commands</span>
+</span><span id="line-288">
+</span><span id="line-289">
+</span><span id="line-290"><span class="k">def</span><span class="w"> </span><span class="nf">_shown</span><span class="p">(</span><span class="n">command</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-291"><span class="w">    </span><span class="sd">"""``command`` as a user would type it, with the host's uv pins cleared."""</span>
+</span><span id="line-292">    <span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">command</span><span class="p">]</span>
+</span><span id="line-293">    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span><span class="p">:</span>
+</span><span id="line-294">        <span class="n">clear</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s1">'set "</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s1">=" &amp; '</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">HOST_UV_VARS</span><span class="p">)</span>
+</span><span id="line-295">        <span class="k">return</span> <span class="n">clear</span> <span class="o">+</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">list2cmdline</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+</span><span id="line-296">    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">var</span><span class="si">}</span><span class="s2">= "</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">HOST_UV_VARS</span><span class="p">)</span> <span class="o">+</span> <span class="n">shlex</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+</span><span id="line-297">
+</span><span id="line-298">
+</span><span id="line-299"><span class="k">def</span><span class="w"> </span><span class="nf">_find_uv</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-300">    <span class="n">uv</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"uv"</span><span class="p">)</span>
+</span><span id="line-301">    <span class="k">if</span> <span class="n">uv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-302">        <span class="k">raise</span> <span class="n">RuntimeNotInstalled</span><span class="p">(</span>
+</span><span id="line-303">            <span class="sa">f</span><span class="s2">"Building an isolated environment needs uv: </span><span class="si">{</span><span class="n">_UV_INSTALL</span><span class="si">}</span><span class="s2"> "</span>
+</span><span id="line-304">            <span class="s2">"(see https://docs.astral.sh/uv/)"</span>
+</span><span id="line-305">        <span class="p">)</span>
+</span><span id="line-306">    <span class="k">return</span> <span class="n">uv</span>
+</span><span id="line-307">
+</span><span id="line-308">
+</span><span id="line-309"><span class="k">def</span><span class="w"> </span><span class="nf">_clear_env_dir</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">marker</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-310"><span class="w">    </span><span class="sd">"""Remove a stale environment at ``path`` that ps built (it holds ``marker``).</span>
+</span><span id="line-311">
+</span><span id="line-312"><span class="sd">    Anything else is refused: an empty folder is reused, and a folder ps did not</span>
+</span><span id="line-313"><span class="sd">    build (a hand-made venv, the running interpreter's own) is never deleted.</span>
+</span><span id="line-314"><span class="sd">    """</span>
+</span><span id="line-315">    <span class="n">resolved</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+</span><span id="line-316">    <span class="k">if</span> <span class="n">resolved</span> <span class="ow">in</span> <span class="p">{</span><span class="n">Path</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">prefix</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">(),</span> <span class="n">Path</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">base_prefix</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()}:</span>
+</span><span id="line-317">        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+</span><span id="line-318">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is this interpreter's own environment: not replacing it"</span>
+</span><span id="line-319">        <span class="p">)</span>
+</span><span id="line-320">    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
+</span><span id="line-321">        <span class="k">return</span>
+</span><span id="line-322">    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="n">marker</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="line-323">        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+</span><span id="line-324">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not empty and was not built by ps (no </span><span class="si">{</span><span class="n">marker</span><span class="si">}</span><span class="s2">): "</span>
+</span><span id="line-325">            <span class="s2">"delete it yourself, or choose another folder"</span>
+</span><span id="line-326">        <span class="p">)</span>
+</span><span id="line-327">    <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="line-328">
+</span><span id="line-329">
+</span><span id="line-330"><span class="k">def</span><span class="w"> </span><span class="nf">_write_marker</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">marker</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">EnvSpec</span><span class="p">,</span> <span class="n">digest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-331">    <span class="n">content</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"digest"</span><span class="p">:</span> <span class="n">digest</span><span class="p">,</span> <span class="s2">"spec"</span><span class="p">:</span> <span class="n">asdict</span><span class="p">(</span><span class="n">spec</span><span class="p">)}</span>
+</span><span id="line-332">    <span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="n">marker</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+</span><span id="line-333">
+</span><span id="line-334">
+</span><span id="line-335"><span class="k">def</span><span class="w"> </span><span class="nf">_log_to_stderr</span><span class="p">(</span><span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-336">    <span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+</span><span id="line-337">
+</span><span id="line-338">
+</span><span id="line-339"><span class="k">def</span><span class="w"> </span><span class="nf">ensure_env</span><span class="p">(</span>
+</span><span id="line-340">    <span class="n">spec</span><span class="p">:</span> <span class="n">EnvSpec</span><span class="p">,</span>
+</span><span id="line-341">    <span class="n">path</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-342">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-343">    <span class="n">run</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
+</span><span id="line-344">    <span class="n">log</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">_log_to_stderr</span><span class="p">,</span>
+</span><span id="line-345">    <span class="n">marker</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DFLT_ENV_MARKER</span><span class="p">,</span>
+</span><span id="line-346"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="line-347"><span class="w">    </span><span class="sd">"""Build ``spec``'s environment at ``path`` unless it was built from this spec; return its Python.</span>
+</span><span id="line-348">
+</span><span id="line-349"><span class="sd">    A stale environment ps built (from another spec, or half-built) is removed and</span>
+</span><span id="line-350"><span class="sd">    built afresh, so a changed Python version or a dropped requirement does take</span>
+</span><span id="line-351"><span class="sd">    effect; a non-empty folder ps did not build raises instead (a provisional marker,</span>
+</span><span id="line-352"><span class="sd">    written right after ``uv venv``, makes a half-built one count as ps's). The</span>
+</span><span id="line-353"><span class="sd">    host's uv pins (:data:`HOST_UV_VARS`) are cleared for the build: they are for the</span>
+</span><span id="line-354"><span class="sd">    host, and an isolated environment exists precisely to differ.</span>
+</span><span id="line-355">
+</span><span id="line-356"><span class="sd">    Args:</span>
+</span><span id="line-357"><span class="sd">        spec: What to install.</span>
+</span><span id="line-358"><span class="sd">        path: The environment's folder (``~`` expanded).</span>
+</span><span id="line-359"><span class="sd">        run: Runs each command (seam; ``subprocess.run`` signature).</span>
+</span><span id="line-360"><span class="sd">        log: Receives a notice, with the commands, before a build.</span>
+</span><span id="line-361"><span class="sd">        marker: The marker file name (a host may keep its own).</span>
+</span><span id="line-362"><span class="sd">    """</span>
+</span><span id="line-363">    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+</span><span id="line-364">    <span class="k">if</span> <span class="n">is_env_ready</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="n">marker</span><span class="p">):</span>
+</span><span id="line-365">        <span class="k">return</span> <span class="n">venv_python</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="line-366">    <span class="n">commands</span> <span class="o">=</span> <span class="n">_env_commands</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">_find_uv</span><span class="p">())</span>
+</span><span id="line-367">    <span class="n">shown</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_shown</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">commands</span><span class="p">)</span>
+</span><span id="line-368">    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Building the </span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> environment in </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> (one-time):</span><span class="se">\n</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-369">    <span class="n">_clear_env_dir</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">marker</span><span class="p">)</span>
+</span><span id="line-370">    <span class="n">env</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="n">var</span><span class="p">:</span> <span class="s2">""</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">HOST_UV_VARS</span><span class="p">}}</span>
+</span><span id="line-371">    <span class="n">venv</span><span class="p">,</span> <span class="o">*</span><span class="n">install</span> <span class="o">=</span> <span class="n">commands</span>
+</span><span id="line-372">    <span class="n">run</span><span class="p">(</span><span class="n">venv</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span><span class="p">)</span>
+</span><span id="line-373">    <span class="n">_write_marker</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">marker</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>  <span class="c1"># ps's, but not ready until the end</span>
+</span><span id="line-374">    <span class="k">for</span> <span class="n">command</span> <span class="ow">in</span> <span class="n">install</span><span class="p">:</span>
+</span><span id="line-375">        <span class="n">run</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span><span class="p">)</span>
+</span><span id="line-376">    <span class="n">_write_marker</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">marker</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span>
+</span><span id="line-377">    <span class="k">return</span> <span class="n">venv_python</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="line-378">
+</span><span id="line-379">
+</span><span id="line-380"><span class="c1"># --------------------------------------------------------------------------------------</span>
+</span><span id="line-381"><span class="c1"># The host side: one long-lived process</span>
+</span><span id="line-382">
+</span><span id="line-383">
+</span><span id="line-384"><span class="n">_LIVE_WORKERS</span><span class="p">:</span> <span class="s2">"weakref.WeakSet[Worker]"</span> <span class="o">=</span> <span class="n">weakref</span><span class="o">.</span><span class="n">WeakSet</span><span class="p">()</span>
+</span><span id="line-385"><span class="n">_NEUTRAL_DIR</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-386"><span class="n">_TEMP_LOG</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>  <span class="c1"># the default ``stderr``: a temporary log file</span>
+</span><span id="line-387">
+</span><span id="line-388">
+</span><span id="line-389"><span class="nd">@atexit</span><span class="o">.</span><span class="n">register</span>
+</span><span id="line-390"><span class="k">def</span><span class="w"> </span><span class="nf">_kill_all</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-391"><span class="w">    </span><span class="sd">"""Kill every live worker, without waiting on a call in flight.</span>
+</span><span id="line-392">
+</span><span id="line-393"><span class="sd">    This only helps calls made from daemon threads: Python joins non-daemon threads</span>
+</span><span id="line-394"><span class="sd">    before running exit handlers, so a non-daemon thread stuck in a call keeps the</span>
+</span><span id="line-395"><span class="sd">    host alive (stop it with :meth:`Worker.kill`).</span>
+</span><span id="line-396"><span class="sd">    """</span>
+</span><span id="line-397">    <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">_LIVE_WORKERS</span><span class="p">):</span>
+</span><span id="line-398">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-399">            <span class="n">worker</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+</span><span id="line-400">        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - one stuck worker must not keep the rest</span>
+</span><span id="line-401">            <span class="k">pass</span>
+</span><span id="line-402">
+</span><span id="line-403">
+</span><span id="line-404"><span class="k">def</span><span class="w"> </span><span class="nf">_neutral_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-405"><span class="w">    </span><span class="sd">"""An empty folder, made once per host process: a default ``cwd`` that shadows nothing."""</span>
+</span><span id="line-406">    <span class="k">if</span> <span class="ow">not</span> <span class="n">_NEUTRAL_DIR</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">_NEUTRAL_DIR</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>  <span class="c1"># temp dirs get swept</span>
+</span><span id="line-407">        <span class="n">_NEUTRAL_DIR</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"ps-isolated-"</span><span class="p">)]</span>
+</span><span id="line-408">    <span class="k">return</span> <span class="n">_NEUTRAL_DIR</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-409">
+</span><span id="line-410">
+</span><span id="line-411"><span class="c1">#: Run in the worker: load this module standalone, serve the adapter. One line (no</span>
+</span><span id="line-412"><span class="c1">#: newlines to survive Windows command-line quoting); the working directory is taken</span>
+</span><span id="line-413"><span class="c1">#: off ``sys.path`` first, as for a script.</span>
+</span><span id="line-414"><span class="n">_BOOTSTRAP</span> <span class="o">=</span> <span class="s2">"; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+</span><span id="line-415">    <span class="p">[</span>
+</span><span id="line-416">        <span class="s2">"import importlib.util, sys"</span><span class="p">,</span>
+</span><span id="line-417">        <span class="s2">"sys.path and sys.path[0] in ('', '.') and sys.path.pop(0)"</span><span class="p">,</span>
+</span><span id="line-418">        <span class="s2">"spec = importlib.util.spec_from_file_location('ps_isolated_serve', sys.argv[1])"</span><span class="p">,</span>
+</span><span id="line-419">        <span class="s2">"module = importlib.util.module_from_spec(spec)"</span><span class="p">,</span>
+</span><span id="line-420">        <span class="s2">"sys.modules[spec.name] = module"</span><span class="p">,</span>
+</span><span id="line-421">        <span class="s2">"spec.loader.exec_module(module)"</span><span class="p">,</span>
+</span><span id="line-422">        <span class="s2">"module.serve_adapter(sys.argv[2])"</span><span class="p">,</span>
+</span><span id="line-423">    <span class="p">]</span>
+</span><span id="line-424"><span class="p">)</span>
+</span><span id="line-425">
+</span><span id="line-426">
+</span><span id="line-427"><span class="k">class</span><span class="w"> </span><span class="nc">Worker</span><span class="p">:</span>
+</span><span id="line-428"><span class="w">    </span><span class="sd">"""One long-lived process of another environment, running an adapter file.</span>
+</span><span id="line-429">
+</span><span id="line-430"><span class="sd">    Started (and the adapter loaded) on the first :meth:`call`, stopped by</span>
+</span><span id="line-431"><span class="sd">    :meth:`close` or :meth:`kill` (the latter at interpreter exit too). One request is</span>
+</span><span id="line-432"><span class="sd">    in flight at a time. The process leads its own process group, so stopping it also</span>
+</span><span id="line-433"><span class="sd">    kills what it spawned (a forked data loader, say); on POSIX it therefore does not</span>
+</span><span id="line-434"><span class="sd">    get the terminal's Ctrl-C, and if the host is killed outright it ends when its</span>
+</span><span id="line-435"><span class="sd">    stdin closes, once the operation it is running returns.</span>
+</span><span id="line-436">
+</span><span id="line-437"><span class="sd">    Args:</span>
+</span><span id="line-438"><span class="sd">        python: The environment's interpreter.</span>
+</span><span id="line-439"><span class="sd">        adapter: The adapter file (``load`` plus operations).</span>
+</span><span id="line-440"><span class="sd">        init: Keyword arguments of the adapter's ``load`` (sent on start).</span>
+</span><span id="line-441"><span class="sd">        env: Environment variables added to the host's (minus :data:`HOST_ONLY_VARS`).</span>
+</span><span id="line-442"><span class="sd">        cwd: The working directory (default: an empty folder).</span>
+</span><span id="line-443"><span class="sd">        stderr: Where the process's stderr goes: a log file path, or ``None`` for the</span>
+</span><span id="line-444"><span class="sd">            host's stderr (model output reaches the terminal, errors carry no log</span>
+</span><span id="line-445"><span class="sd">            tail). Default: a temporary log file, created on start, deleted on close.</span>
+</span><span id="line-446"><span class="sd">        spawn: The process factory (seam; :class:`subprocess.Popen` signature).</span>
+</span><span id="line-447"><span class="sd">    """</span>
+</span><span id="line-448">
+</span><span id="line-449">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="line-450">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-451">        <span class="n">python</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-452">        <span class="n">adapter</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-453">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-454">        <span class="n">init</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-455">        <span class="n">env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-456">        <span class="n">cwd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PathLike</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-457">        <span class="n">stderr</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_TEMP_LOG</span><span class="p">,</span>
+</span><span id="line-458">        <span class="n">spawn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">]</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">,</span>
+</span><span id="line-459">    <span class="p">):</span>
+</span><span id="line-460">        <span class="bp">self</span><span class="o">.</span><span class="n">python</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">python</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span>
+</span><span id="line-461">        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span>
+</span><span id="line-462">        <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">init</span> <span class="ow">or</span> <span class="p">{})</span>
+</span><span id="line-463">        <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">env</span> <span class="ow">or</span> <span class="p">{})</span>
+</span><span id="line-464">        <span class="bp">self</span><span class="o">.</span><span class="n">cwd</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">cwd</span><span class="p">)</span> <span class="k">if</span> <span class="n">cwd</span> <span class="k">else</span> <span class="kc">None</span>
+</span><span id="line-465">        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="o">=</span> <span class="n">stderr</span> <span class="ow">is</span> <span class="n">_TEMP_LOG</span>
+</span><span id="line-466">        <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="ow">or</span> <span class="n">stderr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="n">stderr</span><span class="p">)</span>
+</span><span id="line-467">        <span class="bp">self</span><span class="o">.</span><span class="n">_spawn</span> <span class="o">=</span> <span class="n">spawn</span>
+</span><span id="line-468">        <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-469">        <span class="c1"># re-entrant: a failed load or a dead process stops the worker inside call()</span>
+</span><span id="line-470">        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span>
+</span><span id="line-471">        <span class="n">_LIVE_WORKERS</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</span><span id="line-472">
+</span><span id="line-473">    <span class="nd">@property</span>
+</span><span id="line-474">    <span class="k">def</span><span class="w"> </span><span class="nf">running</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-475"><span class="w">        </span><span class="sd">"""Whether the process is running."""</span>
+</span><span id="line-476">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span>
+</span><span id="line-477">
+</span><span id="line-478">    <span class="k">def</span><span class="w"> </span><span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="line-479"><span class="w">        </span><span class="sd">"""Run ``op(state, **request)`` in the worker (starting it on first use).</span>
+</span><span id="line-480">
+</span><span id="line-481"><span class="sd">        Raises:</span>
+</span><span id="line-482"><span class="sd">            WorkerError: The operation failed in the worker, or the worker died.</span>
+</span><span id="line-483"><span class="sd">            TypeError, ValueError: ``request`` is not JSON-serialisable (the worker is</span>
+</span><span id="line-484"><span class="sd">                left as it was).</span>
+</span><span id="line-485"><span class="sd">        """</span>
+</span><span id="line-486">        <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"op"</span><span class="p">:</span> <span class="n">op</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">})</span>
+</span><span id="line-487">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+</span><span id="line-488">            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+</span><span id="line-489">                <span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">()</span>
+</span><span id="line-490">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+</span><span id="line-491">
+</span><span id="line-492">    <span class="k">def</span><span class="w"> </span><span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-493">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()):</span>
+</span><span id="line-494">            <span class="n">fd</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-"</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">".log"</span><span class="p">)</span>
+</span><span id="line-495">            <span class="n">os</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">)</span>
+</span><span id="line-496">            <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="line-497">        <span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">python</span><span class="p">,</span> <span class="s2">"-u"</span><span class="p">,</span> <span class="s2">"-c"</span><span class="p">,</span> <span class="n">_BOOTSTRAP</span><span class="p">,</span> <span class="vm">__file__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">]</span>
+</span><span id="line-498">        <span class="kn">from</span><span class="w"> </span><span class="nn">ps.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">NEW_PROCESS_GROUP</span>
+</span><span id="line-499">
+</span><span id="line-500">        <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+</span><span id="line-501">            <span class="o">**</span><span class="n">NEW_PROCESS_GROUP</span><span class="p">,</span>
+</span><span id="line-502">            <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="line-503">            <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="line-504">            <span class="n">cwd</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cwd</span> <span class="ow">or</span> <span class="n">_neutral_dir</span><span class="p">(),</span>
+</span><span id="line-505">            <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">clean_environ</span><span class="p">(),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="p">},</span>
+</span><span id="line-506">            <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="line-507">            <span class="n">bufsize</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="line-508">        <span class="p">)</span>
+</span><span id="line-509">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-510">            <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spawn</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+</span><span id="line-511">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-512">            <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-513">            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="p">,</span> <span class="s2">"ab"</span><span class="p">)</span> <span class="k">as</span> <span class="n">log</span><span class="p">:</span>
+</span><span id="line-514">                <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spawn</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">log</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+</span><span id="line-515">        <span class="bp">self</span><span class="o">.</span><span class="n">_send</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"op"</span><span class="p">:</span> <span class="s2">"load"</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">}),</span> <span class="n">loading</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-516">
+</span><span id="line-517">    <span class="k">def</span><span class="w"> </span><span class="nf">_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">loading</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="line-518">        <span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span>
+</span><span id="line-519">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-520">            <span class="n">reply</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exchange</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+</span><span id="line-521">        <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+</span><span id="line-522">            <span class="c1"># An interrupted or garbled exchange would leave a reply in the pipe that the</span>
+</span><span id="line-523">            <span class="c1"># next call would read as its own: stop the worker (it restarts lazily).</span>
+</span><span id="line-524">            <span class="bp">self</span><span class="o">.</span><span class="n">_stop</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-525">            <span class="k">raise</span>
+</span><span id="line-526">        <span class="k">if</span> <span class="ow">not</span> <span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ok"</span><span class="p">):</span>
+</span><span id="line-527">            <span class="k">if</span> <span class="n">loading</span><span class="p">:</span>
+</span><span id="line-528">                <span class="bp">self</span><span class="o">.</span><span class="n">_stop</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>  <span class="c1"># a model that failed to load must not serve calls</span>
+</span><span id="line-529">            <span class="n">trace</span> <span class="o">=</span> <span class="p">(</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"traceback"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)[</span><span class="o">-</span><span class="n">LOG_TAIL_CHARS</span><span class="p">:]</span>
+</span><span id="line-530">            <span class="k">raise</span> <span class="n">WorkerError</span><span class="p">(</span>
+</span><span id="line-531">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> worker failed: </span><span class="si">{</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'error'</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">trace</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-532">            <span class="p">)</span>
+</span><span id="line-533">        <span class="k">return</span> <span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"result"</span><span class="p">)</span>
+</span><span id="line-534">
+</span><span id="line-535">    <span class="k">def</span><span class="w"> </span><span class="nf">_exchange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-536">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-537">            <span class="n">proc</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-538">            <span class="n">proc</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</span><span id="line-539">            <span class="n">line</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+</span><span id="line-540">        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>  <span class="c1"># a broken or closed pipe</span>
+</span><span id="line-541">            <span class="n">line</span> <span class="o">=</span> <span class="s2">""</span>
+</span><span id="line-542">        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+</span><span id="line-543">            <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_died</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-544">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-545">            <span class="n">reply</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+</span><span id="line-546">        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+</span><span id="line-547">            <span class="n">reply</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-548">        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+</span><span id="line-549">            <span class="k">raise</span> <span class="n">WorkerError</span><span class="p">(</span>
+</span><span id="line-550">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> worker sent a line that is not a reply: </span><span class="si">{</span><span class="n">line</span><span class="p">[:</span><span class="mi">200</span><span class="p">]</span><span class="si">!r}</span><span class="s2">"</span>
+</span><span id="line-551">            <span class="p">)</span>
+</span><span id="line-552">        <span class="k">return</span> <span class="n">reply</span>
+</span><span id="line-553">
+</span><span id="line-554">    <span class="k">def</span><span class="w"> </span><span class="nf">_died</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkerError</span><span class="p">:</span>
+</span><span id="line-555">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-556">            <span class="n">code</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">DFLT_CLOSE_TIMEOUT</span><span class="p">)</span>
+</span><span id="line-557">        <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+</span><span id="line-558">            <span class="n">code</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-559">        <span class="n">where</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-560">            <span class="sa">f</span><span class="s2">"log: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="si">}</span><span class="s2">):</span><span class="se">\n</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">log_tail</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-561">            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span>
+</span><span id="line-562">            <span class="k">else</span> <span class="s2">"its stderr went to this process's)"</span>
+</span><span id="line-563">        <span class="p">)</span>
+</span><span id="line-564">        <span class="k">return</span> <span class="n">WorkerError</span><span class="p">(</span>
+</span><span id="line-565">            <span class="sa">f</span><span class="s2">"The </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> worker exited (code </span><span class="si">{</span><span class="n">code</span><span class="si">}</span><span class="s2">) before answering (</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-566">        <span class="p">)</span>
+</span><span id="line-567">
+</span><span id="line-568">    <span class="k">def</span><span class="w"> </span><span class="nf">log_tail</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">LOG_TAIL_CHARS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-569"><span class="w">        </span><span class="sd">"""The last ``chars`` characters of the process's log ("" without a log file)."""</span>
+</span><span id="line-570">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-571">            <span class="k">return</span> <span class="s2">""</span>
+</span><span id="line-572">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-573">            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">log</span><span class="p">:</span>
+</span><span id="line-574">                <span class="n">log</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_END</span><span class="p">)</span>
+</span><span id="line-575">                <span class="n">log</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span>
+</span><span id="line-576">                    <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">log</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">chars</span><span class="p">)</span>
+</span><span id="line-577">                <span class="p">)</span>  <span class="c1"># utf-8: at most 4 bytes a char</span>
+</span><span id="line-578">                <span class="k">return</span> <span class="n">log</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)[</span><span class="o">-</span><span class="n">chars</span><span class="p">:]</span>
+</span><span id="line-579">        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+</span><span id="line-580">            <span class="k">return</span> <span class="s2">""</span>
+</span><span id="line-581">
+</span><span id="line-582">    <span class="k">def</span><span class="w"> </span><span class="nf">_stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-583"><span class="w">        </span><span class="sd">"""Kill ``proc`` if it is still this worker's process (keeps the log)."""</span>
+</span><span id="line-584">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="ow">is</span> <span class="n">proc</span><span class="p">:</span>
+</span><span id="line-585">            <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-586">        <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-587">
+</span><span id="line-588">    <span class="k">def</span><span class="w"> </span><span class="nf">_remove_temp_log</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-589">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-590">            <span class="k">try</span><span class="p">:</span>
+</span><span id="line-591">                <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+</span><span id="line-592">            <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+</span><span id="line-593">                <span class="k">pass</span>
+</span><span id="line-594">            <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-595">
+</span><span id="line-596">    <span class="k">def</span><span class="w"> </span><span class="nf">kill</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-597"><span class="w">        </span><span class="sd">"""Kill the process (and what it spawned) now, without waiting for a call in flight.</span>
+</span><span id="line-598">
+</span><span id="line-599"><span class="sd">        That call then fails. The reply pipe is left to its reader to close.</span>
+</span><span id="line-600"><span class="sd">        """</span>
+</span><span id="line-601">        <span class="n">proc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="line-602">        <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">close_stdout</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="line-603">        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_temp_log</span><span class="p">()</span>
+</span><span id="line-604">
+</span><span id="line-605">    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_CLOSE_TIMEOUT</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-606"><span class="w">        </span><span class="sd">"""Stop the process: close its stdin (ending the serve loop), kill it after ``timeout``.</span>
+</span><span id="line-607">
+</span><span id="line-608"><span class="sd">        From another thread, this waits for a call in flight to finish first.</span>
+</span><span id="line-609"><span class="sd">        """</span>
+</span><span id="line-610">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+</span><span id="line-611">            <span class="n">proc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="line-612">        <span class="k">if</span> <span class="n">proc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-613">            <span class="k">try</span><span class="p">:</span>
+</span><span id="line-614">                <span class="n">proc</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-615">                <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+</span><span id="line-616">            <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">):</span>
+</span><span id="line-617">                <span class="k">pass</span>
+</span><span id="line-618">            <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-619">        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_temp_log</span><span class="p">()</span>
+</span><span id="line-620">
+</span><span id="line-621">    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="line-622">        <span class="k">return</span> <span class="bp">self</span>
+</span><span id="line-623">
+</span><span id="line-624">    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">exc</span><span class="p">):</span>
+</span><span id="line-625">        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-626">
+</span><span id="line-627">    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="line-628">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-629">            <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-630">        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - nothing to report to at collection time</span>
+</span><span id="line-631">            <span class="k">pass</span>
+</span><span id="line-632">
+</span><span id="line-633">
+</span><span id="line-634"><span class="k">def</span><span class="w"> </span><span class="nf">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">close_stdout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-635"><span class="w">    </span><span class="sd">"""Kill ``proc`` and its process group, collect it, and close our ends of its pipes.</span>
+</span><span id="line-636">
+</span><span id="line-637"><span class="sd">    The group is killed even when ``proc`` already exited, since what it spawned may</span>
+</span><span id="line-638"><span class="sd">    live on. ``close_stdout=False`` leaves the reply pipe alone: closing it while</span>
+</span><span id="line-639"><span class="sd">    another thread reads it would block until every writer is gone.</span>
+</span><span id="line-640"><span class="sd">    """</span>
+</span><span id="line-641">    <span class="k">if</span> <span class="n">proc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-642">        <span class="k">return</span>
+</span><span id="line-643">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">):</span>
+</span><span id="line-644">        <span class="kn">from</span><span class="w"> </span><span class="nn">ps.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">kill_process_tree</span>
+</span><span id="line-645">
+</span><span id="line-646">        <span class="n">kill_process_tree</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-647">    <span class="k">elif</span> <span class="n">proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># a spawn= stand-in: no group to kill</span>
+</span><span id="line-648">        <span class="n">proc</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+</span><span id="line-649">    <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+</span><span id="line-650">    <span class="n">streams</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="s2">"stdin"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)]</span>
+</span><span id="line-651">    <span class="k">if</span> <span class="n">close_stdout</span><span class="p">:</span>
+</span><span id="line-652">        <span class="n">streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="s2">"stdout"</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+</span><span id="line-653">    <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">streams</span><span class="p">:</span>
+</span><span id="line-654">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-655">            <span class="n">stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-656">        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - already closed, or a fake without close</span>
+</span><span id="line-657">            <span class="k">pass</span>
+</span><span id="line-658">
+</span><span id="line-659">
+</span><span id="line-660"><span class="c1"># --------------------------------------------------------------------------------------</span>
+</span><span id="line-661"><span class="c1"># The environment side</span>
+</span><span id="line-662">
+</span><span id="line-663">
+</span><span id="line-664"><span class="k">def</span><span class="w"> </span><span class="nf">_protect_stdout</span><span class="p">():</span>
+</span><span id="line-665"><span class="w">    </span><span class="sd">"""Keep the real stdout for replies; send everything else written to fd 1 to stderr."""</span>
+</span><span id="line-666">    <span class="n">replies</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">dup</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">buffering</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="line-667">    <span class="n">os</span><span class="o">.</span><span class="n">dup2</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># C-level prints to fd 1 now land in stderr too</span>
+</span><span id="line-668">    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span>
+</span><span id="line-669">    <span class="k">return</span> <span class="n">replies</span>
+</span><span id="line-670">
+</span><span id="line-671">
+</span><span id="line-672"><span class="k">def</span><span class="w"> </span><span class="nf">_adapter_handler</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">dict</span><span class="p">],</span> <span class="n">Any</span><span class="p">]:</span>
+</span><span id="line-673">    <span class="n">state</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-674">
+</span><span id="line-675">    <span class="k">def</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="line-676">        <span class="k">nonlocal</span> <span class="n">state</span>
+</span><span id="line-677">        <span class="n">op</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"op"</span><span class="p">)</span>
+</span><span id="line-678">        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">"load"</span><span class="p">:</span>
+</span><span id="line-679">            <span class="n">state</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="o">**</span><span class="n">request</span><span class="p">)</span>
+</span><span id="line-680">            <span class="k">return</span> <span class="p">{}</span>
+</span><span id="line-681">        <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">adapter</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-682">        <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+</span><span id="line-683">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown operation </span><span class="si">{</span><span class="n">op</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-684">        <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">)</span>
+</span><span id="line-685">        <span class="k">return</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">result</span>
+</span><span id="line-686">
+</span><span id="line-687">    <span class="k">return</span> <span class="n">handle</span>
+</span><span id="line-688">
+</span><span id="line-689">
+</span><span id="line-690"><span class="k">def</span><span class="w"> </span><span class="nf">serve_adapter</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-691"><span class="w">    </span><span class="sd">"""Load the adapter file at ``path`` and answer JSON requests on stdin (what a :class:`Worker` runs).</span>
+</span><span id="line-692">
+</span><span id="line-693"><span class="sd">    stdout is protected before the adapter is loaded, so what it prints on import goes</span>
+</span><span id="line-694"><span class="sd">    to stderr too; the adapter's folder is put first on ``sys.path``.</span>
+</span><span id="line-695"><span class="sd">    """</span>
+</span><span id="line-696">    <span class="n">replies</span> <span class="o">=</span> <span class="n">_protect_stdout</span><span class="p">()</span>
+</span><span id="line-697">    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+</span><span id="line-698">    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+</span><span id="line-699">    <span class="n">spec</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">spec_from_file_location</span><span class="p">(</span><span class="s2">"ps_isolated_adapter"</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+</span><span id="line-700">    <span class="n">adapter</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">module_from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+</span><span id="line-701">    <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">adapter</span>  <span class="c1"># what dataclasses and pickle look up</span>
+</span><span id="line-702">    <span class="n">spec</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">exec_module</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span>
+</span><span id="line-703">    <span class="n">handle</span> <span class="o">=</span> <span class="n">_adapter_handler</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span>
+</span><span id="line-704">    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">:</span>
+</span><span id="line-705">        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+</span><span id="line-706">            <span class="k">continue</span>
+</span><span id="line-707">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-708">            <span class="n">reply</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"ok"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"result"</span><span class="p">:</span> <span class="n">handle</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">))}</span>
+</span><span id="line-709">        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># report every failure to the client, keep serving</span>
+</span><span id="line-710">            <span class="n">reply</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-711">                <span class="s2">"ok"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="line-712">                <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="line-713">                <span class="s2">"traceback"</span><span class="p">:</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),</span>
+</span><span id="line-714">            <span class="p">}</span>
+</span><span id="line-715">        <span class="n">replies</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">reply</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-716">        <span class="n">replies</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</span><span id="line-717">
+</span><span id="line-718">
+</span><span id="line-719"><span class="c1"># --------------------------------------------------------------------------------------</span>
+</span><span id="line-720"><span class="c1"># One-shot</span>
+</span><span id="line-721">
+</span><span id="line-722">
+</span><span id="line-723"><span class="k">def</span><span class="w"> </span><span class="nf">run_process</span><span class="p">(</span>
+</span><span id="line-724">    <span class="n">cmd</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span>
+</span><span id="line-725">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-726">    <span class="n">cwd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PathLike</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-727">    <span class="n">env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-728">    <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-729"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-730"><span class="w">    </span><span class="sd">"""Run ``cmd`` once; return ``(returncode, output)``, stdout and stderr interleaved.</span>
+</span><span id="line-731">
+</span><span id="line-732"><span class="sd">    ``env`` is added to the host's environment (minus :data:`HOST_ONLY_VARS`); stdin is</span>
+</span><span id="line-733"><span class="sd">    closed, so a program prompting for input fails instead of waiting. Past ``timeout``</span>
+</span><span id="line-734"><span class="sd">    seconds the process and everything it spawned are killed, and</span>
+</span><span id="line-735"><span class="sd">    :class:`subprocess.TimeoutExpired` is raised. The process leads its own process</span>
+</span><span id="line-736"><span class="sd">    group for that, so on POSIX it does not get the terminal's Ctrl-C or SIGHUP, and</span>
+</span><span id="line-737"><span class="sd">    it outlives a host that is killed outright.</span>
+</span><span id="line-738">
+</span><span id="line-739"><span class="sd">    &gt;&gt;&gt; import sys</span>
+</span><span id="line-740"><span class="sd">    &gt;&gt;&gt; run_process([sys.executable, "-c", "print('hi')"])</span>
+</span><span id="line-741"><span class="sd">    (0, 'hi\\n')</span>
+</span><span id="line-742"><span class="sd">    """</span>
+</span><span id="line-743">    <span class="kn">from</span><span class="w"> </span><span class="nn">ps.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">NEW_PROCESS_GROUP</span><span class="p">,</span> <span class="n">_kill_and_reap</span><span class="p">,</span> <span class="n">kill_process_tree</span>
+</span><span id="line-744">
+</span><span id="line-745">    <span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cmd</span><span class="p">]</span>
+</span><span id="line-746">    <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+</span><span id="line-747">        <span class="n">argv</span><span class="p">,</span>
+</span><span id="line-748">        <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">,</span>
+</span><span id="line-749">        <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">clean_environ</span><span class="p">(),</span> <span class="o">**</span><span class="p">(</span><span class="n">env</span> <span class="ow">or</span> <span class="p">{})},</span>
+</span><span id="line-750">        <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span>
+</span><span id="line-751">        <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="line-752">        <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span>
+</span><span id="line-753">        <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="line-754">        <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span>
+</span><span id="line-755">        <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">,</span>
+</span><span id="line-756">        <span class="o">**</span><span class="n">NEW_PROCESS_GROUP</span><span class="p">,</span>
+</span><span id="line-757">    <span class="p">)</span>
+</span><span id="line-758">    <span class="k">try</span><span class="p">:</span>
+</span><span id="line-759">        <span class="n">output</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+</span><span id="line-760">    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+</span><span id="line-761">        <span class="n">_kill_and_reap</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">kill</span><span class="o">=</span><span class="n">kill_process_tree</span><span class="p">)</span>
+</span><span id="line-762">        <span class="k">raise</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+</span><span id="line-763">    <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+</span><span id="line-764">        <span class="n">_kill_and_reap</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">kill</span><span class="o">=</span><span class="n">kill_process_tree</span><span class="p">)</span>
+</span><span id="line-765">        <span class="k">raise</span>
+</span><span id="line-766">    <span class="k">return</span> <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="p">,</span> <span class="n">output</span>
+</span></code></pre></div>
+    </div></div>
+          </main>
+        </div>
+      </div><footer class="py-6 border-t border-border md:py-0">
+    <div class="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
+      <div class="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
+        <p class="text-sm leading-loose text-center text-muted-foreground md:text-left"></p>
+</div>
+</div>
+</footer>
+    </div>
+    
+    <script src="../../_static/documentation_options.js?v=6eb1e6b8"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=fd10adb8"></script>
+    <script defer="defer" src="../../_static/theme.js?v=49cc6205"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+
+
+
+
+
+const initStyles = () => {
+    const defaultStyle = document.createElement('style');
+    defaultStyle.textContent = "pre.mermaid {\n    /* Same as .mermaid-container > pre */\n    display: block;\n    width: 100%;\n}\n\npre.mermaid > svg {\n    /* Same as .mermaid-container > pre > svg */\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}";
+    document.head.appendChild(defaultStyle);
+
+    const fullscreenStyle = document.createElement('style');
+    fullscreenStyle.textContent = ".mermaid-container {\n    position: relative;\n    display: flex;\n    flex-direction: row;\n    width: 100%;\n}\n\n.mermaid-container > pre {\n    display: block;\n    width: 100%;\n}\n\n.mermaid-container > pre > svg {\n    height: 500px;\n    width: 100%;\n    max-width: 100% !important;\n}\n\n.mermaid-fullscreen-btn {\n    position: absolute;\n    width: 28px;\n    height: 28px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.3);\n    border-radius: 4px;\n    cursor: pointer;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    transition: all 0.2s;\n    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);\n    font-size: 14px;\n    line-height: 1;\n    padding: 0;\n    color: #333;\n}\n\n.mermaid-fullscreen-btn:hover {\n    opacity: 100% !important;\n    background: rgba(255, 255, 255, 1);\n    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-btn.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.3);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-btn.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal {\n    display: none;\n    position: fixed !important;\n    top: 0 !important;\n    left: 0 !important;\n    width: 95vw;\n    height: 100vh;\n    background: rgba(255, 255, 255, 0.98);\n    z-index: 9999;\n    padding: 20px;\n    overflow: auto;\n}\n\n.mermaid-fullscreen-modal.dark-theme {\n    background: rgba(0, 0, 0, 0.98);\n}\n\n.mermaid-fullscreen-modal.active {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen {\n    position: relative;\n    width: 95vw;\n    height: 90vh;\n    max-width: 95vw;\n    max-height: 90vh;\n    background: white;\n    border-radius: 8px;\n    padding: 20px;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);\n    overflow: auto;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen.dark-theme {\n    background: #1a1a1a;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);\n}\n\n.mermaid-container-fullscreen pre.mermaid {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n\n.mermaid-container-fullscreen .mermaid svg {\n    height: 100% !important;\n    width: 100% !important;\n    cursor: grab;\n}\n\n.mermaid-fullscreen-close {\n    position: fixed !important;\n    top: 20px !important;\n    right: 20px !important;\n    width: 40px;\n    height: 40px;\n    background: rgba(255, 255, 255, 0.95);\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    border-radius: 50%;\n    cursor: pointer;\n    z-index: 10000;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);\n    transition: all 0.2s;\n    font-size: 24px;\n    line-height: 1;\n    color: #333;\n}\n\n.mermaid-fullscreen-close:hover {\n    background: white;\n    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);\n    transform: scale(1.1);\n}\n\n.mermaid-fullscreen-close.dark-theme {\n    background: rgba(50, 50, 50, 0.95);\n    border: 1px solid rgba(255, 255, 255, 0.2);\n    color: #e0e0e0;\n}\n\n.mermaid-fullscreen-close.dark-theme:hover {\n    background: rgba(60, 60, 60, 1);\n    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);\n}\n\n.mermaid-fullscreen-modal .mermaid-fullscreen-btn {\n    display: none !important;\n}";
+    document.head.appendChild(fullscreenStyle);
+}
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    // We use a set of heuristics:
+    // 1. Check for common dark mode classes or attributes
+    // 2. Check computed background color brightness
+    if (document.documentElement.classList.contains('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.classList.contains('dark') ||
+        document.body.getAttribute('data-theme') === 'dark') {
+        // console.log("Dark theme detected via class/attribute");
+        return true;
+    }
+    if (document.documentElement.classList.contains('light') ||
+        document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.body.classList.contains('light') ||
+        document.body.getAttribute('data-theme') === 'light') {
+        // console.log("Light theme detected via class/attribute");
+        return false;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // console.log("Dark theme detected via prefers-color-scheme");
+        return true;
+    }
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        // console.log("Background color brightness:", brightness);
+        return brightness < 128;
+    }
+    // console.log("No dark or light theme detected, defaulting to light theme");
+    return false;
+};
+
+let darkTheme = isDarkTheme();
+let modal = null;
+let modalContent = null;
+let previousScrollOffset = [window.scrollX, window.scrollY];
+let _lazyObserver = null;
+let _renderQueue = Promise.resolve();
+let closeModal = () => {};
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal?.classList.contains('active')) {
+        closeModal();
+    }
+});
+
+// Apply d3 zoom to each SVG. Idempotent: an SVG already wrapped is skipped,
+// so this is safe to call both for the initial batch and for diagrams that
+// render lazily once they become visible.
+const addZoomToSvgs = (svgs) => {
+    svgs.each(function() {
+        if (this.getAttribute('data-zoom-applied') === 'true') return;
+        var svg = d3.select(this);
+        svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+        var inner = svg.select("g");
+        var zoom = d3.zoom().on("zoom", function(event) {
+            inner.attr("transform", event.transform);
+        });
+        svg.call(zoom);
+        this.setAttribute('data-zoom-applied', 'true');
+    });
+};
+
+const runMermaid = async (rerun) => {
+    console.log("Running mermaid diagrams, rerun =", rerun);
+    // clear all existing mermaid charts
+    let all_mermaids = document.querySelectorAll(".mermaid");
+
+    if (rerun) {
+        // Disconnect any previous lazy rendering observer
+        if (_lazyObserver) {
+            _lazyObserver.disconnect();
+            _lazyObserver = null;
+        }
+
+        all_mermaids.forEach((el) => {
+            el.removeAttribute('data-mermaid-deferred');
+            el.removeAttribute('data-mermaid-render-failed');
+            if(!el.hasAttribute("data-original-code")) {
+                // store original code
+                // console.log(`Storing original code for first run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+            if(el.getAttribute("data-processed") === "true") {
+                // remove and restore original
+                el.removeAttribute("data-processed");
+                // console.log(`Restoring original code for re-run: `, el.getAttribute('data-original-code'));
+                el.innerHTML = el.getAttribute('data-original-code');
+            } else {
+                // store original code
+                // console.log(`Storing original code for re-run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+        });
+
+        // Separate visible and hidden elements. Mermaid's layout engine measures
+        // text dimensions via the DOM, which fails for elements hidden by a parent
+        // (e.g., Reveal.js non-active slides, sphinx-design unopened tabs),
+        // producing broken SVGs. Render visible elements now, defer hidden ones.
+        const visible = [];
+        const hidden = [];
+        all_mermaids.forEach((el) => {
+            // offsetParent is null for display:none ancestors.
+            // getClientRects().length > 0 catches position:fixed elements
+            // (which also have null offsetParent but are still visible).
+            if (el.offsetParent !== null || el.getClientRects().length > 0) {
+                visible.push(el);
+            } else {
+                hidden.push(el);
+                el.setAttribute('data-mermaid-deferred', 'true');
+            }
+        });
+
+        if (visible.length > 0) {
+            try {
+                await mermaid.run({ nodes: visible });
+            } catch (e) {
+                console.error("Mermaid rendering failed:", e);
+            }
+        }
+
+        // Lazily render hidden elements when they become visible.
+        // Uses a promise chain (_renderQueue) to serialize rendering,
+        // since IntersectionObserver may report multiple entries at once
+        // and mermaid.run() is not safe to call concurrently.
+        if (hidden.length > 0) {
+            if (typeof IntersectionObserver === 'undefined') {
+                console.warn("IntersectionObserver not available; hidden mermaid diagrams will not render.");
+            } else {
+                _renderQueue = Promise.resolve();
+                _lazyObserver = new IntersectionObserver((entries) => {
+                    for (const entry of entries) {
+                        if (entry.isIntersecting && entry.target.getAttribute("data-processed") !== "true") {
+                            _lazyObserver.unobserve(entry.target);
+                            const el = entry.target;
+                            _renderQueue = _renderQueue.then(async () => {
+                                try {
+                                    await mermaid.run({ nodes: [el] });
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    // Apply zoom to the now-rendered diagram, matching
+                                    // the decoration visible diagrams receive.
+                                    if (false) {
+                                        addZoomToSvgs(d3.selectAll("").select(function() {
+                                            return this.querySelector("svg");
+                                        }));
+                                    }
+                                } catch (e) {
+                                    console.error("Mermaid deferred rendering failed:", e);
+                                    el.removeAttribute('data-mermaid-deferred');
+                                    el.setAttribute('data-mermaid-render-failed', 'true');
+                                }
+                            });
+                        }
+                    }
+                });
+                hidden.forEach((el) => _lazyObserver.observe(el));
+            }
+        }
+    }
+
+    all_mermaids = document.querySelectorAll(".mermaid");
+    // Exclude deferred (hidden) and render-failed elements from completion checks
+    const mermaids_active = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])");
+    const mermaids_processed = document.querySelectorAll(".mermaid:not([data-mermaid-deferred]):not([data-mermaid-render-failed])[data-processed='true']");
+
+    if (false) {
+        const mermaids_to_add_zoom = 0 === -1 ? mermaids_active.length : 0;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("").select(function() {
+                return this.querySelector("svg");
+            });
+            // Wait until every active (visible) diagram has rendered. Deferred
+            // diagrams are excluded, so a fixed d3_node_count that counts a
+            // hidden diagram no longer loops forever waiting for its SVG.
+            if(mermaids_active.length !== mermaids_processed.length) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            }
+            addZoomToSvgs(svgs);
+        }
+    } else if(mermaids_active.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(() => runMermaid(false), 200);
+        return;
+    }
+
+    // Stop here if not adding fullscreen capability
+    if (!true) return;
+
+    if (modal !== null ) {
+        // Destroy existing modal
+        modal.remove();
+        modal = null;
+        modalContent = null;
+    }
+
+    modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            // Already processed, adjust button class if needed
+            const existingBtn = mermaidDiv.parentNode.querySelector('.mermaid-fullscreen-btn');
+            if (existingBtn) {
+                existingBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+            }
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = "\u26f6";
+        fullscreenBtn.style.opacity = "50%";
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scrollX, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.display = 'block';
+
+                if (false) {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        container.appendChild(fullscreenBtn);
+    });
+};
+
+
+
+const load = async () => {
+    initStyles();
+
+
+    await runMermaid(true);
+
+    const reRunIfThemeChanges = async () => {
+        const newDarkTheme = isDarkTheme();
+        if (newDarkTheme !== darkTheme) {
+            darkTheme = newDarkTheme;
+            console.log("Theme change detected, re-running mermaid with", darkTheme ? "dark" : "default", "theme");
+            await mermaid.initialize(
+                {...{"startOnLoad": false},
+                ...{ darkMode: darkTheme, theme: darkTheme ? "dark" : "default" },
+                }
+            );
+            await runMermaid(true);
+        }
+    };
+
+    // Update theme classes when theme changes
+    const themeObserver = new MutationObserver(reRunIfThemeChanges);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    themeObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+};
+
+
+
+
+
+console.log("Initializing mermaid with", darkTheme ? "dark" : "default", "theme");
+mermaid.initialize(
+    {...{"startOnLoad": false},
+    ...{ darkMode: darkTheme, theme: darkTheme ? "dark" : "default" },
+    }
+);
+
+window.addEventListener("load", load);
+window.runMermaid = runMermaid;</script>
+    
+</body>
+
+</html>

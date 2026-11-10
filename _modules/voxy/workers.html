@@ -193,16 +193,16 @@
 <span></span><code><span id="line-1"><span class="sd">"""</span>
 </span><span id="line-2"><span class="sd">Backend adapters run by ``voxy.worker`` inside each backend's own environment.</span>
 </span><span id="line-3">
-</span><span id="line-4"><span class="sd">``serve.py`` is the entry point; each ``*_adapter.py`` wraps one model library</span>
-</span><span id="line-5"><span class="sd">with ``load(**init)`` and ``synthesize(state, *, text, ref_audio, ref_text,</span>
-</span><span id="line-6"><span class="sd">out_path, **params)``. These files are executed by other interpreters, so they</span>
-</span><span id="line-7"><span class="sd">import nothing from voxy.</span>
-</span><span id="line-8"><span class="sd">"""</span>
-</span><span id="line-9">
-</span><span id="line-10"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="line-11">
-</span><span id="line-12"><span class="n">WORKERS_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
-</span><span id="line-13"><span class="n">SERVE_SCRIPT</span> <span class="o">=</span> <span class="n">WORKERS_DIR</span> <span class="o">/</span> <span class="s2">"serve.py"</span>
+</span><span id="line-4"><span class="sd">Each ``*_adapter.py`` wraps one model library with ``load(**init)`` and operations</span>
+</span><span id="line-5"><span class="sd">such as ``synthesize(state, *, text, ref_audio, ref_text, out_path, **params)``;</span>
+</span><span id="line-6"><span class="sd">``ps.isolated.Worker`` serves it. These files are executed by other interpreters,</span>
+</span><span id="line-7"><span class="sd">so they import nothing from voxy; this folder is on their ``sys.path``, so they</span>
+</span><span id="line-8"><span class="sd">share helpers by plain import (``from _worker_threads import cap_torch_threads``).</span>
+</span><span id="line-9"><span class="sd">"""</span>
+</span><span id="line-10">
+</span><span id="line-11"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="line-12">
+</span><span id="line-13"><span class="n">WORKERS_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
 </span><span id="line-14">
 </span><span id="line-15">
 <div class="viewcode-block" id="adapter_path">
@@ -228,7 +228,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=86ab457a"></script>
+    <script src="../../_static/documentation_options.js?v=6eb1e6b8"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

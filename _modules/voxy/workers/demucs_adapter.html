@@ -213,99 +213,103 @@
 </span><span id="line-18">
 </span><span id="line-19">
 </span><span id="line-20"><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">"htdemucs_ft"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">):</span>
-</span><span id="line-21">    <span class="kn">from</span><span class="w"> </span><span class="nn">demucs.pretrained</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model</span>
+</span><span id="line-21">    <span class="kn">from</span><span class="w"> </span><span class="nn">_worker_threads</span><span class="w"> </span><span class="kn">import</span> <span class="n">cap_torch_threads</span>
 </span><span id="line-22">
-</span><span id="line-23">    <span class="n">separator</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-</span><span id="line-24">    <span class="n">separator</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
-</span><span id="line-25">    <span class="k">return</span> <span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="n">separator</span><span class="p">,</span> <span class="s2">"model_name"</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span> <span class="s2">"device"</span><span class="p">:</span> <span class="n">device</span><span class="p">}</span>
+</span><span id="line-23">    <span class="n">cap_torch_threads</span><span class="p">()</span>
+</span><span id="line-24">
+</span><span id="line-25">    <span class="kn">from</span><span class="w"> </span><span class="nn">demucs.pretrained</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model</span>
 </span><span id="line-26">
-</span><span id="line-27">
+</span><span id="line-27">    <span class="n">separator</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</span><span id="line-28">    <span class="n">separator</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+</span><span id="line-29">    <span class="k">return</span> <span class="p">{</span><span class="s2">"model"</span><span class="p">:</span> <span class="n">separator</span><span class="p">,</span> <span class="s2">"model_name"</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span> <span class="s2">"device"</span><span class="p">:</span> <span class="n">device</span><span class="p">}</span>
+</span><span id="line-30">
+</span><span id="line-31">
 <div class="viewcode-block" id="stem_model">
 <a class="viewcode-back" href="../../../_autosummary/voxy.workers.demucs_adapter.html#voxy.workers.demucs_adapter.stem_model">[docs]</a>
-</span><span id="line-28"><span class="k">def</span><span class="w"> </span><span class="nf">stem_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
-</span><span id="line-29"><span class="w">    </span><span class="sd">"""The one sub-model of a bag that alone makes source ``index``, else ``model``.</span>
-</span><span id="line-30">
-</span><span id="line-31"><span class="sd">    A bag weighs each sub-model's estimate of each source; when a single sub-model</span>
-</span><span id="line-32"><span class="sd">    has a non-zero weight for a source, the bag's estimate of it is that sub-model's.</span>
-</span><span id="line-33"><span class="sd">    """</span>
-</span><span id="line-34">    <span class="n">weights</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"weights"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-35">    <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-36">        <span class="k">return</span> <span class="n">model</span>
-</span><span id="line-37">    <span class="n">makers</span> <span class="o">=</span> <span class="p">[</span><span class="n">sub</span> <span class="k">for</span> <span class="n">sub</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span> <span class="k">if</span> <span class="n">w</span><span class="p">[</span><span class="n">index</span><span class="p">]]</span>
-</span><span id="line-38">    <span class="k">return</span> <span class="n">makers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">makers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">model</span></div>
+</span><span id="line-32"><span class="k">def</span><span class="w"> </span><span class="nf">stem_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+</span><span id="line-33"><span class="w">    </span><span class="sd">"""The one sub-model of a bag that alone makes source ``index``, else ``model``.</span>
+</span><span id="line-34">
+</span><span id="line-35"><span class="sd">    A bag weighs each sub-model's estimate of each source; when a single sub-model</span>
+</span><span id="line-36"><span class="sd">    has a non-zero weight for a source, the bag's estimate of it is that sub-model's.</span>
+</span><span id="line-37"><span class="sd">    """</span>
+</span><span id="line-38">    <span class="n">weights</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"weights"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-39">    <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-40">        <span class="k">return</span> <span class="n">model</span>
+</span><span id="line-41">    <span class="n">makers</span> <span class="o">=</span> <span class="p">[</span><span class="n">sub</span> <span class="k">for</span> <span class="n">sub</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span> <span class="k">if</span> <span class="n">w</span><span class="p">[</span><span class="n">index</span><span class="p">]]</span>
+</span><span id="line-42">    <span class="k">return</span> <span class="n">makers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">makers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">model</span></div>
 
-</span><span id="line-39">
-</span><span id="line-40">
+</span><span id="line-43">
+</span><span id="line-44">
 <div class="viewcode-block" id="separate">
 <a class="viewcode-back" href="../../../_autosummary/voxy.workers.demucs_adapter.html#voxy.workers.demucs_adapter.separate">[docs]</a>
-</span><span id="line-41"><span class="k">def</span><span class="w"> </span><span class="nf">separate</span><span class="p">(</span>
-</span><span id="line-42">    <span class="n">state</span><span class="p">,</span>
-</span><span id="line-43">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-44">    <span class="n">audio</span><span class="p">,</span>
-</span><span id="line-45">    <span class="n">out_dir</span><span class="p">,</span>
-</span><span id="line-46">    <span class="n">stem</span><span class="o">=</span><span class="s2">"vocals"</span><span class="p">,</span>
-</span><span id="line-47">    <span class="n">sample_rate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="line-48">    <span class="n">shifts</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-</span><span id="line-49">    <span class="n">overlap</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
-</span><span id="line-50">    <span class="n">clip_mode</span><span class="o">=</span><span class="n">CLIP_MODE</span><span class="p">,</span>
-</span><span id="line-51">    <span class="n">subtype</span><span class="o">=</span><span class="n">WAV_SUBTYPE</span><span class="p">,</span>
-</span><span id="line-52"><span class="p">):</span>
-</span><span id="line-53"><span class="w">    </span><span class="sd">"""Write ``&lt;stem&gt;.wav`` and ``rest.wav`` (the input minus the voice) into ``out_dir``.</span>
-</span><span id="line-54">
-</span><span id="line-55"><span class="sd">    Both are WAV (``subtype``, default 16-bit PCM) with the model's channels, at</span>
-</span><span id="line-56"><span class="sd">    ``sample_rate`` (default: the model's rate). With ``clip_mode="rescale"`` (the</span>
-</span><span id="line-57"><span class="sd">    default), if either stem would clip both are scaled by one common factor, so</span>
-</span><span id="line-58"><span class="sd">    ``voice + rest`` is the input times that factor; ``clip_mode=None`` with</span>
-</span><span id="line-59"><span class="sd">    ``subtype="FLOAT"`` keeps the level exactly (values may exceed 1).</span>
-</span><span id="line-60"><span class="sd">    """</span>
-</span><span id="line-61">    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-</span><span id="line-62">
-</span><span id="line-63">    <span class="kn">import</span><span class="w"> </span><span class="nn">julius</span>
-</span><span id="line-64">    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-</span><span id="line-65">    <span class="kn">import</span><span class="w"> </span><span class="nn">soundfile</span>
-</span><span id="line-66">    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-</span><span id="line-67">    <span class="kn">from</span><span class="w"> </span><span class="nn">demucs.apply</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_model</span>
-</span><span id="line-68">    <span class="kn">from</span><span class="w"> </span><span class="nn">demucs.audio</span><span class="w"> </span><span class="kn">import</span> <span class="n">convert_audio</span><span class="p">,</span> <span class="n">prevent_clip</span>
-</span><span id="line-69">
-</span><span id="line-70">    <span class="n">model</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span>
-</span><span id="line-71">    <span class="k">if</span> <span class="n">stem</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">sources</span><span class="p">:</span>
-</span><span id="line-72">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-73">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stem</span><span class="si">!r}</span><span class="s2"> is not a stem of </span><span class="si">{</span><span class="n">state</span><span class="p">[</span><span class="s1">'model_name'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">sources</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="line-74">        <span class="p">)</span>
-</span><span id="line-75">    <span class="n">index</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">stem</span><span class="p">)</span>
-</span><span id="line-76">    <span class="n">samples</span><span class="p">,</span> <span class="n">in_rate</span> <span class="o">=</span> <span class="n">soundfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"float32"</span><span class="p">,</span> <span class="n">always_2d</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-77">    <span class="n">mix</span> <span class="o">=</span> <span class="n">convert_audio</span><span class="p">(</span>
-</span><span id="line-78">        <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">samples</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()),</span>  <span class="c1"># (channels, frames)</span>
-</span><span id="line-79">        <span class="n">in_rate</span><span class="p">,</span>
-</span><span id="line-80">        <span class="n">model</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span>
-</span><span id="line-81">        <span class="n">model</span><span class="o">.</span><span class="n">audio_channels</span><span class="p">,</span>
-</span><span id="line-82">    <span class="p">)</span>
-</span><span id="line-83">    <span class="c1"># Demucs's own normalisation (demucs.separate): zero mean, unit std of the mono ref</span>
-</span><span id="line-84">    <span class="n">ref</span> <span class="o">=</span> <span class="n">mix</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="line-85">    <span class="n">offset</span><span class="p">,</span> <span class="n">scale</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">ref</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-8</span>
-</span><span id="line-86">    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
-</span><span id="line-87">        <span class="n">sources</span> <span class="o">=</span> <span class="n">apply_model</span><span class="p">(</span>
-</span><span id="line-88">            <span class="n">stem_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">index</span><span class="p">),</span>
-</span><span id="line-89">            <span class="p">((</span><span class="n">mix</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)[</span><span class="kc">None</span><span class="p">],</span>
-</span><span id="line-90">            <span class="n">device</span><span class="o">=</span><span class="n">state</span><span class="p">[</span><span class="s2">"device"</span><span class="p">],</span>
-</span><span id="line-91">            <span class="n">shifts</span><span class="o">=</span><span class="n">shifts</span><span class="p">,</span>
-</span><span id="line-92">            <span class="n">overlap</span><span class="o">=</span><span class="n">overlap</span><span class="p">,</span>
-</span><span id="line-93">        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-94">    <span class="n">voice</span> <span class="o">=</span> <span class="n">sources</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale</span> <span class="o">+</span> <span class="n">offset</span>
-</span><span id="line-95">    <span class="n">stems</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">voice</span><span class="p">,</span> <span class="n">mix</span> <span class="o">-</span> <span class="n">voice</span><span class="p">])</span>
-</span><span id="line-96">    <span class="n">out_rate</span> <span class="o">=</span> <span class="n">sample_rate</span> <span class="ow">or</span> <span class="n">model</span><span class="o">.</span><span class="n">samplerate</span>
-</span><span id="line-97">    <span class="k">if</span> <span class="n">out_rate</span> <span class="o">!=</span> <span class="n">model</span><span class="o">.</span><span class="n">samplerate</span><span class="p">:</span>
-</span><span id="line-98">        <span class="n">stems</span> <span class="o">=</span> <span class="n">julius</span><span class="o">.</span><span class="n">resample_frac</span><span class="p">(</span><span class="n">stems</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">out_rate</span><span class="p">)</span>
-</span><span id="line-99">    <span class="k">if</span> <span class="n">clip_mode</span><span class="p">:</span>
-</span><span id="line-100">        <span class="n">stems</span> <span class="o">=</span> <span class="n">prevent_clip</span><span class="p">(</span><span class="n">stems</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">clip_mode</span><span class="p">)</span>
-</span><span id="line-101">    <span class="n">paths</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-102">    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">track</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">((</span><span class="n">stem</span><span class="p">,</span> <span class="n">REST_STEM</span><span class="p">),</span> <span class="n">stems</span><span class="p">):</span>
-</span><span id="line-103">        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.wav"</span><span class="p">)</span>
-</span><span id="line-104">        <span class="n">soundfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
-</span><span id="line-105">            <span class="n">path</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">track</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="n">out_rate</span><span class="p">,</span> <span class="n">subtype</span><span class="o">=</span><span class="n">subtype</span>
-</span><span id="line-106">        <span class="p">)</span>
-</span><span id="line-107">        <span class="n">paths</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span>
-</span><span id="line-108">    <span class="k">return</span> <span class="p">{</span><span class="s2">"paths"</span><span class="p">:</span> <span class="n">paths</span><span class="p">,</span> <span class="s2">"sample_rate"</span><span class="p">:</span> <span class="n">out_rate</span><span class="p">,</span> <span class="s2">"sources"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">sources</span><span class="p">)}</span></div>
+</span><span id="line-45"><span class="k">def</span><span class="w"> </span><span class="nf">separate</span><span class="p">(</span>
+</span><span id="line-46">    <span class="n">state</span><span class="p">,</span>
+</span><span id="line-47">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-48">    <span class="n">audio</span><span class="p">,</span>
+</span><span id="line-49">    <span class="n">out_dir</span><span class="p">,</span>
+</span><span id="line-50">    <span class="n">stem</span><span class="o">=</span><span class="s2">"vocals"</span><span class="p">,</span>
+</span><span id="line-51">    <span class="n">sample_rate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-52">    <span class="n">shifts</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="line-53">    <span class="n">overlap</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+</span><span id="line-54">    <span class="n">clip_mode</span><span class="o">=</span><span class="n">CLIP_MODE</span><span class="p">,</span>
+</span><span id="line-55">    <span class="n">subtype</span><span class="o">=</span><span class="n">WAV_SUBTYPE</span><span class="p">,</span>
+</span><span id="line-56"><span class="p">):</span>
+</span><span id="line-57"><span class="w">    </span><span class="sd">"""Write ``&lt;stem&gt;.wav`` and ``rest.wav`` (the input minus the voice) into ``out_dir``.</span>
+</span><span id="line-58">
+</span><span id="line-59"><span class="sd">    Both are WAV (``subtype``, default 16-bit PCM) with the model's channels, at</span>
+</span><span id="line-60"><span class="sd">    ``sample_rate`` (default: the model's rate). With ``clip_mode="rescale"`` (the</span>
+</span><span id="line-61"><span class="sd">    default), if either stem would clip both are scaled by one common factor, so</span>
+</span><span id="line-62"><span class="sd">    ``voice + rest`` is the input times that factor; ``clip_mode=None`` with</span>
+</span><span id="line-63"><span class="sd">    ``subtype="FLOAT"`` keeps the level exactly (values may exceed 1).</span>
+</span><span id="line-64"><span class="sd">    """</span>
+</span><span id="line-65">    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+</span><span id="line-66">
+</span><span id="line-67">    <span class="kn">import</span><span class="w"> </span><span class="nn">julius</span>
+</span><span id="line-68">    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="line-69">    <span class="kn">import</span><span class="w"> </span><span class="nn">soundfile</span>
+</span><span id="line-70">    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+</span><span id="line-71">    <span class="kn">from</span><span class="w"> </span><span class="nn">demucs.apply</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_model</span>
+</span><span id="line-72">    <span class="kn">from</span><span class="w"> </span><span class="nn">demucs.audio</span><span class="w"> </span><span class="kn">import</span> <span class="n">convert_audio</span><span class="p">,</span> <span class="n">prevent_clip</span>
+</span><span id="line-73">
+</span><span id="line-74">    <span class="n">model</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span>
+</span><span id="line-75">    <span class="k">if</span> <span class="n">stem</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">sources</span><span class="p">:</span>
+</span><span id="line-76">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="line-77">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stem</span><span class="si">!r}</span><span class="s2"> is not a stem of </span><span class="si">{</span><span class="n">state</span><span class="p">[</span><span class="s1">'model_name'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">sources</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-78">        <span class="p">)</span>
+</span><span id="line-79">    <span class="n">index</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">stem</span><span class="p">)</span>
+</span><span id="line-80">    <span class="n">samples</span><span class="p">,</span> <span class="n">in_rate</span> <span class="o">=</span> <span class="n">soundfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"float32"</span><span class="p">,</span> <span class="n">always_2d</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-81">    <span class="n">mix</span> <span class="o">=</span> <span class="n">convert_audio</span><span class="p">(</span>
+</span><span id="line-82">        <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">samples</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()),</span>  <span class="c1"># (channels, frames)</span>
+</span><span id="line-83">        <span class="n">in_rate</span><span class="p">,</span>
+</span><span id="line-84">        <span class="n">model</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span>
+</span><span id="line-85">        <span class="n">model</span><span class="o">.</span><span class="n">audio_channels</span><span class="p">,</span>
+</span><span id="line-86">    <span class="p">)</span>
+</span><span id="line-87">    <span class="c1"># Demucs's own normalisation (demucs.separate): zero mean, unit std of the mono ref</span>
+</span><span id="line-88">    <span class="n">ref</span> <span class="o">=</span> <span class="n">mix</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="line-89">    <span class="n">offset</span><span class="p">,</span> <span class="n">scale</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">ref</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-8</span>
+</span><span id="line-90">    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+</span><span id="line-91">        <span class="n">sources</span> <span class="o">=</span> <span class="n">apply_model</span><span class="p">(</span>
+</span><span id="line-92">            <span class="n">stem_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">index</span><span class="p">),</span>
+</span><span id="line-93">            <span class="p">((</span><span class="n">mix</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)[</span><span class="kc">None</span><span class="p">],</span>
+</span><span id="line-94">            <span class="n">device</span><span class="o">=</span><span class="n">state</span><span class="p">[</span><span class="s2">"device"</span><span class="p">],</span>
+</span><span id="line-95">            <span class="n">shifts</span><span class="o">=</span><span class="n">shifts</span><span class="p">,</span>
+</span><span id="line-96">            <span class="n">overlap</span><span class="o">=</span><span class="n">overlap</span><span class="p">,</span>
+</span><span id="line-97">        <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-98">    <span class="n">voice</span> <span class="o">=</span> <span class="n">sources</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale</span> <span class="o">+</span> <span class="n">offset</span>
+</span><span id="line-99">    <span class="n">stems</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">voice</span><span class="p">,</span> <span class="n">mix</span> <span class="o">-</span> <span class="n">voice</span><span class="p">])</span>
+</span><span id="line-100">    <span class="n">out_rate</span> <span class="o">=</span> <span class="n">sample_rate</span> <span class="ow">or</span> <span class="n">model</span><span class="o">.</span><span class="n">samplerate</span>
+</span><span id="line-101">    <span class="k">if</span> <span class="n">out_rate</span> <span class="o">!=</span> <span class="n">model</span><span class="o">.</span><span class="n">samplerate</span><span class="p">:</span>
+</span><span id="line-102">        <span class="n">stems</span> <span class="o">=</span> <span class="n">julius</span><span class="o">.</span><span class="n">resample_frac</span><span class="p">(</span><span class="n">stems</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">samplerate</span><span class="p">,</span> <span class="n">out_rate</span><span class="p">)</span>
+</span><span id="line-103">    <span class="k">if</span> <span class="n">clip_mode</span><span class="p">:</span>
+</span><span id="line-104">        <span class="n">stems</span> <span class="o">=</span> <span class="n">prevent_clip</span><span class="p">(</span><span class="n">stems</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">clip_mode</span><span class="p">)</span>
+</span><span id="line-105">    <span class="n">paths</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-106">    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">track</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">((</span><span class="n">stem</span><span class="p">,</span> <span class="n">REST_STEM</span><span class="p">),</span> <span class="n">stems</span><span class="p">):</span>
+</span><span id="line-107">        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.wav"</span><span class="p">)</span>
+</span><span id="line-108">        <span class="n">soundfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+</span><span id="line-109">            <span class="n">path</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">track</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="n">out_rate</span><span class="p">,</span> <span class="n">subtype</span><span class="o">=</span><span class="n">subtype</span>
+</span><span id="line-110">        <span class="p">)</span>
+</span><span id="line-111">        <span class="n">paths</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span>
+</span><span id="line-112">    <span class="k">return</span> <span class="p">{</span><span class="s2">"paths"</span><span class="p">:</span> <span class="n">paths</span><span class="p">,</span> <span class="s2">"sample_rate"</span><span class="p">:</span> <span class="n">out_rate</span><span class="p">,</span> <span class="s2">"sources"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">sources</span><span class="p">)}</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -320,7 +324,7 @@
 </footer>
     </div>
     
-    <script src="../../../_static/documentation_options.js?v=86ab457a"></script>
+    <script src="../../../_static/documentation_options.js?v=6eb1e6b8"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>

@@ -43,7 +43,6 @@
 - [voxy.workers.kokoro_adapter](voxy.workers.kokoro_adapter.html.md): Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.
 - [voxy.workers.phonemes_adapter](voxy.workers.phonemes_adapter.html.md): Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonem...
 - [voxy.workers.qwen3tts_adapter](voxy.workers.qwen3tts_adapter.html.md): Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a...
-- [voxy.workers.serve](voxy.workers.serve.html.md): Worker entry point: run a backend adapter inside its own environment.
 - [voxy.workers.speaker_adapter](voxy.workers.speaker_adapter.html.md): Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.
 - [voxy.workers.voxcpm_adapter](voxy.workers.voxcpm_adapter.html.md): VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.
 - [voxy.workers.xtts_adapter](voxy.workers.xtts_adapter.html.md): XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.

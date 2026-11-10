@@ -199,50 +199,54 @@
 </span><span id="line-4"><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span>
 </span><span id="line-5">    <span class="o">*</span><span class="p">,</span> <span class="n">model_id</span><span class="o">=</span><span class="s2">"openbmb/VoxCPM2"</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cpu"</span><span class="p">,</span> <span class="n">optimize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">lora_weights_path</span><span class="o">=</span><span class="kc">None</span>
 </span><span id="line-6"><span class="p">):</span>
-</span><span id="line-7">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxcpm</span><span class="w"> </span><span class="kn">import</span> <span class="n">VoxCPM</span>
+</span><span id="line-7">    <span class="kn">from</span><span class="w"> </span><span class="nn">_worker_threads</span><span class="w"> </span><span class="kn">import</span> <span class="n">cap_torch_threads</span>
 </span><span id="line-8">
-</span><span id="line-9">    <span class="k">return</span> <span class="n">VoxCPM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
-</span><span id="line-10">        <span class="n">model_id</span><span class="p">,</span>
-</span><span id="line-11">        <span class="n">load_denoiser</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="line-12">        <span class="n">optimize</span><span class="o">=</span><span class="n">optimize</span><span class="p">,</span>
-</span><span id="line-13">        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
-</span><span id="line-14">        <span class="n">lora_weights_path</span><span class="o">=</span><span class="n">lora_weights_path</span><span class="p">,</span>
-</span><span id="line-15">    <span class="p">)</span>
-</span><span id="line-16">
-</span><span id="line-17">
+</span><span id="line-9">    <span class="n">cap_torch_threads</span><span class="p">()</span>
+</span><span id="line-10">
+</span><span id="line-11">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxcpm</span><span class="w"> </span><span class="kn">import</span> <span class="n">VoxCPM</span>
+</span><span id="line-12">
+</span><span id="line-13">    <span class="k">return</span> <span class="n">VoxCPM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+</span><span id="line-14">        <span class="n">model_id</span><span class="p">,</span>
+</span><span id="line-15">        <span class="n">load_denoiser</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="line-16">        <span class="n">optimize</span><span class="o">=</span><span class="n">optimize</span><span class="p">,</span>
+</span><span id="line-17">        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+</span><span id="line-18">        <span class="n">lora_weights_path</span><span class="o">=</span><span class="n">lora_weights_path</span><span class="p">,</span>
+</span><span id="line-19">    <span class="p">)</span>
+</span><span id="line-20">
+</span><span id="line-21">
 <div class="viewcode-block" id="synthesize">
 <a class="viewcode-back" href="../../../_autosummary/voxy.workers.voxcpm_adapter.html#voxy.workers.voxcpm_adapter.synthesize">[docs]</a>
-</span><span id="line-18"><span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span>
-</span><span id="line-19">    <span class="n">state</span><span class="p">,</span>
-</span><span id="line-20">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-21">    <span class="n">text</span><span class="p">,</span>
-</span><span id="line-22">    <span class="n">ref_audio</span><span class="p">,</span>
-</span><span id="line-23">    <span class="n">ref_text</span><span class="p">,</span>
-</span><span id="line-24">    <span class="n">out_path</span><span class="p">,</span>
-</span><span id="line-25">    <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="line-26">    <span class="n">prompt_mode</span><span class="o">=</span><span class="s2">"continuation"</span><span class="p">,</span>
-</span><span id="line-27">    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
-</span><span id="line-28"><span class="p">):</span>
-</span><span id="line-29"><span class="w">    </span><span class="sd">"""``prompt_mode``: 'continuation' (clip + its text: closest match), 'reference'</span>
-</span><span id="line-30"><span class="sd">    (clip only, isolated), or 'both'."""</span>
-</span><span id="line-31">    <span class="kn">import</span><span class="w"> </span><span class="nn">soundfile</span>
-</span><span id="line-32">    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-</span><span id="line-33">
-</span><span id="line-34">    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-35">        <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
-</span><span id="line-36">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ref_audio</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-</span><span id="line-37">        <span class="n">ref_audio</span> <span class="o">=</span> <span class="n">ref_audio</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-38">    <span class="n">prompt</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-39">    <span class="k">if</span> <span class="n">prompt_mode</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"continuation"</span><span class="p">,</span> <span class="s2">"both"</span><span class="p">):</span>
-</span><span id="line-40">        <span class="n">prompt</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">prompt_wav_path</span><span class="o">=</span><span class="n">ref_audio</span><span class="p">,</span> <span class="n">prompt_text</span><span class="o">=</span><span class="n">ref_text</span><span class="p">)</span>
-</span><span id="line-41">    <span class="k">if</span> <span class="n">prompt_mode</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"reference"</span><span class="p">,</span> <span class="s2">"both"</span><span class="p">):</span>
-</span><span id="line-42">        <span class="n">prompt</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">reference_wav_path</span><span class="o">=</span><span class="n">ref_audio</span><span class="p">)</span>
-</span><span id="line-43">    <span class="k">if</span> <span class="ow">not</span> <span class="n">prompt</span><span class="p">:</span>
-</span><span id="line-44">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown prompt_mode </span><span class="si">{</span><span class="n">prompt_mode</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-45">    <span class="n">wav</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="o">**</span><span class="n">prompt</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
-</span><span id="line-46">    <span class="n">sample_rate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">tts_model</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">)</span>
-</span><span id="line-47">    <span class="n">soundfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="n">wav</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="n">subtype</span><span class="o">=</span><span class="s2">"PCM_16"</span><span class="p">)</span>
-</span><span id="line-48">    <span class="k">return</span> <span class="p">{</span><span class="s2">"sample_rate"</span><span class="p">:</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="s2">"seed"</span><span class="p">:</span> <span class="n">seed</span><span class="p">}</span></div>
+</span><span id="line-22"><span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span>
+</span><span id="line-23">    <span class="n">state</span><span class="p">,</span>
+</span><span id="line-24">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-25">    <span class="n">text</span><span class="p">,</span>
+</span><span id="line-26">    <span class="n">ref_audio</span><span class="p">,</span>
+</span><span id="line-27">    <span class="n">ref_text</span><span class="p">,</span>
+</span><span id="line-28">    <span class="n">out_path</span><span class="p">,</span>
+</span><span id="line-29">    <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-30">    <span class="n">prompt_mode</span><span class="o">=</span><span class="s2">"continuation"</span><span class="p">,</span>
+</span><span id="line-31">    <span class="o">**</span><span class="n">params</span><span class="p">,</span>
+</span><span id="line-32"><span class="p">):</span>
+</span><span id="line-33"><span class="w">    </span><span class="sd">"""``prompt_mode``: 'continuation' (clip + its text: closest match), 'reference'</span>
+</span><span id="line-34"><span class="sd">    (clip only, isolated), or 'both'."""</span>
+</span><span id="line-35">    <span class="kn">import</span><span class="w"> </span><span class="nn">soundfile</span>
+</span><span id="line-36">    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+</span><span id="line-37">
+</span><span id="line-38">    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-39">        <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+</span><span id="line-40">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ref_audio</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+</span><span id="line-41">        <span class="n">ref_audio</span> <span class="o">=</span> <span class="n">ref_audio</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-42">    <span class="n">prompt</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-43">    <span class="k">if</span> <span class="n">prompt_mode</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"continuation"</span><span class="p">,</span> <span class="s2">"both"</span><span class="p">):</span>
+</span><span id="line-44">        <span class="n">prompt</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">prompt_wav_path</span><span class="o">=</span><span class="n">ref_audio</span><span class="p">,</span> <span class="n">prompt_text</span><span class="o">=</span><span class="n">ref_text</span><span class="p">)</span>
+</span><span id="line-45">    <span class="k">if</span> <span class="n">prompt_mode</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"reference"</span><span class="p">,</span> <span class="s2">"both"</span><span class="p">):</span>
+</span><span id="line-46">        <span class="n">prompt</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">reference_wav_path</span><span class="o">=</span><span class="n">ref_audio</span><span class="p">)</span>
+</span><span id="line-47">    <span class="k">if</span> <span class="ow">not</span> <span class="n">prompt</span><span class="p">:</span>
+</span><span id="line-48">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown prompt_mode </span><span class="si">{</span><span class="n">prompt_mode</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-49">    <span class="n">wav</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="o">**</span><span class="n">prompt</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
+</span><span id="line-50">    <span class="n">sample_rate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">tts_model</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">)</span>
+</span><span id="line-51">    <span class="n">soundfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="n">wav</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="n">subtype</span><span class="o">=</span><span class="s2">"PCM_16"</span><span class="p">)</span>
+</span><span id="line-52">    <span class="k">return</span> <span class="p">{</span><span class="s2">"sample_rate"</span><span class="p">:</span> <span class="n">sample_rate</span><span class="p">,</span> <span class="s2">"seed"</span><span class="p">:</span> <span class="n">seed</span><span class="p">}</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -257,7 +261,7 @@
 </footer>
     </div>
     
-    <script src="../../../_static/documentation_options.js?v=86ab457a"></script>
+    <script src="../../../_static/documentation_options.js?v=6eb1e6b8"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>

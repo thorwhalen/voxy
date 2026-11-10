@@ -11,8 +11,11 @@ interpreter, which `voxy.worker` then runs the model in:
 > models/hf/              model weights (`HF_HOME` of every worker)
 > models/{name}/          a backend’s other weights (e.g. Coqui’s `TTS_HOME`)
 
-Nothing here is downloaded at import time; building an environment is explicit
-(`ensure_env`, or `python -m voxy setup <backend>`).
+Building and checking an environment is `ps.isolated`’s (`ensure_env`,
+`is_env_ready`); this module adds voxy’s layout (where an environment and its
+weights live), the `cpu` torch default, a backend’s own environment variables,
+and the thread cap. Nothing here is downloaded at import time; building an
+environment is explicit (`ensure_env`, or `python -m voxy setup <backend>`).
 
 ```pycon
 >>> spec = EnvSpec("demo", ("numpy",))
@@ -24,8 +27,10 @@ True
 
 ### Module Attributes
 
-| [`DFLT_NUM_THREADS`](#voxy.envs.DFLT_NUM_THREADS)   | a shared machine keeps headroom for others.   |
-|---------------------------------------------------------------------|-----------------------------------------------|
+| [`ENV_MARKER`](#voxy.envs.ENV_MARKER)              | voxy's marker file (environments built before ps.isolated carry it).   |
+|--------------------------------------------------------------------------|------------------------------------------------------------------------|
+| [`VOXY_NUM_THREADS_ENVVAR`](#voxy.envs.VOXY_NUM_THREADS_ENVVAR) | spelled once, in the helper the adapters share.                        |
+| [`DFLT_NUM_THREADS`](#voxy.envs.DFLT_NUM_THREADS)        | a shared machine keeps headroom for others.                            |
 
 ### Functions
 
@@ -41,8 +46,8 @@ True
 
 ### Classes
 
-| [`EnvSpec`](#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds.   |
-|-----------------------------------------------------------------------------------------------|---------------------------------------|
+| [`EnvSpec`](#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds (`ps.isolated.EnvSpec` with voxy's defaults).   |
+|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
 
 ### voxy.envs.DFLT_NUM_THREADS *= 8*
 
@@ -51,34 +56,40 @@ a shared machine keeps headroom for others.
 * **Type:**
   Torch/ONNX threads per worker
 
+### voxy.envs.ENV_MARKER *= '.voxy-env.json'*
+
+voxy’s marker file (environments built before ps.isolated carry it).
+
 ### *class* voxy.envs.EnvSpec(name, requirements, python='3.11', torch_backend='cpu', env_vars=dict())
 
-Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+Bases: `EnvSpec`
 
-What a backend’s environment holds.
+What a backend’s environment holds (`ps.isolated.EnvSpec` with voxy’s defaults).
 
 * **Parameters:**
   * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Folder name under `envs/` (usually the backend name).
-  * **requirements** ([`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis)]) – `uv pip install` arguments (packages, pins, extras).
+  * **requirements** (Tuple[str, …]) – `uv pip install` arguments (packages, pins, extras).
   * **python** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Python version for `uv venv`.
   * **torch_backend** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – `uv`’s `--torch-backend` (‘cpu’ keeps CUDA wheels out;
     None leaves the index alone).
   * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]) – Extra environment variables for the worker process (values may
-    use `{models}`, the backend’s own weights folder).
+    use `{models}`, the backend’s own weights folder). Not part of the
+    digest: changing them needs no rebuild.
 
-#### digest()
+### voxy.envs.VOXY_NUM_THREADS_ENVVAR *= 'VOXY_NUM_THREADS'*
 
-A short hash of what is installed (env vars excluded: they don’t need a rebuild).
+spelled once, in the helper the adapters share.
 
-* **Return type:**
-  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+* **Type:**
+  `$VOXY_NUM_THREADS`
 
 ### voxy.envs.ensure_env(spec, \*, rootdir=None, run=<function run>, log=<built-in function print>)
 
 Build `spec`’s environment if missing or stale, and return its interpreter.
 
-The host’s `UV_CONSTRAINT` is cleared for the install: its pins are for the
-host environment, and an isolated environment exists precisely to differ.
+A stale one (built from another spec) is rebuilt from scratch; the host’s uv
+pins (`UV_CONSTRAINT` and co.) are cleared for the build: they are for the
+host, and an isolated environment exists precisely to differ.
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -133,6 +144,9 @@ Delete `spec`’s environment (weights are kept).
 ### voxy.envs.worker_environ(spec, , threads=None, rootdir=None, base=None)
 
 Environment variables for a worker: weights under the data root, threads capped.
+
+The whole environment (`base`, default `os.environ`, minus the variables that
+leak the host’s packages), so a one-shot command (`subprocess.run`) can use it too.
 
 ```pycon
 >>> env = worker_environ(EnvSpec("x", (), env_vars={"TTS_HOME": "{models}"}),
