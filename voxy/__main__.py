@@ -86,6 +86,9 @@ def main(argv=None) -> int:
         envs["phonemes"] = PHONEME_ENV
         envs["align"] = ALIGN_ENV
         envs["demucs"] = SEPARATION_ENV
+        unknown = [name for name in args.backends if name not in envs]
+        if unknown:
+            parser.error(f"unknown backends {unknown}; choose from {sorted(envs)}")
         built = build_envs(
             args.backends or list(envs),
             envs,
