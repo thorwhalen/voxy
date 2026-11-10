@@ -282,7 +282,9 @@ def test_env_worker_is_the_one_factory_for_local_workers(tmp_path, monkeypatch):
         rootdir=tmp_path,
         env_vars={"COQUI_TOS_AGREED": "1"},
     )
-    assert w.python == "/env/python" and w.init == {"model": "base", "device": "cpu"}
+    # ps.isolated.Worker makes a python path absolute (D:\\env\\python on Windows)
+    assert w.python == os.path.abspath("/env/python")
+    assert w.init == {"model": "base", "device": "cpu"}
     assert w.env["COQUI_TOS_AGREED"] == "1" and "OMP_NUM_THREADS" in w.env
     assert w.log_path == tmp_path / "cache" / "logs" / "asr.log"  # a kept log
 

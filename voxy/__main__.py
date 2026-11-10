@@ -67,7 +67,9 @@ def main(argv=None) -> int:
         return 0
 
     if args.command == "setup":
-        from voxy.envs import ensure_env
+        from ps.isolated import build_envs
+
+        from voxy import envs as voxy_envs
         from voxy.local_clone import local_backends
         from voxy.refprep import ASR_ENV
         from voxy.align import ALIGN_ENV
@@ -84,8 +86,17 @@ def main(argv=None) -> int:
         envs["phonemes"] = PHONEME_ENV
         envs["align"] = ALIGN_ENV
         envs["demucs"] = SEPARATION_ENV
-        for name in args.backends or list(envs):
-            print(f"{name}\t{ensure_env(envs[name])}")
+        unknown = [name for name in args.backends if name not in envs]
+        if unknown:
+            parser.error(f"unknown backends {unknown}; choose from {sorted(envs)}")
+        built = build_envs(
+            args.backends or list(envs),
+            envs,
+            env_dir=lambda name: voxy_envs.env_dir(envs[name]),
+            build=lambda spec, folder: voxy_envs.ensure_env(spec),
+        )
+        for name, python in built:
+            print(f"{name}\t{python}")
         return 0
     if args.command == "prep":
         from voxy import refprep
