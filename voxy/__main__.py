@@ -5,6 +5,7 @@ Command line for voxy: voices, speech, local model setup, reference prep, diagno
     python -m voxy voices --backend say         # a backend's voices
     python -m voxy speak "Hello" --voice ada -o hello.mp3
     python -m voxy setup f5tts chatterbox       # build local models' environments
+    python -m voxy setup soulx                  # the singing model (SoulX-Singer)
     python -m voxy speak "Hi" --backend kokoro --voice bf_emma -o hi.wav  # local, no key
     python -m voxy prep ada tape1.m4a tape2.mp3 # clean, cut, transcribe, score clips
     python -m voxy prep ada interview.m4a --speaker dominant  # drop the other voices
@@ -74,7 +75,10 @@ def main(argv=None) -> int:
         from voxy.separate import SEPARATION_ENV
         from voxy.speakers import SPEAKER_ENV
 
+        from voxy.singing import singing_backends
+
         envs = {name: b.env for name, b in local_backends().items()}
+        envs.update({name: b.env for name, b in singing_backends().items()})
         envs["asr"] = ASR_ENV
         envs["speaker"] = SPEAKER_ENV
         envs["phonemes"] = PHONEME_ENV

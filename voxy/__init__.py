@@ -1,5 +1,6 @@
 """
-Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
+Facade for voice generation: speech synthesis in any voice, cloning and designing voices,
+and singing (``sing``, ``convert_singing``).
 
 >>> import voxy
 >>> {'elevenlabs', 'say', 'aix', 'fal', 'voicestudio', 'csm'} <= set(voxy.speech_model_factories)
@@ -37,4 +38,14 @@ from voxy.facade import (
     resolve_voice,
     get_speech_model,
     clear_speech_models,
+)
+from voxy.singing import (
+    sing,
+    convert_singing,
+    close_singing_models,
+    singing_voice,
+    synthetic_singing_voice,
+    singing_backends,
+    register_singing_backend,
+    SingingBackend,
 )
