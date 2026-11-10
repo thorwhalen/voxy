@@ -172,13 +172,17 @@ def _fetch_git_source(source: GitSource, path: Path, *, run, log) -> None:
 def _git(run, folder: Path, *args: str):
     """``git -C folder args...``, without the caller's ``GIT_*`` variables."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    return run(
-        ["git", "-C", str(folder), *args],
-        check=True,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    try:
+        return run(
+            ["git", "-C", str(folder), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    except subprocess.CalledProcessError as error:
+        detail = (error.stderr or error.stdout or "").strip()
+        raise RuntimeError(f"git {' '.join(args)} failed: {detail}") from error
 
 
 def _check_checkout(path: Path, source: GitSource, *, run) -> None:

@@ -422,7 +422,7 @@ SOULX_BACKEND = register_singing_backend(
             "control": "score",
             "seed": None,
             "peak": 0.95,
-            "crossfade_s": 0.02,
+            "fade_s": 0.02,
         },
         source=SOULX_SOURCE,
         licence="code and weights Apache-2.0 (RMVPE and whisper-base: Apache-2.0)",

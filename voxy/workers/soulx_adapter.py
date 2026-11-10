@@ -39,8 +39,9 @@ PHONESET = os.path.join("soulxsinger", "utils", "phoneme", "phone_set.json")
 F0_EXTRACTION = os.path.join("preprocess", "tools", "f0_extraction.py")
 SP = "<SP>"
 DFLT_PEAK = 0.95
-#: Fade length at each join between segments (they are rendered separately).
-DFLT_CROSSFADE_S = 0.02
+#: Fade-out and fade-in length where segments meet (they are rendered separately
+#: and added, not overlapped).
+DFLT_FADE_S = 0.02
 #: The two singers; loading one frees the other (2.8 GB each, about 6 GB in use).
 SINGERS = ("svs", "svc")
 #: Per-note fields of a segment, which must all have one token per note.
@@ -84,7 +85,7 @@ def load(
 
     cap_torch_threads()
     if repo_dir not in sys.path:
-        sys.path.insert(0, repo_dir)
+        sys.path.append(repo_dir)  # after the environment's packages: no shadowing
     from soulxsinger.utils.file_utils import load_config
 
     state = {
@@ -304,7 +305,7 @@ def sing(
     cfg=None,
     seed=None,
     peak=DFLT_PEAK,
-    crossfade_s=DFLT_CROSSFADE_S,
+    fade_s=DFLT_FADE_S,
 ):
     """SVS: sing ``meta`` in the voice of ``prompt_audio``, into ``out_path``.
 
@@ -312,7 +313,7 @@ def sing(
     ``f0``. ``pitch_shift`` transposes by that many semitones; ``auto_shift``
     (upstream's median rule, recomputed for each segment) is best left off for a
     score of several segments. Each segment is placed at its ``time[0]``, with
-    ``crossfade_s`` fades where segments meet.
+    ``fade_s`` fades where segments meet.
     """
     import numpy as np
     import torch
@@ -331,7 +332,7 @@ def sing(
     segments = fill_phonemes(state, meta)
     sr = config.audio.sample_rate
     total = np.zeros(int(segments[-1]["time"][1] / 1000 * sr), dtype=np.float32)
-    fade = int(crossfade_s * sr)
+    fade = int(fade_s * sr)
     t0 = time.perf_counter()
     for i, segment in enumerate(segments):
         start = int(segment["time"][0] / 1000 * sr)

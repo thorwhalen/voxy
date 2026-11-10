@@ -150,16 +150,41 @@ def test_embedded_syllables_join_into_words_and_melismas_hold_them(tmp_path):
     soulx.soulx_metadata(notes)  # one word per note: the metadata accepts it
 
 
-def test_karaoke_text_events_are_lyrics(tmp_path):
-    text = lambda t, delta=0: ("text", delta, {"text": t})  # noqa: E731
-    events = [
-        text("@TTitle"), text("/Sun"), on(60), off(60, 480),
-        text("-ny"), on(62), off(62, 480), text("\\day"), on(64), off(64, 480),
+def lyric(text, delta=0):
+    return ("lyrics", delta, {"text": text})
+
+
+def test_text_events_are_never_sung(tmp_path):
+    text = ("text", 0, {"text": "Melody"})
+    path = raw_midi(tmp_path / "t.mid", [[text, on(60), off(60, 480)]])
+    assert [n.word for n in notes_from_midi(path)] == [""]
+    with pytest.raises(ValueError, match="no lyrics"):
+        read_score(path)
+
+
+def test_lyrics_on_another_track_and_a_late_lyric(tmp_path):
+    words = [lyric("hel-"), lyric("lo", 600)]  # "lo" comes 120 ticks into note 2
+    melody = [on(60), off(60, 480), on(62), off(62, 480)]
+    path = raw_midi(tmp_path / "two.mid", [words, melody])
+    assert [(n.word, n.starts_word) for n in read_score(path)] == [
+        ("hello", True), ("hello", False)
     ]
-    notes = notes_from_midi(raw_midi(tmp_path / "k.kar", [events]))
-    assert [(n.word, n.starts_word) for n in notes] == [
-        ("Sunny", True), ("Sunny", False), ("day", True)
-    ]
+
+
+def test_a_lyric_on_no_note_or_two_on_one_note_is_an_error(tmp_path):
+    melody = [on(60), off(60, 480)]
+    late = raw_midi(tmp_path / "late.mid", [[*melody, lyric("lost", 960)]])
+    with pytest.raises(ValueError, match="'lost' at 1.50 s falls on no note"):
+        read_score(late)
+    assert [n.word for n in read_score(late, "found")] == ["found"]  # lyrics= wins
+    two = raw_midi(tmp_path / "two.mid", [[lyric("a"), lyric("b"), *melody]])
+    with pytest.raises(ValueError, match="Two lyrics"):
+        read_score(two)
+    spread = raw_midi(
+        tmp_path / "spread.mid", [[lyric("x")], [lyric("y")], [*melody]]
+    )
+    with pytest.raises(ValueError, match=r"tracks \[0, 1\] have some"):
+        read_score(spread)
 
 
 MUSICXML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -235,6 +260,38 @@ def test_musicxml_skips_grace_notes_reads_one_voice_and_the_top_of_chords(tmp_pa
     path.write_text(MUSICXML.format(notes=notes_xml))
     notes = notes_from_musicxml(path)
     assert [(n.pitch, n.word) for n in notes] == [(67, "oh"), (62, "my")]
+
+
+def test_two_voices_keep_the_parts_tempo(tmp_path):
+    pytest.importorskip("music21")
+    voice = lambda n, xml: xml.replace("<duration>", f"<voice>{n}</voice><duration>")  # noqa: E731
+    first = voice(1, xml_note("C", 4, 1, "one") + xml_note("D", 4, 1, "two"))
+    second = voice(2, xml_note("C", 3, 2, "low"))
+    xml = MUSICXML.replace('tempo="100"', 'tempo="60"').format(
+        notes=first + "<backup><duration>2</duration></backup>" + second
+    )
+    (tmp_path / "t.musicxml").write_text(xml)
+    notes = notes_from_musicxml(tmp_path / "t.musicxml")
+    assert [(n.pitch, n.word, n.start, n.dur) for n in notes] == [
+        (60, "one", 0.0, 1.0), (62, "two", 1.0, 1.0)
+    ]
+
+
+def test_only_the_first_verse_is_sung(tmp_path):
+    pytest.importorskip("music21")
+    def verses(step, *texts):
+        lyrics = "".join(
+            f'<lyric number="{i}"><syllabic>single</syllabic><text>{t}</text></lyric>'
+            for i, t in texts
+        )
+        return (
+            f"<note><pitch><step>{step}</step><octave>4</octave></pitch>"
+            f"<duration>1</duration><type>quarter</type>{lyrics}</note>"
+        )
+    notes_xml = verses("C", (2, "second"), (1, "first")) + verses("D", (2, "only2"))
+    (tmp_path / "v.musicxml").write_text(MUSICXML.format(notes=notes_xml))
+    notes = notes_from_musicxml(tmp_path / "v.musicxml")
+    assert [(n.word, n.starts_word) for n in notes] == [("first", True), ("first", False)]
 
 
 def test_midi_and_musicxml_of_one_melody_give_the_same_metadata(tmp_path):
@@ -787,6 +844,54 @@ def test_ensure_git_source_fetches_one_commit_once_and_checks_it(tmp_path, monke
         ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit(source.commit, edits=" M x.py"))
     with pytest.raises(RuntimeError, match="not aaaaaaaaaaaa"):
         ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit("b" * 40))
+
+
+def test_losing_the_rename_race_keeps_the_winners_copy(tmp_path):
+    source = GitSource("https://example.org/r.git", "e" * 40)
+    final = git_source_dir(source, "b", rootdir=tmp_path)
+
+    class Racing(FakeGit):
+        def __call__(self, command, **kw):
+            if command[3] == "checkout":  # another process finishes first
+                final.mkdir(parents=True)
+                (final / "theirs").write_text("x")
+            return super().__call__(command, **kw)
+
+    path = ensure_git_source(source, "b", rootdir=tmp_path, run=Racing(source.commit), log=lambda m: None)
+    assert path == final and (final / "theirs").exists()
+    assert not final.with_name(final.name + ".partial").exists()
+
+
+def test_a_git_failure_carries_its_message(tmp_path):
+    import subprocess
+
+    def run(command, **kw):
+        if command[3] == "fetch":
+            raise subprocess.CalledProcessError(
+                128, command, stderr="fatal: no such commit"
+            )
+        return types.SimpleNamespace(stdout="")
+
+    source = GitSource("https://example.org/r.git", "f" * 40)
+    with pytest.raises(RuntimeError, match="git fetch .* failed: fatal: no such commit"):
+        ensure_git_source(source, "b", rootdir=tmp_path, run=run, log=lambda m: None)
+
+
+def test_sing_passes_track_and_channel_to_the_score(tmp_path, cache, monkeypatch):
+    seen = []
+    real = singing.read_score
+    monkeypatch.setattr(
+        singing,
+        "read_score",
+        lambda score, lyrics, **kw: seen.append(kw) or real(score, lyrics, **kw),
+    )
+    melody = [on(72, channel=2), off(72, 480, channel=2)]
+    bass = [on(36, channel=1), off(36, 480, channel=1)]
+    path = raw_midi(tmp_path / "m.mid", [[*melody, *bass]])
+    run = FakeRun()
+    singing.sing(path, "hi", track=0, channel=3, model=soulx.SoulXSingingModel(run=run), voices={})
+    assert seen[0] == {"track": 0, "channel": 3}  # then the synthetic voice's own
+    assert run.requests[0][1]["meta"][0]["note_pitch"] == "0 72 0"
 
 
 def test_an_interrupted_fetch_is_started_afresh(tmp_path):
