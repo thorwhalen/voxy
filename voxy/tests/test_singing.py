@@ -347,6 +347,12 @@ def adapter(tmp_path, monkeypatch):
         "soulxsinger.models.soulxsinger_svc": types.SimpleNamespace(
             SoulXSingerSVC=FakeModel
         ),
+        # CI has no soundfile: write 16-bit WAV with voxy's own writer
+        "soundfile": types.SimpleNamespace(
+            write=lambda path, samples, sr, subtype: Path(path).write_bytes(
+                write_wav(samples, sr)
+            )
+        ),
         "g2p_en": types.SimpleNamespace(
             G2p=lambda: lambda word: list(word.upper()) + [" "]
         ),
