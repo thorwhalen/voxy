@@ -323,7 +323,13 @@ def test_ensure_env_builds_once_then_reuses(tmp_path, monkeypatch):
     assert python == env_python(spec, rootdir=tmp_path)
     assert is_env_ready(spec, rootdir=tmp_path)
     assert (env_dir(spec, rootdir=tmp_path) / ENV_MARKER).exists()  # voxy's marker
-    assert commands[0][:5] == ["uv", "venv", "--python", "3.11", str(env_dir(spec, rootdir=tmp_path))]
+    assert commands[0][:5] == [
+        "uv",
+        "venv",
+        "--python",
+        "3.11",
+        str(env_dir(spec, rootdir=tmp_path)),
+    ]
     assert commands[1][-3:] == ["--torch-backend", "cpu", "numpy"]  # voxy's default
     ensure_env(spec, rootdir=tmp_path, run=run, log=lambda *a: None)
     assert len(commands) == 2  # ready: nothing runs
@@ -331,41 +337,134 @@ def test_ensure_env_builds_once_then_reuses(tmp_path, monkeypatch):
 
 def test_env_digests_are_the_ones_voxy_built_its_environments_with():
     """Moving onto ps.isolated must not rebuild an environment already built."""
-    assert EnvSpec("demo", ("numpy",)).digest() == "9b996d61b155"  # what voxy <= 0.0.68 computed
+    assert (
+        EnvSpec("demo", ("numpy",)).digest() == "9b996d61b155"
+    )  # what voxy <= 0.0.68 computed
     assert (
         EnvSpec("demo", ("numpy",), env_vars={"X": "1"}).digest()
         == EnvSpec("demo", ("numpy",)).digest()
     )  # env vars need no rebuild
 
 
-def test_adapters_import_nothing_from_voxy_and_cap_torch_threads():
+#: Adapters whose environment has no torch (their threads are capped otherwise).
+NON_TORCH_ADAPTERS = {"kokoro", "asr"}
+
+
+def test_adapters_import_nothing_from_voxy_and_cap_torch_threads_first():
+    import ast
+
     from voxy.workers import WORKERS_DIR
 
-    for path in WORKERS_DIR.glob("*_adapter.py"):
+    adapters = sorted(WORKERS_DIR.glob("*_adapter.py"))
+    assert len(adapters) >= len(LOCAL_CLONE_BACKENDS)
+    for path in adapters:
         source = path.read_text()
         assert "from voxy" not in source and "import voxy" not in source, path.name
-        if "import torch" in source:
-            assert "cap_torch_threads()" in source, path.name
+        name = path.stem.removesuffix("_adapter")
+        if name in NON_TORCH_ADAPTERS:
+            continue
+        load = next(
+            n
+            for n in ast.parse(source).body
+            if isinstance(n, ast.FunctionDef) and n.name == "load"
+        )
+        body = load.body[1:] if ast.get_docstring(load) else load.body
+        imported, called = body[0], body[1]
+        assert isinstance(imported, ast.ImportFrom), path.name
+        assert imported.module == "_worker_threads", path.name
+        assert ast.unparse(called) == "cap_torch_threads()", path.name
+
+
+def test_the_thread_variable_is_spelled_once():
+    from voxy import envs
+    from voxy.workers import WORKERS_DIR
+    from voxy.workers._worker_threads import THREADS_ENVVAR
+
+    assert envs.VOXY_NUM_THREADS_ENVVAR == THREADS_ENVVAR == "VOXY_NUM_THREADS"
+    assert THREADS_ENVVAR in envs.THREAD_ENVVARS
+    for path in WORKERS_DIR.glob("*_adapter.py"):
+        assert '"VOXY_NUM_THREADS"' not in path.read_text(), path.name
 
 
 def test_a_worker_caps_torch_threads_through_the_shared_helper(tmp_path):
-    """The helper module is importable from an adapter: its folder is on sys.path."""
+    """The helper is importable from an adapter (its folder is on sys.path) and caps torch."""
     import shutil
 
     from voxy.workers import WORKERS_DIR
 
-    shutil.copy(WORKERS_DIR / "_torch_threads.py", tmp_path)
+    shutil.copy(WORKERS_DIR / "_worker_threads.py", tmp_path)
+    (tmp_path / "torch.py").write_text(  # a fake torch recording what it is asked
+        "calls = []\n"
+        "def set_num_threads(n): calls.append(['intra', n])\n"
+        "def set_num_interop_threads(n): calls.append(['inter', n])\n"
+    )
     adapter = tmp_path / "t_adapter.py"
     adapter.write_text(
         "def load(**kw):\n"
-        "    from _torch_threads import cap_torch_threads\n"
+        "    from _worker_threads import cap_torch_threads\n"
         "    cap_torch_threads()\n"
-        "def threads(state):\n"
-        "    import os\n"
-        "    return {'env': os.environ.get('VOXY_NUM_THREADS')}\n"
+        "def calls(state):\n"
+        "    import torch\n"
+        "    return {'calls': torch.calls}\n"
     )
-    with Worker(sys.executable, adapter, env={"VOXY_NUM_THREADS": "3"}) as worker:
-        assert worker.call("threads") == {"env": "3"}
+    with Worker(sys.executable, adapter, env={"VOXY_NUM_THREADS": "6"}) as worker:
+        assert worker.call("calls") == {"calls": [["intra", 6], ["inter", 1]]}
+    with Worker(sys.executable, adapter, env={"VOXY_NUM_THREADS": ""}) as worker:
+        assert worker.call("calls") == {"calls": []}  # no cap: torch left alone
+
+
+def test_worker_still_takes_log_path_as_a_deprecated_alias(tmp_path):
+    adapter = tmp_path / "h_adapter.py"
+    adapter.write_text(
+        "def load(**kw): print('to the log')\ndef ping(state): return {}\n"
+    )
+    with pytest.warns(DeprecationWarning, match="stderr="):
+        worker = Worker(sys.executable, adapter, log_path=tmp_path / "old.log")
+    with worker:
+        worker.call("ping")
+    assert "to the log" in (tmp_path / "old.log").read_text()
+
+
+def test_ensure_env_rebuilds_a_half_built_env_an_older_voxy_left(tmp_path, monkeypatch):
+    """Older voxy marked an env only when built: a venv with no marker is voxy's to replace."""
+    from ps import isolated
+
+    from voxy.envs import env_dir, env_python
+
+    monkeypatch.setattr(isolated, "_find_uv", lambda: "uv")
+    spec = EnvSpec("demo", ("numpy",))
+    python = env_python(spec, rootdir=tmp_path)
+    python.parent.mkdir(parents=True)
+    python.touch()  # the venv an interrupted build left, without .voxy-env.json
+    (env_dir(spec, rootdir=tmp_path) / "leftover").touch()
+    commands = []
+
+    def run(cmd, **kwargs):
+        commands.append(list(cmd))
+        if cmd[1] == "venv":
+            assert not env_dir(spec, rootdir=tmp_path).exists()  # removed first
+            python.parent.mkdir(parents=True)
+            python.touch()
+
+    ensure_env(spec, rootdir=tmp_path, run=run, log=lambda *a: None)
+    assert is_env_ready(spec, rootdir=tmp_path) and len(commands) == 2
+
+
+def test_ensure_env_leaves_an_unmarked_folder_that_is_not_a_venv(tmp_path, monkeypatch):
+    from ps import isolated
+
+    from voxy.envs import env_dir
+
+    monkeypatch.setattr(isolated, "_find_uv", lambda: "uv")
+    spec = EnvSpec("demo", ("numpy",))
+    folder = env_dir(spec, rootdir=tmp_path)
+    folder.mkdir(parents=True)
+    (folder / "notes.txt").write_text("mine")
+    with pytest.raises(RuntimeError, match="not built by ps"):
+        ensure_env(
+            spec, rootdir=tmp_path, run=lambda *a, **k: None, log=lambda *a: None
+        )
+    assert (folder / "notes.txt").read_text() == "mine"
 
 
 # reference prep ---------------------------------------------------------------

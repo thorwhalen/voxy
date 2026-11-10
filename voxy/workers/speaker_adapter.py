@@ -7,7 +7,7 @@ DFLT_BATCH = 64
 
 
 def load(*, model="speechbrain/spkrec-ecapa-voxceleb", device="cpu"):
-    from _torch_threads import cap_torch_threads
+    from _worker_threads import cap_torch_threads
 
     cap_torch_threads()
 

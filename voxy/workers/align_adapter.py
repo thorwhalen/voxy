@@ -17,7 +17,7 @@ MIN_CROP_SECONDS = 0.1
 
 
 def load(*, model="MMS_FA", device="cpu"):
-    from _torch_threads import cap_torch_threads
+    from _worker_threads import cap_torch_threads
 
     cap_torch_threads()
 

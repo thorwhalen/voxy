@@ -5,7 +5,7 @@ Each ``*_adapter.py`` wraps one model library with ``load(**init)`` and operatio
 such as ``synthesize(state, *, text, ref_audio, ref_text, out_path, **params)``;
 ``ps.isolated.Worker`` serves it. These files are executed by other interpreters,
 so they import nothing from voxy; this folder is on their ``sys.path``, so they
-share helpers by plain import (``from _torch_threads import cap_torch_threads``).
+share helpers by plain import (``from _worker_threads import cap_torch_threads``).
 """
 
 from pathlib import Path

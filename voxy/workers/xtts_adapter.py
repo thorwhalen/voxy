@@ -6,7 +6,7 @@ DFLT_MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
 def load(
     *, model_name=DFLT_MODEL_NAME, model_path=None, config_path=None, device="cpu"
 ):
-    from _torch_threads import cap_torch_threads
+    from _worker_threads import cap_torch_threads
 
     cap_torch_threads()
 

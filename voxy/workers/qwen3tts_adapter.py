@@ -26,7 +26,7 @@ def load(
     device="cpu",
     dtype="float32",
 ):
-    from _torch_threads import cap_torch_threads
+    from _worker_threads import cap_torch_threads
 
     cap_torch_threads()
 

@@ -5,7 +5,7 @@ VARIANTS = ("original", "turbo", "multilingual")
 
 
 def load(*, variant="original", device="cpu"):
-    from _torch_threads import cap_torch_threads
+    from _worker_threads import cap_torch_threads
 
     cap_torch_threads()
 

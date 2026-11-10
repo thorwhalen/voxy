@@ -1,7 +1,8 @@
 """
 Talk to a model running in another Python environment, as if it were local.
 
-The worker itself is ``ps.isolated.Worker`` (re-exported here, with ``WorkerError``):
+The worker itself is ``ps.isolated.Worker`` (``Worker`` here, which also takes the
+former ``log_path=``; ``WorkerError`` is ps's):
 it starts an adapter file (``voxy/workers/<name>_adapter.py``) with an environment's
 interpreter, keeps it alive (weights load once), and turns each call into one JSON
 line each way. This module adds what is voxy's: ``env_worker``, the one place an
@@ -18,15 +19,31 @@ log file), and ``WorkerPool``, workers shared across threads.
 
 import os
 import threading
+import warnings
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from ps.isolated import LOG_TAIL_CHARS, Worker, WorkerError
+from ps import isolated
+from ps.isolated import LOG_TAIL_CHARS, WorkerError
 
 if TYPE_CHECKING:
     from voxy.envs import EnvSpec
 
 __all__ = ["LOG_TAIL_CHARS", "Worker", "WorkerError", "WorkerPool", "env_worker"]
+
+
+class Worker(isolated.Worker):
+    """``ps.isolated.Worker``, still accepting voxy's former ``log_path=`` (now ``stderr=``)."""
+
+    def __init__(self, python, adapter, *, log_path=None, **kwargs):
+        if log_path is not None:
+            warnings.warn(
+                "Worker(log_path=) is deprecated: use stderr=",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            kwargs.setdefault("stderr", log_path)
+        super().__init__(python, adapter, **kwargs)
 
 
 def env_worker(

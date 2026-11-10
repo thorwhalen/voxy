@@ -2,7 +2,7 @@
 
 
 def load(*, model="F5TTS_v1_Base", ckpt_file="", vocab_file="", device="cpu", **kwargs):
-    from _torch_threads import cap_torch_threads
+    from _worker_threads import cap_torch_threads
 
     cap_torch_threads()
 

@@ -33,6 +33,7 @@ from pathlib import Path
 from ps import isolated
 
 from voxy.stores import voxy_data_dir
+from voxy.workers._worker_threads import THREADS_ENVVAR
 
 ENVS_KIND = "envs"
 MODELS_KIND = "models"
@@ -41,7 +42,8 @@ HF_SUBDIR = "hf"
 ENV_MARKER = ".voxy-env.json"
 DFLT_ENV_PYTHON = "3.11"
 DFLT_TORCH_BACKEND = "cpu"
-VOXY_NUM_THREADS_ENVVAR = "VOXY_NUM_THREADS"
+#: ``$VOXY_NUM_THREADS``: spelled once, in the helper the adapters share.
+VOXY_NUM_THREADS_ENVVAR = THREADS_ENVVAR
 #: Torch/ONNX threads per worker: a shared machine keeps headroom for others.
 DFLT_NUM_THREADS = 8
 THREAD_ENVVARS = (
@@ -108,9 +110,27 @@ def ensure_env(
     pins (``UV_CONSTRAINT`` and co.) are cleared for the build: they are for the
     host, and an isolated environment exists precisely to differ.
     """
-    return isolated.ensure_env(
-        spec, env_dir(spec, rootdir=rootdir), run=run, log=log, marker=ENV_MARKER
-    )
+    path = env_dir(spec, rootdir=rootdir)
+    if not is_env_ready(spec, rootdir=rootdir):
+        _remove_unmarked_voxy_env(path, rootdir=rootdir, log=log)
+    return isolated.ensure_env(spec, path, run=run, log=log, marker=ENV_MARKER)
+
+
+def _remove_unmarked_voxy_env(path: Path, *, rootdir, log) -> None:
+    """Remove a half-built environment an older voxy left in its own ``envs/`` folder.
+
+    voxy wrote its marker only once a build finished, so an interrupted build left a
+    venv with no marker, which ``ps.isolated`` (rightly, in general) refuses to
+    delete. Under voxy's own ``envs/`` such a folder is voxy's: it is removed so the
+    build can start afresh. Anywhere else, or without a venv interpreter, it is left
+    for ps to refuse.
+    """
+    envs_root = (Path(rootdir or voxy_data_dir()) / ENVS_KIND).resolve()
+    if path.resolve().parent != envs_root or (path / ENV_MARKER).exists():
+        return
+    if isolated.venv_python(path).exists():
+        log(f"voxy: removing the half-built environment in {path}")
+        shutil.rmtree(path)
 
 
 def num_threads(threads: int | None = None) -> int:
