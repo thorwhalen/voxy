@@ -44,6 +44,7 @@ CLI: `python -m voxy voices [--backend X]`, `python -m voxy speak "text" --voice
 | `voicestudio` | local; a voice is a text description (Parler-TTS), no cloning | `voxy[voicestudio]` + model weights (GBs) |
 | `voxcpm`, `qwen3tts`, `chatterbox`, `f5tts`, `xtts` | local cloning from one reference clip + transcript, CPU OK (slow: RTF > 1); long text chunked | `uv`, `ffmpeg`; env + weights built on first use under `$VOXY_DATA_DIR` |
 | `csm` | local Sesame CSM-1B (GPU) | torch, the CSM repo |
+| `soulx` (singing: `voxy.sing`, `voxy.convert_singing`) | sing a MIDI/MusicXML melody with lyrics, or re-voice a sung take; zero-shot from a sung clip + its score; English; Apache-2.0 | `uv`, `git`, `voxy[singing]`; env + 6 GB of weights on first use (`python -m voxy setup soulx`) |
 
 To choose between cloning backends on evidence (French and English accuracy, voice likeness judged by people, arenas, licence, price, watermark), read `docs/benchmarks.md` in the voxy repo; its data is `voxy/data/benchmarks.json` (`voxy.benchmarks.load_benchmarks()`), every number with its source. When you find a newer published result, add a row and run `python -m voxy benchmarks docs/benchmarks.md`.
 
@@ -75,4 +76,4 @@ Cross-lingual clones have the same problem: a French-reference clone speaking En
 
 ## Not this skill
 
-Music and singing: arioso, audiate. Sound effects: foley. Speech-to-text: scribed. Mixing narration with video or music: mixing, braidio.
+Music (instrumental, songs from a prompt): arioso; rendering a score to audio: audiate. Singing a score with lyrics in a voice, or re-voicing a sung take, is voxy: `voxy.sing(score, "can-dle lyr-ics", voice=...)`, `voxy.convert_singing(take, voice=...)` (README "Singing"); a singing voice is a sung clip plus the score it sings (`voxy.singing_voice(clip, score, lyrics)`), only from the singer's own consent or synthetic. Sound effects: foley. Speech-to-text: scribed. Mixing narration with video or music: mixing, braidio.

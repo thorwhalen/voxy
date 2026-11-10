@@ -52,6 +52,8 @@ OPTIONAL_MODULE_EXTRAS = {
     "torchaudio": "local",
     "whisper": "transcription",
     "huggingface_hub": "local",
+    "mido": "singing",
+    "music21": "singing",
 }
 
 

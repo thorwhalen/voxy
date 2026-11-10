@@ -20,6 +20,7 @@ keywords = [
     "voice-cloning",
     "csm",
     "elevenlabs",
+    "singing-voice-synthesis",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -89,6 +90,13 @@ fal = [
 # Pins numpy/transformers tightly: prefer an isolated environment.
 voicestudio = [
     "voicestudio",
+]
+# Reading scores to sing (voxy.score, voxy.sing): MIDI with mido, MusicXML with
+# music21; imported only when a score of that kind is read. The singing models
+# themselves run in their own environments (python -m voxy setup soulx).
+singing = [
+    "mido",
+    "music21",
 ]
 # The part-of-speech heteronym detector (voxy.speechtext.pos_detector); imported
 # lazily. Also needs the model: python -m spacy download fr_core_news_sm
@@ -173,9 +181,9 @@ lint = []
 format = []
 
 [tool.wads.ci.install]
-# The tests exercise the tensor paths, and the ElevenLabs request building against
-# the real (latest) SDK, offline.
-extras = ["local", "elevenlabs"]
+# The tests exercise the tensor paths, the ElevenLabs request building against
+# the real (latest) SDK, offline, and the MIDI/MusicXML score readers.
+extras = ["local", "elevenlabs", "singing"]
 
 [tool.wads.ci.env]
 required_envvars = []

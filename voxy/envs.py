@@ -9,6 +9,7 @@ interpreter, which ``voxy.worker`` then runs the model in:
     envs/{name}/            one virtual environment per backend
     models/hf/              model weights (``HF_HOME`` of every worker)
     models/{name}/          a backend's other weights (e.g. Coqui's ``TTS_HOME``)
+    models/{name}/source/{commit}/   a backend's code that pip can't install (``GitSource``)
 
 Building and checking an environment is ``ps.isolated``'s (``ensure_env``,
 ``is_env_ready``); this module adds voxy's layout (where an environment and its
@@ -73,6 +74,66 @@ class EnvSpec(isolated.EnvSpec):
     python: str = DFLT_ENV_PYTHON
     torch_backend: str | None = DFLT_TORCH_BACKEND
     env_vars: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class GitSource:
+    """Code a backend runs that is not pip-installable (no ``pyproject.toml``), at a
+    pinned commit: ``ensure_git_source`` fetches it once, and the adapter puts the
+    folder on its ``sys.path``.
+
+    Args:
+        url: The repository (anything ``git fetch`` takes).
+        commit: The full commit SHA (a branch or tag would move under you).
+    """
+
+    url: str
+    commit: str
+
+
+def git_source_dir(
+    source: GitSource, name: str, *, rootdir: str | os.PathLike | None = None
+) -> Path:
+    """Where ``source`` is checked out for backend ``name`` (not created here).
+
+    >>> git_source_dir(GitSource("https://x/y", "0123456789abcdef"), "b", rootdir="/d").as_posix()
+    '/d/models/b/source/0123456789ab'
+    """
+    return models_dir(name, "source", source.commit[:12], rootdir=rootdir)
+
+
+def ensure_git_source(
+    source: GitSource,
+    name: str,
+    *,
+    rootdir: str | os.PathLike | None = None,
+    run=subprocess.run,
+    log=print,
+) -> Path:
+    """Check out ``source`` for backend ``name`` once (only that commit, no history),
+    and return its folder.
+
+    The checkout is made beside its final folder and renamed into place when
+    complete, so an interrupted fetch never passes for a ready one.
+    """
+    path = git_source_dir(source, name, rootdir=rootdir)
+    if path.is_dir():
+        return path
+    if shutil.which("git") is None:
+        raise RuntimeError(f"Fetching {source.url} needs git (https://git-scm.com)")
+    partial = path.with_name(path.name + ".partial")
+    shutil.rmtree(partial, ignore_errors=True)
+    partial.mkdir(parents=True)
+    log(f"voxy: fetching {source.url} at {source.commit[:12]} into {path} (one-time)")
+    git = ["git", "-C", str(partial)]
+    for command in (
+        git + ["init", "--quiet"],
+        git + ["fetch", "--quiet", "--depth", "1", source.url, source.commit],
+        git + ["checkout", "--quiet", "--detach", "FETCH_HEAD"],
+    ):
+        run(command, check=True)
+    partial.rename(path)
+    return path
 
 
 def env_dir(spec: EnvSpec, *, rootdir: str | os.PathLike | None = None) -> Path:
