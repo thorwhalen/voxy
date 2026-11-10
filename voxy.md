@@ -1,4 +1,4 @@
-> built 2026-11-10 11:13 UTC from 170f02a (main) · voxy 0.0.68. Details: build_info.json
+> built 2026-11-10 12:09 UTC from 9a49bf3 (main) · voxy 0.0.69. Details: build_info.json
 
 # index.html.md
 
@@ -23,7 +23,7 @@ voxy.list_voices()  # our named voices
 voxy.list_voices("elevenlabs")  # a service's voices
 ```
 
-Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `kokoro` (local stock voices, CPU, no key; see below), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
+Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `kokoro` (local stock voices, CPU, no key; see below), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`. Singing (`voxy.sing`, `voxy.convert_singing`): `soulx` (SoulX-Singer, local), see below.
 
 Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice ada -o out.mp3`.
 
@@ -287,6 +287,32 @@ python -m voxy diagnose spec.json --out renders/first-listen --publish
 ```
 
 Cards are titled with readable names (the backend, then the settings that vary, e.g. “Chatterbox 0.3”). For a page you share with other listeners, optional spec keys help: `references` (named clips, e.g. a raw and a denoised one, each with a `label`), `appendix` (reference name → a note: those variants go in a collapsed section at the end), `imported` (clips rendered elsewhere, such as a cloud service, with their `backend`, `label` and `audio_file`), `backend_notes`, `noindex`, and `notes_sink` + `page_url`, which save every rating, note, name and clip play as they happen to an [annoquest](https://github.com/i2mint/annoquest) server (`{"kind": "annoquest", "url": "/api/annoquest", "request": "<id>"}`). The page says so, and `annoquest-request.json` is written next to it for registering on that server; add `?reader=<name>` to the link you send each listener to tell them apart.
+
+### Singing: a score with lyrics, or a sung take re-voiced
+
+`voxy.sing` sings a melody (MIDI, MusicXML, a music21 stream, or `voxy.score.Note`s) with lyrics in a voice; `voxy.convert_singing` re-voices a sung take, keeping its melody, words and timing. The backend is `soulx` ([SoulX-Singer](https://github.com/Soul-AILab/SoulX-Singer), Soul AI Lab, code and weights Apache-2.0), in its own environment like the local cloners: `python -m voxy setup soulx`, or built on first use (Python 3.11, torch 2.2; needs `uv` and `git`). SoulX-Singer is not pip-installable, so voxy fetches its repository at a pinned commit into `$VOXY_DATA_DIR/models/soulx/source/`; the weights (two 2.8 GB checkpoints plus RMVPE) come from the Hugging Face Hub at pinned revisions; `openai/whisper-base` (loaded by upstream for conversion) and g2p_en’s NLTK data are fetched unpinned, at their latest versions, on first use. Reading scores needs `'voxy[singing]'` (mido for MIDI, music21 for MusicXML).
+
+```python
+import voxy
+
+# lyrics: one token per note; "can-dle" spreads a word over two notes, "-" holds it one more
+voxy.sing("melody.mid", "Light a can-dle in the win-dow").save("sung.wav")
+voxy.sing("song.musicxml", transpose=-2).save("song.wav")  # the score's own lyrics, 2 semitones down
+voxy.sing("arrangement.mid", track=2)  # a MIDI file with several lines: say which one sings
+
+# a voice: a sung clip and the score it sings, timed as in the clip
+voice = voxy.singing_voice("phrase-take.wav", "phrase.mid", "la la la la la la la la")
+voxy.sing("melody.mid", "Light a can-dle in the win-dow", voice=voice, seed=0)
+voxy.convert_singing("take.wav", voice=voice).save("take-revoiced.wav")
+```
+
+**Making a voice.** Synthesis copies the timbre of a sung clip and aligns that clip with its notes and phonemes, so a voice is a clip plus its score. The simplest way to get both: record the voice singing a short phrase written beforehand (a MIDI or MusicXML file with its lyrics, sung in time, 5 to 30 s, no accompaniment), and pass the recording with that score. Conversion needs only the clip. Without `voice=`, a synthetic voice is used (`voxy.synthetic_singing_voice("high" | "low")`: a formant synthesiser singing “la”, which belongs to no one); words sung in it are less clear than with a real voice. A voice is plain data, so `voxy.save_voice(name, voice, consent="...")` keeps it in the library and `voice=name` finds it again.
+
+**Scores.** A MIDI file’s melody is its one track and channel with notes (drums aside); with several, the error lists them and `track=` (and `channel=`, 1 to 16) picks one; a line with chords is refused. Words come only from `lyrics` meta-events (on the melody’s track, else the one other track that has them; `text` events are never sung), each on the note sounding at its time (a lyric on no note is an error); `can-` / `-dle` join into one word, and a note without a syllable holds the word before it unless a rest came between. Karaoke files (`.kar`, lyrics in `text` events) are not supported yet; full score reading is planned in [audiate#2](https://github.com/thorwhalen/audiate/issues/2). MusicXML is read through music21: the part’s first voice and first verse (`part=` picks the part), syllabic lyrics, ties merged, grace notes skipped, the top note of a chord. Each sung note gets one word without spaces.
+
+**Options.** `transpose=` is semitones (0, the default for `sing`: as written) or `"fit_voice"` (into the voice’s register, the default for `convert_singing`). Model parameters are keyword arguments: `n_steps=32` (16 is twice as fast but blurs words), `cfg=3.0`, `seed=`, `peak=0.95` (output above it is scaled down), `fade_s=0.02` (fade-out and fade-in where segments meet, not an overlap: a song is sung in segments of at most 30 s, cut at rests where possible). `"fit_voice"` is computed once for the whole song (median note of the voice’s clip minus median note of the score). English lyrics only for now (upstream also sings Mandarin and Cantonese). On Apple Silicon it runs on MPS with the vocoder on the CPU (torch 2.2’s MPS backend fails on its complex multiply): about 1.4x real time on an M1 Max once loaded (a first call, which loads the model, took 48 s for 6 s of singing, and conversion 35 s) and up to 6 GB of memory per model; on the CPU alone about 8x real time. A model stays loaded (about 6 GB) until `voxy.close_singing_models()` or the end of the process; switching between `sing` and `convert_singing` swaps one model for the other rather than holding both.
+
+**Consent.** SoulX-Singer’s usage disclaimer (not a licence term) forbids impersonating anyone without authorisation and making deceptive audio, and asks to respect intellectual property, privacy and consent. Clone only your own voice, a consenting singer’s, or a synthetic one. Each singing backend records its restrictions in `voxy.singing_backends()[name].consent`.
 
 ### Heteronyms: what to send, and checking what was said
 
@@ -675,7 +701,7 @@ Registry name of the backend (also each profile’s `model_type`).
 
 Sample rate of the generated audio (loads the model).
 
-### voxy.base.OPTIONAL_MODULE_EXTRAS *= {'huggingface_hub': 'local', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'}*
+### voxy.base.OPTIONAL_MODULE_EXTRAS *= {'huggingface_hub': 'local', 'mido': 'singing', 'music21': 'singing', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'}*
 
 The extra that installs each optional module (for the error raised without it).
 
@@ -931,7 +957,7 @@ False
 * **Return type:**
   [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
-### voxy.base.optional_import(module, , package='voxy', extra=None, extras={'huggingface_hub': 'local', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'})
+### voxy.base.optional_import(module, , package='voxy', extra=None, extras={'huggingface_hub': 'local', 'mido': 'singing', 'music21': 'singing', 'torch': 'local', 'torchaudio': 'local', 'whisper': 'transcription'})
 
 `optional_import(module)`: the module, or an ImportError naming the voxy extra.
 
@@ -1571,6 +1597,7 @@ interpreter, which `voxy.worker` then runs the model in:
 > envs/{name}/            one virtual environment per backend
 > models/hf/              model weights (`HF_HOME` of every worker)
 > models/{name}/          a backend’s other weights (e.g. Coqui’s `TTS_HOME`)
+> models/{name}/source/{commit}/   a backend’s code that pip can’t install (`GitSource`)
 
 Building and checking an environment is `ps.isolated`’s (`ensure_env`,
 `is_env_ready`); this module adds voxy’s layout (where an environment and its
@@ -1588,27 +1615,31 @@ True
 
 ### Module Attributes
 
-| [`ENV_MARKER`](_autosummary/voxy.envs.html.md#voxy.envs.ENV_MARKER)              | voxy's marker file (environments built before ps.isolated carry it).   |
-|--------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [`VOXY_NUM_THREADS_ENVVAR`](_autosummary/voxy.envs.html.md#voxy.envs.VOXY_NUM_THREADS_ENVVAR) | spelled once, in the helper the adapters share.                        |
-| [`DFLT_NUM_THREADS`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_NUM_THREADS)        | a shared machine keeps headroom for others.                            |
+| [`ENV_MARKER`](_autosummary/voxy.envs.html.md#voxy.envs.ENV_MARKER)                 | voxy's marker file (environments built before ps.isolated carry it).   |
+|-----------------------------------------------------------------------------|------------------------------------------------------------------------|
+| [`VOXY_NUM_THREADS_ENVVAR`](_autosummary/voxy.envs.html.md#voxy.envs.VOXY_NUM_THREADS_ENVVAR)    | spelled once, in the helper the adapters share.                        |
+| [`DFLT_NUM_THREADS`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_NUM_THREADS)           | a shared machine keeps headroom for others.                            |
+| [`DFLT_SOURCE_LOCK_TIMEOUT_S`](_autosummary/voxy.envs.html.md#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S) | How long to wait for another process fetching the same source.         |
 
 ### Functions
 
-| [`ensure_env`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_env)(spec, \*[, rootdir, run, log])          | Build `spec`'s environment if missing or stale, and return its interpreter.      |
-|-----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| [`env_dir`](_autosummary/voxy.envs.html.md#voxy.envs.env_dir)(spec, \*[, rootdir])                       | The folder of `spec`'s environment (not created here).                           |
-| [`env_python`](_autosummary/voxy.envs.html.md#voxy.envs.env_python)(spec, \*[, rootdir])                    | The interpreter of `spec`'s environment (it may not exist yet).                  |
-| [`is_env_ready`](_autosummary/voxy.envs.html.md#voxy.envs.is_env_ready)(spec, \*[, rootdir])                  | True if the environment exists and was built from this exact spec.               |
-| [`models_dir`](_autosummary/voxy.envs.html.md#voxy.envs.models_dir)(\*parts[, rootdir])                     | Where weights live (`models/`, or a subfolder of it).                            |
-| [`num_threads`](_autosummary/voxy.envs.html.md#voxy.envs.num_threads)([threads])                             | `threads`, else `$VOXY_NUM_THREADS`, else `DFLT_NUM_THREADS`.                    |
-| [`remove_env`](_autosummary/voxy.envs.html.md#voxy.envs.remove_env)(spec, \*[, rootdir])                    | Delete `spec`'s environment (weights are kept).                                  |
-| [`worker_environ`](_autosummary/voxy.envs.html.md#voxy.envs.worker_environ)(spec, \*[, threads, rootdir, base]) | Environment variables for a worker: weights under the data root, threads capped. |
+| [`ensure_env`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_env)(spec, \*[, rootdir, run, log])          | Build `spec`'s environment if missing or stale, and return its interpreter.                                                                     |
+|-----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`ensure_git_source`](_autosummary/voxy.envs.html.md#voxy.envs.ensure_git_source)(source, name, \*[, ...])         | Check out `source` for backend `name` once (only that commit, no history), and return its folder, checked: at that commit, with no local edits. |
+| [`env_dir`](_autosummary/voxy.envs.html.md#voxy.envs.env_dir)(spec, \*[, rootdir])                       | The folder of `spec`'s environment (not created here).                                                                                          |
+| [`env_python`](_autosummary/voxy.envs.html.md#voxy.envs.env_python)(spec, \*[, rootdir])                    | The interpreter of `spec`'s environment (it may not exist yet).                                                                                 |
+| [`git_source_dir`](_autosummary/voxy.envs.html.md#voxy.envs.git_source_dir)(source, name, \*[, rootdir])        | Where `source` is checked out for backend `name` (not created here).                                                                            |
+| [`is_env_ready`](_autosummary/voxy.envs.html.md#voxy.envs.is_env_ready)(spec, \*[, rootdir])                  | True if the environment exists and was built from this exact spec.                                                                              |
+| [`models_dir`](_autosummary/voxy.envs.html.md#voxy.envs.models_dir)(\*parts[, rootdir])                     | Where weights live (`models/`, or a subfolder of it).                                                                                           |
+| [`num_threads`](_autosummary/voxy.envs.html.md#voxy.envs.num_threads)([threads])                             | `threads`, else `$VOXY_NUM_THREADS`, else `DFLT_NUM_THREADS`.                                                                                   |
+| [`remove_env`](_autosummary/voxy.envs.html.md#voxy.envs.remove_env)(spec, \*[, rootdir])                    | Delete `spec`'s environment (weights are kept).                                                                                                 |
+| [`worker_environ`](_autosummary/voxy.envs.html.md#voxy.envs.worker_environ)(spec, \*[, threads, rootdir, base]) | Environment variables for a worker: weights under the data root, threads capped.                                                                |
 
 ### Classes
 
-| [`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds (`ps.isolated.EnvSpec` with voxy's defaults).   |
-|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
+| [`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)(name, requirements[, python, ...])   | What a backend's environment holds (`ps.isolated.EnvSpec` with voxy's defaults).                                                                                                   |
+|-----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`GitSource`](_autosummary/voxy.envs.html.md#voxy.envs.GitSource)(url, commit)                       | Code a backend runs that is not pip-installable (no `pyproject.toml`), at a pinned commit: `ensure_git_source` fetches it once, and the adapter puts the folder on its `sys.path`. |
 
 ### voxy.envs.DFLT_NUM_THREADS *= 8*
 
@@ -1616,6 +1647,10 @@ a shared machine keeps headroom for others.
 
 * **Type:**
   Torch/ONNX threads per worker
+
+### voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S *= 900*
+
+How long to wait for another process fetching the same source.
 
 ### voxy.envs.ENV_MARKER *= '.voxy-env.json'*
 
@@ -1637,6 +1672,26 @@ What a backend’s environment holds (`ps.isolated.EnvSpec` with voxy’s defaul
     use `{models}`, the backend’s own weights folder). Not part of the
     digest: changing them needs no rebuild.
 
+### *class* voxy.envs.GitSource(url, commit)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+Code a backend runs that is not pip-installable (no `pyproject.toml`), at a
+pinned commit: `ensure_git_source` fetches it once, and the adapter puts the
+folder on its `sys.path`.
+
+* **Parameters:**
+  * **url** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The repository (anything `git fetch` takes).
+  * **commit** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The full 40-character commit SHA (a branch, tag or short SHA would
+    not pin it).
+
+```pycon
+>>> GitSource("https://x/y", "main")
+Traceback (most recent call last):
+  ...
+ValueError: GitSource needs a full 40-character commit SHA, not 'main'
+```
+
 ### voxy.envs.VOXY_NUM_THREADS_ENVVAR *= 'VOXY_NUM_THREADS'*
 
 spelled once, in the helper the adapters share.
@@ -1655,6 +1710,18 @@ host, and an isolated environment exists precisely to differ.
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
 
+### voxy.envs.ensure_git_source(source, name, \*, rootdir=None, run=<function run>, log=<built-in function print>, lock_timeout_s=900)
+
+Check out `source` for backend `name` once (only that commit, no history),
+and return its folder, checked: at that commit, with no local edits.
+
+The fetch holds a lock (another process fetching the same source waits), goes
+into a `.partial` folder (an interrupted one is started afresh), and is renamed
+into place when complete. git runs without the caller’s `GIT_*` variables.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
 ### voxy.envs.env_dir(spec, , rootdir=None)
 
 The folder of `spec`’s environment (not created here).
@@ -1665,6 +1732,18 @@ The folder of `spec`’s environment (not created here).
 ### voxy.envs.env_python(spec, , rootdir=None)
 
 The interpreter of `spec`’s environment (it may not exist yet).
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.envs.git_source_dir(source, name, , rootdir=None)
+
+Where `source` is checked out for backend `name` (not created here).
+
+```pycon
+>>> git_source_dir(GitSource("https://x/y", "0123456789ab" + "0" * 28), "b", rootdir="/d").as_posix()
+'/d/models/b/source/0123456789ab'
+```
 
 * **Return type:**
   [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
@@ -1991,11 +2070,75 @@ trained on once.
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
 
+# _autosummary/voxy.formant_singer.html.md
+
+# voxy.formant_singer
+
+A formant synthesiser that sings “la” on a list of notes: voices that belong to no one.
+
+A zero-shot singing model learns a timbre from a sung prompt clip. When no consenting
+singer is at hand (a default voice, a test, a demo), this makes one: glottal-like
+harmonics shaped by /l/ then /a/ formants, a portamento between notes, a delayed
+vibrato and a little breath noise. Because the clip is rendered from known notes,
+its notes and words are exact by construction, which is what an SVS prompt needs.
+It is buzzy, and words sung in it come out less clearly than with a real voice.
+
+```pycon
+>>> from voxy.score import notes_from_pitches
+>>> samples = sing_la(notes_from_pitches([(60, 1)], bpm=120, start=0.1), sample_rate=8000)
+>>> len(samples), float(abs(samples).max()) <= 1.0
+(8000, True)
+```
+
+### Module Attributes
+
+| [`SYNTH_VERSION`](_autosummary/voxy.formant_singer.html.md#voxy.formant_singer.SYNTH_VERSION)     | Bump when the synthesis changes, so cached renders are made again.         |
+|--------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`FORMANT_PRESETS`](_autosummary/voxy.formant_singer.html.md#voxy.formant_singer.FORMANT_PRESETS)   | `(centre Hz, bandwidth Hz)` per formant, for /a/ and /l/, per preset.      |
+| [`PORTAMENTO_S`](_autosummary/voxy.formant_singer.html.md#voxy.formant_singer.PORTAMENTO_S)      | Glide between notes (time constant of a one-pole smoother, run both ways). |
+| [`CONSONANT_S`](_autosummary/voxy.formant_singer.html.md#voxy.formant_singer.CONSONANT_S)       | /l/ turns into /a/ over this long at each onset.                           |
+| [`NYQUIST_MARGIN_HZ`](_autosummary/voxy.formant_singer.html.md#voxy.formant_singer.NYQUIST_MARGIN_HZ) | Harmonics stop this far below Nyquist.                                     |
+
+### Functions
+
+| [`sing_la`](_autosummary/voxy.formant_singer.html.md#voxy.formant_singer.sing_la)(notes, \*[, sample_rate, preset, ...])   | Mono float32 samples of "la" sung on `notes` (silence before the first note, `tail_s` after the last), peaking at 0.8.   |
+|---------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+
+### voxy.formant_singer.CONSONANT_S *= 0.08*
+
+/l/ turns into /a/ over this long at each onset.
+
+### voxy.formant_singer.FORMANT_PRESETS *: [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Sequence](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)[[tuple](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[float](https://docs.python.org/3/builtins/functions.html#float), [float](https://docs.python.org/3/builtins/functions.html#float)]]]]* *= {'high': {'a': ((850, 80), (1220, 90), (2810, 120), (3800, 150), (4950, 200)), 'l': ((380, 60), (1100, 100), (2700, 150), (3700, 180), (4900, 220))}, 'low': {'a': ((730, 80), (1090, 90), (2440, 120), (3400, 150), (4500, 200)), 'l': ((360, 60), (1000, 100), (2500, 150), (3300, 180), (4400, 220))}}*
+
+`(centre Hz, bandwidth Hz)` per formant, for /a/ and /l/, per preset.
+
+### voxy.formant_singer.NYQUIST_MARGIN_HZ *= 200*
+
+Harmonics stop this far below Nyquist.
+
+### voxy.formant_singer.PORTAMENTO_S *= 0.035*
+
+Glide between notes (time constant of a one-pole smoother, run both ways).
+
+### voxy.formant_singer.SYNTH_VERSION *= 1*
+
+Bump when the synthesis changes, so cached renders are made again.
+
+### voxy.formant_singer.sing_la(notes, , sample_rate=24000, preset='high', tail_s=0.4, seed=0)
+
+Mono float32 samples of “la” sung on `notes` (silence before the first note,
+`tail_s` after the last), peaking at 0.8.
+
+* **Return type:**
+  `ndarray`
+
+
 # _autosummary/voxy.html.md
 
 # voxy
 
-Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
+Facade for voice generation: speech synthesis in any voice, cloning and designing voices,
+and singing (`sing`, `convert_singing`).
 
 ```pycon
 >>> import voxy
@@ -2005,36 +2148,40 @@ True
 
 ### Modules
 
-| [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.     |
-|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
-| [`align`](_autosummary/voxy.align.html.md#module-voxy.align)                         | Where each word of a known text is in a recording, to the character: forced alignment.        |
-| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                   |
-| [`benchmarks`](_autosummary/voxy.benchmarks.html.md#module-voxy.benchmarks)               | Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.    |
-| [`diagnosis`](_autosummary/voxy.diagnosis.html.md#module-voxy.diagnosis)                 | Diagnosis pages: render one text through a grid of (model x parameters), listen side by side. |
-| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model)   | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.             |
-| [`envs`](_autosummary/voxy.envs.html.md#module-voxy.envs)                           | Isolated Python environments for backends whose dependencies clash with yours.                |
-| [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                       | Voice generation in one call, whatever the service behind it.                                 |
-| [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)                 | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.             |
-| [`finetune`](_autosummary/voxy.finetune.html.md#module-voxy.finetune)                   | Fine-tuning datasets from prepared clips: one export per training recipe.                     |
-| [`kokoro_model`](_autosummary/voxy.kokoro_model.html.md#module-voxy.kokoro_model)           | Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.                |
-| [`lexique`](_autosummary/voxy.lexique.html.md#module-voxy.lexique)                     | French heteronyms derived from Lexique, to merge under voxy's hand-made table.                |
-| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                          |
-| [`local_clone`](_autosummary/voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.           |
-| [`pauses`](_autosummary/voxy.pauses.html.md#module-voxy.pauses)                       | Pauses in text to speak: SSML breaks, honoured on every backend.                              |
-| [`pronounce`](_autosummary/voxy.pronounce.html.md#module-voxy.pronounce)                 | Checking, in the audio, which reading of a flagged word a render used.                        |
-| [`refprep`](_autosummary/voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.    |
-| [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                |
-| [`script`](_autosummary/voxy.script.html.md#module-voxy.script)                       | Render a cast script: text segments, each read by its own voice, one audio file per section.  |
-| [`separate`](_autosummary/voxy.separate.html.md#module-voxy.separate)                   | Split a recording into the voice and the rest (music, noise) before using the voice.          |
-| [`speakers`](_autosummary/voxy.speakers.html.md#module-voxy.speakers)                   | Keep one speaker: find their voice in a recording and mark everyone else's words.             |
-| [`speechtext`](_autosummary/voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                          |
-| [`splice`](_autosummary/voxy.splice.html.md#module-voxy.splice)                       | Correct words in a recording, in the speaker's voice: find, render, splice, check.            |
-| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.               |
-| [`textsplit`](_autosummary/voxy.textsplit.html.md#module-voxy.textsplit)                 | Split long text (a chapter) into chunks a speech model can say in one breath.                 |
-| [`voicestudio_model`](_autosummary/voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).               |
-| [`wavutil`](_autosummary/voxy.wavutil.html.md#module-voxy.wavutil)                     | Mono PCM WAV in and out as float arrays, plus the few edits narration needs.                  |
-| [`worker`](_autosummary/voxy.worker.html.md#module-voxy.worker)                       | Talk to a model running in another Python environment, as if it were local.                   |
-| [`workers`](_autosummary/voxy.workers.html.md#module-voxy.workers)                     | Backend adapters run by `voxy.worker` inside each backend's own environment.                  |
+| [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.                                                        |
+|--------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`align`](_autosummary/voxy.align.html.md#module-voxy.align)                         | Where each word of a known text is in a recording, to the character: forced alignment.                                                           |
+| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                                                                      |
+| [`benchmarks`](_autosummary/voxy.benchmarks.html.md#module-voxy.benchmarks)               | Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.                                                       |
+| [`diagnosis`](_autosummary/voxy.diagnosis.html.md#module-voxy.diagnosis)                 | Diagnosis pages: render one text through a grid of (model x parameters), listen side by side.                                                    |
+| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model)   | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.                                                                |
+| [`envs`](_autosummary/voxy.envs.html.md#module-voxy.envs)                           | Isolated Python environments for backends whose dependencies clash with yours.                                                                   |
+| [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                       | Voice generation in one call, whatever the service behind it.                                                                                    |
+| [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)                 | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.                                                                |
+| [`finetune`](_autosummary/voxy.finetune.html.md#module-voxy.finetune)                   | Fine-tuning datasets from prepared clips: one export per training recipe.                                                                        |
+| [`formant_singer`](_autosummary/voxy.formant_singer.html.md#module-voxy.formant_singer)       | A formant synthesiser that sings "la" on a list of notes: voices that belong to no one.                                                          |
+| [`kokoro_model`](_autosummary/voxy.kokoro_model.html.md#module-voxy.kokoro_model)           | Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.                                                                   |
+| [`lexique`](_autosummary/voxy.lexique.html.md#module-voxy.lexique)                     | French heteronyms derived from Lexique, to merge under voxy's hand-made table.                                                                   |
+| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                                                                             |
+| [`local_clone`](_autosummary/voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.                                                              |
+| [`pauses`](_autosummary/voxy.pauses.html.md#module-voxy.pauses)                       | Pauses in text to speak: SSML breaks, honoured on every backend.                                                                                 |
+| [`pronounce`](_autosummary/voxy.pronounce.html.md#module-voxy.pronounce)                 | Checking, in the audio, which reading of a flagged word a render used.                                                                           |
+| [`refprep`](_autosummary/voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.                                                       |
+| [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                                                                   |
+| [`score`](_autosummary/voxy.score.html.md#module-voxy.score)                         | Scores for singing: the notes of a melody (pitch, timing, word) from MIDI, MusicXML or plain code, with lyrics attached.                         |
+| [`script`](_autosummary/voxy.script.html.md#module-voxy.script)                       | Render a cast script: text segments, each read by its own voice, one audio file per section.                                                     |
+| [`separate`](_autosummary/voxy.separate.html.md#module-voxy.separate)                   | Split a recording into the voice and the rest (music, noise) before using the voice.                                                             |
+| [`singing`](_autosummary/voxy.singing.html.md#module-voxy.singing)                     | Singing: sing a score with lyrics in a voice (SVS), or re-voice a sung take (SVC).                                                               |
+| [`soulx`](_autosummary/voxy.soulx.html.md#module-voxy.soulx)                         | SoulX-Singer (Soul AI Lab, 2026; code and weights Apache-2.0): zero-shot singing voice synthesis and conversion, as the `soulx` singing backend. |
+| [`speakers`](_autosummary/voxy.speakers.html.md#module-voxy.speakers)                   | Keep one speaker: find their voice in a recording and mark everyone else's words.                                                                |
+| [`speechtext`](_autosummary/voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                                                                             |
+| [`splice`](_autosummary/voxy.splice.html.md#module-voxy.splice)                       | Correct words in a recording, in the speaker's voice: find, render, splice, check.                                                               |
+| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.                                                                  |
+| [`textsplit`](_autosummary/voxy.textsplit.html.md#module-voxy.textsplit)                 | Split long text (a chapter) into chunks a speech model can say in one breath.                                                                    |
+| [`voicestudio_model`](_autosummary/voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).                                                                  |
+| [`wavutil`](_autosummary/voxy.wavutil.html.md#module-voxy.wavutil)                     | Mono PCM WAV in and out as float arrays, plus the few edits narration needs.                                                                     |
+| [`worker`](_autosummary/voxy.worker.html.md#module-voxy.worker)                       | Talk to a model running in another Python environment, as if it were local.                                                                      |
+| [`workers`](_autosummary/voxy.workers.html.md#module-voxy.workers)                     | Backend adapters run by `voxy.worker` inside each backend's own environment.                                                                     |
 
 
 # _autosummary/voxy.kokoro_model.html.md
@@ -4467,6 +4614,224 @@ Parse `say -v '?'` output.
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
 
 
+# _autosummary/voxy.score.html.md
+
+# voxy.score
+
+Scores for singing: the notes of a melody (pitch, timing, word) from MIDI, MusicXML
+or plain code, with lyrics attached.
+
+A `Note` is one sung note in absolute seconds: its MIDI pitch, the word sung on it,
+and whether the word starts on it (`starts_word`) or continues from the note
+before (a melisma, or the later syllables of a word). Rests are the gaps between
+notes. A singing backend turns a list of notes into its own input format
+(`voxy.soulx.soulx_metadata` for SoulX-Singer).
+
+```pycon
+>>> from voxy.score import read_score
+>>> notes = read_score("melody.mid", "Light a can-dle in the win-dow")
+>>> notes = read_score("song.musicxml")         # the score's own lyrics
+```
+
+Lyrics are a line of whitespace-separated tokens, one per sung note:
+`can-dle` spreads one word over two notes, a bare `-` (or `_`) holds the
+previous word one more note.
+
+```pycon
+>>> notes = notes_from_pitches([(64, 1), (67, 1), (60, 2)], bpm=120)
+>>> [(n.start, n.dur, n.pitch) for n in notes]
+[(0.0, 0.5, 64), (0.5, 0.5, 67), (1.0, 1.0, 60)]
+>>> [(n.word, n.starts_word) for n in attach_lyrics(notes, "hel-lo you")]
+[('hello', True), ('hello', False), ('you', True)]
+```
+
+MIDI is read with `mido` (every tempo change honoured, lyric meta-events kept),
+MusicXML (and anything else music21 parses) with `music21`: both are in the
+`voxy[singing]` extra and imported only when a score of that kind is read.
+
+### Module Attributes
+
+| [`HOLD_TOKENS`](_autosummary/voxy.score.html.md#voxy.score.HOLD_TOKENS)        | Tokens of a lyric line that hold the previous word one more note.                             |
+|---------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|
+| [`DFLT_FILLER_WORD`](_autosummary/voxy.score.html.md#voxy.score.DFLT_FILLER_WORD)   | The word given to sung notes that have none (a score without lyrics on every note).           |
+| [`DFLT_MIDI_TEMPO`](_autosummary/voxy.score.html.md#voxy.score.DFLT_MIDI_TEMPO)    | 500 000 microseconds a beat (120 BPM).                                                        |
+| [`DRUM_CHANNEL`](_autosummary/voxy.score.html.md#voxy.score.DRUM_CHANNEL)       | percussion, never a melody.                                                                   |
+| [`DFLT_MAX_OVERLAP_S`](_autosummary/voxy.score.html.md#voxy.score.DFLT_MAX_OVERLAP_S) | A note may overlap the next by this much (legato) before the line counts as polyphonic.       |
+| [`WORD_BREAK_REST_S`](_autosummary/voxy.score.html.md#voxy.score.WORD_BREAK_REST_S)  | a note after it without a lyric of its own starts a new word instead of continuing (melisma). |
+
+### Functions
+
+| [`attach_lyrics`](_autosummary/voxy.score.html.md#voxy.score.attach_lyrics)(notes, lyrics)                     | `notes` with the words of `lyrics` (see `lyric_tokens`), one token per note.                                          |
+|---------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| [`lyric_tokens`](_autosummary/voxy.score.html.md#voxy.score.lyric_tokens)(lyrics)                             | `(word, starts_word)` per sung note, from a lyric line.                                                               |
+| [`notes_from_midi`](_autosummary/voxy.score.html.md#voxy.score.notes_from_midi)(path, \*[, track, channel, ...]) | The melody of a MIDI file: the notes of one track and channel, with its lyric events joined into words.               |
+| [`notes_from_musicxml`](_autosummary/voxy.score.html.md#voxy.score.notes_from_musicxml)(score, \*[, part])           | The notes of one part of a MusicXML file (or any score music21 reads, or a music21 stream), with its lyrics as words. |
+| [`notes_from_pitches`](_autosummary/voxy.score.html.md#voxy.score.notes_from_pitches)(pitches, \*[, bpm, start])    | Notes from `(midi_pitch, beats)` pairs, back to back; a pitch of 0 or None is a rest.                                 |
+| [`read_score`](_autosummary/voxy.score.html.md#voxy.score.read_score)(score[, lyrics, filler, track, ...])  | The notes of `score`, with words: from `lyrics` if given, else the score's own.                                       |
+
+### Classes
+
+| [`Note`](_autosummary/voxy.score.html.md#voxy.score.Note)(start, dur, pitch[, word, starts_word])   | One sung note, in absolute seconds.   |
+|-------------------------------------------------------------------------------------------------|---------------------------------------|
+
+### voxy.score.DFLT_FILLER_WORD *= 'la'*
+
+The word given to sung notes that have none (a score without lyrics on every note).
+
+### voxy.score.DFLT_MAX_OVERLAP_S *= 0.1*
+
+A note may overlap the next by this much (legato) before the line counts as polyphonic.
+
+### voxy.score.DFLT_MIDI_TEMPO *= 500000*
+
+500 000 microseconds a beat (120 BPM).
+
+* **Type:**
+  MIDI tempo before any `set_tempo` event
+
+### voxy.score.DRUM_CHANNEL *= 9*
+
+percussion, never a melody.
+
+* **Type:**
+  MIDI channel 10 (index 9)
+
+### voxy.score.HOLD_TOKENS *= frozenset({'-', '_'})*
+
+Tokens of a lyric line that hold the previous word one more note.
+
+### *class* voxy.score.Note(start, dur, pitch, word='', starts_word=True)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One sung note, in absolute seconds.
+
+* **Parameters:**
+  * **start** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Onset (seconds from the start of the score).
+  * **dur** ([`float`](https://docs.python.org/3/builtins/functions.html#float)) – Duration in seconds.
+  * **pitch** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – MIDI note number (60 is middle C).
+  * **word** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The word sung on it (’’ until lyrics are attached).
+  * **starts_word** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – True if the word starts here; False if it continues the
+    previous note’s word (melisma, later syllable).
+
+#### *property* end *: [float](https://docs.python.org/3/builtins/functions.html#float)*
+
+Where the note stops (seconds).
+
+### voxy.score.WORD_BREAK_REST_S *= 0.2*
+
+a note after it without a lyric of
+its own starts a new word instead of continuing (melisma).
+
+* **Type:**
+  A gap this long between notes ends a word
+
+### voxy.score.attach_lyrics(notes, lyrics)
+
+`notes` with the words of `lyrics` (see `lyric_tokens`), one token per note.
+
+```pycon
+>>> attach_lyrics(notes_from_pitches([(60, 1)]), "two words")
+Traceback (most recent call last):
+  ...
+ValueError: 2 lyric syllables for 1 notes: write 'can-dle' for one word over two notes, '-' to hold a word
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Note`](_autosummary/voxy.score.html.md#voxy.score.Note)]
+
+### voxy.score.lyric_tokens(lyrics)
+
+`(word, starts_word)` per sung note, from a lyric line.
+
+```pycon
+>>> lyric_tokens("Light a can-dle - in")
+[('Light', True), ('a', True), ('candle', True), ('candle', False), ('candle', False), ('in', True)]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`bool`](https://docs.python.org/3/builtins/functions.html#bool)]]
+
+### voxy.score.notes_from_midi(path, , track=None, channel=None, max_overlap_s=0.1, with_lyrics=True)
+
+The melody of a MIDI file: the notes of one track and channel, with its lyric
+events joined into words.
+
+The line is the one track and channel that has notes, drums (channel 10) aside;
+with several, pass `track=` (its index in the file) and, for a file that mixes
+channels in one track, `channel=` (1 to 16); the error lists the candidates.
+Times follow the file’s tempo map. A note overlapping the next by up to
+`max_overlap_s` (legato) is cut at the next onset; more, or two notes starting
+together, is polyphony, and an error.
+
+Words come from `lyrics` meta-events only (never `text` events, so a label
+is never sung), on the melody’s track, else on the one other track that has
+them (type-1 files often keep them in track 0). Each is a syllable on the note
+sounding at its tick (from a little before its onset to its end); one that
+falls on no note, or a second one on a note, is an error. A trailing `-`
+(`can-`) or a leading one (`-dle`) joins syllables into one word; a note
+without a syllable continues the word before it (a melisma), unless a rest
+separates them. `with_lyrics=False` reads no lyrics (words come from
+elsewhere). Karaoke files (`.kar`, lyrics in `text` events) are not
+supported yet: full score reading is planned in audiate
+([https://github.com/thorwhalen/audiate/issues/2](https://github.com/thorwhalen/audiate/issues/2)).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Note`](_autosummary/voxy.score.html.md#voxy.score.Note)]
+
+### voxy.score.notes_from_musicxml(score, , part=0)
+
+The notes of one part of a MusicXML file (or any score music21 reads, or a
+music21 stream), with its lyrics as words.
+
+Only the part’s first voice is read (timed by the part’s own tempo marks), and
+only its first verse of lyrics; grace notes and zero-length notes are skipped;
+a chord sings its highest note. Tied notes become one. Syllables are
+joined into words with MusicXML’s `syllabic` (begin, middle, end), so
+`can-dle` on two notes is `candle` on both, the second continuing the
+word. A note without a lyric continues the word before it (a melisma under a
+slur), unless a rest came between.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Note`](_autosummary/voxy.score.html.md#voxy.score.Note)]
+
+### voxy.score.notes_from_pitches(pitches, , bpm=100, start=0.0)
+
+Notes from `(midi_pitch, beats)` pairs, back to back; a pitch of 0 or None is a rest.
+
+```pycon
+>>> [(n.start, n.pitch) for n in notes_from_pitches([(60, 1), (0, 1), (62, 1)], bpm=60)]
+[(0.0, 60), (2.0, 62)]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Note`](_autosummary/voxy.score.html.md#voxy.score.Note)]
+
+### voxy.score.read_score(score, lyrics=None, , filler='la', track=None, channel=None, part=0)
+
+The notes of `score`, with words: from `lyrics` if given, else the score’s own.
+
+* **Parameters:**
+  * **score** – A MIDI file (`.mid`, `.midi`), a MusicXML file (`.musicxml`,
+    `.xml`, `.mxl`, or anything music21 parses), a music21 stream, or
+    a sequence of `Note`.
+  * **lyrics** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A lyric line (one token per note, see `lyric_tokens`); replaces
+    the score’s own words.
+  * **filler** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The word for sung notes that still have none and continue no word
+    (a note after a rest, in a score with lyrics on only some notes); a
+    score with no words at all, and no `lyrics`, is an error.
+  * **track** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The MIDI line to sing (see `notes_from_midi`).
+  * **channel** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The MIDI line to sing (see `notes_from_midi`).
+  * **part** ([`int`](https://docs.python.org/3/builtins/functions.html#int)) – The MusicXML part to sing.
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Note`](_autosummary/voxy.score.html.md#voxy.score.Note)]
+
+```pycon
+>>> [n.word for n in read_score(notes_from_pitches([(60, 1), (62, 1)]), "do re")]
+['do', 're']
+```
+
+
 # _autosummary/voxy.script.html.md
 
 # voxy.script
@@ -4781,6 +5146,425 @@ message) for the others.
 
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]]
+
+
+# _autosummary/voxy.singing.html.md
+
+# voxy.singing
+
+Singing: sing a score with lyrics in a voice (SVS), or re-voice a sung take (SVC).
+
+```pycon
+>>> import voxy
+>>> voxy.sing("melody.mid", "Light a can-dle in the win-dow").save("sung.wav")
+>>> voice = voxy.singing_voice("me.wav", "phrase.mid", "la la la la")
+>>> voxy.sing("song.musicxml", voice=voice).save("song.wav")
+>>> voxy.convert_singing("take.wav", voice=voice).save("take-in-my-voice.wav")
+```
+
+A singing *voice* is a sung clip, plus, for synthesis, the notes and words it sings
+(`singing_voice`): a zero-shot singer copies the clip’s timbre, and SoulX-Singer
+also aligns the clip with its notes and phonemes. The simplest way to get that
+alignment is to make the clip from a known score: sing a short given phrase (its
+MIDI or MusicXML, with its lyrics) and pass the recording with that score. Without
+a voice, a synthetic one is used (`synthetic_singing_voice`: a formant
+synthesiser singing “la”, which belongs to no one). Conversion needs only the clip.
+Only clone a singing voice with its owner’s consent; each backend records its own
+usage restrictions in `singing_backends()[name].consent`.
+
+Scores are MIDI or MusicXML files, music21 streams, or lists of `voxy.score.Note`
+(`voxy.score.read_score`); lyrics are one token per note (`can-dle` spreads a
+word over two notes, `-` holds it one more).
+
+Backends are `SingingBackend` records (`singing_backends()`), each running in
+its own environment (`python -m voxy setup soulx`); `soulx` (SoulX-Singer,
+Apache-2.0) is the built-in one. A model is the seam: `sing(..., model=...)`
+takes any object with `sing(notes, voice, *, transpose, language, **params)` and
+`convert(audio_path, voice, *, transpose, **params)` returning a `Speech`.
+
+```pycon
+>>> class Echo:
+...     name = "echo"
+...     def sing(self, notes, voice, **kw):
+...         return Speech(b"RIFF", "wav", "echo", text=" ".join(n.word for n in notes))
+>>> from voxy.score import notes_from_pitches
+>>> sing(notes_from_pitches([(60, 1), (62, 1)]), "do re", voice=VoiceProfile(
+...     {"prompt_audio": "v.wav", "prompt_notes": []}, 0, "echo", 24000), model=Echo()).text
+'do re'
+```
+
+### Module Attributes
+
+| [`DFLT_SINGING_SAMPLES`](_autosummary/voxy.singing.html.md#voxy.singing.DFLT_SINGING_SAMPLES)       | The samples store that keeps singing clips given as bytes.                  |
+|-----------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| [`FIT_VOICE`](_autosummary/voxy.singing.html.md#voxy.singing.FIT_VOICE)                  | `transpose` value meaning "move the melody into the voice's register".      |
+| [`BUILTIN_SINGING_MODULES`](_autosummary/voxy.singing.html.md#voxy.singing.BUILTIN_SINGING_MODULES)    | Modules that register a built-in singing backend when imported.             |
+| [`SYNTHETIC_PROMPT_PHRASE`](_autosummary/voxy.singing.html.md#voxy.singing.SYNTHETIC_PROMPT_PHRASE)    | `(midi, beats)`.                                                            |
+| [`SYNTHETIC_PRESET_TRANSPOSE`](_autosummary/voxy.singing.html.md#voxy.singing.SYNTHETIC_PRESET_TRANSPOSE) | Semitones each synthetic voice preset sings the phrase at, from as written. |
+
+### Functions
+
+| [`close_singing_models`](_autosummary/voxy.singing.html.md#voxy.singing.close_singing_models)([models])                    | Stop the cached singing models' workers and free their memory (a model stays loaded, about 6 GB for SoulX, until this is called or the process ends).                                                                                     |
+|----------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`convert_singing`](_autosummary/voxy.singing.html.md#voxy.singing.convert_singing)(audio, \*[, voice, backend, ...]) | Re-voice the sung `audio` in `voice`, keeping its melody, words and timing.                                                                                                                                                               |
+| [`get_singing_model`](_autosummary/voxy.singing.html.md#voxy.singing.get_singing_model)([backend, models])              | The (cached) model of `backend`; `models` replaces the shared cache.                                                                                                                                                                      |
+| [`register_singing_backend`](_autosummary/voxy.singing.html.md#voxy.singing.register_singing_backend)(backend, \*[, replace])  | Add a singing backend (`replace=False` keeps one already registered).                                                                                                                                                                     |
+| [`resolve_singing_voice`](_autosummary/voxy.singing.html.md#voxy.singing.resolve_singing_voice)(voice, \*[, backend, ...])  | The singing voice `voice` names: a profile as is; a library name or alias (its `backend` profile); a path to a sung clip (for conversion); None, the synthetic voice.                                                                     |
+| [`sing`](_autosummary/voxy.singing.html.md#voxy.singing.sing)(score[, lyrics, voice, backend, ...])        | Sing `score` with `lyrics` in `voice` and return the audio (`.save(path)`).                                                                                                                                                               |
+| [`singing_backends`](_autosummary/voxy.singing.html.md#voxy.singing.singing_backends)()                                | Every singing backend, by name (the built-in ones registered first).                                                                                                                                                                      |
+| [`singing_voice`](_autosummary/voxy.singing.html.md#voxy.singing.singing_voice)(audio[, score, lyrics, ...])        | A singing voice: a sung clip, and (for synthesis) the score it sings.                                                                                                                                                                     |
+| [`synthetic_singing_voice`](_autosummary/voxy.singing.html.md#voxy.singing.synthetic_singing_voice)([preset, backend])        | A voice that belongs to no one: a formant synthesiser singing "la" on a short phrase (`voxy.formant_singer`), rendered once into voxy's cache (the file is named by a hash of everything it is rendered from, so a change re-renders it). |
+
+### Classes
+
+| [`SingingBackend`](_autosummary/voxy.singing.html.md#voxy.singing.SingingBackend)(name, env, factory[, init, ...])   | What voxy knows about one singing model.                                                                                             |
+|----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| [`SingingModel`](_autosummary/voxy.singing.html.md#voxy.singing.SingingModel)(\*args, \*\*kwargs)                  | What `sing` and `convert_singing` call.                                                                                              |
+| [`SingingWorker`](_autosummary/voxy.singing.html.md#voxy.singing.SingingWorker)(backend, \*[, init, threads, ...])  | The default model call of a singing backend: its adapter in its own environment, given the backend's fetched `source` as `repo_dir`. |
+
+### voxy.singing.BUILTIN_SINGING_MODULES *= ('voxy.soulx',)*
+
+Modules that register a built-in singing backend when imported.
+
+### voxy.singing.DFLT_SINGING_SAMPLES *= 'singing-voices'*
+
+The samples store that keeps singing clips given as bytes.
+
+### voxy.singing.FIT_VOICE *= 'fit_voice'*
+
+`transpose` value meaning “move the melody into the voice’s register”.
+
+### voxy.singing.SYNTHETIC_PRESET_TRANSPOSE *= {'high': 0, 'low': -12}*
+
+Semitones each synthetic voice preset sings the phrase at, from as written.
+
+### voxy.singing.SYNTHETIC_PROMPT_PHRASE *= ((67, 1), (64, 1), (65, 1), (62, 1), (64, 1), (60, 1), (62, 1), (60, 2))*
+
+`(midi, beats)`.
+
+* **Type:**
+  The phrase the synthetic voices sing (”la” on each note)
+
+### *class* voxy.singing.SingingBackend(name, env, factory, init=dict(), params=dict(), source=None, licence='', consent='', notes='', sings=True, converts=True)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What voxy knows about one singing model.
+
+* **Parameters:**
+  * **name** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Registry name (also its adapter’s, `workers/{name}_adapter.py`).
+  * **env** ([`EnvSpec`](_autosummary/voxy.envs.html.md#voxy.envs.EnvSpec)) – The environment it runs in.
+  * **factory** ([`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`SingingModel`](_autosummary/voxy.singing.html.md#voxy.singing.SingingModel)]) – `(**kwargs) -> SingingModel`.
+  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)) – Default keyword arguments of the adapter’s `load`.
+  * **params** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)) – Documented parameters and their defaults (pass any to `sing`).
+  * **source** ([`GitSource`](_autosummary/voxy.envs.html.md#voxy.envs.GitSource) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Code fetched at a pinned commit and handed to the adapter as
+    `repo_dir` (for a model that pip can’t install), or None.
+  * **licence** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Code and weights licences.
+  * **consent** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The model’s own restrictions on cloning and impersonation.
+  * **notes** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – One line on strengths and caveats.
+  * **sings** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Whether it does SVS, SVC.
+  * **converts** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Whether it does SVS, SVC.
+
+### *class* voxy.singing.SingingModel(\*args, \*\*kwargs)
+
+Bases: [`Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol)
+
+What `sing` and `convert_singing` call.
+
+### *class* voxy.singing.SingingWorker(backend, , init=None, threads=None, rootdir=None, env_vars=None, auto_setup=True)
+
+Bases: [`WorkerGenerate`](_autosummary/voxy.local_clone.html.md#voxy.local_clone.WorkerGenerate)
+
+The default model call of a singing backend: its adapter in its own
+environment, given the backend’s fetched `source` as `repo_dir`.
+
+`worker(op, **request)` runs operation `op`, which writes a WAV to the
+`out_path` it is given, and returns `(samples, sample_rate)`.
+
+### voxy.singing.close_singing_models(models=None)
+
+Stop the cached singing models’ workers and free their memory (a model stays
+loaded, about 6 GB for SoulX, until this is called or the process ends).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.singing.convert_singing(audio, , voice=None, backend='soulx', output_path=None, transpose='fit_voice', model=None, models=None, voices=None, \*\*params)
+
+Re-voice the sung `audio` in `voice`, keeping its melody, words and timing.
+
+* **Parameters:**
+  * **audio** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)) – A sung clip without accompaniment (a path, or WAV bytes); separate a
+    song first (`voxy.separate.separate`).
+  * **voice** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A singing voice, a library voice, a path to a clip of the target
+    voice, or None (the synthetic voice).
+  * **transpose** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'fit_voice'`]]) – ‘fit_voice’ (default: move the melody into the voice’s register)
+    or semitones (0: keep it).
+  * **arguments** (*Other*) – as `sing`.
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### voxy.singing.get_singing_model(backend='soulx', , models=None)
+
+The (cached) model of `backend`; `models` replaces the shared cache.
+
+* **Return type:**
+  [`SingingModel`](_autosummary/voxy.singing.html.md#voxy.singing.SingingModel)
+
+### voxy.singing.register_singing_backend(backend, , replace=True)
+
+Add a singing backend (`replace=False` keeps one already registered).
+
+* **Return type:**
+  [`SingingBackend`](_autosummary/voxy.singing.html.md#voxy.singing.SingingBackend)
+
+### voxy.singing.resolve_singing_voice(voice, , backend='soulx', voices=None)
+
+The singing voice `voice` names: a profile as is; a library name or alias
+(its `backend` profile); a path to a sung clip (for conversion); None, the
+synthetic voice.
+
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+### voxy.singing.sing(score, lyrics=None, , voice=None, backend='soulx', output_path=None, transpose=0, language='English', track=None, channel=None, model=None, models=None, voices=None, \*\*params)
+
+Sing `score` with `lyrics` in `voice` and return the audio (`.save(path)`).
+
+* **Parameters:**
+  * **score** – A MIDI or MusicXML file, a music21 stream, or 
+
+    ```
+    ``
+    ```
+
+    voxy.score.Note\`\`s.
+  * **lyrics** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – One token per note (`can-dle`: a word over two notes; `-`: hold
+    the word); default: the score’s own lyrics.
+  * **voice** ([`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A singing voice (`singing_voice`), a library voice saved for
+    `backend`, or None (the synthetic voice).
+  * **backend** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The singing backend (`singing_backends()`).
+  * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Also save the audio there.
+  * **transpose** ([`Union`](https://docs.python.org/3/library/typing.html#typing.Union)[[`int`](https://docs.python.org/3/builtins/functions.html#int), [`Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)[`'fit_voice'`]]) – Semitones to move the melody (0: as written), or ‘fit_voice’
+    (into the voice’s register).
+  * **language** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Of the lyrics (SoulX here: English).
+  * **track** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of a MIDI file to sing, when it has several
+    (`voxy.score.notes_from_midi`).
+  * **channel** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Which line of a MIDI file to sing, when it has several
+    (`voxy.score.notes_from_midi`).
+  * **model** ([`SingingModel`](_autosummary/voxy.singing.html.md#voxy.singing.SingingModel) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready model (its backend is then the backend).
+  * **models** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Model cache to use instead of the shared one.
+  * **voices** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice library store (default `voxy.voices_store()`).
+  * **\*\*params** – The backend’s parameters (`singing_backends()[b].params`).
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### voxy.singing.singing_backends()
+
+Every singing backend, by name (the built-in ones registered first).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`SingingBackend`](_autosummary/voxy.singing.html.md#voxy.singing.SingingBackend)]
+
+### voxy.singing.singing_voice(audio, score=None, lyrics=None, , backend='soulx', sample_rate=24000, name='singing-voices', rootdir=None, \*\*metadata)
+
+A singing voice: a sung clip, and (for synthesis) the score it sings.
+
+* **Parameters:**
+  * **audio** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`bytes`](https://docs.python.org/3/builtins/stdtypes.html#bytes)) – The clip, 5 to 30 s of one voice singing, without accompaniment: a
+    path, or WAV bytes (kept in the samples store of voice `name`, under
+    the data root `rootdir`, so the voice outlives the session).
+  * **score** – What the clip sings, timed as in the clip (a MIDI or MusicXML file,
+    a music21 stream, or notes; see `voxy.score.read_score`). Needed by
+    `sing`; `convert_singing` needs only the clip.
+  * **lyrics** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Its words, if the score has none.
+  * **backend** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – The backend the voice is for (its `model_type`).
+  * **\*\*metadata** – Kept with the voice (e.g. `consent=`, `description=`).
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+The profile’s `segment` is plain data (`prompt_audio` path, `prompt_notes`),
+so it can be saved in the voice library: `voxy.save_voice(name, voice,
+consent=...)`.
+
+### voxy.singing.synthetic_singing_voice(preset='high', , backend='soulx')
+
+A voice that belongs to no one: a formant synthesiser singing “la” on a short
+phrase (`voxy.formant_singer`), rendered once into voxy’s cache (the file is
+named by a hash of everything it is rendered from, so a change re-renders it).
+
+`preset` is ‘high’ or ‘low’ (an octave down, darker vowels).
+
+* **Return type:**
+  [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile)
+
+
+# _autosummary/voxy.soulx.html.md
+
+# voxy.soulx
+
+SoulX-Singer (Soul AI Lab, 2026; code and weights Apache-2.0): zero-shot singing
+voice synthesis and conversion, as the `soulx` singing backend.
+
+```pycon
+>>> import voxy
+>>> voxy.sing("melody.mid", "Light a can-dle in the win-dow", backend="soulx")
+```
+
+How it runs: in its own environment (`python -m voxy setup soulx`: Python 3.11,
+torch 2.2, transformers 4.41, the upstream pins). SoulX-Singer has no
+`pyproject.toml`, so pip can’t install it: voxy fetches its repository at a pinned
+commit (`SOULX_SOURCE`) into `models/soulx/source/<commit>` on first use, and the
+adapter puts that folder on `sys.path`. Weights (two 2.8 GB checkpoints, SVS and
+SVC, plus RMVPE for F0) come from the Hugging Face Hub at pinned revisions; SVC also
+loads `openai/whisper-base` (Apache-2.0) on first use. On Apple Silicon it runs on
+MPS, with the vocoder on the CPU; elsewhere on CUDA or the CPU (about 8x real time).
+
+What it reads: SoulX metadata, a list of *segments*, one entry per note in every
+field, made here from `voxy.score` notes by `soulx_metadata`:
+
+> {“index”: “target_0”, “language”: “English”, “time”: [0, 6080],
+> : “duration”: “0.30 0.60 …”, “text”: “<SP> Light a candle candle …”,
+>   “phoneme”: “”, “note_pitch”: “0 64 64 67 …”, “note_type”: “1 2 2 3 …”, “f0”: “”}
+
+`note_type` is 1 for a rest (`<SP>`), 2 where a word starts, 3 where it
+continues; a word sung over several notes is written on each. Phonemes are left
+empty and filled in the worker (English, g2p_en), so the host needs no phonemizer.
+A synthesis prompt needs the same metadata, aligned to its clip
+(`soulx_prompt_metadata`).
+
+Usage disclaimer (upstream README; not a licence term): do not use the model to
+impersonate anyone without authorisation or to create deceptive audio; respect
+intellectual property, privacy and personal consent.
+
+```pycon
+>>> from voxy.score import Note
+>>> meta = soulx_metadata([Note(0.0, 0.5, 64, "hel"), Note(0.5, 0.5, 67, "hel", False)])
+>>> meta[0]["text"], meta[0]["note_type"], meta[0]["duration"]
+('<SP> hel hel <SP>', '1 2 3 1', '0.30 0.50 0.50 0.40')
+```
+
+### Module Attributes
+
+| [`DFLT_LEAD_S`](_autosummary/voxy.soulx.html.md#voxy.soulx.DFLT_LEAD_S)        | Rest before the first note and after the last (upstream's examples start with <SP>).                  |
+|---------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| [`DFLT_MIN_REST_S`](_autosummary/voxy.soulx.html.md#voxy.soulx.DFLT_MIN_REST_S)    | A gap shorter than this joins the previous note (legato); a longer one is a rest.                     |
+| [`DFLT_SPLIT_REST_S`](_autosummary/voxy.soulx.html.md#voxy.soulx.DFLT_SPLIT_REST_S)  | A rest longer than this ends a segment.                                                               |
+| [`DFLT_MAX_SEGMENT_S`](_autosummary/voxy.soulx.html.md#voxy.soulx.DFLT_MAX_SEGMENT_S) | No segment longer than this (upstream allows 60 s; shorter is safer on MPS).                          |
+| [`SOULX_ENV`](_autosummary/voxy.soulx.html.md#voxy.soulx.SOULX_ENV)          | Upstream's inference pins (its requirements.txt minus the preprocessing, web UI and training stacks). |
+
+### Functions
+
+| [`fit_voice_shift`](_autosummary/voxy.soulx.html.md#voxy.soulx.fit_voice_shift)(target, prompt)                   | Semitones that move `target` into the register of the voice singing `prompt`: median prompt pitch minus median target pitch, over notes.    |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| [`soulx_metadata`](_autosummary/voxy.soulx.html.md#voxy.soulx.soulx_metadata)(notes, \*[, name, language, ...])  | SoulX-Singer metadata (segments, phonemes left empty) for sung `notes`.                                                                     |
+| [`soulx_prompt_metadata`](_autosummary/voxy.soulx.html.md#voxy.soulx.soulx_prompt_metadata)(notes, \*[, language, ...]) | The one-segment metadata of a prompt clip whose notes are `notes`, at the clip's own times (SoulX crops the clip to the metadata's length). |
+
+### Classes
+
+| [`SoulXSingingModel`](_autosummary/voxy.soulx.html.md#voxy.soulx.SoulXSingingModel)(\*[, run, init, threads, ...])   | SoulX-Singer as a singing model (`voxy.sing(..., backend="soulx")`).   |
+|-----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+
+### voxy.soulx.DFLT_LEAD_S *= 0.3*
+
+Rest before the first note and after the last (upstream’s examples start with <SP>).
+
+### voxy.soulx.DFLT_MAX_SEGMENT_S *= 30.0*
+
+No segment longer than this (upstream allows 60 s; shorter is safer on MPS).
+
+### voxy.soulx.DFLT_MIN_REST_S *= 0.2*
+
+A gap shorter than this joins the previous note (legato); a longer one is a rest.
+
+### voxy.soulx.DFLT_SPLIT_REST_S *= 2.0*
+
+A rest longer than this ends a segment.
+
+### voxy.soulx.SOULX_ENV *= EnvSpec(name='soulx', requirements=('torch==2.2.0', 'torchaudio==2.2.0', 'numpy<2', 'transformers==4.41.2', 'accelerate==1.11.0', 'librosa==0.11.0', 'soundfile', 'omegaconf==2.3.0', 'scipy', 'tqdm', 'huggingface_hub>=0.20,<1', 'g2p_en==2.1.0', 'nltk==3.9.2'), python='3.11', torch_backend='cpu', env_vars={'PYTORCH_ENABLE_MPS_FALLBACK': '1', 'NLTK_DATA': '{models}/nltk_data'})*
+
+Upstream’s inference pins (its requirements.txt minus the preprocessing, web UI
+and training stacks).
+
+### *class* voxy.soulx.SoulXSingingModel(, run=None, init=None, threads=None, rootdir=None, auto_setup=True, env_vars=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+SoulX-Singer as a singing model (`voxy.sing(..., backend="soulx")`).
+
+* **Parameters:**
+  * **run** – `(op, **request) -> (samples, sample_rate)`, where `op` is the
+    adapter’s ‘sing’ or ‘convert’; default: a `SingingWorker` running
+    `workers/soulx_adapter.py` in the `soulx` environment (built, and the
+    source fetched, on first use). Tests inject a fake.
+  * **init** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Keyword arguments of the adapter’s `load` over the backend’s
+    (`device='cpu'`, `weights_dir=` local weights, `preload=`).
+  * **threads** ([`int`](https://docs.python.org/3/builtins/functions.html#int) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As `voxy.local_clone.WorkerGenerate`.
+  * **rootdir** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`PathLike`](https://docs.python.org/3/library/os.html#os.PathLike) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As `voxy.local_clone.WorkerGenerate`.
+  * **auto_setup** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – As `voxy.local_clone.WorkerGenerate`.
+  * **env_vars** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)] | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – As `voxy.local_clone.WorkerGenerate`.
+
+#### close()
+
+Stop the worker (free the weights).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+#### convert(audio, voice, , transpose='fit_voice', \*\*params)
+
+Re-voice the sung clip at `audio` with `voice`’s timbre.
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+#### sing(notes, voice, , transpose=0, language='English', \*\*params)
+
+Sing `notes` (with words) in `voice` (a clip and the notes it sings).
+
+* **Return type:**
+  [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
+
+### voxy.soulx.fit_voice_shift(target, prompt)
+
+Semitones that move `target` into the register of the voice singing
+`prompt`: median prompt pitch minus median target pitch, over notes.
+
+Upstream computes this per segment (and weights notes by their phoneme count),
+so a long song would change key between segments; voxy computes it once.
+
+```pycon
+>>> fit_voice_shift([Note(0, 1, 60), Note(1, 1, 64)], [Note(0, 1, 55)])
+-5
+```
+
+* **Return type:**
+  [`int`](https://docs.python.org/3/builtins/functions.html#int)
+
+### voxy.soulx.soulx_metadata(notes, , name='target', language='English', lead_s=0.3, tail_s=0.4, min_rest_s=0.2, split_rest_s=2.0, max_segment_s=30.0)
+
+SoulX-Singer metadata (segments, phonemes left empty) for sung `notes`.
+
+The line starts `lead_s` after a rest, gaps of `min_rest_s` or more become
+rests (shorter ones join the previous note), and a segment ends at a rest
+longer than `split_rest_s` or before it would pass `max_segment_s`.
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
+
+### voxy.soulx.soulx_prompt_metadata(notes, , language='English', tail_s=0.0, min_rest_s=0.2)
+
+The one-segment metadata of a prompt clip whose notes are `notes`, at the
+clip’s own times (SoulX crops the clip to the metadata’s length).
+
+```pycon
+>>> from voxy.score import Note
+>>> soulx_prompt_metadata([Note(0.3, 0.6, 67, "la")])[0]["duration"]
+'0.30 0.60'
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)]
 
 
 # _autosummary/voxy.speakers.html.md
@@ -6517,18 +7301,19 @@ The adapter file for `name` (e.g. ‘f5tts’ -> `f5tts_adapter.py`).
 
 ### Modules
 
-| [`align_adapter`](_autosummary/voxy.workers.align_adapter.html.md#module-voxy.workers.align_adapter)           | Forced alignment with torchaudio's `MMS_FA` bundle (Meta's multilingual CTC aligner): character spans of words already known to be in the audio.   |
-|------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`asr_adapter`](_autosummary/voxy.workers.asr_adapter.html.md#module-voxy.workers.asr_adapter)               | Speech recognition with timed words (scribed's faster-whisper backend), for reference prep.                                                        |
-| [`chatterbox_adapter`](_autosummary/voxy.workers.chatterbox_adapter.html.md#module-voxy.workers.chatterbox_adapter) | Chatterbox (Resemble AI): 'original' (emotion exaggeration, CFG), 'turbo' (faster), or 'multilingual' (23 languages; pass `language`, e.g. 'fr').  |
-| [`demucs_adapter`](_autosummary/voxy.workers.demucs_adapter.html.md#module-voxy.workers.demucs_adapter)         | Demucs (Meta, MIT): split a recording into a voice stem and the rest (music, noise).                                                               |
-| [`f5tts_adapter`](_autosummary/voxy.workers.f5tts_adapter.html.md#module-voxy.workers.f5tts_adapter)           | F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).                                                                      |
-| [`kokoro_adapter`](_autosummary/voxy.workers.kokoro_adapter.html.md#module-voxy.workers.kokoro_adapter)         | Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.                                                                  |
-| [`phonemes_adapter`](_autosummary/voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.                                       |
-| [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).                    |
-| [`speaker_adapter`](_autosummary/voxy.workers.speaker_adapter.html.md#module-voxy.workers.speaker_adapter)       | Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.                                                             |
-| [`voxcpm_adapter`](_autosummary/voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.                                                                 |
-| [`xtts_adapter`](_autosummary/voxy.workers.xtts_adapter.html.md#module-voxy.workers.xtts_adapter)             | XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.                                                            |
+| [`align_adapter`](_autosummary/voxy.workers.align_adapter.html.md#module-voxy.workers.align_adapter)           | Forced alignment with torchaudio's `MMS_FA` bundle (Meta's multilingual CTC aligner): character spans of words already known to be in the audio.            |
+|------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`asr_adapter`](_autosummary/voxy.workers.asr_adapter.html.md#module-voxy.workers.asr_adapter)               | Speech recognition with timed words (scribed's faster-whisper backend), for reference prep.                                                                 |
+| [`chatterbox_adapter`](_autosummary/voxy.workers.chatterbox_adapter.html.md#module-voxy.workers.chatterbox_adapter) | Chatterbox (Resemble AI): 'original' (emotion exaggeration, CFG), 'turbo' (faster), or 'multilingual' (23 languages; pass `language`, e.g. 'fr').           |
+| [`demucs_adapter`](_autosummary/voxy.workers.demucs_adapter.html.md#module-voxy.workers.demucs_adapter)         | Demucs (Meta, MIT): split a recording into a voice stem and the rest (music, noise).                                                                        |
+| [`f5tts_adapter`](_autosummary/voxy.workers.f5tts_adapter.html.md#module-voxy.workers.f5tts_adapter)           | F5-TTS (flow matching, zero-shot cloning from a reference clip and its text).                                                                               |
+| [`kokoro_adapter`](_autosummary/voxy.workers.kokoro_adapter.html.md#module-voxy.workers.kokoro_adapter)         | Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.                                                                           |
+| [`phonemes_adapter`](_autosummary/voxy.workers.phonemes_adapter.html.md#module-voxy.workers.phonemes_adapter)     | Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonemization.                                                |
+| [`qwen3tts_adapter`](_autosummary/voxy.workers.qwen3tts_adapter.html.md#module-voxy.workers.qwen3tts_adapter)     | Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a voice from a description).                             |
+| [`soulx_adapter`](_autosummary/voxy.workers.soulx_adapter.html.md#module-voxy.workers.soulx_adapter)           | SoulX-Singer (Soul AI Lab; code and weights Apache-2.0): zero-shot singing voice synthesis (notes and lyrics to a sung vocal) and singing voice conversion. |
+| [`speaker_adapter`](_autosummary/voxy.workers.speaker_adapter.html.md#module-voxy.workers.speaker_adapter)       | Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.                                                                      |
+| [`voxcpm_adapter`](_autosummary/voxy.workers.voxcpm_adapter.html.md#module-voxy.workers.voxcpm_adapter)         | VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.                                                                          |
+| [`xtts_adapter`](_autosummary/voxy.workers.xtts_adapter.html.md#module-voxy.workers.xtts_adapter)             | XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.                                                                     |
 
 
 # _autosummary/voxy.workers.kokoro_adapter.html.md
@@ -6599,6 +7384,122 @@ The VoiceDesign model is loaded on the first `design` call, apart from Base.
 Speak `text` in a voice described by `instruct` (a new voice per seed).
 
 
+# _autosummary/voxy.workers.soulx_adapter.html.md
+
+# voxy.workers.soulx_adapter
+
+SoulX-Singer (Soul AI Lab; code and weights Apache-2.0): zero-shot singing voice
+synthesis (notes and lyrics to a sung vocal) and singing voice conversion.
+
+Runs in the `soulx` environment, with no voxy imports. SoulX-Singer is not
+pip-installable, so `load` puts its checkout (`repo_dir`, fetched by voxy at a
+pinned commit) on `sys.path`. Weights come from the Hugging Face Hub at pinned
+revisions (into `HF_HOME`), unless `weights_dir` / `preprocess_dir` point at
+local copies.
+
+Operations:
+
+- `sing(state, *, meta, prompt_audio, prompt_meta, out_path, ...)`: SVS. `meta`
+  and `prompt_meta` are SoulX metadata (lists of segments); `prompt_audio` is a
+  sung clip whose notes and words `prompt_meta` describes. Empty `phoneme`
+  fields are filled here (English, with g2p_en).
+- `convert(state, *, audio, prompt_audio, out_path, ...)`: SVC, audio to audio;
+  F0 is extracted with RMVPE.
+- `f0(state, *, audio, out_path=None)`: the RMVPE F0 of a clip (50 frames a second).
+- `unload(state, *, component)`: free one model (‘svs’, ‘svc’ or ‘rmvpe’).
+
+The SVS and SVC checkpoints are 2.8 GB each; each loads on first use (`preload`
+loads them at start). On Apple Silicon the models run on MPS except the vocoder,
+which runs on the CPU: its ISTFT head multiplies complex tensors, which torch 2.2’s
+MPS backend rejects (an internal assert in BinaryKernel.mm). Output is written as
+16-bit WAV, scaled down if it peaks above `peak`.
+
+Usage disclaimer (upstream README): do not impersonate anyone without authorisation
+or make deceptive audio; respect intellectual property, privacy and consent.
+
+### Module Attributes
+
+| [`DFLT_FADE_S`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.DFLT_FADE_S)    | Fade-out and fade-in length where segments meet (they are rendered separately and added, not overlapped).   |
+|-----------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| [`SINGERS`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.SINGERS)        | The two singers; loading one frees the other (2.8 GB each, about 6 GB in use).                              |
+| [`NOTE_FIELDS`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.NOTE_FIELDS)    | Per-note fields of a segment, which must all have one token per note.                                       |
+| [`NLTK_RESOURCES`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.NLTK_RESOURCES) | g2p_en's NLTK resources (nltk 3.9 tags with the `_eng` tagger).                                             |
+
+### Functions
+
+| [`convert`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.convert)(state, \*, audio, prompt_audio, out_path)   | SVC: re-voice the sung `audio` with the timbre of `prompt_audio`.              |
+|------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| [`f0`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.f0)(state, \*, audio[, out_path])                    | RMVPE F0 of `audio` on SoulX's 20 ms grid (Hz, 0 when unvoiced).               |
+| [`fill_phonemes`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.fill_phonemes)(state, meta)                          | `meta` with each empty `phoneme` field filled from its `text` (English).       |
+| [`load`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.load)(\*, repo_dir[, weights, preprocess, ...])      | Get ready to sing (models load on first use, or now for those in `preload`).   |
+| [`phonemize_en`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.phonemize_en)(word, g2p)                             | SoulX's token for an English word: `en_` and its ARPAbet phones joined by '-'. |
+| [`sing`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.sing)(state, \*, meta, prompt_audio, ...[, ...])     | SVS: sing `meta` in the voice of `prompt_audio`, into `out_path`.              |
+| [`unload`](_autosummary/voxy.workers.soulx_adapter.html.md#voxy.workers.soulx_adapter.unload)(state, \*, component)                        | Free one component's weights; returns what stays loaded.                       |
+
+### voxy.workers.soulx_adapter.DFLT_FADE_S *= 0.02*
+
+Fade-out and fade-in length where segments meet (they are rendered separately
+and added, not overlapped).
+
+### voxy.workers.soulx_adapter.NLTK_RESOURCES *= {'corpora/cmudict': 'cmudict', 'taggers/averaged_perceptron_tagger_eng': 'averaged_perceptron_tagger_eng'}*
+
+g2p_en’s NLTK resources (nltk 3.9 tags with the `_eng` tagger).
+
+### voxy.workers.soulx_adapter.NOTE_FIELDS *= ('duration', 'text', 'phoneme', 'note_pitch', 'note_type')*
+
+Per-note fields of a segment, which must all have one token per note.
+
+### voxy.workers.soulx_adapter.SINGERS *= ('svs', 'svc')*
+
+The two singers; loading one frees the other (2.8 GB each, about 6 GB in use).
+
+### voxy.workers.soulx_adapter.convert(state, , audio, prompt_audio, out_path, auto_shift=True, pitch_shift=0, n_steps=None, cfg=None, seed=None, peak=0.95)
+
+SVC: re-voice the sung `audio` with the timbre of `prompt_audio`.
+
+`auto_shift` moves the melody into the prompt voice’s register (the shift
+used is returned); `pitch_shift` sets it in semitones instead.
+
+### voxy.workers.soulx_adapter.f0(state, , audio, out_path=None)
+
+RMVPE F0 of `audio` on SoulX’s 20 ms grid (Hz, 0 when unvoiced).
+
+### voxy.workers.soulx_adapter.fill_phonemes(state, meta)
+
+`meta` with each empty `phoneme` field filled from its `text` (English).
+
+### voxy.workers.soulx_adapter.load(, repo_dir, weights=None, preprocess=None, weights_dir=None, preprocess_dir=None, device='auto', preload=())
+
+Get ready to sing (models load on first use, or now for those in `preload`).
+
+* **Parameters:**
+  * **repo_dir** – The SoulX-Singer checkout.
+  * **weights** – `{"repo_id", "revision"}` of the SVS/SVC weights on the Hub.
+  * **preprocess** – `{"repo_id", "revision"}` of the repo holding RMVPE.
+  * **weights_dir** – Local folders with the same files, instead.
+  * **preprocess_dir** – Local folders with the same files, instead.
+  * **device** – ‘auto’ (MPS when available, else CPU), ‘cpu’, ‘mps’ or ‘cuda’.
+  * **preload** – Components to load now (‘svs’, ‘svc’, ‘rmvpe’).
+
+### voxy.workers.soulx_adapter.phonemize_en(word, g2p)
+
+SoulX’s token for an English word: `en_` and its ARPAbet phones joined by ‘-‘.
+
+### voxy.workers.soulx_adapter.sing(state, , meta, prompt_audio, prompt_meta, out_path, control='score', auto_shift=False, pitch_shift=0, n_steps=None, cfg=None, seed=None, peak=0.95, fade_s=0.02)
+
+SVS: sing `meta` in the voice of `prompt_audio`, into `out_path`.
+
+`control='score'` follows the notes; `'melody'` follows each segment’s
+`f0`. `pitch_shift` transposes by that many semitones; `auto_shift`
+(upstream’s median rule, recomputed for each segment) is best left off for a
+score of several segments. Each segment is placed at its `time[0]`, with
+`fade_s` fades where segments meet.
+
+### voxy.workers.soulx_adapter.unload(state, , component)
+
+Free one component’s weights; returns what stays loaded.
+
+
 # _autosummary/voxy.workers.speaker_adapter.html.md
 
 # voxy.workers.speaker_adapter
@@ -6656,7 +7557,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-10 11:13 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/170f02a78fd686d8557e0d72af4144a175855b99"><code>170f02a</code></a> on branch <code>main</code>, for **voxy 0.0.68** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-10 12:09 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/9a49bf34e58a3111e89a0de6e3a07f8de94c0add"><code>9a49bf3</code></a> on branch <code>main</code>, for **voxy 0.0.69** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -6665,7 +7566,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/170f02a78fd686d8557e0d72af4144a175855b99"><code>170f02a78fd686d8557e0d72af4144a175855b99</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/9a49bf34e58a3111e89a0de6e3a07f8de94c0add"><code>9a49bf34e58a3111e89a0de6e3a07f8de94c0add</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -6676,9 +7577,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42805357665">42805357665</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42813059654">42813059654</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>170f02a78fd686d8557e0d72af4144a175855b99</code> (in the history of the built commit) |
+| Event commit | <code>9a49bf34e58a3111e89a0de6e3a07f8de94c0add</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -6703,13 +7604,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.68/">0.0.68</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.69/">0.0.69</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 170f02a78fd686d8557e0d72af4144a175855b99
+git checkout 9a49bf34e58a3111e89a0de6e3a07f8de94c0add
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
@@ -6763,7 +7664,7 @@ This site publishes the same documentation in forms that fit an agent’s contex
 
 # API reference
 
-| [`voxy`](_autosummary/voxy.html.md#module-voxy)   | Facade for voice generation: speech synthesis in any voice, cloning and designing voices.   |
-|---------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| [`voxy`](_autosummary/voxy.html.md#module-voxy)   | Facade for voice generation: speech synthesis in any voice, cloning and designing voices, and singing (`sing`, `convert_singing`).   |
+|---------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
 
 

@@ -1,0 +1,30 @@
+voxy.soulx
+==========
+
+.. automodule:: voxy.soulx
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DFLT_LEAD_S
+      DFLT_MIN_REST_S
+      DFLT_SPLIT_REST_S
+      DFLT_MAX_SEGMENT_S
+      SOULX_ENV
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      fit_voice_shift
+      soulx_metadata
+      soulx_prompt_metadata
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      SoulXSingingModel
+   

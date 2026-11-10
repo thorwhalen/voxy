@@ -1,0 +1,22 @@
+voxy.formant\_singer
+====================
+
+.. automodule:: voxy.formant_singer
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      SYNTH_VERSION
+      FORMANT_PRESETS
+      PORTAMENTO_S
+      CONSONANT_S
+      NYQUIST_MARGIN_HZ
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      sing_la
+   

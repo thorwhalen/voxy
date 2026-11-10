@@ -19,7 +19,7 @@ voxy.list_voices()  # our named voices
 voxy.list_voices("elevenlabs")  # a service's voices
 ```
 
-Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `kokoro` (local stock voices, CPU, no key; see below), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`.
+Backends: `elevenlabs` (cloning, voice design, TTS), `say` (macOS, offline), `aix` (OpenAI voices and other LiteLLM providers), `fal` (fal.ai models via falaw), `kokoro` (local stock voices, CPU, no key; see below), `voicestudio` (local text-described voices, `voxy[voicestudio]`), `csm` (local Sesame CSM-1B). Register more with `voxy.register_speech_model(name, factory)`. Singing (`voxy.sing`, `voxy.convert_singing`): `soulx` (SoulX-Singer, local), see below.
 
 Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "text" --voice ada -o out.mp3`.
 
@@ -283,6 +283,32 @@ python -m voxy diagnose spec.json --out renders/first-listen --publish
 ```
 
 Cards are titled with readable names (the backend, then the settings that vary, e.g. “Chatterbox 0.3”). For a page you share with other listeners, optional spec keys help: `references` (named clips, e.g. a raw and a denoised one, each with a `label`), `appendix` (reference name → a note: those variants go in a collapsed section at the end), `imported` (clips rendered elsewhere, such as a cloud service, with their `backend`, `label` and `audio_file`), `backend_notes`, `noindex`, and `notes_sink` + `page_url`, which save every rating, note, name and clip play as they happen to an [annoquest](https://github.com/i2mint/annoquest) server (`{"kind": "annoquest", "url": "/api/annoquest", "request": "<id>"}`). The page says so, and `annoquest-request.json` is written next to it for registering on that server; add `?reader=<name>` to the link you send each listener to tell them apart.
+
+### Singing: a score with lyrics, or a sung take re-voiced
+
+`voxy.sing` sings a melody (MIDI, MusicXML, a music21 stream, or `voxy.score.Note`s) with lyrics in a voice; `voxy.convert_singing` re-voices a sung take, keeping its melody, words and timing. The backend is `soulx` ([SoulX-Singer](https://github.com/Soul-AILab/SoulX-Singer), Soul AI Lab, code and weights Apache-2.0), in its own environment like the local cloners: `python -m voxy setup soulx`, or built on first use (Python 3.11, torch 2.2; needs `uv` and `git`). SoulX-Singer is not pip-installable, so voxy fetches its repository at a pinned commit into `$VOXY_DATA_DIR/models/soulx/source/`; the weights (two 2.8 GB checkpoints plus RMVPE) come from the Hugging Face Hub at pinned revisions; `openai/whisper-base` (loaded by upstream for conversion) and g2p_en’s NLTK data are fetched unpinned, at their latest versions, on first use. Reading scores needs `'voxy[singing]'` (mido for MIDI, music21 for MusicXML).
+
+```python
+import voxy
+
+# lyrics: one token per note; "can-dle" spreads a word over two notes, "-" holds it one more
+voxy.sing("melody.mid", "Light a can-dle in the win-dow").save("sung.wav")
+voxy.sing("song.musicxml", transpose=-2).save("song.wav")  # the score's own lyrics, 2 semitones down
+voxy.sing("arrangement.mid", track=2)  # a MIDI file with several lines: say which one sings
+
+# a voice: a sung clip and the score it sings, timed as in the clip
+voice = voxy.singing_voice("phrase-take.wav", "phrase.mid", "la la la la la la la la")
+voxy.sing("melody.mid", "Light a can-dle in the win-dow", voice=voice, seed=0)
+voxy.convert_singing("take.wav", voice=voice).save("take-revoiced.wav")
+```
+
+**Making a voice.** Synthesis copies the timbre of a sung clip and aligns that clip with its notes and phonemes, so a voice is a clip plus its score. The simplest way to get both: record the voice singing a short phrase written beforehand (a MIDI or MusicXML file with its lyrics, sung in time, 5 to 30 s, no accompaniment), and pass the recording with that score. Conversion needs only the clip. Without `voice=`, a synthetic voice is used (`voxy.synthetic_singing_voice("high" | "low")`: a formant synthesiser singing “la”, which belongs to no one); words sung in it are less clear than with a real voice. A voice is plain data, so `voxy.save_voice(name, voice, consent="...")` keeps it in the library and `voice=name` finds it again.
+
+**Scores.** A MIDI file’s melody is its one track and channel with notes (drums aside); with several, the error lists them and `track=` (and `channel=`, 1 to 16) picks one; a line with chords is refused. Words come only from `lyrics` meta-events (on the melody’s track, else the one other track that has them; `text` events are never sung), each on the note sounding at its time (a lyric on no note is an error); `can-` / `-dle` join into one word, and a note without a syllable holds the word before it unless a rest came between. Karaoke files (`.kar`, lyrics in `text` events) are not supported yet; full score reading is planned in [audiate#2](https://github.com/thorwhalen/audiate/issues/2). MusicXML is read through music21: the part’s first voice and first verse (`part=` picks the part), syllabic lyrics, ties merged, grace notes skipped, the top note of a chord. Each sung note gets one word without spaces.
+
+**Options.** `transpose=` is semitones (0, the default for `sing`: as written) or `"fit_voice"` (into the voice’s register, the default for `convert_singing`). Model parameters are keyword arguments: `n_steps=32` (16 is twice as fast but blurs words), `cfg=3.0`, `seed=`, `peak=0.95` (output above it is scaled down), `fade_s=0.02` (fade-out and fade-in where segments meet, not an overlap: a song is sung in segments of at most 30 s, cut at rests where possible). `"fit_voice"` is computed once for the whole song (median note of the voice’s clip minus median note of the score). English lyrics only for now (upstream also sings Mandarin and Cantonese). On Apple Silicon it runs on MPS with the vocoder on the CPU (torch 2.2’s MPS backend fails on its complex multiply): about 1.4x real time on an M1 Max once loaded (a first call, which loads the model, took 48 s for 6 s of singing, and conversion 35 s) and up to 6 GB of memory per model; on the CPU alone about 8x real time. A model stays loaded (about 6 GB) until `voxy.close_singing_models()` or the end of the process; switching between `sing` and `convert_singing` swaps one model for the other rather than holding both.
+
+**Consent.** SoulX-Singer’s usage disclaimer (not a licence term) forbids impersonating anyone without authorisation and making deceptive audio, and asks to respect intellectual property, privacy and consent. Clone only your own voice, a consenting singer’s, or a synthetic one. Each singing backend records its restrictions in `voxy.singing_backends()[name].consent`.
 
 ### Heteronyms: what to send, and checking what was said
 

@@ -94,6 +94,7 @@
 <li class="toctree-l3"><a class="reference internal" href="voxy.facade.html">voxy.facade</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.fal_model.html">voxy.fal_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.finetune.html">voxy.finetune</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.formant_singer.html">voxy.formant_singer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.kokoro_model.html">voxy.kokoro_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.lexique.html">voxy.lexique</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
@@ -102,8 +103,11 @@
 <li class="toctree-l3"><a class="reference internal" href="voxy.pronounce.html">voxy.pronounce</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.say_model.html">voxy.say_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.score.html">voxy.score</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.script.html">voxy.script</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.separate.html">voxy.separate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.singing.html">voxy.singing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.soulx.html">voxy.soulx</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.speakers.html">voxy.speakers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.speechtext.html">voxy.speechtext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.splice.html">voxy.splice</a></li>
@@ -152,7 +156,8 @@ interpreter, which <code class="docutils literal notranslate"><span class="pre">
 <blockquote>
 <div><p>envs/{name}/            one virtual environment per backend
 models/hf/              model weights (<code class="docutils literal notranslate"><span class="pre">HF_HOME</span></code> of every worker)
-models/{name}/          a backend’s other weights (e.g. Coqui’s <code class="docutils literal notranslate"><span class="pre">TTS_HOME</span></code>)</p>
+models/{name}/          a backend’s other weights (e.g. Coqui’s <code class="docutils literal notranslate"><span class="pre">TTS_HOME</span></code>)
+models/{name}/source/{commit}/   a backend’s code that pip can’t install (<code class="docutils literal notranslate"><span class="pre">GitSource</span></code>)</p>
 </div></blockquote>
 <p>Building and checking an environment is <code class="docutils literal notranslate"><span class="pre">ps.isolated</span></code>’s (<code class="docutils literal notranslate"><span class="pre">ensure_env</span></code>,
 <code class="docutils literal notranslate"><span class="pre">is_env_ready</span></code>); this module adds voxy’s layout (where an environment and its
@@ -178,6 +183,9 @@ environment is explicit (<code class="docutils literal notranslate"><span class=
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.envs.DFLT_NUM_THREADS" title="voxy.envs.DFLT_NUM_THREADS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_NUM_THREADS</span></code></a></p></td>
 <td><p>a shared machine keeps headroom for others.</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S" title="voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_SOURCE_LOCK_TIMEOUT_S</span></code></a></p></td>
+<td><p>How long to wait for another process fetching the same source.</p></td>
+</tr>
 </tbody>
 </table>
 <p class="rubric">Functions</p>
@@ -186,11 +194,17 @@ environment is explicit (<code class="docutils literal notranslate"><span class=
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.envs.ensure_env" title="voxy.envs.ensure_env"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ensure_env</span></code></a>(spec, *[, rootdir, run, log])</p></td>
 <td><p>Build <code class="docutils literal notranslate"><span class="pre">spec</span></code>'s environment if missing or stale, and return its interpreter.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.envs.env_dir" title="voxy.envs.env_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">env_dir</span></code></a>(spec, *[, rootdir])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.envs.ensure_git_source" title="voxy.envs.ensure_git_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ensure_git_source</span></code></a>(source, name, *[, ...])</p></td>
+<td><p>Check out <code class="docutils literal notranslate"><span class="pre">source</span></code> for backend <code class="docutils literal notranslate"><span class="pre">name</span></code> once (only that commit, no history), and return its folder, checked: at that commit, with no local edits.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.envs.env_dir" title="voxy.envs.env_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">env_dir</span></code></a>(spec, *[, rootdir])</p></td>
 <td><p>The folder of <code class="docutils literal notranslate"><span class="pre">spec</span></code>'s environment (not created here).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.envs.env_python" title="voxy.envs.env_python"><code class="xref py py-obj docutils literal notranslate"><span class="pre">env_python</span></code></a>(spec, *[, rootdir])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.envs.env_python" title="voxy.envs.env_python"><code class="xref py py-obj docutils literal notranslate"><span class="pre">env_python</span></code></a>(spec, *[, rootdir])</p></td>
 <td><p>The interpreter of <code class="docutils literal notranslate"><span class="pre">spec</span></code>'s environment (it may not exist yet).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.envs.git_source_dir" title="voxy.envs.git_source_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">git_source_dir</span></code></a>(source, name, *[, rootdir])</p></td>
+<td><p>Where <code class="docutils literal notranslate"><span class="pre">source</span></code> is checked out for backend <code class="docutils literal notranslate"><span class="pre">name</span></code> (not created here).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.envs.is_env_ready" title="voxy.envs.is_env_ready"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_env_ready</span></code></a>(spec, *[, rootdir])</p></td>
 <td><p>True if the environment exists and was built from this exact spec.</p></td>
@@ -215,6 +229,9 @@ environment is explicit (<code class="docutils literal notranslate"><span class=
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.envs.EnvSpec" title="voxy.envs.EnvSpec"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EnvSpec</span></code></a>(name, requirements[, python, ...])</p></td>
 <td><p>What a backend's environment holds (<code class="docutils literal notranslate"><span class="pre">ps.isolated.EnvSpec</span></code> with voxy's defaults).</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.envs.GitSource" title="voxy.envs.GitSource"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GitSource</span></code></a>(url, commit)</p></td>
+<td><p>Code a backend runs that is not pip-installable (no <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>), at a pinned commit: <code class="docutils literal notranslate"><span class="pre">ensure_git_source</span></code> fetches it once, and the adapter puts the folder on its <code class="docutils literal notranslate"><span class="pre">sys.path</span></code>.</p></td>
+</tr>
 </tbody>
 </table>
 <dl class="py data">
@@ -226,6 +243,11 @@ environment is explicit (<code class="docutils literal notranslate"><span class=
 <dd class="field-odd"><p>Torch/ONNX threads per worker</p>
 </dd>
 </dl>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S">
+<span class="sig-prename descclassname"><span class="pre">voxy.envs.</span></span><span class="sig-name descname"><span class="pre">DFLT_SOURCE_LOCK_TIMEOUT_S</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">900</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S'">¶</a></dt>
+<dd><p>How long to wait for another process fetching the same source.</p>
 </dd></dl>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.envs.ENV_MARKER">
@@ -252,6 +274,29 @@ digest: changing them needs no rebuild.</p></li>
 </dd>
 </dl>
 </dd></dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="voxy.envs.GitSource">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">voxy.envs.</span></span><span class="sig-name descname"><span class="pre">GitSource</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commit</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/envs.html#GitSource"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.envs.GitSource" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.envs.GitSource'">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></p>
+<p>Code a backend runs that is not pip-installable (no <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>), at a
+pinned commit: <code class="docutils literal notranslate"><span class="pre">ensure_git_source</span></code> fetches it once, and the adapter puts the
+folder on its <code class="docutils literal notranslate"><span class="pre">sys.path</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span>) – The repository (anything <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">fetch</span></code> takes).</p></li>
+<li><p><strong>commit</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span>) – The full 40-character commit SHA (a branch, tag or short SHA would
+not pin it).</p></li>
+</ul>
+</dd>
+</dl>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">GitSource</span><span class="p">(</span><span class="s2">"https://x/y"</span><span class="p">,</span> <span class="s2">"main"</span><span class="p">)</span>
+</span><span id="line-2"><span class="gt">Traceback (most recent call last):</span>
+</span><span id="line-3"><span class="w">  </span><span class="c">...</span>
+</span><span id="line-4"><span class="gr">ValueError</span>: <span class="n">GitSource needs a full 40-character commit SHA, not 'main'</span>
+</span></code></pre></div>
+</div>
+</dd></dl>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.envs.VOXY_NUM_THREADS_ENVVAR">
 <span class="sig-prename descclassname"><span class="pre">voxy.envs.</span></span><span class="sig-name descname"><span class="pre">VOXY_NUM_THREADS_ENVVAR</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'VOXY_NUM_THREADS'</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.envs.VOXY_NUM_THREADS_ENVVAR" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.envs.VOXY_NUM_THREADS_ENVVAR'">¶</a></dt>
@@ -276,6 +321,20 @@ host, and an isolated environment exists precisely to differ.</p>
 </dl>
 </dd></dl>
 <dl class="py function">
+<dt class="sig sig-object py" id="voxy.envs.ensure_git_source">
+<span class="sig-prename descclassname"><span class="pre">voxy.envs.</span></span><span class="sig-name descname"><span class="pre">ensure_git_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;function</span> <span class="pre">run&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;built-in</span> <span class="pre">function</span> <span class="pre">print&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lock_timeout_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">900</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/envs.html#ensure_git_source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.envs.ensure_git_source" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.envs.ensure_git_source'">¶</a></dt>
+<dd><p>Check out <code class="docutils literal notranslate"><span class="pre">source</span></code> for backend <code class="docutils literal notranslate"><span class="pre">name</span></code> once (only that commit, no history),
+and return its folder, checked: at that commit, with no local edits.</p>
+<p>The fetch holds a lock (another process fetching the same source waits), goes
+into a <code class="docutils literal notranslate"><span class="pre">.partial</span></code> folder (an interrupted one is started afresh), and is renamed
+into place when complete. git runs without the caller’s <code class="docutils literal notranslate"><span class="pre">GIT_*</span></code> variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="voxy.envs.env_dir">
 <span class="sig-prename descclassname"><span class="pre">voxy.envs.</span></span><span class="sig-name descname"><span class="pre">env_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/envs.html#env_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.envs.env_dir" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.envs.env_dir'">¶</a></dt>
 <dd><p>The folder of <code class="docutils literal notranslate"><span class="pre">spec</span></code>’s environment (not created here).</p>
@@ -289,6 +348,20 @@ host, and an isolated environment exists precisely to differ.</p>
 <dt class="sig sig-object py" id="voxy.envs.env_python">
 <span class="sig-prename descclassname"><span class="pre">voxy.envs.</span></span><span class="sig-name descname"><span class="pre">env_python</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spec</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/envs.html#env_python"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.envs.env_python" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.envs.env_python'">¶</a></dt>
 <dd><p>The interpreter of <code class="docutils literal notranslate"><span class="pre">spec</span></code>’s environment (it may not exist yet).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.envs.git_source_dir">
+<span class="sig-prename descclassname"><span class="pre">voxy.envs.</span></span><span class="sig-name descname"><span class="pre">git_source_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">rootdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/envs.html#git_source_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.envs.git_source_dir" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.envs.git_source_dir'">¶</a></dt>
+<dd><p>Where <code class="docutils literal notranslate"><span class="pre">source</span></code> is checked out for backend <code class="docutils literal notranslate"><span class="pre">name</span></code> (not created here).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">git_source_dir</span><span class="p">(</span><span class="n">GitSource</span><span class="p">(</span><span class="s2">"https://x/y"</span><span class="p">,</span> <span class="s2">"0123456789ab"</span> <span class="o">+</span> <span class="s2">"0"</span> <span class="o">*</span> <span class="mi">28</span><span class="p">),</span> <span class="s2">"b"</span><span class="p">,</span> <span class="n">rootdir</span><span class="o">=</span><span class="s2">"/d"</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+</span><span id="line-2"><span class="go">'/d/models/b/source/0123456789ab'</span>
+</span></code></pre></div>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
@@ -363,12 +436,16 @@ leak the host’s packages), so a one-shot command (<code class="docutils litera
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
 <li><a :data-current="activeSection === '#voxy.envs.DFLT_NUM_THREADS'" class="reference internal" href="#voxy.envs.DFLT_NUM_THREADS"><code class="docutils literal notranslate"><span class="pre">DFLT_NUM_THREADS</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S'" class="reference internal" href="#voxy.envs.DFLT_SOURCE_LOCK_TIMEOUT_S"><code class="docutils literal notranslate"><span class="pre">DFLT_SOURCE_LOCK_TIMEOUT_S</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.envs.ENV_MARKER'" class="reference internal" href="#voxy.envs.ENV_MARKER"><code class="docutils literal notranslate"><span class="pre">ENV_MARKER</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.envs.EnvSpec'" class="reference internal" href="#voxy.envs.EnvSpec"><code class="docutils literal notranslate"><span class="pre">EnvSpec</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.envs.GitSource'" class="reference internal" href="#voxy.envs.GitSource"><code class="docutils literal notranslate"><span class="pre">GitSource</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.envs.VOXY_NUM_THREADS_ENVVAR'" class="reference internal" href="#voxy.envs.VOXY_NUM_THREADS_ENVVAR"><code class="docutils literal notranslate"><span class="pre">VOXY_NUM_THREADS_ENVVAR</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.envs.ensure_env'" class="reference internal" href="#voxy.envs.ensure_env"><code class="docutils literal notranslate"><span class="pre">ensure_env()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.envs.ensure_git_source'" class="reference internal" href="#voxy.envs.ensure_git_source"><code class="docutils literal notranslate"><span class="pre">ensure_git_source()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.envs.env_dir'" class="reference internal" href="#voxy.envs.env_dir"><code class="docutils literal notranslate"><span class="pre">env_dir()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.envs.env_python'" class="reference internal" href="#voxy.envs.env_python"><code class="docutils literal notranslate"><span class="pre">env_python()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.envs.git_source_dir'" class="reference internal" href="#voxy.envs.git_source_dir"><code class="docutils literal notranslate"><span class="pre">git_source_dir()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.envs.is_env_ready'" class="reference internal" href="#voxy.envs.is_env_ready"><code class="docutils literal notranslate"><span class="pre">is_env_ready()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.envs.models_dir'" class="reference internal" href="#voxy.envs.models_dir"><code class="docutils literal notranslate"><span class="pre">models_dir()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.envs.num_threads'" class="reference internal" href="#voxy.envs.num_threads"><code class="docutils literal notranslate"><span class="pre">num_threads()</span></code></a></li>
@@ -387,7 +464,7 @@ leak the host’s packages), so a one-shot command (<code class="docutils litera
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=6eb1e6b8"></script>
+<script src="../_static/documentation_options.js?v=cac962a1"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

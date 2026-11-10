@@ -1,0 +1,27 @@
+voxy.workers.soulx\_adapter
+===========================
+
+.. automodule:: voxy.workers.soulx_adapter
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DFLT_FADE_S
+      SINGERS
+      NOTE_FIELDS
+      NLTK_RESOURCES
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      convert
+      f0
+      fill_phonemes
+      load
+      phonemize_en
+      sing
+      unload
+   

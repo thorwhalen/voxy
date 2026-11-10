@@ -124,6 +124,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.facade.html">voxy.facade</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.fal_model.html">voxy.fal_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.finetune.html">voxy.finetune</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.formant_singer.html">voxy.formant_singer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.kokoro_model.html">voxy.kokoro_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.lexique.html">voxy.lexique</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.library.html">voxy.library</a></li>
@@ -132,8 +133,11 @@
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.pronounce.html">voxy.pronounce</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.say_model.html">voxy.say_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.score.html">voxy.score</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.script.html">voxy.script</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.separate.html">voxy.separate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.singing.html">voxy.singing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.soulx.html">voxy.soulx</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.speakers.html">voxy.speakers</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.speechtext.html">voxy.speechtext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../_autosummary/voxy.splice.html">voxy.splice</a></li>
@@ -631,334 +635,337 @@
 </span><span id="line-436">
 </span><span id="line-437"><span class="sd">    Args:</span>
 </span><span id="line-438"><span class="sd">        python: The environment's interpreter.</span>
-</span><span id="line-439"><span class="sd">        adapter: The adapter file (``load`` plus operations).</span>
-</span><span id="line-440"><span class="sd">        init: Keyword arguments of the adapter's ``load`` (sent on start).</span>
-</span><span id="line-441"><span class="sd">        env: Environment variables added to the host's (minus :data:`HOST_ONLY_VARS`).</span>
-</span><span id="line-442"><span class="sd">        cwd: The working directory (default: an empty folder).</span>
-</span><span id="line-443"><span class="sd">        stderr: Where the process's stderr goes: a log file path, or ``None`` for the</span>
-</span><span id="line-444"><span class="sd">            host's stderr (model output reaches the terminal, errors carry no log</span>
-</span><span id="line-445"><span class="sd">            tail). Default: a temporary log file, created on start, deleted on close.</span>
-</span><span id="line-446"><span class="sd">        spawn: The process factory (seam; :class:`subprocess.Popen` signature).</span>
-</span><span id="line-447"><span class="sd">    """</span>
-</span><span id="line-448">
-</span><span id="line-449">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-</span><span id="line-450">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-451">        <span class="n">python</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-</span><span id="line-452">        <span class="n">adapter</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
-</span><span id="line-453">        <span class="o">*</span><span class="p">,</span>
-</span><span id="line-454">        <span class="n">init</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-455">        <span class="n">env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-456">        <span class="n">cwd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PathLike</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-457">        <span class="n">stderr</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_TEMP_LOG</span><span class="p">,</span>
-</span><span id="line-458">        <span class="n">spawn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">]</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">,</span>
-</span><span id="line-459">    <span class="p">):</span>
-</span><span id="line-460">        <span class="bp">self</span><span class="o">.</span><span class="n">python</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">python</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span>
-</span><span id="line-461">        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span>
-</span><span id="line-462">        <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">init</span> <span class="ow">or</span> <span class="p">{})</span>
-</span><span id="line-463">        <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">env</span> <span class="ow">or</span> <span class="p">{})</span>
-</span><span id="line-464">        <span class="bp">self</span><span class="o">.</span><span class="n">cwd</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">cwd</span><span class="p">)</span> <span class="k">if</span> <span class="n">cwd</span> <span class="k">else</span> <span class="kc">None</span>
-</span><span id="line-465">        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="o">=</span> <span class="n">stderr</span> <span class="ow">is</span> <span class="n">_TEMP_LOG</span>
-</span><span id="line-466">        <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="ow">or</span> <span class="n">stderr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="n">stderr</span><span class="p">)</span>
-</span><span id="line-467">        <span class="bp">self</span><span class="o">.</span><span class="n">_spawn</span> <span class="o">=</span> <span class="n">spawn</span>
-</span><span id="line-468">        <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-469">        <span class="c1"># re-entrant: a failed load or a dead process stops the worker inside call()</span>
-</span><span id="line-470">        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span>
-</span><span id="line-471">        <span class="n">_LIVE_WORKERS</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-</span><span id="line-472">
-</span><span id="line-473">    <span class="nd">@property</span>
-</span><span id="line-474">    <span class="k">def</span><span class="w"> </span><span class="nf">running</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="line-475"><span class="w">        </span><span class="sd">"""Whether the process is running."""</span>
-</span><span id="line-476">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span>
-</span><span id="line-477">
-</span><span id="line-478">    <span class="k">def</span><span class="w"> </span><span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-</span><span id="line-479"><span class="w">        </span><span class="sd">"""Run ``op(state, **request)`` in the worker (starting it on first use).</span>
+</span><span id="line-439"><span class="sd">        adapter: The adapter file (``load`` plus operations); a relative path is</span>
+</span><span id="line-440"><span class="sd">            resolved against the host's working directory.</span>
+</span><span id="line-441"><span class="sd">        init: Keyword arguments of the adapter's ``load`` (sent on start).</span>
+</span><span id="line-442"><span class="sd">        env: Environment variables added to the host's (minus :data:`HOST_ONLY_VARS`).</span>
+</span><span id="line-443"><span class="sd">        cwd: The working directory (default: an empty folder).</span>
+</span><span id="line-444"><span class="sd">        stderr: Where the process's stderr goes: a log file path, or ``None`` for the</span>
+</span><span id="line-445"><span class="sd">            host's stderr (model output reaches the terminal, errors carry no log</span>
+</span><span id="line-446"><span class="sd">            tail). Default: a temporary log file, created on start, deleted on close.</span>
+</span><span id="line-447"><span class="sd">        spawn: The process factory (seam; :class:`subprocess.Popen` signature).</span>
+</span><span id="line-448"><span class="sd">    """</span>
+</span><span id="line-449">
+</span><span id="line-450">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="line-451">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-452">        <span class="n">python</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-453">        <span class="n">adapter</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">,</span>
+</span><span id="line-454">        <span class="o">*</span><span class="p">,</span>
+</span><span id="line-455">        <span class="n">init</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-456">        <span class="n">env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-457">        <span class="n">cwd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PathLike</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-458">        <span class="n">stderr</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">_TEMP_LOG</span><span class="p">,</span>
+</span><span id="line-459">        <span class="n">spawn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">]</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">,</span>
+</span><span id="line-460">    <span class="p">):</span>
+</span><span id="line-461">        <span class="c1"># absolute: the process runs in another directory (an empty one by default)</span>
+</span><span id="line-462">        <span class="bp">self</span><span class="o">.</span><span class="n">python</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">python</span><span class="p">)</span>
+</span><span id="line-463">        <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">adapter</span><span class="p">))</span>
+</span><span id="line-464">        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span>
+</span><span id="line-465">        <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">init</span> <span class="ow">or</span> <span class="p">{})</span>
+</span><span id="line-466">        <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">env</span> <span class="ow">or</span> <span class="p">{})</span>
+</span><span id="line-467">        <span class="bp">self</span><span class="o">.</span><span class="n">cwd</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">cwd</span><span class="p">)</span> <span class="k">if</span> <span class="n">cwd</span> <span class="k">else</span> <span class="kc">None</span>
+</span><span id="line-468">        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="o">=</span> <span class="n">stderr</span> <span class="ow">is</span> <span class="n">_TEMP_LOG</span>
+</span><span id="line-469">        <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="ow">or</span> <span class="n">stderr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="n">stderr</span><span class="p">)</span>
+</span><span id="line-470">        <span class="bp">self</span><span class="o">.</span><span class="n">_spawn</span> <span class="o">=</span> <span class="n">spawn</span>
+</span><span id="line-471">        <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-472">        <span class="c1"># re-entrant: a failed load or a dead process stops the worker inside call()</span>
+</span><span id="line-473">        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span>
+</span><span id="line-474">        <span class="n">_LIVE_WORKERS</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</span><span id="line-475">
+</span><span id="line-476">    <span class="nd">@property</span>
+</span><span id="line-477">    <span class="k">def</span><span class="w"> </span><span class="nf">running</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-478"><span class="w">        </span><span class="sd">"""Whether the process is running."""</span>
+</span><span id="line-479">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span>
 </span><span id="line-480">
-</span><span id="line-481"><span class="sd">        Raises:</span>
-</span><span id="line-482"><span class="sd">            WorkerError: The operation failed in the worker, or the worker died.</span>
-</span><span id="line-483"><span class="sd">            TypeError, ValueError: ``request`` is not JSON-serialisable (the worker is</span>
-</span><span id="line-484"><span class="sd">                left as it was).</span>
-</span><span id="line-485"><span class="sd">        """</span>
-</span><span id="line-486">        <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"op"</span><span class="p">:</span> <span class="n">op</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">})</span>
-</span><span id="line-487">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-</span><span id="line-488">            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
-</span><span id="line-489">                <span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">()</span>
-</span><span id="line-490">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
-</span><span id="line-491">
-</span><span id="line-492">    <span class="k">def</span><span class="w"> </span><span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-493">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()):</span>
-</span><span id="line-494">            <span class="n">fd</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-"</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">".log"</span><span class="p">)</span>
-</span><span id="line-495">            <span class="n">os</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">)</span>
-</span><span id="line-496">            <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="line-497">        <span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">python</span><span class="p">,</span> <span class="s2">"-u"</span><span class="p">,</span> <span class="s2">"-c"</span><span class="p">,</span> <span class="n">_BOOTSTRAP</span><span class="p">,</span> <span class="vm">__file__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">]</span>
-</span><span id="line-498">        <span class="kn">from</span><span class="w"> </span><span class="nn">ps.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">NEW_PROCESS_GROUP</span>
-</span><span id="line-499">
-</span><span id="line-500">        <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-</span><span id="line-501">            <span class="o">**</span><span class="n">NEW_PROCESS_GROUP</span><span class="p">,</span>
-</span><span id="line-502">            <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-</span><span id="line-503">            <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-</span><span id="line-504">            <span class="n">cwd</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cwd</span> <span class="ow">or</span> <span class="n">_neutral_dir</span><span class="p">(),</span>
-</span><span id="line-505">            <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">clean_environ</span><span class="p">(),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="p">},</span>
-</span><span id="line-506">            <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="line-507">            <span class="n">bufsize</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-</span><span id="line-508">        <span class="p">)</span>
-</span><span id="line-509">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-510">            <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spawn</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
-</span><span id="line-511">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-512">            <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-513">            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="p">,</span> <span class="s2">"ab"</span><span class="p">)</span> <span class="k">as</span> <span class="n">log</span><span class="p">:</span>
-</span><span id="line-514">                <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spawn</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">log</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
-</span><span id="line-515">        <span class="bp">self</span><span class="o">.</span><span class="n">_send</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"op"</span><span class="p">:</span> <span class="s2">"load"</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">}),</span> <span class="n">loading</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-516">
-</span><span id="line-517">    <span class="k">def</span><span class="w"> </span><span class="nf">_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">loading</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-</span><span id="line-518">        <span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span>
-</span><span id="line-519">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-520">            <span class="n">reply</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exchange</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
-</span><span id="line-521">        <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
-</span><span id="line-522">            <span class="c1"># An interrupted or garbled exchange would leave a reply in the pipe that the</span>
-</span><span id="line-523">            <span class="c1"># next call would read as its own: stop the worker (it restarts lazily).</span>
-</span><span id="line-524">            <span class="bp">self</span><span class="o">.</span><span class="n">_stop</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
-</span><span id="line-525">            <span class="k">raise</span>
-</span><span id="line-526">        <span class="k">if</span> <span class="ow">not</span> <span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ok"</span><span class="p">):</span>
-</span><span id="line-527">            <span class="k">if</span> <span class="n">loading</span><span class="p">:</span>
-</span><span id="line-528">                <span class="bp">self</span><span class="o">.</span><span class="n">_stop</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>  <span class="c1"># a model that failed to load must not serve calls</span>
-</span><span id="line-529">            <span class="n">trace</span> <span class="o">=</span> <span class="p">(</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"traceback"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)[</span><span class="o">-</span><span class="n">LOG_TAIL_CHARS</span><span class="p">:]</span>
-</span><span id="line-530">            <span class="k">raise</span> <span class="n">WorkerError</span><span class="p">(</span>
-</span><span id="line-531">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> worker failed: </span><span class="si">{</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'error'</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">trace</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="line-532">            <span class="p">)</span>
-</span><span id="line-533">        <span class="k">return</span> <span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"result"</span><span class="p">)</span>
-</span><span id="line-534">
-</span><span id="line-535">    <span class="k">def</span><span class="w"> </span><span class="nf">_exchange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-</span><span id="line-536">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-537">            <span class="n">proc</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-538">            <span class="n">proc</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
-</span><span id="line-539">            <span class="n">line</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
-</span><span id="line-540">        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>  <span class="c1"># a broken or closed pipe</span>
-</span><span id="line-541">            <span class="n">line</span> <span class="o">=</span> <span class="s2">""</span>
-</span><span id="line-542">        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
-</span><span id="line-543">            <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_died</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
-</span><span id="line-544">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-545">            <span class="n">reply</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
-</span><span id="line-546">        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-</span><span id="line-547">            <span class="n">reply</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-548">        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-</span><span id="line-549">            <span class="k">raise</span> <span class="n">WorkerError</span><span class="p">(</span>
-</span><span id="line-550">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> worker sent a line that is not a reply: </span><span class="si">{</span><span class="n">line</span><span class="p">[:</span><span class="mi">200</span><span class="p">]</span><span class="si">!r}</span><span class="s2">"</span>
-</span><span id="line-551">            <span class="p">)</span>
-</span><span id="line-552">        <span class="k">return</span> <span class="n">reply</span>
-</span><span id="line-553">
-</span><span id="line-554">    <span class="k">def</span><span class="w"> </span><span class="nf">_died</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkerError</span><span class="p">:</span>
-</span><span id="line-555">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-556">            <span class="n">code</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">DFLT_CLOSE_TIMEOUT</span><span class="p">)</span>
-</span><span id="line-557">        <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
-</span><span id="line-558">            <span class="n">code</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-559">        <span class="n">where</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-560">            <span class="sa">f</span><span class="s2">"log: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="si">}</span><span class="s2">):</span><span class="se">\n</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">log_tail</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="line-561">            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span>
-</span><span id="line-562">            <span class="k">else</span> <span class="s2">"its stderr went to this process's)"</span>
-</span><span id="line-563">        <span class="p">)</span>
-</span><span id="line-564">        <span class="k">return</span> <span class="n">WorkerError</span><span class="p">(</span>
-</span><span id="line-565">            <span class="sa">f</span><span class="s2">"The </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> worker exited (code </span><span class="si">{</span><span class="n">code</span><span class="si">}</span><span class="s2">) before answering (</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-481">    <span class="k">def</span><span class="w"> </span><span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">/</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="line-482"><span class="w">        </span><span class="sd">"""Run ``op(state, **request)`` in the worker (starting it on first use).</span>
+</span><span id="line-483">
+</span><span id="line-484"><span class="sd">        Raises:</span>
+</span><span id="line-485"><span class="sd">            WorkerError: The operation failed in the worker, or the worker died.</span>
+</span><span id="line-486"><span class="sd">            TypeError, ValueError: ``request`` is not JSON-serialisable (the worker is</span>
+</span><span id="line-487"><span class="sd">                left as it was).</span>
+</span><span id="line-488"><span class="sd">        """</span>
+</span><span id="line-489">        <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"op"</span><span class="p">:</span> <span class="n">op</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">})</span>
+</span><span id="line-490">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+</span><span id="line-491">            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+</span><span id="line-492">                <span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">()</span>
+</span><span id="line-493">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+</span><span id="line-494">
+</span><span id="line-495">    <span class="k">def</span><span class="w"> </span><span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-496">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()):</span>
+</span><span id="line-497">            <span class="n">fd</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-"</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">".log"</span><span class="p">)</span>
+</span><span id="line-498">            <span class="n">os</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">)</span>
+</span><span id="line-499">            <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="line-500">        <span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">python</span><span class="p">,</span> <span class="s2">"-u"</span><span class="p">,</span> <span class="s2">"-c"</span><span class="p">,</span> <span class="n">_BOOTSTRAP</span><span class="p">,</span> <span class="vm">__file__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">adapter</span><span class="p">]</span>
+</span><span id="line-501">        <span class="kn">from</span><span class="w"> </span><span class="nn">ps.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">NEW_PROCESS_GROUP</span>
+</span><span id="line-502">
+</span><span id="line-503">        <span class="n">options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+</span><span id="line-504">            <span class="o">**</span><span class="n">NEW_PROCESS_GROUP</span><span class="p">,</span>
+</span><span id="line-505">            <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="line-506">            <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="line-507">            <span class="n">cwd</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cwd</span> <span class="ow">or</span> <span class="n">_neutral_dir</span><span class="p">(),</span>
+</span><span id="line-508">            <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">clean_environ</span><span class="p">(),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="p">},</span>
+</span><span id="line-509">            <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="line-510">            <span class="n">bufsize</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="line-511">        <span class="p">)</span>
+</span><span id="line-512">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-513">            <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spawn</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+</span><span id="line-514">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-515">            <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-516">            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="p">,</span> <span class="s2">"ab"</span><span class="p">)</span> <span class="k">as</span> <span class="n">log</span><span class="p">:</span>
+</span><span id="line-517">                <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spawn</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">log</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+</span><span id="line-518">        <span class="bp">self</span><span class="o">.</span><span class="n">_send</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"op"</span><span class="p">:</span> <span class="s2">"load"</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">}),</span> <span class="n">loading</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-519">
+</span><span id="line-520">    <span class="k">def</span><span class="w"> </span><span class="nf">_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">loading</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="line-521">        <span class="n">proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span>
+</span><span id="line-522">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-523">            <span class="n">reply</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exchange</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+</span><span id="line-524">        <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+</span><span id="line-525">            <span class="c1"># An interrupted or garbled exchange would leave a reply in the pipe that the</span>
+</span><span id="line-526">            <span class="c1"># next call would read as its own: stop the worker (it restarts lazily).</span>
+</span><span id="line-527">            <span class="bp">self</span><span class="o">.</span><span class="n">_stop</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-528">            <span class="k">raise</span>
+</span><span id="line-529">        <span class="k">if</span> <span class="ow">not</span> <span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ok"</span><span class="p">):</span>
+</span><span id="line-530">            <span class="k">if</span> <span class="n">loading</span><span class="p">:</span>
+</span><span id="line-531">                <span class="bp">self</span><span class="o">.</span><span class="n">_stop</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>  <span class="c1"># a model that failed to load must not serve calls</span>
+</span><span id="line-532">            <span class="n">trace</span> <span class="o">=</span> <span class="p">(</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"traceback"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)[</span><span class="o">-</span><span class="n">LOG_TAIL_CHARS</span><span class="p">:]</span>
+</span><span id="line-533">            <span class="k">raise</span> <span class="n">WorkerError</span><span class="p">(</span>
+</span><span id="line-534">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> worker failed: </span><span class="si">{</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'error'</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">trace</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-535">            <span class="p">)</span>
+</span><span id="line-536">        <span class="k">return</span> <span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"result"</span><span class="p">)</span>
+</span><span id="line-537">
+</span><span id="line-538">    <span class="k">def</span><span class="w"> </span><span class="nf">_exchange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-539">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-540">            <span class="n">proc</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">payload</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-541">            <span class="n">proc</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</span><span id="line-542">            <span class="n">line</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+</span><span id="line-543">        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>  <span class="c1"># a broken or closed pipe</span>
+</span><span id="line-544">            <span class="n">line</span> <span class="o">=</span> <span class="s2">""</span>
+</span><span id="line-545">        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+</span><span id="line-546">            <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_died</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-547">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-548">            <span class="n">reply</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+</span><span id="line-549">        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+</span><span id="line-550">            <span class="n">reply</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-551">        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+</span><span id="line-552">            <span class="k">raise</span> <span class="n">WorkerError</span><span class="p">(</span>
+</span><span id="line-553">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> worker sent a line that is not a reply: </span><span class="si">{</span><span class="n">line</span><span class="p">[:</span><span class="mi">200</span><span class="p">]</span><span class="si">!r}</span><span class="s2">"</span>
+</span><span id="line-554">            <span class="p">)</span>
+</span><span id="line-555">        <span class="k">return</span> <span class="n">reply</span>
+</span><span id="line-556">
+</span><span id="line-557">    <span class="k">def</span><span class="w"> </span><span class="nf">_died</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkerError</span><span class="p">:</span>
+</span><span id="line-558">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-559">            <span class="n">code</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">DFLT_CLOSE_TIMEOUT</span><span class="p">)</span>
+</span><span id="line-560">        <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+</span><span id="line-561">            <span class="n">code</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-562">        <span class="n">where</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-563">            <span class="sa">f</span><span class="s2">"log: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="si">}</span><span class="s2">):</span><span class="se">\n</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">log_tail</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-564">            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span>
+</span><span id="line-565">            <span class="k">else</span> <span class="s2">"its stderr went to this process's)"</span>
 </span><span id="line-566">        <span class="p">)</span>
-</span><span id="line-567">
-</span><span id="line-568">    <span class="k">def</span><span class="w"> </span><span class="nf">log_tail</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">LOG_TAIL_CHARS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-569"><span class="w">        </span><span class="sd">"""The last ``chars`` characters of the process's log ("" without a log file)."""</span>
-</span><span id="line-570">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-571">            <span class="k">return</span> <span class="s2">""</span>
-</span><span id="line-572">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-573">            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">log</span><span class="p">:</span>
-</span><span id="line-574">                <span class="n">log</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_END</span><span class="p">)</span>
-</span><span id="line-575">                <span class="n">log</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span>
-</span><span id="line-576">                    <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">log</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">chars</span><span class="p">)</span>
-</span><span id="line-577">                <span class="p">)</span>  <span class="c1"># utf-8: at most 4 bytes a char</span>
-</span><span id="line-578">                <span class="k">return</span> <span class="n">log</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)[</span><span class="o">-</span><span class="n">chars</span><span class="p">:]</span>
-</span><span id="line-579">        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
-</span><span id="line-580">            <span class="k">return</span> <span class="s2">""</span>
-</span><span id="line-581">
-</span><span id="line-582">    <span class="k">def</span><span class="w"> </span><span class="nf">_stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-583"><span class="w">        </span><span class="sd">"""Kill ``proc`` if it is still this worker's process (keeps the log)."""</span>
-</span><span id="line-584">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="ow">is</span> <span class="n">proc</span><span class="p">:</span>
-</span><span id="line-585">            <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-586">        <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
-</span><span id="line-587">
-</span><span id="line-588">    <span class="k">def</span><span class="w"> </span><span class="nf">_remove_temp_log</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-589">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-590">            <span class="k">try</span><span class="p">:</span>
-</span><span id="line-591">                <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
-</span><span id="line-592">            <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
-</span><span id="line-593">                <span class="k">pass</span>
-</span><span id="line-594">            <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-595">
-</span><span id="line-596">    <span class="k">def</span><span class="w"> </span><span class="nf">kill</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-597"><span class="w">        </span><span class="sd">"""Kill the process (and what it spawned) now, without waiting for a call in flight.</span>
+</span><span id="line-567">        <span class="k">return</span> <span class="n">WorkerError</span><span class="p">(</span>
+</span><span id="line-568">            <span class="sa">f</span><span class="s2">"The </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> worker exited (code </span><span class="si">{</span><span class="n">code</span><span class="si">}</span><span class="s2">) before answering (</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-569">        <span class="p">)</span>
+</span><span id="line-570">
+</span><span id="line-571">    <span class="k">def</span><span class="w"> </span><span class="nf">log_tail</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">LOG_TAIL_CHARS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-572"><span class="w">        </span><span class="sd">"""The last ``chars`` characters of the process's log ("" without a log file)."""</span>
+</span><span id="line-573">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-574">            <span class="k">return</span> <span class="s2">""</span>
+</span><span id="line-575">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-576">            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">log</span><span class="p">:</span>
+</span><span id="line-577">                <span class="n">log</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_END</span><span class="p">)</span>
+</span><span id="line-578">                <span class="n">log</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span>
+</span><span id="line-579">                    <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">log</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">chars</span><span class="p">)</span>
+</span><span id="line-580">                <span class="p">)</span>  <span class="c1"># utf-8: at most 4 bytes a char</span>
+</span><span id="line-581">                <span class="k">return</span> <span class="n">log</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)[</span><span class="o">-</span><span class="n">chars</span><span class="p">:]</span>
+</span><span id="line-582">        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+</span><span id="line-583">            <span class="k">return</span> <span class="s2">""</span>
+</span><span id="line-584">
+</span><span id="line-585">    <span class="k">def</span><span class="w"> </span><span class="nf">_stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-586"><span class="w">        </span><span class="sd">"""Kill ``proc`` if it is still this worker's process (keeps the log)."""</span>
+</span><span id="line-587">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="ow">is</span> <span class="n">proc</span><span class="p">:</span>
+</span><span id="line-588">            <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-589">        <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-590">
+</span><span id="line-591">    <span class="k">def</span><span class="w"> </span><span class="nf">_remove_temp_log</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-592">        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_log</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-593">            <span class="k">try</span><span class="p">:</span>
+</span><span id="line-594">                <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+</span><span id="line-595">            <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+</span><span id="line-596">                <span class="k">pass</span>
+</span><span id="line-597">            <span class="bp">self</span><span class="o">.</span><span class="n">log_path</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="line-598">
-</span><span id="line-599"><span class="sd">        That call then fails. The reply pipe is left to its reader to close.</span>
-</span><span id="line-600"><span class="sd">        """</span>
-</span><span id="line-601">        <span class="n">proc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span><span class="p">,</span> <span class="kc">None</span>
-</span><span id="line-602">        <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">close_stdout</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="line-603">        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_temp_log</span><span class="p">()</span>
-</span><span id="line-604">
-</span><span id="line-605">    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_CLOSE_TIMEOUT</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-606"><span class="w">        </span><span class="sd">"""Stop the process: close its stdin (ending the serve loop), kill it after ``timeout``.</span>
+</span><span id="line-599">    <span class="k">def</span><span class="w"> </span><span class="nf">kill</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-600"><span class="w">        </span><span class="sd">"""Kill the process (and what it spawned) now, without waiting for a call in flight.</span>
+</span><span id="line-601">
+</span><span id="line-602"><span class="sd">        That call then fails. The reply pipe is left to its reader to close.</span>
+</span><span id="line-603"><span class="sd">        """</span>
+</span><span id="line-604">        <span class="n">proc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="line-605">        <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">close_stdout</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="line-606">        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_temp_log</span><span class="p">()</span>
 </span><span id="line-607">
-</span><span id="line-608"><span class="sd">        From another thread, this waits for a call in flight to finish first.</span>
-</span><span id="line-609"><span class="sd">        """</span>
-</span><span id="line-610">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-</span><span id="line-611">            <span class="n">proc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span><span class="p">,</span> <span class="kc">None</span>
-</span><span id="line-612">        <span class="k">if</span> <span class="n">proc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-613">            <span class="k">try</span><span class="p">:</span>
-</span><span id="line-614">                <span class="n">proc</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="line-615">                <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
-</span><span id="line-616">            <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">):</span>
-</span><span id="line-617">                <span class="k">pass</span>
-</span><span id="line-618">            <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
-</span><span id="line-619">        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_temp_log</span><span class="p">()</span>
-</span><span id="line-620">
-</span><span id="line-621">    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="line-622">        <span class="k">return</span> <span class="bp">self</span>
+</span><span id="line-608">    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DFLT_CLOSE_TIMEOUT</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-609"><span class="w">        </span><span class="sd">"""Stop the process: close its stdin (ending the serve loop), kill it after ``timeout``.</span>
+</span><span id="line-610">
+</span><span id="line-611"><span class="sd">        From another thread, this waits for a call in flight to finish first.</span>
+</span><span id="line-612"><span class="sd">        """</span>
+</span><span id="line-613">        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+</span><span id="line-614">            <span class="n">proc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proc</span><span class="p">,</span> <span class="kc">None</span>
+</span><span id="line-615">        <span class="k">if</span> <span class="n">proc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-616">            <span class="k">try</span><span class="p">:</span>
+</span><span id="line-617">                <span class="n">proc</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-618">                <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+</span><span id="line-619">            <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">):</span>
+</span><span id="line-620">                <span class="k">pass</span>
+</span><span id="line-621">            <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-622">        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_temp_log</span><span class="p">()</span>
 </span><span id="line-623">
-</span><span id="line-624">    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">exc</span><span class="p">):</span>
-</span><span id="line-625">        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-624">    <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="line-625">        <span class="k">return</span> <span class="bp">self</span>
 </span><span id="line-626">
-</span><span id="line-627">    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="line-628">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-629">            <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="line-630">        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - nothing to report to at collection time</span>
-</span><span id="line-631">            <span class="k">pass</span>
-</span><span id="line-632">
-</span><span id="line-633">
-</span><span id="line-634"><span class="k">def</span><span class="w"> </span><span class="nf">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">close_stdout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-635"><span class="w">    </span><span class="sd">"""Kill ``proc`` and its process group, collect it, and close our ends of its pipes.</span>
+</span><span id="line-627">    <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">exc</span><span class="p">):</span>
+</span><span id="line-628">        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-629">
+</span><span id="line-630">    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="line-631">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-632">            <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-633">        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - nothing to report to at collection time</span>
+</span><span id="line-634">            <span class="k">pass</span>
+</span><span id="line-635">
 </span><span id="line-636">
-</span><span id="line-637"><span class="sd">    The group is killed even when ``proc`` already exited, since what it spawned may</span>
-</span><span id="line-638"><span class="sd">    live on. ``close_stdout=False`` leaves the reply pipe alone: closing it while</span>
-</span><span id="line-639"><span class="sd">    another thread reads it would block until every writer is gone.</span>
-</span><span id="line-640"><span class="sd">    """</span>
-</span><span id="line-641">    <span class="k">if</span> <span class="n">proc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-642">        <span class="k">return</span>
-</span><span id="line-643">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">):</span>
-</span><span id="line-644">        <span class="kn">from</span><span class="w"> </span><span class="nn">ps.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">kill_process_tree</span>
-</span><span id="line-645">
-</span><span id="line-646">        <span class="n">kill_process_tree</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
-</span><span id="line-647">    <span class="k">elif</span> <span class="n">proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># a spawn= stand-in: no group to kill</span>
-</span><span id="line-648">        <span class="n">proc</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
-</span><span id="line-649">    <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
-</span><span id="line-650">    <span class="n">streams</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="s2">"stdin"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)]</span>
-</span><span id="line-651">    <span class="k">if</span> <span class="n">close_stdout</span><span class="p">:</span>
-</span><span id="line-652">        <span class="n">streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="s2">"stdout"</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
-</span><span id="line-653">    <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">streams</span><span class="p">:</span>
-</span><span id="line-654">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-655">            <span class="n">stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="line-656">        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - already closed, or a fake without close</span>
-</span><span id="line-657">            <span class="k">pass</span>
-</span><span id="line-658">
-</span><span id="line-659">
-</span><span id="line-660"><span class="c1"># --------------------------------------------------------------------------------------</span>
-</span><span id="line-661"><span class="c1"># The environment side</span>
+</span><span id="line-637"><span class="k">def</span><span class="w"> </span><span class="nf">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">close_stdout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-638"><span class="w">    </span><span class="sd">"""Kill ``proc`` and its process group, collect it, and close our ends of its pipes.</span>
+</span><span id="line-639">
+</span><span id="line-640"><span class="sd">    The group is killed even when ``proc`` already exited, since what it spawned may</span>
+</span><span id="line-641"><span class="sd">    live on. ``close_stdout=False`` leaves the reply pipe alone: closing it while</span>
+</span><span id="line-642"><span class="sd">    another thread reads it would block until every writer is gone.</span>
+</span><span id="line-643"><span class="sd">    """</span>
+</span><span id="line-644">    <span class="k">if</span> <span class="n">proc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-645">        <span class="k">return</span>
+</span><span id="line-646">    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">):</span>
+</span><span id="line-647">        <span class="kn">from</span><span class="w"> </span><span class="nn">ps.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">kill_process_tree</span>
+</span><span id="line-648">
+</span><span id="line-649">        <span class="n">kill_process_tree</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+</span><span id="line-650">    <span class="k">elif</span> <span class="n">proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># a spawn= stand-in: no group to kill</span>
+</span><span id="line-651">        <span class="n">proc</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+</span><span id="line-652">    <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+</span><span id="line-653">    <span class="n">streams</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="s2">"stdin"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)]</span>
+</span><span id="line-654">    <span class="k">if</span> <span class="n">close_stdout</span><span class="p">:</span>
+</span><span id="line-655">        <span class="n">streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="s2">"stdout"</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+</span><span id="line-656">    <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">streams</span><span class="p">:</span>
+</span><span id="line-657">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-658">            <span class="n">stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-659">        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - already closed, or a fake without close</span>
+</span><span id="line-660">            <span class="k">pass</span>
+</span><span id="line-661">
 </span><span id="line-662">
-</span><span id="line-663">
-</span><span id="line-664"><span class="k">def</span><span class="w"> </span><span class="nf">_protect_stdout</span><span class="p">():</span>
-</span><span id="line-665"><span class="w">    </span><span class="sd">"""Keep the real stdout for replies; send everything else written to fd 1 to stderr."""</span>
-</span><span id="line-666">    <span class="n">replies</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">dup</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">buffering</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="line-667">    <span class="n">os</span><span class="o">.</span><span class="n">dup2</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># C-level prints to fd 1 now land in stderr too</span>
-</span><span id="line-668">    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span>
-</span><span id="line-669">    <span class="k">return</span> <span class="n">replies</span>
-</span><span id="line-670">
-</span><span id="line-671">
-</span><span id="line-672"><span class="k">def</span><span class="w"> </span><span class="nf">_adapter_handler</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">dict</span><span class="p">],</span> <span class="n">Any</span><span class="p">]:</span>
-</span><span id="line-673">    <span class="n">state</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-663"><span class="c1"># --------------------------------------------------------------------------------------</span>
+</span><span id="line-664"><span class="c1"># The environment side</span>
+</span><span id="line-665">
+</span><span id="line-666">
+</span><span id="line-667"><span class="k">def</span><span class="w"> </span><span class="nf">_protect_stdout</span><span class="p">():</span>
+</span><span id="line-668"><span class="w">    </span><span class="sd">"""Keep the real stdout for replies; send everything else written to fd 1 to stderr."""</span>
+</span><span id="line-669">    <span class="n">replies</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">dup</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">buffering</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="line-670">    <span class="n">os</span><span class="o">.</span><span class="n">dup2</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># C-level prints to fd 1 now land in stderr too</span>
+</span><span id="line-671">    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span>
+</span><span id="line-672">    <span class="k">return</span> <span class="n">replies</span>
+</span><span id="line-673">
 </span><span id="line-674">
-</span><span id="line-675">    <span class="k">def</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-</span><span id="line-676">        <span class="k">nonlocal</span> <span class="n">state</span>
-</span><span id="line-677">        <span class="n">op</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"op"</span><span class="p">)</span>
-</span><span id="line-678">        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">"load"</span><span class="p">:</span>
-</span><span id="line-679">            <span class="n">state</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="o">**</span><span class="n">request</span><span class="p">)</span>
-</span><span id="line-680">            <span class="k">return</span> <span class="p">{}</span>
-</span><span id="line-681">        <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">adapter</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-682">        <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
-</span><span id="line-683">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown operation </span><span class="si">{</span><span class="n">op</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-684">        <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">)</span>
-</span><span id="line-685">        <span class="k">return</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">result</span>
-</span><span id="line-686">
-</span><span id="line-687">    <span class="k">return</span> <span class="n">handle</span>
-</span><span id="line-688">
+</span><span id="line-675"><span class="k">def</span><span class="w"> </span><span class="nf">_adapter_handler</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">dict</span><span class="p">],</span> <span class="n">Any</span><span class="p">]:</span>
+</span><span id="line-676">    <span class="n">state</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-677">
+</span><span id="line-678">    <span class="k">def</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="line-679">        <span class="k">nonlocal</span> <span class="n">state</span>
+</span><span id="line-680">        <span class="n">op</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"op"</span><span class="p">)</span>
+</span><span id="line-681">        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">"load"</span><span class="p">:</span>
+</span><span id="line-682">            <span class="n">state</span> <span class="o">=</span> <span class="n">adapter</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="o">**</span><span class="n">request</span><span class="p">)</span>
+</span><span id="line-683">            <span class="k">return</span> <span class="p">{}</span>
+</span><span id="line-684">        <span class="n">func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">adapter</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-685">        <span class="k">if</span> <span class="n">op</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+</span><span id="line-686">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown operation </span><span class="si">{</span><span class="n">op</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-687">        <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="o">**</span><span class="n">request</span><span class="p">)</span>
+</span><span id="line-688">        <span class="k">return</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">result</span>
 </span><span id="line-689">
-</span><span id="line-690"><span class="k">def</span><span class="w"> </span><span class="nf">serve_adapter</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-691"><span class="w">    </span><span class="sd">"""Load the adapter file at ``path`` and answer JSON requests on stdin (what a :class:`Worker` runs).</span>
+</span><span id="line-690">    <span class="k">return</span> <span class="n">handle</span>
+</span><span id="line-691">
 </span><span id="line-692">
-</span><span id="line-693"><span class="sd">    stdout is protected before the adapter is loaded, so what it prints on import goes</span>
-</span><span id="line-694"><span class="sd">    to stderr too; the adapter's folder is put first on ``sys.path``.</span>
-</span><span id="line-695"><span class="sd">    """</span>
-</span><span id="line-696">    <span class="n">replies</span> <span class="o">=</span> <span class="n">_protect_stdout</span><span class="p">()</span>
-</span><span id="line-697">    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
-</span><span id="line-698">    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
-</span><span id="line-699">    <span class="n">spec</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">spec_from_file_location</span><span class="p">(</span><span class="s2">"ps_isolated_adapter"</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
-</span><span id="line-700">    <span class="n">adapter</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">module_from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
-</span><span id="line-701">    <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">adapter</span>  <span class="c1"># what dataclasses and pickle look up</span>
-</span><span id="line-702">    <span class="n">spec</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">exec_module</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span>
-</span><span id="line-703">    <span class="n">handle</span> <span class="o">=</span> <span class="n">_adapter_handler</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span>
-</span><span id="line-704">    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">:</span>
-</span><span id="line-705">        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-</span><span id="line-706">            <span class="k">continue</span>
-</span><span id="line-707">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-708">            <span class="n">reply</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"ok"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"result"</span><span class="p">:</span> <span class="n">handle</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">))}</span>
-</span><span id="line-709">        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># report every failure to the client, keep serving</span>
-</span><span id="line-710">            <span class="n">reply</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-711">                <span class="s2">"ok"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="line-712">                <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-</span><span id="line-713">                <span class="s2">"traceback"</span><span class="p">:</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),</span>
-</span><span id="line-714">            <span class="p">}</span>
-</span><span id="line-715">        <span class="n">replies</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">reply</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-716">        <span class="n">replies</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
-</span><span id="line-717">
-</span><span id="line-718">
-</span><span id="line-719"><span class="c1"># --------------------------------------------------------------------------------------</span>
-</span><span id="line-720"><span class="c1"># One-shot</span>
+</span><span id="line-693"><span class="k">def</span><span class="w"> </span><span class="nf">serve_adapter</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">PathLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-694"><span class="w">    </span><span class="sd">"""Load the adapter file at ``path`` and answer JSON requests on stdin (what a :class:`Worker` runs).</span>
+</span><span id="line-695">
+</span><span id="line-696"><span class="sd">    stdout is protected before the adapter is loaded, so what it prints on import goes</span>
+</span><span id="line-697"><span class="sd">    to stderr too; the adapter's folder is put first on ``sys.path``.</span>
+</span><span id="line-698"><span class="sd">    """</span>
+</span><span id="line-699">    <span class="n">replies</span> <span class="o">=</span> <span class="n">_protect_stdout</span><span class="p">()</span>
+</span><span id="line-700">    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+</span><span id="line-701">    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+</span><span id="line-702">    <span class="n">spec</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">spec_from_file_location</span><span class="p">(</span><span class="s2">"ps_isolated_adapter"</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+</span><span id="line-703">    <span class="n">adapter</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">module_from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+</span><span id="line-704">    <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">adapter</span>  <span class="c1"># what dataclasses and pickle look up</span>
+</span><span id="line-705">    <span class="n">spec</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">exec_module</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span>
+</span><span id="line-706">    <span class="n">handle</span> <span class="o">=</span> <span class="n">_adapter_handler</span><span class="p">(</span><span class="n">adapter</span><span class="p">)</span>
+</span><span id="line-707">    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">:</span>
+</span><span id="line-708">        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+</span><span id="line-709">            <span class="k">continue</span>
+</span><span id="line-710">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-711">            <span class="n">reply</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"ok"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"result"</span><span class="p">:</span> <span class="n">handle</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">))}</span>
+</span><span id="line-712">        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># report every failure to the client, keep serving</span>
+</span><span id="line-713">            <span class="n">reply</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-714">                <span class="s2">"ok"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="line-715">                <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="line-716">                <span class="s2">"traceback"</span><span class="p">:</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),</span>
+</span><span id="line-717">            <span class="p">}</span>
+</span><span id="line-718">        <span class="n">replies</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">reply</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-719">        <span class="n">replies</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</span><span id="line-720">
 </span><span id="line-721">
-</span><span id="line-722">
-</span><span id="line-723"><span class="k">def</span><span class="w"> </span><span class="nf">run_process</span><span class="p">(</span>
-</span><span id="line-724">    <span class="n">cmd</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span>
-</span><span id="line-725">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-726">    <span class="n">cwd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PathLike</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-727">    <span class="n">env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-728">    <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-729"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-730"><span class="w">    </span><span class="sd">"""Run ``cmd`` once; return ``(returncode, output)``, stdout and stderr interleaved.</span>
-</span><span id="line-731">
-</span><span id="line-732"><span class="sd">    ``env`` is added to the host's environment (minus :data:`HOST_ONLY_VARS`); stdin is</span>
-</span><span id="line-733"><span class="sd">    closed, so a program prompting for input fails instead of waiting. Past ``timeout``</span>
-</span><span id="line-734"><span class="sd">    seconds the process and everything it spawned are killed, and</span>
-</span><span id="line-735"><span class="sd">    :class:`subprocess.TimeoutExpired` is raised. The process leads its own process</span>
-</span><span id="line-736"><span class="sd">    group for that, so on POSIX it does not get the terminal's Ctrl-C or SIGHUP, and</span>
-</span><span id="line-737"><span class="sd">    it outlives a host that is killed outright.</span>
-</span><span id="line-738">
-</span><span id="line-739"><span class="sd">    &gt;&gt;&gt; import sys</span>
-</span><span id="line-740"><span class="sd">    &gt;&gt;&gt; run_process([sys.executable, "-c", "print('hi')"])</span>
-</span><span id="line-741"><span class="sd">    (0, 'hi\\n')</span>
-</span><span id="line-742"><span class="sd">    """</span>
-</span><span id="line-743">    <span class="kn">from</span><span class="w"> </span><span class="nn">ps.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">NEW_PROCESS_GROUP</span><span class="p">,</span> <span class="n">_kill_and_reap</span><span class="p">,</span> <span class="n">kill_process_tree</span>
-</span><span id="line-744">
-</span><span id="line-745">    <span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cmd</span><span class="p">]</span>
-</span><span id="line-746">    <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
-</span><span id="line-747">        <span class="n">argv</span><span class="p">,</span>
-</span><span id="line-748">        <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">,</span>
-</span><span id="line-749">        <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">clean_environ</span><span class="p">(),</span> <span class="o">**</span><span class="p">(</span><span class="n">env</span> <span class="ow">or</span> <span class="p">{})},</span>
-</span><span id="line-750">        <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span>
-</span><span id="line-751">        <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-</span><span id="line-752">        <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span>
-</span><span id="line-753">        <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="line-754">        <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span>
-</span><span id="line-755">        <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">,</span>
-</span><span id="line-756">        <span class="o">**</span><span class="n">NEW_PROCESS_GROUP</span><span class="p">,</span>
-</span><span id="line-757">    <span class="p">)</span>
-</span><span id="line-758">    <span class="k">try</span><span class="p">:</span>
-</span><span id="line-759">        <span class="n">output</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
-</span><span id="line-760">    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
-</span><span id="line-761">        <span class="n">_kill_and_reap</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">kill</span><span class="o">=</span><span class="n">kill_process_tree</span><span class="p">)</span>
-</span><span id="line-762">        <span class="k">raise</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
-</span><span id="line-763">    <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+</span><span id="line-722"><span class="c1"># --------------------------------------------------------------------------------------</span>
+</span><span id="line-723"><span class="c1"># One-shot</span>
+</span><span id="line-724">
+</span><span id="line-725">
+</span><span id="line-726"><span class="k">def</span><span class="w"> </span><span class="nf">run_process</span><span class="p">(</span>
+</span><span id="line-727">    <span class="n">cmd</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span>
+</span><span id="line-728">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-729">    <span class="n">cwd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PathLike</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-730">    <span class="n">env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-731">    <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-732"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+</span><span id="line-733"><span class="w">    </span><span class="sd">"""Run ``cmd`` once; return ``(returncode, output)``, stdout and stderr interleaved.</span>
+</span><span id="line-734">
+</span><span id="line-735"><span class="sd">    ``env`` is added to the host's environment (minus :data:`HOST_ONLY_VARS`); stdin is</span>
+</span><span id="line-736"><span class="sd">    closed, so a program prompting for input fails instead of waiting. Past ``timeout``</span>
+</span><span id="line-737"><span class="sd">    seconds the process and everything it spawned are killed, and</span>
+</span><span id="line-738"><span class="sd">    :class:`subprocess.TimeoutExpired` is raised. The process leads its own process</span>
+</span><span id="line-739"><span class="sd">    group for that, so on POSIX it does not get the terminal's Ctrl-C or SIGHUP, and</span>
+</span><span id="line-740"><span class="sd">    it outlives a host that is killed outright.</span>
+</span><span id="line-741">
+</span><span id="line-742"><span class="sd">    &gt;&gt;&gt; import sys</span>
+</span><span id="line-743"><span class="sd">    &gt;&gt;&gt; run_process([sys.executable, "-c", "print('hi')"])</span>
+</span><span id="line-744"><span class="sd">    (0, 'hi\\n')</span>
+</span><span id="line-745"><span class="sd">    """</span>
+</span><span id="line-746">    <span class="kn">from</span><span class="w"> </span><span class="nn">ps.util</span><span class="w"> </span><span class="kn">import</span> <span class="n">NEW_PROCESS_GROUP</span><span class="p">,</span> <span class="n">_kill_and_reap</span><span class="p">,</span> <span class="n">kill_process_tree</span>
+</span><span id="line-747">
+</span><span id="line-748">    <span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cmd</span><span class="p">]</span>
+</span><span id="line-749">    <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+</span><span id="line-750">        <span class="n">argv</span><span class="p">,</span>
+</span><span id="line-751">        <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">,</span>
+</span><span id="line-752">        <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">clean_environ</span><span class="p">(),</span> <span class="o">**</span><span class="p">(</span><span class="n">env</span> <span class="ow">or</span> <span class="p">{})},</span>
+</span><span id="line-753">        <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span>
+</span><span id="line-754">        <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+</span><span id="line-755">        <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span>
+</span><span id="line-756">        <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="line-757">        <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span>
+</span><span id="line-758">        <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">,</span>
+</span><span id="line-759">        <span class="o">**</span><span class="n">NEW_PROCESS_GROUP</span><span class="p">,</span>
+</span><span id="line-760">    <span class="p">)</span>
+</span><span id="line-761">    <span class="k">try</span><span class="p">:</span>
+</span><span id="line-762">        <span class="n">output</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+</span><span id="line-763">    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
 </span><span id="line-764">        <span class="n">_kill_and_reap</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">kill</span><span class="o">=</span><span class="n">kill_process_tree</span><span class="p">)</span>
-</span><span id="line-765">        <span class="k">raise</span>
-</span><span id="line-766">    <span class="k">return</span> <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="p">,</span> <span class="n">output</span>
+</span><span id="line-765">        <span class="k">raise</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">(</span><span class="n">argv</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+</span><span id="line-766">    <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+</span><span id="line-767">        <span class="n">_kill_and_reap</span><span class="p">(</span><span class="n">proc</span><span class="p">,</span> <span class="n">kill</span><span class="o">=</span><span class="n">kill_process_tree</span><span class="p">)</span>
+</span><span id="line-768">        <span class="k">raise</span>
+</span><span id="line-769">    <span class="k">return</span> <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="p">,</span> <span class="n">output</span>
 </span></code></pre></div>
     </div></div>
           </main>
@@ -972,7 +979,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=6eb1e6b8"></script>
+    <script src="../../_static/documentation_options.js?v=cac962a1"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

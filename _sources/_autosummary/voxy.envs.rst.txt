@@ -11,14 +11,17 @@ voxy.envs
       ENV_MARKER
       VOXY_NUM_THREADS_ENVVAR
       DFLT_NUM_THREADS
+      DFLT_SOURCE_LOCK_TIMEOUT_S
    
    .. rubric:: Functions
 
    .. autosummary::
    
       ensure_env
+      ensure_git_source
       env_dir
       env_python
+      git_source_dir
       is_env_ready
       models_dir
       num_threads
@@ -30,4 +33,5 @@ voxy.envs
    .. autosummary::
    
       EnvSpec
+      GitSource
    

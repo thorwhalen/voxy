@@ -5,7 +5,7 @@
 
 ## Pages in this subsection
 
-- [voxy](voxy.html.md): Facade for voice generation: speech synthesis in any voice, cloning and designing voices.
+- [voxy](voxy.html.md): Facade for voice generation: speech synthesis in any voice, cloning and designing voices,
 - [voxy.aix_model](voxy.aix_model.html.md): Speech through aix (LiteLLM): OpenAI’s TTS voices and the other providers LiteLLM routes.
 - [voxy.align](voxy.align.html.md): Where each word of a known text is in a recording, to the character: forced alignment.
 - [voxy.base](voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
@@ -16,6 +16,7 @@
 - [voxy.facade](voxy.facade.html.md): Voice generation in one call, whatever the service behind it.
 - [voxy.fal_model](voxy.fal_model.html.md): Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.
 - [voxy.finetune](voxy.finetune.html.md): Fine-tuning datasets from prepared clips: one export per training recipe.
+- [voxy.formant_singer](voxy.formant_singer.html.md): A formant synthesiser that sings “la” on a list of notes: voices that belong to no one.
 - [voxy.kokoro_model](voxy.kokoro_model.html.md): Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.
 - [voxy.lexique](voxy.lexique.html.md): French heteronyms derived from Lexique, to merge under voxy’s hand-made table.
 - [voxy.library](voxy.library.html.md): A persistent voice library: clone a voice once, then use it by name.
@@ -24,8 +25,11 @@
 - [voxy.pronounce](voxy.pronounce.html.md): Checking, in the audio, which reading of a flagged word a render used.
 - [voxy.refprep](voxy.refprep.html.md): Prepare a speaker’s recordings for cloning and fine-tuning: clean, cut, transcribe, score.
 - [voxy.say_model](voxy.say_model.html.md): Local speech with the macOS &#96;say&#96; command: free, offline, no API key, no deps.
+- [voxy.score](voxy.score.html.md): Scores for singing: the notes of a melody (pitch, timing, word) from MIDI, MusicXML
 - [voxy.script](voxy.script.html.md): Render a cast script: text segments, each read by its own voice, one audio file per section.
 - [voxy.separate](voxy.separate.html.md): Split a recording into the voice and the rest (music, noise) before using the voice.
+- [voxy.singing](voxy.singing.html.md): Singing: sing a score with lyrics in a voice (SVS), or re-voice a sung take (SVC).
+- [voxy.soulx](voxy.soulx.html.md): SoulX-Singer (Soul AI Lab, 2026; code and weights Apache-2.0): zero-shot singing
 - [voxy.speakers](voxy.speakers.html.md): Keep one speaker: find their voice in a recording and mark everyone else’s words.
 - [voxy.speechtext](voxy.speechtext.html.md): Display text vs speech text, and spotting words a model may misread.
 - [voxy.splice](voxy.splice.html.md): Correct words in a recording, in the speaker’s voice: find, render, splice, check.
@@ -43,6 +47,7 @@
 - [voxy.workers.kokoro_adapter](voxy.workers.kokoro_adapter.html.md): Kokoro-82M through kokoro-onnx: stock voices on CPU, no torch, no reference clip.
 - [voxy.workers.phonemes_adapter](voxy.workers.phonemes_adapter.html.md): Phoneme recognition (wav2vec2 espeak CTC): frame-wise log-probabilities of a crop, and espeak phonem...
 - [voxy.workers.qwen3tts_adapter](voxy.workers.qwen3tts_adapter.html.md): Qwen3-TTS (Alibaba Qwen): Base voice cloning from a clip and its text (ICL mode), and VoiceDesign (a...
+- [voxy.workers.soulx_adapter](voxy.workers.soulx_adapter.html.md): SoulX-Singer (Soul AI Lab; code and weights Apache-2.0): zero-shot singing voice
 - [voxy.workers.speaker_adapter](voxy.workers.speaker_adapter.html.md): Speaker embeddings (SpeechBrain ECAPA-TDNN) of sliding windows, for speaker filtering.
 - [voxy.workers.voxcpm_adapter](voxy.workers.voxcpm_adapter.html.md): VoxCPM2 (OpenBMB): tokenizer-free diffusion-autoregressive cloning, 48 kHz output.
 - [voxy.workers.xtts_adapter](voxy.workers.xtts_adapter.html.md): XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a short clip.

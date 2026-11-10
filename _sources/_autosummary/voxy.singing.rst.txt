@@ -1,0 +1,38 @@
+voxy.singing
+============
+
+.. automodule:: voxy.singing
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DFLT_SINGING_SAMPLES
+      FIT_VOICE
+      BUILTIN_SINGING_MODULES
+      SYNTHETIC_PROMPT_PHRASE
+      SYNTHETIC_PRESET_TRANSPOSE
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      close_singing_models
+      convert_singing
+      get_singing_model
+      register_singing_backend
+      resolve_singing_voice
+      sing
+      singing_backends
+      singing_voice
+      synthetic_singing_voice
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      SingingBackend
+      SingingModel
+      SingingWorker
+   

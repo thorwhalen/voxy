@@ -1,0 +1,34 @@
+voxy.score
+==========
+
+.. automodule:: voxy.score
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      HOLD_TOKENS
+      DFLT_FILLER_WORD
+      DFLT_MIDI_TEMPO
+      DRUM_CHANNEL
+      DFLT_MAX_OVERLAP_S
+      WORD_BREAK_REST_S
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      attach_lyrics
+      lyric_tokens
+      notes_from_midi
+      notes_from_musicxml
+      notes_from_pitches
+      read_score
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Note
+   
