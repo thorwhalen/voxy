@@ -114,7 +114,7 @@ def test_worker_reports_errors_and_keeps_serving(tmp_path):
         "def boom(state): raise KeyError('nope')\n"
         "def hello(state, name): print('noise on stdout'); return {'hi': name}\n"
     )
-    with Worker(sys.executable, adapter, log_path=tmp_path / "w.log") as worker:
+    with Worker(sys.executable, adapter, stderr=tmp_path / "w.log") as worker:
         with pytest.raises(WorkerError, match="nope"):
             worker.call("boom")
         assert worker.call("hello", name="x") == {
@@ -126,7 +126,7 @@ def test_worker_reports_errors_and_keeps_serving(tmp_path):
 def test_worker_that_fails_to_load_raises_and_stops(tmp_path):
     adapter = tmp_path / "b_adapter.py"
     adapter.write_text("def load(**kw): raise ImportError('no torch here')\n")
-    worker = Worker(sys.executable, adapter, log_path=tmp_path / "w.log")
+    worker = Worker(sys.executable, adapter, stderr=tmp_path / "w.log")
     with pytest.raises(WorkerError, match="no torch here"):
         worker.call("anything")
     assert not worker.running
@@ -138,7 +138,7 @@ def test_close_from_another_thread_waits_for_the_call_in_flight(tmp_path):
 
     adapter = tmp_path / "e_adapter.py"
     adapter.write_text("def load(**kw): return kw\n")
-    worker = Worker(sys.executable, adapter, log_path=tmp_path / "w.log")
+    worker = Worker(sys.executable, adapter, stderr=tmp_path / "w.log")
     in_call, release = threading.Event(), threading.Event()
 
     def call_in_flight():  # holds the lock as call() does
@@ -162,17 +162,20 @@ def test_close_from_another_thread_waits_for_the_call_in_flight(tmp_path):
 def test_a_closed_pipe_is_reported_as_the_worker_exiting(tmp_path):
     adapter = tmp_path / "f_adapter.py"
     adapter.write_text("def load(**kw): return kw\ndef ping(state): return {}\n")
-    worker = Worker(sys.executable, adapter, log_path=tmp_path / "w.log")
+    worker = Worker(sys.executable, adapter, stderr=tmp_path / "w.log")
     worker.call("ping")
-    worker._process.stdin.close()  # as a close() racing the write would leave it
+    worker._proc.stdin.close()  # as a close() racing the write would leave it
     with pytest.raises(WorkerError, match="exited"):
-        worker._request({"op": "ping"})
+        worker.call("ping")
+    assert not worker.running
+    assert worker.call("ping") == {}  # the next call starts a fresh worker
+    worker.close()
 
 
 def test_a_request_that_cannot_be_serialised_leaves_the_worker_alive(tmp_path):
     adapter = tmp_path / "g_adapter.py"
     adapter.write_text("def load(**kw): return kw\ndef ping(state, **kw): return {}\n")
-    worker = Worker(sys.executable, adapter, log_path=tmp_path / "w.log")
+    worker = Worker(sys.executable, adapter, stderr=tmp_path / "w.log")
     worker.call("ping")
     circular = {}
     circular["self"] = circular
@@ -281,7 +284,7 @@ def test_env_worker_is_the_one_factory_for_local_workers(tmp_path, monkeypatch):
     )
     assert w.python == "/env/python" and w.init == {"model": "base", "device": "cpu"}
     assert w.env["COQUI_TOS_AGREED"] == "1" and "OMP_NUM_THREADS" in w.env
-    assert w.log_path == tmp_path / "cache" / "logs" / "asr.log"
+    assert w.log_path == tmp_path / "cache" / "logs" / "asr.log"  # a kept log
 
     generate = WorkerGenerate(
         LOCAL_CLONE_BACKENDS["f5tts"], env_vars={"COQUI_TOS_AGREED": "1"}
@@ -298,23 +301,71 @@ def test_env_worker_is_the_one_factory_for_local_workers(tmp_path, monkeypatch):
         )._make_worker()
 
 
-def test_ensure_env_builds_once_then_reuses(tmp_path):
+def test_ensure_env_builds_once_then_reuses(tmp_path, monkeypatch):
+    from ps import isolated
+
+    from voxy.envs import ENV_MARKER, env_dir, env_python
+
+    monkeypatch.setattr(isolated, "_find_uv", lambda: "uv")
+    monkeypatch.setenv("UV_CONSTRAINT", "/host/pins.txt")
     spec = EnvSpec("demo", ("numpy",))
     commands = []
 
     def run(cmd, **kwargs):
-        commands.append(cmd)
+        commands.append(list(cmd))
         assert kwargs["env"]["UV_CONSTRAINT"] == ""  # host pins don't leak in
+        if cmd[1] == "venv":  # what uv would leave on disk
+            python = env_python(spec, rootdir=tmp_path)
+            python.parent.mkdir(parents=True)
+            python.touch()
 
+    python = ensure_env(spec, rootdir=tmp_path, run=run, log=lambda *a: None)
+    assert python == env_python(spec, rootdir=tmp_path)
+    assert is_env_ready(spec, rootdir=tmp_path)
+    assert (env_dir(spec, rootdir=tmp_path) / ENV_MARKER).exists()  # voxy's marker
+    assert commands[0][:5] == ["uv", "venv", "--python", "3.11", str(env_dir(spec, rootdir=tmp_path))]
+    assert commands[1][-3:] == ["--torch-backend", "cpu", "numpy"]  # voxy's default
+    ensure_env(spec, rootdir=tmp_path, run=run, log=lambda *a: None)
+    assert len(commands) == 2  # ready: nothing runs
+
+
+def test_env_digests_are_the_ones_voxy_built_its_environments_with():
+    """Moving onto ps.isolated must not rebuild an environment already built."""
+    assert EnvSpec("demo", ("numpy",)).digest() == "9b996d61b155"  # what voxy <= 0.0.68 computed
+    assert (
+        EnvSpec("demo", ("numpy",), env_vars={"X": "1"}).digest()
+        == EnvSpec("demo", ("numpy",)).digest()
+    )  # env vars need no rebuild
+
+
+def test_adapters_import_nothing_from_voxy_and_cap_torch_threads():
+    from voxy.workers import WORKERS_DIR
+
+    for path in WORKERS_DIR.glob("*_adapter.py"):
+        source = path.read_text()
+        assert "from voxy" not in source and "import voxy" not in source, path.name
+        if "import torch" in source:
+            assert "cap_torch_threads()" in source, path.name
+
+
+def test_a_worker_caps_torch_threads_through_the_shared_helper(tmp_path):
+    """The helper module is importable from an adapter: its folder is on sys.path."""
     import shutil
 
-    if shutil.which("uv") is None:
-        pytest.skip("uv not installed")
-    ensure_env(spec, rootdir=tmp_path, run=run, log=lambda *a: None)
-    assert is_env_ready(spec, rootdir=tmp_path)
-    n = len(commands)
-    ensure_env(spec, rootdir=tmp_path, run=run, log=lambda *a: None)
-    assert len(commands) == n
+    from voxy.workers import WORKERS_DIR
+
+    shutil.copy(WORKERS_DIR / "_torch_threads.py", tmp_path)
+    adapter = tmp_path / "t_adapter.py"
+    adapter.write_text(
+        "def load(**kw):\n"
+        "    from _torch_threads import cap_torch_threads\n"
+        "    cap_torch_threads()\n"
+        "def threads(state):\n"
+        "    import os\n"
+        "    return {'env': os.environ.get('VOXY_NUM_THREADS')}\n"
+    )
+    with Worker(sys.executable, adapter, env={"VOXY_NUM_THREADS": "3"}) as worker:
+        assert worker.call("threads") == {"env": "3"}
 
 
 # reference prep ---------------------------------------------------------------

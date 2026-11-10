@@ -5,6 +5,10 @@ VARIANTS = ("original", "turbo", "multilingual")
 
 
 def load(*, variant="original", device="cpu"):
+    from _torch_threads import cap_torch_threads
+
+    cap_torch_threads()
+
     if variant == "turbo":
         from chatterbox.tts_turbo import ChatterboxTurboTTS as Model
     elif variant == "original":

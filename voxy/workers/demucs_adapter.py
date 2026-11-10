@@ -18,6 +18,10 @@ CLIP_MODE = "rescale"
 
 
 def load(*, model="htdemucs_ft", device="cpu"):
+    from _torch_threads import cap_torch_threads
+
+    cap_torch_threads()
+
     from demucs.pretrained import get_model
 
     separator = get_model(model)
