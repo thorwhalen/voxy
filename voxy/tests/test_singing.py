@@ -813,70 +813,6 @@ def test_the_worker_gets_the_fetched_source(monkeypatch, tmp_path):
     assert init["weights"] == soulx.SOULX_WEIGHTS
 
 
-class FakeGit:
-    """``run`` for git: records commands, answers rev-parse and status."""
-
-    def __init__(self, head, *, edits=""):
-        self.head, self.edits, self.commands = head, edits, []
-
-    def __call__(self, command, check, capture_output, text, env):
-        assert not any(k.startswith("GIT_") for k in env)
-        args = command[3:]
-        self.commands.append(args)
-        out = {"rev-parse": self.head + "\n", "status": self.edits}.get(args[0], "")
-        return types.SimpleNamespace(stdout=out)
-
-
-def test_ensure_git_source_fetches_one_commit_once_and_checks_it(tmp_path, monkeypatch):
-    monkeypatch.setenv("GIT_DIR", "/elsewhere")  # never reaches git
-    source = GitSource("https://example.org/r.git", "a" * 40)
-    run = FakeGit(source.commit)
-    path = ensure_git_source(source, "b", rootdir=tmp_path, run=run, log=lambda m: None)
-    assert path == git_source_dir(source, "b", rootdir=tmp_path) and path.is_dir()
-    assert [c[0] for c in run.commands] == [
-        "init", "fetch", "checkout", "rev-parse", "status", "rev-parse", "status"
-    ]
-    assert run.commands[1] == ["fetch", "--quiet", "--depth", "1", source.url, source.commit]
-    run.commands.clear()
-    ensure_git_source(source, "b", rootdir=tmp_path, run=run)
-    assert [c[0] for c in run.commands] == ["rev-parse", "status"]  # reused, checked
-    with pytest.raises(RuntimeError, match="local edits"):
-        ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit(source.commit, edits=" M x.py"))
-    with pytest.raises(RuntimeError, match="not aaaaaaaaaaaa"):
-        ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit("b" * 40))
-
-
-def test_losing_the_rename_race_keeps_the_winners_copy(tmp_path):
-    source = GitSource("https://example.org/r.git", "e" * 40)
-    final = git_source_dir(source, "b", rootdir=tmp_path)
-
-    class Racing(FakeGit):
-        def __call__(self, command, **kw):
-            if command[3] == "checkout":  # another process finishes first
-                final.mkdir(parents=True)
-                (final / "theirs").write_text("x")
-            return super().__call__(command, **kw)
-
-    path = ensure_git_source(source, "b", rootdir=tmp_path, run=Racing(source.commit), log=lambda m: None)
-    assert path == final and (final / "theirs").exists()
-    assert not final.with_name(final.name + ".partial").exists()
-
-
-def test_a_git_failure_carries_its_message(tmp_path):
-    import subprocess
-
-    def run(command, **kw):
-        if command[3] == "fetch":
-            raise subprocess.CalledProcessError(
-                128, command, stderr="fatal: no such commit"
-            )
-        return types.SimpleNamespace(stdout="")
-
-    source = GitSource("https://example.org/r.git", "f" * 40)
-    with pytest.raises(RuntimeError, match="git fetch .* failed: fatal: no such commit"):
-        ensure_git_source(source, "b", rootdir=tmp_path, run=run, log=lambda m: None)
-
-
 def test_sing_passes_track_and_channel_to_the_score(tmp_path, cache, monkeypatch):
     seen = []
     real = singing.read_score
@@ -894,23 +830,20 @@ def test_sing_passes_track_and_channel_to_the_score(tmp_path, cache, monkeypatch
     assert run.requests[0][1]["meta"][0]["note_pitch"] == "0 72 0"
 
 
-def test_an_interrupted_fetch_is_started_afresh(tmp_path):
-    source = GitSource("https://example.org/r.git", "c" * 40)
-    final = git_source_dir(source, "b", rootdir=tmp_path)
-    partial = final.with_name(final.name + ".partial")
-    partial.mkdir(parents=True)
-    (partial / "half-written").write_text("x")
-    path = ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit(source.commit), log=lambda m: None)
-    assert path == final and not partial.exists() and not (path / "half-written").exists()
-    assert not final.with_name(final.name + ".lock").exists()
+def test_ensure_git_source_is_ps_s_in_voxy_s_models_folder(tmp_path, monkeypatch):
+    seen = {}
 
+    def fake(source, path, **kw):
+        seen.update(source=source, path=path, **kw)
+        return path
 
-def test_a_held_lock_times_out_with_a_hint(tmp_path):
-    source = GitSource("https://example.org/r.git", "d" * 40)
-    final = git_source_dir(source, "b", rootdir=tmp_path)
-    final.with_name(final.name + ".lock").mkdir(parents=True)
-    with pytest.raises(TimeoutError, match="delete it"):
-        ensure_git_source(source, "b", rootdir=tmp_path, run=FakeGit(source.commit), lock_timeout_s=0)
+    monkeypatch.setattr("ps.isolated.ensure_git_source", fake)
+    source = GitSource("https://example.org/r.git", "a" * 40)
+    run = object()
+    path = ensure_git_source(source, "b", rootdir=tmp_path, run=run, lock_timeout_s=5)
+    assert path == git_source_dir(source, "b", rootdir=tmp_path)
+    assert path == tmp_path / "models" / "b" / "source" / ("a" * 12)  # folders already fetched stay valid
+    assert seen["run"] is run and seen["lock_timeout_s"] == 5 and seen["source"] is source
 
 
 def test_a_source_needs_a_full_sha():

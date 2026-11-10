@@ -25,12 +25,9 @@ True
 """
 
 import os
-import re
 import shutil
 import subprocess
-import time
 from collections.abc import Mapping
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -79,38 +76,13 @@ class EnvSpec(isolated.EnvSpec):
     env_vars: Mapping[str, str] = field(default_factory=dict)
 
 
-#: A full commit SHA: what ``GitSource`` pins.
-_FULL_SHA = re.compile(r"[0-9a-f]{40}")
 #: How long to wait for another process fetching the same source.
-DFLT_SOURCE_LOCK_TIMEOUT_S = 900
-_LOCK_POLL_S = 1.0
+DFLT_SOURCE_LOCK_TIMEOUT_S = isolated.DFLT_SOURCE_LOCK_TIMEOUT_S
 
-
-@dataclass(frozen=True)
-class GitSource:
-    """Code a backend runs that is not pip-installable (no ``pyproject.toml``), at a
-    pinned commit: ``ensure_git_source`` fetches it once, and the adapter puts the
-    folder on its ``sys.path``.
-
-    Args:
-        url: The repository (anything ``git fetch`` takes).
-        commit: The full 40-character commit SHA (a branch, tag or short SHA would
-            not pin it).
-
-    >>> GitSource("https://x/y", "main")
-    Traceback (most recent call last):
-      ...
-    ValueError: GitSource needs a full 40-character commit SHA, not 'main'
-    """
-
-    url: str
-    commit: str
-
-    def __post_init__(self):
-        if not _FULL_SHA.fullmatch(self.commit):
-            raise ValueError(
-                f"GitSource needs a full 40-character commit SHA, not {self.commit!r}"
-            )
+#: Code a backend runs that is not pip-installable, at a pinned commit (a full
+#: 40-character SHA): :func:`ensure_git_source` fetches it once, and the adapter puts
+#: the folder on its ``sys.path``. The mechanism is :class:`ps.isolated.GitSource`.
+GitSource = isolated.GitSource
 
 
 def git_source_dir(
@@ -133,95 +105,17 @@ def ensure_git_source(
     log=print,
     lock_timeout_s: float = DFLT_SOURCE_LOCK_TIMEOUT_S,
 ) -> Path:
-    """Check out ``source`` for backend ``name`` once (only that commit, no history),
-    and return its folder, checked: at that commit, with no local edits.
-
-    The fetch holds a lock (another process fetching the same source waits), goes
-    into a ``.partial`` folder (an interrupted one is started afresh), and is renamed
-    into place when complete. git runs without the caller's ``GIT_*`` variables.
+    """Check out ``source`` for backend ``name`` once and return its folder, checked
+    (at that commit, no edits to tracked files): :func:`ps.isolated.ensure_git_source`
+    in voxy's models folder (:func:`git_source_dir`).
     """
-    path = git_source_dir(source, name, rootdir=rootdir)
-    if not path.is_dir():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with _dir_lock(path.with_name(path.name + ".lock"), timeout_s=lock_timeout_s):
-            if not path.is_dir():
-                _fetch_git_source(source, path, run=run, log=log)
-    _check_checkout(path, source, run=run)
-    return path
-
-
-def _fetch_git_source(source: GitSource, path: Path, *, run, log) -> None:
-    if shutil.which("git") is None:
-        raise RuntimeError(f"Fetching {source.url} needs git (https://git-scm.com)")
-    partial = path.with_name(path.name + ".partial")
-    shutil.rmtree(partial, ignore_errors=True)
-    partial.mkdir(parents=True)
-    log(f"voxy: fetching {source.url} at {source.commit[:12]} into {path} (one-time)")
-    _git(run, partial, "init", "--quiet")
-    _git(run, partial, "fetch", "--quiet", "--depth", "1", source.url, source.commit)
-    _git(run, partial, "checkout", "--quiet", "--detach", "FETCH_HEAD")
-    _check_checkout(partial, source, run=run)
-    try:
-        partial.rename(path)
-    except OSError:
-        if not path.is_dir():
-            raise
-        shutil.rmtree(partial, ignore_errors=True)  # someone else's copy won
-
-
-def _git(run, folder: Path, *args: str):
-    """``git -C folder args...``, without the caller's ``GIT_*`` variables."""
-    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    try:
-        return run(
-            ["git", "-C", str(folder), *args],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-    except subprocess.CalledProcessError as error:
-        detail = (error.stderr or error.stdout or "").strip()
-        raise RuntimeError(f"git {' '.join(args)} failed: {detail}") from error
-
-
-def _check_checkout(path: Path, source: GitSource, *, run) -> None:
-    """Refuse a checkout at another commit, or with edits to its tracked files."""
-    head = (_git(run, path, "rev-parse", "HEAD").stdout or "").strip()
-    if head != source.commit:
-        raise RuntimeError(
-            f"{path} is at {head[:12] or 'no commit'}, not {source.commit[:12]}: "
-            "delete the folder to fetch it again"
-        )
-    edits = (
-        _git(run, path, "status", "--porcelain", "--untracked-files=no").stdout or ""
-    ).strip()
-    if edits:
-        raise RuntimeError(
-            f"{path} has local edits ({edits.splitlines()[0].strip()}, ...): "
-            "delete the folder to fetch it again"
-        )
-
-
-@contextmanager
-def _dir_lock(lock: Path, *, timeout_s: float):
-    """Hold ``lock`` (a folder, made atomically) for the block; wait up to ``timeout_s``."""
-    deadline = time.monotonic() + timeout_s
-    while True:
-        try:
-            lock.mkdir()
-            break
-        except FileExistsError:
-            if time.monotonic() > deadline:
-                raise TimeoutError(
-                    f"{lock} has been held for over {timeout_s:.0f} s; if no voxy "
-                    "process is fetching, delete it"
-                ) from None
-            time.sleep(_LOCK_POLL_S)
-    try:
-        yield
-    finally:
-        shutil.rmtree(lock, ignore_errors=True)
+    return isolated.ensure_git_source(
+        source,
+        git_source_dir(source, name, rootdir=rootdir),
+        run=run,
+        log=log,
+        lock_timeout_s=lock_timeout_s,
+    )
 
 
 def env_dir(spec: EnvSpec, *, rootdir: str | os.PathLike | None = None) -> Path:
