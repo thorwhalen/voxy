@@ -43,7 +43,13 @@ from voxy.direction import (
     register_dialect,
     strip_directions,
 )
-from voxy.speech_cache import SpeechCache, cached_synthesizer, default_speech_cache_dir
+from voxy.speech_cache import (
+    SpeechCache,
+    TakeRejected,
+    cached_synthesizer,
+    default_speech_cache_dir,
+    speaking_rate_check,
+)
 from voxy.facade import (
     text_to_speech,
     speech_to_speech,

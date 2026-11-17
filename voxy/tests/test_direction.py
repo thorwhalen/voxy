@@ -105,3 +105,40 @@ def test_cache_serves_repeats_and_reports_it(tmp_path):
     assert again.audio == first.audio
     text_to_speech(TEXT, "tim_en", model=model, cache=tmp_path, instruction="Other.")
     assert len(model.calls) == 2 * n  # a different instruction is a different request
+
+
+class _Flaky(Voice):
+    """Returns 30 s of tone (a broken take) for the first ``bad`` calls."""
+
+    def __init__(self, bad):
+        super().__init__("fal", SEED)
+        self.bad = bad
+
+    def synthesize(self, text, voice=None, **kwargs):
+        self.calls.append((text, kwargs))
+        seconds = 30.0 if len(self.calls) <= self.bad else len(text) / 14
+        audio = write_wav(np.full(int(RATE * seconds), 0.5, np.float32), RATE)
+        return Speech(audio, format="wav", backend=self.name, voice=voice, text=text)
+
+
+LONG = "You aren't gonna need it is good advice about features, and never meant for seams."
+
+
+def test_a_broken_take_is_retried_and_never_cached(tmp_path):
+    from voxy import speaking_rate_check
+
+    model = _Flaky(bad=1)
+    speech = text_to_speech(LONG, "tim_en", model=model, cache=tmp_path, validate=speaking_rate_check)
+    assert len(model.calls) == 2 and speaking_rate_check(speech, LONG) is None
+    again = text_to_speech(LONG, "tim_en", model=model, cache=tmp_path, validate=speaking_rate_check)
+    assert again.cached and len(model.calls) == 2  # the good take was cached, the bad one never
+
+
+def test_an_engine_that_keeps_failing_raises(tmp_path):
+    from voxy import TakeRejected, speaking_rate_check
+
+    model = _Flaky(bad=10)
+    with pytest.raises(TakeRejected, match="too slow"):
+        text_to_speech(LONG, "tim_en", model=model, cache=tmp_path, validate=speaking_rate_check)
+    assert not list(tmp_path.glob("*.json"))  # nothing stored
+    assert speaking_rate_check(model.synthesize("Hi.", None), "Hi.") is None  # short lines are not judged
