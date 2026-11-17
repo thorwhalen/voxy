@@ -86,7 +86,9 @@ def test_facade_single_call_when_backend_renders_the_breaks():
 
 def test_text_without_markup_is_untouched():
     model = Tone()
-    text_to_speech("[softly] Hello <there>.", model=model)
+    # the pause layer leaves non-SSML text alone; delivery tags are voxy.direction's
+    # business (on this plain model 'auto' would strip [softly], so keep them here)
+    text_to_speech("[softly] Hello <there>.", model=model, directions="keep")
     assert model.calls == [("[softly] Hello <there>.", {})]
 
 

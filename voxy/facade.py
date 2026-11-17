@@ -41,6 +41,13 @@ from voxy.base import (
 )
 from voxy.library import find_voice, profile_from_record
 from voxy.pauses import encode_audio, has_pause_markup, join_sections, plan_sections
+from voxy.direction import plan_directions, strip_directions, directions as _directions_in
+from voxy.speech_cache import cached_synthesizer, resolve_cache
+
+
+def has_directions(text: str) -> bool:
+    """Whether ``text`` carries inline delivery directions (``[dryly]``, ``[beat]``)."""
+    return bool(_directions_in(text))
 
 VOXY_TTS_BACKEND_ENVVAR = "VOXY_TTS_BACKEND"
 FALLBACK_TTS_BACKEND = "elevenlabs"
@@ -120,6 +127,9 @@ def text_to_speech(
     model: SpeechModel | None = None,
     models: MutableMapping | None = None,
     use_library: bool = True,
+    directions: str = "auto",
+    instruction: str | None = None,
+    cache=None,
     **kwargs,
 ) -> Speech:
     """Speak ``text`` in ``voice`` and return the encoded audio (``.save(path)``).
@@ -142,6 +152,18 @@ def text_to_speech(
         models: Model cache to use instead of the shared one.
         use_library: Look ``voice`` up in the library first (False: always
             the backend's own voice of that name).
+        directions: Inline delivery directions (``[dryly]``, ``[beat]``):
+            ``'auto'`` (default) renders them in the model's dialect (performed
+            by an inline-tags model, turned into a natural-language instruction
+            per part on an instruction model, removed elsewhere, pause tags
+            becoming silence; ``voxy.direction``); ``'keep'`` sends the text as
+            written; ``'strip'`` removes them.
+        instruction: A standing delivery instruction (a character, a register)
+            for models that take one (Seed Speech, gpt-4o-mini-tts); ignored by
+            the rest.
+        cache: ``True``, a folder, or a ``MutableMapping`` to serve repeated
+            requests from (``voxy.speech_cache``; a served result has
+            ``cached=True``); ``None`` (default) always synthesizes.
         **kwargs: Backend-specific options (e.g. ``output_format=`` for
             ElevenLabs, ``speed=`` for aix, ``quality=`` for fal).
     """
@@ -153,10 +175,18 @@ def text_to_speech(
     model = model or get_speech_model(backend, models=models)
     if voice is None:
         voice = model.dflt_voice
-    if has_pause_markup(text):
-        speech = _speak_with_pauses(text, voice, model, kwargs)
+    store = resolve_cache(cache)
+    synth = cached_synthesizer(model, store) if store is not None else model.synthesize
+    if directions not in ("auto", "keep", "strip"):
+        raise ValueError(f"directions must be 'auto', 'keep' or 'strip', not {directions!r}")
+    if directions == "strip":
+        text = strip_directions(text)
+    if directions == "auto" and (instruction or has_directions(text)):
+        speech = _speak_directed(text, voice, model, synth, kwargs, instruction)
+    elif has_pause_markup(text):
+        speech = _speak_with_pauses(text, voice, model, kwargs, synth=synth)
     else:
-        speech = model.synthesize(text, voice, **kwargs)
+        speech = synth(text, voice, **kwargs)
     if output_path:
         speech.save(output_path)
     return speech
@@ -172,23 +202,61 @@ def _requested_bitrate(options: Mapping) -> str | None:
     return f"{parts[2]}k" if len(parts) == 3 and parts[2].isdigit() else None
 
 
-def _speak_with_pauses(text: str, voice, model: SpeechModel, kwargs: dict) -> Speech:
+def _speak_with_pauses(
+    text: str, voice, model: SpeechModel, kwargs: dict, *, synth=None
+) -> Speech:
     """``text`` with SSML breaks and marks, spoken by ``model`` (``voxy.pauses``).
 
     One call when every break is one the model renders; otherwise one call per
     section, joined with exactly the requested silences (as WAV, or mp3 etc. via ffmpeg).
     """
+    synth = synth or model.synthesize
     sections = plan_sections(text, native_break_s=model.native_break_s(**kwargs))
     if len(sections) == 1 and not sections[0].pause_s:
-        return model.synthesize(sections[0].text, voice, **kwargs)
+        return synth(sections[0].text, voice, **kwargs)
     options = {**model.wav_synth_kwargs, **kwargs}
     speech = join_sections(
         sections,
-        lambda part: model.synthesize(part, voice, **options),
+        lambda part: synth(part, voice, **options),
         backend=model.name,
         encode=partial(encode_audio, bitrate=_requested_bitrate(options)),
     )
     return replace(speech, text=text)
+
+
+def _speak_directed(
+    text: str, voice, model: SpeechModel, synth, kwargs: dict, instruction
+) -> Speech:
+    """``text`` with delivery directions, in ``model``'s dialect (``voxy.direction``):
+    each part spoken with its own options, its SSML breaks (pause tags included)
+    honoured, all joined into one ``Speech``."""
+    parts = plan_directions(text, model.markup_dialect(**kwargs), instruction=instruction)
+    native = model.native_break_s(**kwargs)
+    plan = [
+        (section, part.options)
+        for part in parts
+        for section in plan_sections(part.text, native_break_s=native)
+    ]
+    if len(plan) == 1 and not plan[0][0].pause_s:
+        section, options = plan[0]
+        speech = synth(section.text, voice, **{**kwargs, **options})
+        return replace(speech, text=text)
+    base = {**model.wav_synth_kwargs, **kwargs}
+    queue = iter([options for section, options in plan if section.text])
+    flags: list[bool] = []
+
+    def speak(part: str) -> Speech:
+        speech = synth(part, voice, **{**base, **next(queue)})
+        flags.append(speech.cached)
+        return speech
+
+    speech = join_sections(
+        [section for section, _ in plan],
+        speak,
+        backend=model.name,
+        encode=partial(encode_audio, bitrate=_requested_bitrate(base)),
+    )
+    return replace(speech, text=text, cached=bool(flags) and all(flags))
 
 
 def speech_to_speech(
@@ -201,6 +269,9 @@ def speech_to_speech(
     model: SpeechModel | None = None,
     models: MutableMapping | None = None,
     use_library: bool = True,
+    directions: str = "auto",
+    instruction: str | None = None,
+    cache=None,
     **kwargs,
 ) -> Speech:
     """Voice changer: re-speak ``audio`` in ``voice``, keeping its timing and intonation.

@@ -43,6 +43,21 @@ Change the voice of a recording (speech to speech, ElevenLabs): the words, timin
 voxy.speech_to_speech("my_take.wav", voice="ada").save("ada_take.mp3")
 ```
 
+### Delivery directions: `[dryly]`, `[beat]`, on any backend
+
+Mark delivery inline in eleven_v3's bracket notation. voxy renders it for the engine that speaks: an inline-tags model (`eleven_v3`, `eleven_v4`) performs the tags; an instruction model (fal's Seed Speech, OpenAI's `gpt-4o-mini-tts`) gets the text cut where the direction changes, each part with a natural-language instruction; any other model gets the words only. Pause tags (`[beat]`, `[pause]`) become real silence wherever the model would not perform them.
+
+```python
+voxy.text_to_speech(
+    "[dryly] We all believe in agility. [beat] [wryly] But we disagree on how.",
+    "tim_en",
+    backend="fal",
+    model_id="fal-ai/bytedance/seed-speech/tts/v2",
+    cache=True,  # repeats are free: content-addressed, `speech.cached` says so
+)
+voxy.dialect_for("fal", "fal-ai/bytedance/seed-speech/tts/v2")  # instruction:voice_instruction
+```
+
 ### Pauses: SSML breaks, on any backend
 
 Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs' v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them with exactly that much silence (as WAV; or, when you ask for a compressed `output_format` such as `mp3_44100_128`, in that format through ffmpeg, which is how to get 44.1 kHz on ElevenLabs tiers below Pro). `eleven_v3` and `eleven_v4` render no SSML, so every break is cut there:

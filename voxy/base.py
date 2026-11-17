@@ -437,6 +437,8 @@ class Speech:
     voice: str | None = None
     sample_rate: int | None = None
     text: str | None = None
+    #: served from a speech cache (no synthesis, no spend) rather than rendered
+    cached: bool = False
 
     def save(self, path: str) -> str:
         """Write the audio to ``path`` (folders created) and return the path."""
@@ -570,6 +572,22 @@ class SpeechModel:
         backend whose answer depends on them (ElevenLabs: the ``model_id``).
         """
         return 0.0
+
+    def markup_dialect(self, **synth_kwargs):
+        """How this backend takes delivery directions (``[dryly]``, ``[beat]``...).
+
+        Looked up in ``voxy.direction``'s registry by backend name and model id
+        (``model_id`` in ``synth_kwargs``, else this model's own), so a new model
+        only needs ``voxy.register_dialect``. See ``voxy.direction``.
+        """
+        from voxy.direction import dialect_for
+
+        model_id = (
+            synth_kwargs.get("model_id")
+            or getattr(self, "model_id", None)
+            or getattr(self, "model", None)
+        )
+        return dialect_for(self.name, model_id if isinstance(model_id, str) else None)
 
     def list_voices(self) -> list[VoiceInfo]:
         """The voices this backend offers."""
