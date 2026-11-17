@@ -110,18 +110,76 @@ def resolve_cache(cache) -> MutableMapping | None:
     return cache
 
 
-def cached_synthesizer(model, cache: MutableMapping) -> Callable[..., Speech]:
+class TakeRejected(RuntimeError):
+    """An engine kept returning takes that failed validation (never cached)."""
+
+
+#: Speaking-rate bounds (characters per second) for a take of a long text. Speech
+#: runs about 12-17 chars/s; a take far slower is noise, breath or silence (seen: a
+#: 177-character request answered with 29 s of breathing), far faster is a truncation.
+MIN_CHARS_PER_S, MAX_CHARS_PER_S, MIN_CHECKED_CHARS = 7.0, 30.0, 60
+
+
+def speaking_rate_check(
+    speech: Speech,
+    text: str,
+    *,
+    min_chars_per_s: float = MIN_CHARS_PER_S,
+    max_chars_per_s: float = MAX_CHARS_PER_S,
+    min_chars: int = MIN_CHECKED_CHARS,
+) -> str | None:
+    """A problem description if ``speech`` cannot be ``text`` spoken, else ``None``.
+
+    Only texts of ``min_chars`` or more are judged (a short line's lead-in and
+    tail dominate its duration). Needs no model: the duration comes from the audio.
+    """
+    if len(text) < min_chars:
+        return None
+    from voxy.pauses import decode_speech
+
+    samples, rate = decode_speech(speech)
+    seconds = len(samples) / rate if rate else 0.0
+    cps = len(text) / seconds if seconds else float("inf")
+    if cps < min_chars_per_s:
+        return f"{seconds:.1f}s for {len(text)} chars ({cps:.1f}/s): too slow to be this text (noise, breath, silence?)"
+    if cps > max_chars_per_s:
+        return f"{seconds:.1f}s for {len(text)} chars ({cps:.1f}/s): too fast (truncated?)"
+    return None
+
+
+def validated(synthesize: Callable[..., Speech], validate, *, retries: int = 2) -> Callable[..., Speech]:
+    """``synthesize`` that re-asks (up to ``retries`` times) while ``validate(speech, text)``
+    reports a problem, then raises :class:`TakeRejected`."""
+
+    def synth(text, voice=None, **options) -> Speech:
+        problems = []
+        for _ in range(retries + 1):
+            speech = synthesize(text, voice, **options)
+            problem = validate(speech, text)
+            if problem is None:
+                return speech
+            problems.append(problem)
+        raise TakeRejected(f"{len(problems)} takes of {text[:60]!r} rejected: {problems}")
+
+    return synth
+
+
+def cached_synthesizer(model, cache: MutableMapping, *, validate=None, retries: int = 2) -> Callable[..., Speech]:
     """``model.synthesize``, served from ``cache`` when the same request was made before.
 
     A served result has ``cached=True``, so callers can tell spend from reuse.
+    ``validate(speech, text) -> problem | None`` (e.g. :func:`speaking_rate_check`)
+    runs on every new take before it is cached: a bad take is re-asked up to
+    ``retries`` times and never stored, so a cache cannot freeze a broken take.
     """
+    fresh = validated(model.synthesize, validate, retries=retries) if validate else model.synthesize
 
     def synthesize(text, voice=None, **options) -> Speech:
         key = speech_key(model, text, voice, options)
         try:
             return replace(cache[key], cached=True)
         except KeyError:
-            speech = model.synthesize(text, voice, **options)
+            speech = fresh(text, voice, **options)
             cache[key] = speech
             return speech
 

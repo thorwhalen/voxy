@@ -76,6 +76,8 @@ Write *how* a line is said inline, in eleven_v3's bracket notation; that is voxy
 
 Measured on Seed Speech `tim_en` (one 612-character paragraph, f0 p5–p95 as the liveliness proxy): flat 124 Hz, tags as instructions 109 Hz, plus a standing "unhurried" persona 106 Hz, plus a "lively, varied" persona 111 Hz. On that engine an instruction steers mood and pace but does not widen the melody, and a calm persona flattens it: choose the voice for range, use tags for intent, and keep any standing instruction short and not about tempo.
 
+**Two hosted-engine failures to guard against** (Seed Speech, a 23-minute narration): with no language set, Seed detects it per request, and a sentence carrying a year and two percentages came back in Tagalog; pass the engine's language option (`language="en"` for Seed) on every request. And one request returned 29 s of breathing instead of speech, which a cache then serves forever: pass `validate=voxy.speaking_rate_check` (a take far outside 7–30 characters per second on a text of 60+ characters is re-asked, never cached, then `TakeRejected`).
+
 **Listen-check before the long render, with two recognisers.** One ASR engine's mistake looks like a misread; two engines (ElevenLabs Scribe and local Whisper, e.g. `mlx_whisper`) hearing the same wrong word means the voice said it. On a 24-minute essay that caught a title read as "Agile, Refault", a skipped acronym and three mangled coinages; re-roll a line by changing its text (a respelling, or a different tag), since TTS caches are keyed on the text.
 
 ## 4. New voices

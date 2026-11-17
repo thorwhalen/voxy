@@ -46,7 +46,7 @@ from voxy.direction import (
     strip_directions,
     directions as _directions_in,
 )
-from voxy.speech_cache import cached_synthesizer, resolve_cache
+from voxy.speech_cache import cached_synthesizer, resolve_cache, validated
 
 
 def has_directions(text: str) -> bool:
@@ -135,6 +135,7 @@ def text_to_speech(
     directions: str = "auto",
     instruction: str | None = None,
     cache=None,
+    validate=None,
     **kwargs,
 ) -> Speech:
     """Speak ``text`` in ``voice`` and return the encoded audio (``.save(path)``).
@@ -169,6 +170,9 @@ def text_to_speech(
         cache: ``True``, a folder, or a ``MutableMapping`` to serve repeated
             requests from (``voxy.speech_cache``; a served result has
             ``cached=True``); ``None`` (default) always synthesizes.
+        validate: ``(speech, text) -> problem | None`` run on each new take
+            (e.g. ``voxy.speaking_rate_check``): a failing take is re-asked
+            twice, never cached, then ``TakeRejected`` is raised.
         **kwargs: Backend-specific options (e.g. ``output_format=`` for
             ElevenLabs, ``speed=`` for aix, ``quality=`` for fal).
     """
@@ -181,7 +185,12 @@ def text_to_speech(
     if voice is None:
         voice = model.dflt_voice
     store = resolve_cache(cache)
-    synth = cached_synthesizer(model, store) if store is not None else model.synthesize
+    if store is not None:
+        synth = cached_synthesizer(model, store, validate=validate)
+    elif validate is not None:
+        synth = validated(model.synthesize, validate)
+    else:
+        synth = model.synthesize
     if directions not in ("auto", "keep", "strip"):
         raise ValueError(
             f"directions must be 'auto', 'keep' or 'strip', not {directions!r}"
@@ -281,6 +290,7 @@ def speech_to_speech(
     directions: str = "auto",
     instruction: str | None = None,
     cache=None,
+    validate=None,
     **kwargs,
 ) -> Speech:
     """Voice changer: re-speak ``audio`` in ``voice``, keeping its timing and intonation.
