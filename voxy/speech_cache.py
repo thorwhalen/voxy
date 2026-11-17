@@ -143,11 +143,15 @@ def speaking_rate_check(
     if cps < min_chars_per_s:
         return f"{seconds:.1f}s for {len(text)} chars ({cps:.1f}/s): too slow to be this text (noise, breath, silence?)"
     if cps > max_chars_per_s:
-        return f"{seconds:.1f}s for {len(text)} chars ({cps:.1f}/s): too fast (truncated?)"
+        return (
+            f"{seconds:.1f}s for {len(text)} chars ({cps:.1f}/s): too fast (truncated?)"
+        )
     return None
 
 
-def validated(synthesize: Callable[..., Speech], validate, *, retries: int = 2) -> Callable[..., Speech]:
+def validated(
+    synthesize: Callable[..., Speech], validate, *, retries: int = 2
+) -> Callable[..., Speech]:
     """``synthesize`` that re-asks (up to ``retries`` times) while ``validate(speech, text)``
     reports a problem, then raises :class:`TakeRejected`."""
 
@@ -159,12 +163,16 @@ def validated(synthesize: Callable[..., Speech], validate, *, retries: int = 2) 
             if problem is None:
                 return speech
             problems.append(problem)
-        raise TakeRejected(f"{len(problems)} takes of {text[:60]!r} rejected: {problems}")
+        raise TakeRejected(
+            f"{len(problems)} takes of {text[:60]!r} rejected: {problems}"
+        )
 
     return synth
 
 
-def cached_synthesizer(model, cache: MutableMapping, *, validate=None, retries: int = 2) -> Callable[..., Speech]:
+def cached_synthesizer(
+    model, cache: MutableMapping, *, validate=None, retries: int = 2
+) -> Callable[..., Speech]:
     """``model.synthesize``, served from ``cache`` when the same request was made before.
 
     A served result has ``cached=True``, so callers can tell spend from reuse.
@@ -172,7 +180,11 @@ def cached_synthesizer(model, cache: MutableMapping, *, validate=None, retries: 
     runs on every new take before it is cached: a bad take is re-asked up to
     ``retries`` times and never stored, so a cache cannot freeze a broken take.
     """
-    fresh = validated(model.synthesize, validate, retries=retries) if validate else model.synthesize
+    fresh = (
+        validated(model.synthesize, validate, retries=retries)
+        if validate
+        else model.synthesize
+    )
 
     def synthesize(text, voice=None, **options) -> Speech:
         key = speech_key(model, text, voice, options)
