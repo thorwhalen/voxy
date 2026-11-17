@@ -57,7 +57,9 @@ voxy.text_to_speech(
     model_id="fal-ai/bytedance/seed-speech/tts/v2",
     cache=True,  # repeats are free: content-addressed, `speech.cached` says so
 )
-voxy.dialect_for("fal", "fal-ai/bytedance/seed-speech/tts/v2")  # instruction:voice_instruction
+voxy.dialect_for(
+    "fal", "fal-ai/bytedance/seed-speech/tts/v2"
+)  # instruction:voice_instruction
 ```
 
 ## Pauses: SSML breaks, on any backend

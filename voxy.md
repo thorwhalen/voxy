@@ -1,4 +1,4 @@
-> built 2026-11-17 12:47 UTC from 89cd52c (main) · voxy 0.0.73. Details: build_info.json
+> built 2026-11-17 13:28 UTC from a7500ae (main) · voxy 0.0.74. Details: build_info.json
 
 # index.html.md
 
@@ -61,7 +61,9 @@ voxy.text_to_speech(
     model_id="fal-ai/bytedance/seed-speech/tts/v2",
     cache=True,  # repeats are free: content-addressed, `speech.cached` says so
 )
-voxy.dialect_for("fal", "fal-ai/bytedance/seed-speech/tts/v2")  # instruction:voice_instruction
+voxy.dialect_for(
+    "fal", "fal-ai/bytedance/seed-speech/tts/v2"
+)  # instruction:voice_instruction
 ```
 
 ## Pauses: SSML breaks, on any backend
@@ -2126,7 +2128,7 @@ Our named voices (`backend=None`), or the voices a backend offers.
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
 
-### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, \*\*kwargs)
+### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, validate=None, \*\*kwargs)
 
 Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.
 
@@ -2138,7 +2140,7 @@ narrator’s voice, splice.
 * **Return type:**
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
-### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, \*\*kwargs)
+### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, validate=None, \*\*kwargs)
 
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
@@ -2172,6 +2174,9 @@ compressed format asked for, e.g. mp3, through ffmpeg)
   * **cache** – `True`, a folder, or a `MutableMapping` to serve repeated
     requests from (`voxy.speech_cache`; a served result has
     `cached=True`); `None` (default) always synthesizes.
+  * **validate** – `(speech, text) -> problem | None` run on each new take
+    (e.g. `voxy.speaking_rate_check`): a failing take is re-asked
+    twice, never cached, then `TakeRejected` is raised.
   * **\*\*kwargs** – Backend-specific options (e.g. `output_format=` for
     ElevenLabs, `speed=` for aix, `quality=` for fal).
 * **Return type:**
@@ -6084,25 +6089,53 @@ with a small JSON record each.
 
 ### Module Attributes
 
-| [`KEY_VERSION`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.KEY_VERSION)   | Bump when the meaning of a key changes, so old entries stop matching.   |
-|----------------------------------------------------------------|-------------------------------------------------------------------------|
+| [`KEY_VERSION`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.KEY_VERSION)       | Bump when the meaning of a key changes, so old entries stop matching.   |
+|--------------------------------------------------------------------|-------------------------------------------------------------------------|
+| [`MIN_CHARS_PER_S`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.MIN_CHARS_PER_S)   | Speaking-rate bounds (characters per second) for a take of a long text. |
+| [`MAX_CHARS_PER_S`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.MAX_CHARS_PER_S)   | Speaking-rate bounds (characters per second) for a take of a long text. |
+| [`MIN_CHECKED_CHARS`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.MIN_CHECKED_CHARS) | Speaking-rate bounds (characters per second) for a take of a long text. |
 
 ### Functions
 
-| [`cached_synthesizer`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.cached_synthesizer)(model, cache)        | `model.synthesize`, served from `cache` when the same request was made before.                    |
-|------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| [`default_speech_cache_dir`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.default_speech_cache_dir)()              | `$VOXY_SPEECH_CACHE_DIR`, else `$XDG_CACHE_HOME/voxy/speech`, else `~/.cache/voxy/speech`.        |
-| [`resolve_cache`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.resolve_cache)(cache)                    | `None`/`False`: no cache; `True`: the default folder; a path: that folder; a mapping: used as is. |
-| [`speech_key`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.speech_key)(model, text, voice, options) | The cache key: a SHA-256 over backend, model settings, voice, text and options.                   |
+| [`cached_synthesizer`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.cached_synthesizer)(model, cache, \*[, ...])    | `model.synthesize`, served from `cache` when the same request was made before.                                                                                                 |
+|-------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`default_speech_cache_dir`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.default_speech_cache_dir)()                     | `$VOXY_SPEECH_CACHE_DIR`, else `$XDG_CACHE_HOME/voxy/speech`, else `~/.cache/voxy/speech`.                                                                                     |
+| [`resolve_cache`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.resolve_cache)(cache)                           | `None`/`False`: no cache; `True`: the default folder; a path: that folder; a mapping: used as is.                                                                              |
+| [`speaking_rate_check`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.speaking_rate_check)(speech, text, \*[, ...])   | A problem description if `speech` cannot be `text` spoken, else `None`.                                                                                                        |
+| [`speech_key`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.speech_key)(model, text, voice, options)        | The cache key: a SHA-256 over backend, model settings, voice, text and options.                                                                                                |
+| [`validated`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.validated)(synthesize, validate, \*[, retries]) | `synthesize` that re-asks (up to `retries` times) while `validate(speech, text)` reports a problem, then raises [`TakeRejected`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.TakeRejected). |
 
 ### Classes
 
 | [`SpeechCache`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.SpeechCache)([root])   | Speech on disk: `<key>.<format>` audio plus `<key>.json` (everything else).   |
 |------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 
+### Exceptions
+
+| [`TakeRejected`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.TakeRejected)   | An engine kept returning takes that failed validation (never cached).   |
+|-----------------------------------------------------------------|-------------------------------------------------------------------------|
+
 ### voxy.speech_cache.KEY_VERSION *= 1*
 
 Bump when the meaning of a key changes, so old entries stop matching.
+
+### voxy.speech_cache.MAX_CHARS_PER_S *= 30.0*
+
+Speaking-rate bounds (characters per second) for a take of a long text. Speech
+runs about 12-17 chars/s; a take far slower is noise, breath or silence (seen: a
+177-character request answered with 29 s of breathing), far faster is a truncation.
+
+### voxy.speech_cache.MIN_CHARS_PER_S *= 7.0*
+
+Speaking-rate bounds (characters per second) for a take of a long text. Speech
+runs about 12-17 chars/s; a take far slower is noise, breath or silence (seen: a
+177-character request answered with 29 s of breathing), far faster is a truncation.
+
+### voxy.speech_cache.MIN_CHECKED_CHARS *= 60*
+
+Speaking-rate bounds (characters per second) for a take of a long text. Speech
+runs about 12-17 chars/s; a take far slower is noise, breath or silence (seen: a
+177-character request answered with 29 s of breathing), far faster is a truncation.
 
 ### *class* voxy.speech_cache.SpeechCache(root=None)
 
@@ -6110,11 +6143,20 @@ Bases: [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html
 
 Speech on disk: `<key>.<format>` audio plus `<key>.json` (everything else).
 
-### voxy.speech_cache.cached_synthesizer(model, cache)
+### *exception* voxy.speech_cache.TakeRejected
+
+Bases: [`RuntimeError`](https://docs.python.org/3/builtins/exceptions.html#RuntimeError)
+
+An engine kept returning takes that failed validation (never cached).
+
+### voxy.speech_cache.cached_synthesizer(model, cache, , validate=None, retries=2)
 
 `model.synthesize`, served from `cache` when the same request was made before.
 
 A served result has `cached=True`, so callers can tell spend from reuse.
+`validate(speech, text) -> problem | None` (e.g. [`speaking_rate_check()`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.speaking_rate_check))
+runs on every new take before it is cached: a bad take is re-asked up to
+`retries` times and never stored, so a cache cannot freeze a broken take.
 
 * **Return type:**
   [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)]
@@ -6134,12 +6176,30 @@ a mapping: used as is.
 * **Return type:**
   [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
+### voxy.speech_cache.speaking_rate_check(speech, text, , min_chars_per_s=7.0, max_chars_per_s=30.0, min_chars=60)
+
+A problem description if `speech` cannot be `text` spoken, else `None`.
+
+Only texts of `min_chars` or more are judged (a short line’s lead-in and
+tail dominate its duration). Needs no model: the duration comes from the audio.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### voxy.speech_cache.speech_key(model, text, voice, options)
 
 The cache key: a SHA-256 over backend, model settings, voice, text and options.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.speech_cache.validated(synthesize, validate, , retries=2)
+
+`synthesize` that re-asks (up to `retries` times) while `validate(speech, text)`
+reports a problem, then raises [`TakeRejected`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.TakeRejected).
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)]
 
 
 # _autosummary/voxy.speechtext.html.md
@@ -7865,7 +7925,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-17 12:47 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/89cd52cd117b759c393e3c0d12f81d58b0f5b62b"><code>89cd52c</code></a> on branch <code>main</code>, for **voxy 0.0.73** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-17 13:28 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/a7500ae216089858a25ea068b007a63d0d8b64f3"><code>a7500ae</code></a> on branch <code>main</code>, for **voxy 0.0.74** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -7874,7 +7934,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/89cd52cd117b759c393e3c0d12f81d58b0f5b62b"><code>89cd52cd117b759c393e3c0d12f81d58b0f5b62b</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/a7500ae216089858a25ea068b007a63d0d8b64f3"><code>a7500ae216089858a25ea068b007a63d0d8b64f3</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -7885,9 +7945,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/44086089360">44086089360</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/44092641854">44092641854</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>89cd52cd117b759c393e3c0d12f81d58b0f5b62b</code> (in the history of the built commit) |
+| Event commit | <code>a7500ae216089858a25ea068b007a63d0d8b64f3</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -7912,13 +7972,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.73/">0.0.73</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.74/">0.0.74</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 89cd52cd117b759c393e3c0d12f81d58b0f5b62b
+git checkout a7500ae216089858a25ea068b007a63d0d8b64f3
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

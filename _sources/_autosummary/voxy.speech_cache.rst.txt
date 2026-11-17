@@ -9,6 +9,9 @@ voxy.speech\_cache
    .. autosummary::
    
       KEY_VERSION
+      MIN_CHARS_PER_S
+      MAX_CHARS_PER_S
+      MIN_CHECKED_CHARS
    
    .. rubric:: Functions
 
@@ -17,11 +20,19 @@ voxy.speech\_cache
       cached_synthesizer
       default_speech_cache_dir
       resolve_cache
+      speaking_rate_check
       speech_key
+      validated
    
    .. rubric:: Classes
 
    .. autosummary::
    
       SpeechCache
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      TakeRejected
    

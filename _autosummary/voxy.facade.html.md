@@ -100,7 +100,7 @@ Our named voices (`backend=None`), or the voices a backend offers.
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
 
-### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, \*\*kwargs)
+### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, validate=None, \*\*kwargs)
 
 Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.
 
@@ -112,7 +112,7 @@ narrator’s voice, splice.
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)
 
-### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, \*\*kwargs)
+### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, validate=None, \*\*kwargs)
 
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
@@ -146,6 +146,9 @@ compressed format asked for, e.g. mp3, through ffmpeg)
   * **cache** – `True`, a folder, or a `MutableMapping` to serve repeated
     requests from (`voxy.speech_cache`; a served result has
     `cached=True`); `None` (default) always synthesizes.
+  * **validate** – `(speech, text) -> problem | None` run on each new take
+    (e.g. `voxy.speaking_rate_check`): a failing take is re-asked
+    twice, never cached, then `TakeRejected` is raised.
   * **\*\*kwargs** – Backend-specific options (e.g. `output_format=` for
     ElevenLabs, `speed=` for aix, `quality=` for fal).
 * **Return type:**

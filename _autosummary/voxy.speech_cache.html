@@ -175,12 +175,21 @@ with a small JSON record each.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.speech_cache.KEY_VERSION" title="voxy.speech_cache.KEY_VERSION"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KEY_VERSION</span></code></a></p></td>
 <td><p>Bump when the meaning of a key changes, so old entries stop matching.</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.speech_cache.MIN_CHARS_PER_S" title="voxy.speech_cache.MIN_CHARS_PER_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIN_CHARS_PER_S</span></code></a></p></td>
+<td><p>Speaking-rate bounds (characters per second) for a take of a long text.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.speech_cache.MAX_CHARS_PER_S" title="voxy.speech_cache.MAX_CHARS_PER_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MAX_CHARS_PER_S</span></code></a></p></td>
+<td><p>Speaking-rate bounds (characters per second) for a take of a long text.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.speech_cache.MIN_CHECKED_CHARS" title="voxy.speech_cache.MIN_CHECKED_CHARS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIN_CHECKED_CHARS</span></code></a></p></td>
+<td><p>Speaking-rate bounds (characters per second) for a take of a long text.</p></td>
+</tr>
 </tbody>
 </table>
 <p class="rubric">Functions</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.speech_cache.cached_synthesizer" title="voxy.speech_cache.cached_synthesizer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cached_synthesizer</span></code></a>(model, cache)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.speech_cache.cached_synthesizer" title="voxy.speech_cache.cached_synthesizer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cached_synthesizer</span></code></a>(model, cache, *[, ...])</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">model.synthesize</span></code>, served from <code class="docutils literal notranslate"><span class="pre">cache</span></code> when the same request was made before.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.speech_cache.default_speech_cache_dir" title="voxy.speech_cache.default_speech_cache_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_speech_cache_dir</span></code></a>()</p></td>
@@ -189,8 +198,14 @@ with a small JSON record each.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.speech_cache.resolve_cache" title="voxy.speech_cache.resolve_cache"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_cache</span></code></a>(cache)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">None</span></code>/<code class="docutils literal notranslate"><span class="pre">False</span></code>: no cache; <code class="docutils literal notranslate"><span class="pre">True</span></code>: the default folder; a path: that folder; a mapping: used as is.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.speech_cache.speech_key" title="voxy.speech_cache.speech_key"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speech_key</span></code></a>(model, text, voice, options)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.speech_cache.speaking_rate_check" title="voxy.speech_cache.speaking_rate_check"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speaking_rate_check</span></code></a>(speech, text, *[, ...])</p></td>
+<td><p>A problem description if <code class="docutils literal notranslate"><span class="pre">speech</span></code> cannot be <code class="docutils literal notranslate"><span class="pre">text</span></code> spoken, else <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.speech_cache.speech_key" title="voxy.speech_cache.speech_key"><code class="xref py py-obj docutils literal notranslate"><span class="pre">speech_key</span></code></a>(model, text, voice, options)</p></td>
 <td><p>The cache key: a SHA-256 over backend, model settings, voice, text and options.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.speech_cache.validated" title="voxy.speech_cache.validated"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validated</span></code></a>(synthesize, validate, *[, retries])</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">synthesize</span></code> that re-asks (up to <code class="docutils literal notranslate"><span class="pre">retries</span></code> times) while <code class="docutils literal notranslate"><span class="pre">validate(speech,</span> <span class="pre">text)</span></code> reports a problem, then raises <a class="reference internal" href="#voxy.speech_cache.TakeRejected" title="voxy.speech_cache.TakeRejected"><code class="xref py py-class docutils literal notranslate"><span class="pre">TakeRejected</span></code></a>.</p></td>
 </tr>
 </tbody>
 </table>
@@ -202,10 +217,39 @@ with a small JSON record each.</p>
 </tr>
 </tbody>
 </table>
+<p class="rubric">Exceptions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.speech_cache.TakeRejected" title="voxy.speech_cache.TakeRejected"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TakeRejected</span></code></a></p></td>
+<td><p>An engine kept returning takes that failed validation (never cached).</p></td>
+</tr>
+</tbody>
+</table>
 <dl class="py data">
 <dt class="sig sig-object py" id="voxy.speech_cache.KEY_VERSION">
 <span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">KEY_VERSION</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.KEY_VERSION" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.KEY_VERSION'">¶</a></dt>
 <dd><p>Bump when the meaning of a key changes, so old entries stop matching.</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.speech_cache.MAX_CHARS_PER_S">
+<span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">MAX_CHARS_PER_S</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">30.0</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.MAX_CHARS_PER_S" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.MAX_CHARS_PER_S'">¶</a></dt>
+<dd><p>Speaking-rate bounds (characters per second) for a take of a long text. Speech
+runs about 12-17 chars/s; a take far slower is noise, breath or silence (seen: a
+177-character request answered with 29 s of breathing), far faster is a truncation.</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.speech_cache.MIN_CHARS_PER_S">
+<span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">MIN_CHARS_PER_S</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">7.0</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.MIN_CHARS_PER_S" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.MIN_CHARS_PER_S'">¶</a></dt>
+<dd><p>Speaking-rate bounds (characters per second) for a take of a long text. Speech
+runs about 12-17 chars/s; a take far slower is noise, breath or silence (seen: a
+177-character request answered with 29 s of breathing), far faster is a truncation.</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.speech_cache.MIN_CHECKED_CHARS">
+<span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">MIN_CHECKED_CHARS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">60</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.MIN_CHECKED_CHARS" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.MIN_CHECKED_CHARS'">¶</a></dt>
+<dd><p>Speaking-rate bounds (characters per second) for a take of a long text. Speech
+runs about 12-17 chars/s; a take far slower is noise, breath or silence (seen: a
+177-character request answered with 29 s of breathing), far faster is a truncation.</p>
 </dd></dl>
 <dl class="py class">
 <dt class="sig sig-object py" id="voxy.speech_cache.SpeechCache">
@@ -215,11 +259,20 @@ with a small JSON record each.</p>
 <dl class="field-list simple">
 </dl>
 </dd></dl>
+<dl class="py exception">
+<dt class="sig sig-object py" id="voxy.speech_cache.TakeRejected">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">TakeRejected</span></span><a class="reference internal" href="../_modules/voxy/speech_cache.html#TakeRejected"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.TakeRejected" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.TakeRejected'">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></p>
+<p>An engine kept returning takes that failed validation (never cached).</p>
+</dd></dl>
 <dl class="py function">
 <dt class="sig sig-object py" id="voxy.speech_cache.cached_synthesizer">
-<span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">cached_synthesizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/speech_cache.html#cached_synthesizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.cached_synthesizer" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.cached_synthesizer'">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">cached_synthesizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">retries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/speech_cache.html#cached_synthesizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.cached_synthesizer" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.cached_synthesizer'">¶</a></dt>
 <dd><p><code class="docutils literal notranslate"><span class="pre">model.synthesize</span></code>, served from <code class="docutils literal notranslate"><span class="pre">cache</span></code> when the same request was made before.</p>
-<p>A served result has <code class="docutils literal notranslate"><span class="pre">cached=True</span></code>, so callers can tell spend from reuse.</p>
+<p>A served result has <code class="docutils literal notranslate"><span class="pre">cached=True</span></code>, so callers can tell spend from reuse.
+<code class="docutils literal notranslate"><span class="pre">validate(speech,</span> <span class="pre">text)</span> <span class="pre">-&gt;</span> <span class="pre">problem</span> <span class="pre">|</span> <span class="pre">None</span></code> (e.g. <a class="reference internal" href="#voxy.speech_cache.speaking_rate_check" title="voxy.speech_cache.speaking_rate_check"><code class="xref py py-func docutils literal notranslate"><span class="pre">speaking_rate_check()</span></code></a>)
+runs on every new take before it is cached: a bad take is re-asked up to
+<code class="docutils literal notranslate"><span class="pre">retries</span></code> times and never stored, so a cache cannot freeze a broken take.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference external" href="https://docs.python.org/3/builtins/constants.html#Ellipsis" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>, <a class="reference internal" href="voxy.base.html#voxy.base.Speech" title="voxy.base.Speech"><code class="xref py py-class docutils literal notranslate"><span class="pre">Speech</span></code></a>]</span></p>
@@ -248,6 +301,18 @@ a mapping: used as is.</p>
 </dl>
 </dd></dl>
 <dl class="py function">
+<dt class="sig sig-object py" id="voxy.speech_cache.speaking_rate_check">
+<span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">speaking_rate_check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">speech</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_chars_per_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_chars_per_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_chars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/speech_cache.html#speaking_rate_check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.speaking_rate_check" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.speaking_rate_check'">¶</a></dt>
+<dd><p>A problem description if <code class="docutils literal notranslate"><span class="pre">speech</span></code> cannot be <code class="docutils literal notranslate"><span class="pre">text</span></code> spoken, else <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<p>Only texts of <code class="docutils literal notranslate"><span class="pre">min_chars</span></code> or more are judged (a short line’s lead-in and
+tail dominate its duration). Needs no model: the duration comes from the audio.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> | <span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="voxy.speech_cache.speech_key">
 <span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">speech_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/speech_cache.html#speech_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.speech_key" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.speech_key'">¶</a></dt>
 <dd><p>The cache key: a SHA-256 over backend, model settings, voice, text and options.</p>
@@ -257,16 +322,33 @@ a mapping: used as is.</p>
 </dd>
 </dl>
 </dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="voxy.speech_cache.validated">
+<span class="sig-prename descclassname"><span class="pre">voxy.speech_cache.</span></span><span class="sig-name descname"><span class="pre">validated</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">synthesize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validate</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">retries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/speech_cache.html#validated"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.speech_cache.validated" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.speech_cache.validated'">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">synthesize</span></code> that re-asks (up to <code class="docutils literal notranslate"><span class="pre">retries</span></code> times) while <code class="docutils literal notranslate"><span class="pre">validate(speech,</span> <span class="pre">text)</span></code>
+reports a problem, then raises <a class="reference internal" href="#voxy.speech_cache.TakeRejected" title="voxy.speech_cache.TakeRejected"><code class="xref py py-class docutils literal notranslate"><span class="pre">TakeRejected</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Callable</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>[<a class="reference external" href="https://docs.python.org/3/builtins/constants.html#Ellipsis" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-data docutils literal notranslate"><span class="pre">...</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>, <a class="reference internal" href="voxy.base.html#voxy.base.Speech" title="voxy.base.Speech"><code class="xref py py-class docutils literal notranslate"><span class="pre">Speech</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
 </section>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
 <li><a :data-current="activeSection === '#voxy.speech_cache.KEY_VERSION'" class="reference internal" href="#voxy.speech_cache.KEY_VERSION"><code class="docutils literal notranslate"><span class="pre">KEY_VERSION</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.speech_cache.MAX_CHARS_PER_S'" class="reference internal" href="#voxy.speech_cache.MAX_CHARS_PER_S"><code class="docutils literal notranslate"><span class="pre">MAX_CHARS_PER_S</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.speech_cache.MIN_CHARS_PER_S'" class="reference internal" href="#voxy.speech_cache.MIN_CHARS_PER_S"><code class="docutils literal notranslate"><span class="pre">MIN_CHARS_PER_S</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.speech_cache.MIN_CHECKED_CHARS'" class="reference internal" href="#voxy.speech_cache.MIN_CHECKED_CHARS"><code class="docutils literal notranslate"><span class="pre">MIN_CHECKED_CHARS</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.speech_cache.SpeechCache'" class="reference internal" href="#voxy.speech_cache.SpeechCache"><code class="docutils literal notranslate"><span class="pre">SpeechCache</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.speech_cache.TakeRejected'" class="reference internal" href="#voxy.speech_cache.TakeRejected"><code class="docutils literal notranslate"><span class="pre">TakeRejected</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.speech_cache.cached_synthesizer'" class="reference internal" href="#voxy.speech_cache.cached_synthesizer"><code class="docutils literal notranslate"><span class="pre">cached_synthesizer()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.speech_cache.default_speech_cache_dir'" class="reference internal" href="#voxy.speech_cache.default_speech_cache_dir"><code class="docutils literal notranslate"><span class="pre">default_speech_cache_dir()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.speech_cache.resolve_cache'" class="reference internal" href="#voxy.speech_cache.resolve_cache"><code class="docutils literal notranslate"><span class="pre">resolve_cache()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.speech_cache.speaking_rate_check'" class="reference internal" href="#voxy.speech_cache.speaking_rate_check"><code class="docutils literal notranslate"><span class="pre">speaking_rate_check()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.speech_cache.speech_key'" class="reference internal" href="#voxy.speech_cache.speech_key"><code class="docutils literal notranslate"><span class="pre">speech_key()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.speech_cache.validated'" class="reference internal" href="#voxy.speech_cache.validated"><code class="docutils literal notranslate"><span class="pre">validated()</span></code></a></li>
 </ul>
 </div>
 </aside>
@@ -280,7 +362,7 @@ a mapping: used as is.</p>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=1e158f99"></script>
+<script src="../_static/documentation_options.js?v=d59c1f54"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
