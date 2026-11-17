@@ -30,6 +30,20 @@ from voxy.library import (
 )
 from voxy.splice import replace_words
 from voxy.pauses import Section, parse_sections, plan_sections
+from voxy.direction import (
+    DIRECTIONS,
+    Dialect,
+    Directed,
+    INLINE,
+    PLAIN,
+    dialect_for,
+    directions,
+    instruction_dialect,
+    plan_directions,
+    register_dialect,
+    strip_directions,
+)
+from voxy.speech_cache import SpeechCache, cached_synthesizer, default_speech_cache_dir
 from voxy.facade import (
     text_to_speech,
     speech_to_speech,

@@ -62,6 +62,22 @@ Speech models misread words that are spelled one way and said two ways, and an A
 
 Cross-lingual clones have the same problem: a French-reference clone speaking English said "son" as /sɔ̃/; a respelling (`respellings={"son": "sun"}`) fixed it.
 
+## 3b. Delivery directions (`[dryly]`, `[beat]`, `[laughs]`) on any engine
+
+Write *how* a line is said inline, in eleven_v3's bracket notation; that is voxy's authoring form for every backend. `voxy.text_to_speech(text, ..., directions="auto")` (the default) renders it in the engine's **dialect** (`voxy.dialect_for(backend, model_id)`, extend with `voxy.register_dialect`):
+
+| dialect | engines | what happens |
+|---|---|---|
+| `inline-tags` | ElevenLabs `eleven_v3*`, `eleven_v4*` | sent as written; the model performs the tags |
+| `instruction:<param>` | fal Seed Speech TTS 2.0 (`voice_instruction`), aix `gpt-4o-mini-tts` (`instructions`) | the text is cut where the direction changes; each part goes with a natural-language instruction built from its tags (`voxy.DIRECTIONS`; unknown tags become "Delivery: <tag>"); pause tags become real silence |
+| `plain` | everything else (ElevenLabs v2, say, kokoro, ...) | tags removed (never read aloud); pause tags become real silence |
+
+`instruction=` adds a standing delivery note to every part on an instruction engine (a character, a register); `directions="keep"` / `"strip"` override. `cache=True` (or a folder) makes repeats free: each request is content-addressed (backend, model settings, voice, text, options), and a served result says `speech.cached`.
+
+Measured on Seed Speech `tim_en` (one 612-character paragraph, f0 p5–p95 as the liveliness proxy): flat 124 Hz, tags as instructions 109 Hz, plus a standing "unhurried" persona 106 Hz, plus a "lively, varied" persona 111 Hz. On that engine an instruction steers mood and pace but does not widen the melody, and a calm persona flattens it: choose the voice for range, use tags for intent, and keep any standing instruction short and not about tempo.
+
+**Listen-check before the long render, with two recognisers.** One ASR engine's mistake looks like a misread; two engines (ElevenLabs Scribe and local Whisper, e.g. `mlx_whisper`) hearing the same wrong word means the voice said it. On a 24-minute essay that caught a title read as "Agile, Refault", a skipped acronym and three mangled coinages; re-roll a line by changing its text (a respelling, or a different tag), since TTS caches are keyed on the text.
+
 ## 4. New voices
 
 - **Clone** a real person, only with their consent (a parent for a child), never a public figure or creator who hasn't agreed: put 1-2 min of clean, single-speaker audio in `voxy.samples_store(name)`, then `voxy.clone_from_samples(name, record_fields={"aliases": [...], "consent": "..."})` (`display_name=` names it differently in the backend). Prepare samples first: separate the voice from music (`voxy.separate.separate(path)` gives `{'vocals': wav, 'rest': wav}`, Demucs in its own env), keep only the target speaker (VAD + speaker embeddings), at most 25 files. Show the user the sample summary before uploading.
