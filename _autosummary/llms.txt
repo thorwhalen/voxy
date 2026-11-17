@@ -11,6 +11,7 @@
 - [voxy.base](voxy.base.html.md): Voxy: A flexible speech synthesis and voice cloning module.
 - [voxy.benchmarks](voxy.benchmarks.html.md): Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.
 - [voxy.diagnosis](voxy.diagnosis.html.md): Diagnosis pages: render one text through a grid of (model x parameters), listen side by side.
+- [voxy.direction](voxy.direction.html.md): Delivery directions: one way to write &#42;how&#42; a line is said, rendered for whatever voice says it.
 - [voxy.elevenlabs_model](voxy.elevenlabs_model.html.md): ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.
 - [voxy.envs](voxy.envs.html.md): Isolated Python environments for backends whose dependencies clash with yours.
 - [voxy.facade](voxy.facade.html.md): Voice generation in one call, whatever the service behind it.
@@ -31,6 +32,7 @@
 - [voxy.singing](voxy.singing.html.md): Singing: sing a score with lyrics in a voice (SVS), or re-voice a sung take (SVC).
 - [voxy.soulx](voxy.soulx.html.md): SoulX-Singer (Soul AI Lab, 2026; code and weights Apache-2.0): zero-shot singing
 - [voxy.speakers](voxy.speakers.html.md): Keep one speaker: find their voice in a recording and mark everyone else’s words.
+- [voxy.speech_cache](voxy.speech_cache.html.md): A content-addressed cache of synthesized speech, so re-rendering unchanged text is free.
 - [voxy.speechtext](voxy.speechtext.html.md): Display text vs speech text, and spotting words a model may misread.
 - [voxy.splice](voxy.splice.html.md): Correct words in a recording, in the speaker’s voice: find, render, splice, check.
 - [voxy.stores](voxy.stores.html.md): Where voxy keeps its data: voice records and audio, as &#96;MutableMapping&#96; stores.

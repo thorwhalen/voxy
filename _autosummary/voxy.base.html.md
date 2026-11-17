@@ -88,7 +88,7 @@ Sample rate of the generated audio (loads the model).
 
 The extra that installs each optional module (for the error raised without it).
 
-### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None)
+### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None, cached=False)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -101,6 +101,10 @@ Synthesized speech: encoded audio plus what produced it.
 >>> open(path, "rb").read()[:4]
 b'RIFF'
 ```
+
+#### cached *: [bool](https://docs.python.org/3/builtins/functions.html#bool)* *= False*
+
+served from a speech cache (no synthesis, no spend) rather than rendered
 
 #### save(path)
 
@@ -178,6 +182,14 @@ The voices this backend offers.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](#voxy.base.VoiceInfo)]
+
+#### markup_dialect(\*\*synth_kwargs)
+
+How this backend takes delivery directions (`[dryly]`, `[beat]`…).
+
+Looked up in `voxy.direction`’s registry by backend name and model id
+(`model_id` in `synth_kwargs`, else this model’s own), so a new model
+only needs `voxy.register_dialect`. See `voxy.direction`.
 
 #### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= ''*
 

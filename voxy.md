@@ -1,4 +1,4 @@
-> built 2026-11-10 21:44 UTC from bd7a8b3 (main) · voxy 0.0.72. Details: build_info.json
+> built 2026-11-17 12:47 UTC from 89cd52c (main) · voxy 0.0.73. Details: build_info.json
 
 # index.html.md
 
@@ -47,6 +47,21 @@ Change the voice of a recording (speech to speech, ElevenLabs): the words, timin
 
 ```python
 voxy.speech_to_speech("my_take.wav", voice="ada").save("ada_take.mp3")
+```
+
+## Delivery directions: `[dryly]`, `[beat]`, on any backend
+
+Mark delivery inline in eleven_v3’s bracket notation. voxy renders it for the engine that speaks: an inline-tags model (`eleven_v3`, `eleven_v4`) performs the tags; an instruction model (fal’s Seed Speech, OpenAI’s `gpt-4o-mini-tts`) gets the text cut where the direction changes, each part with a natural-language instruction; any other model gets the words only. Pause tags (`[beat]`, `[pause]`) become real silence wherever the model would not perform them.
+
+```python
+voxy.text_to_speech(
+    "[dryly] We all believe in agility. [beat] [wryly] But we disagree on how.",
+    "tim_en",
+    backend="fal",
+    model_id="fal-ai/bytedance/seed-speech/tts/v2",
+    cache=True,  # repeats are free: content-addressed, `speech.cached` says so
+)
+voxy.dialect_for("fal", "fal-ai/bytedance/seed-speech/tts/v2")  # instruction:voice_instruction
 ```
 
 ## Pauses: SSML breaks, on any backend
@@ -709,7 +724,7 @@ Sample rate of the generated audio (loads the model).
 
 The extra that installs each optional module (for the error raised without it).
 
-### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None)
+### *class* voxy.base.Speech(audio, format, backend='', voice=None, sample_rate=None, text=None, cached=False)
 
 Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
 
@@ -722,6 +737,10 @@ Synthesized speech: encoded audio plus what produced it.
 >>> open(path, "rb").read()[:4]
 b'RIFF'
 ```
+
+#### cached *: [bool](https://docs.python.org/3/builtins/functions.html#bool)* *= False*
+
+served from a speech cache (no synthesis, no spend) rather than rendered
 
 #### save(path)
 
@@ -799,6 +818,14 @@ The voices this backend offers.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)]
+
+#### markup_dialect(\*\*synth_kwargs)
+
+How this backend takes delivery directions (`[dryly]`, `[beat]`…).
+
+Looked up in `voxy.direction`’s registry by backend name and model id
+(`model_id` in `synth_kwargs`, else this model’s own), so a new model
+only needs `voxy.register_dialect`. See `voxy.direction`.
 
 #### name *: [str](https://docs.python.org/3/builtins/stdtypes.html#str)* *= ''*
 
@@ -1333,6 +1360,199 @@ between that backend’s variants. A result’s own `label` wins.
   [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
 
 
+# _autosummary/voxy.direction.html.md
+
+# voxy.direction
+
+Delivery directions: one way to write *how* a line is said, rendered for whatever voice says it.
+
+A script marks delivery inline, in the bracket notation ElevenLabs’ v3 models read:
+`[dryly] We all believe in agility. [beat] But then...`. That notation is voxy’s
+authoring form for any backend. Each backend has a **dialect**, the way it takes
+direction, and [`plan_directions()`](_autosummary/voxy.direction.html.md#voxy.direction.plan_directions) turns a directed text into what that dialect
+accepts:
+
+| dialect       | what happens to `[dryly]`, `[beat]`, `[laughs]`                                                                                                                                                                                 |
+|---------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `inline-tags` | sent as written: the model performs them (eleven_v3, eleven_v4)                                                                                                                                                                 |
+| `instruction` | the text is cut where the direction changes; each part is sent<br/>with a natural-language instruction (Seed Speech’s<br/>`voice_instruction`, OpenAI’s `instructions`) built from its<br/>tags; pause tags become real silence |
+| `plain`       | tags removed, pause tags become real silence (every other model)                                                                                                                                                                |
+
+Which dialect a backend speaks is [`dialect_for()`](_autosummary/voxy.direction.html.md#voxy.direction.dialect_for) (`backend`, `model_id`), a
+registry you can extend with [`register_dialect()`](_autosummary/voxy.direction.html.md#voxy.direction.register_dialect); `SpeechModel.markup_dialect`
+asks it. The vocabulary (what each tag means as an instruction, and how long a pause
+tag is) is [`DIRECTIONS`](_autosummary/voxy.direction.html.md#voxy.direction.DIRECTIONS); an unknown tag still becomes an instruction
+(“Deliver this <tag>.”), so writers are not limited to the table.
+
+```pycon
+>>> t = "[dryly] We all agree. [beat] Then we disagree."
+>>> [(d.text, d.options) for d in plan_directions(t, PLAIN)]
+[('We all agree. <break time="0.45s" /> Then we disagree.', {})]
+>>> [(d.text, d.options) for d in plan_directions(t, INLINE)]
+[('[dryly] We all agree. [beat] Then we disagree.', {})]
+>>> for d in plan_directions(t, instruction_dialect("voice_instruction")):
+...     print(repr(d.text), d.options)
+'We all agree. <break time="0.45s" /> Then we disagree.' {'voice_instruction': 'Delivery: dry, understated, a little ironic.'}
+```
+
+### Module Attributes
+
+| [`DIRECTION_RE`](_autosummary/voxy.direction.html.md#voxy.direction.DIRECTION_RE)   | `[word]` or `[a few words]`, lowercase, as eleven_v3 reads them.   |
+|-----------------------------------------------------------------|--------------------------------------------------------------------|
+| [`DIRECTIONS`](_autosummary/voxy.direction.html.md#voxy.direction.DIRECTIONS)     | tag -> meaning.                                                    |
+
+### Functions
+
+| [`compose_instruction`](_autosummary/voxy.direction.html.md#voxy.direction.compose_instruction)(instruction, tags)            | The instruction for a part: the voice's standing `instruction`, then its tags.                                      |
+|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| [`dialect_for`](_autosummary/voxy.direction.html.md#voxy.direction.dialect_for)(backend[, model_id])                  | The dialect of `backend`'s model `model_id` (`PLAIN` when unknown).                                                 |
+| [`direction`](_autosummary/voxy.direction.html.md#voxy.direction.direction)(tag)                                    | The meaning of `tag` (unknown tags read as a delivery instruction).                                                 |
+| [`directions`](_autosummary/voxy.direction.html.md#voxy.direction.directions)(text)                                  | The inline direction tags in `text`, in order.                                                                      |
+| [`instruction_dialect`](_autosummary/voxy.direction.html.md#voxy.direction.instruction_dialect)(param)                        | A dialect taking a natural-language instruction in the option `param`.                                              |
+| [`plan_directions`](_autosummary/voxy.direction.html.md#voxy.direction.plan_directions)(text, dialect, \*[, instruction]) | The requests that say `text` in `dialect` (see the module docstring).                                               |
+| [`register_dialect`](_autosummary/voxy.direction.html.md#voxy.direction.register_dialect)(backend, model_glob, dialect)    | Declare that `backend`'s models matching `model_glob` speak `dialect` (checked before the ones already registered). |
+| [`strip_directions`](_autosummary/voxy.direction.html.md#voxy.direction.strip_directions)(text)                            | `text` with its direction tags removed and spacing tidied.                                                          |
+
+### Classes
+
+| [`Dialect`](_autosummary/voxy.direction.html.md#voxy.direction.Dialect)(name[, inline_tags, instruction_param])   | How a backend takes direction.                                                                                                   |
+|----------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [`Directed`](_autosummary/voxy.direction.html.md#voxy.direction.Directed)(text[, options])                         | One request's worth of a directed text: its text (SSML breaks allowed) and the extra synthesis `options` carrying its direction. |
+| [`Direction`](_autosummary/voxy.direction.html.md#voxy.direction.Direction)(kind[, instruction, pause_s])           | What one tag asks for: a `pause_s` of silence, or an `instruction` phrase.                                                       |
+
+### voxy.direction.DIRECTIONS *: [Mapping](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping)[[str](https://docs.python.org/3/builtins/stdtypes.html#str), [Direction](_autosummary/voxy.direction.html.md#voxy.direction.Direction)]* *= mappingproxy({'pause': Direction(kind='pause', instruction='', pause_s=0.7), 'short pause': Direction(kind='pause', instruction='', pause_s=0.3), 'long pause': Direction(kind='pause', instruction='', pause_s=1.4), 'beat': Direction(kind='pause', instruction='', pause_s=0.45), 'dryly': Direction(kind='delivery', instruction='dry, understated, a little ironic', pause_s=0.0), 'wryly': Direction(kind='delivery', instruction='wry, with a knowing half-smile', pause_s=0.0), 'deadpan': Direction(kind='delivery', instruction='deadpan: flat, letting the line land by itself', pause_s=0.0), 'mock-solemn': Direction(kind='delivery', instruction='mock-solemn, pretending to be grave', pause_s=0.0), 'emphatic': Direction(kind='delivery', instruction='emphatic, leaning on the key words', pause_s=0.0), 'earnest': Direction(kind='delivery', instruction='earnest and sincere', pause_s=0.0), 'thoughtful': Direction(kind='delivery', instruction='thoughtful and unhurried, thinking it through', pause_s=0.0), 'curious': Direction(kind='delivery', instruction='curious, genuinely asking', pause_s=0.0), 'amused': Direction(kind='delivery', instruction='amused, smiling', pause_s=0.0), 'sarcastic': Direction(kind='delivery', instruction='lightly sarcastic', pause_s=0.0), 'excited': Direction(kind='delivery', instruction='excited, with energy', pause_s=0.0), 'incredulous': Direction(kind='delivery', instruction='incredulous', pause_s=0.0), 'serious': Direction(kind='delivery', instruction='serious and grounded', pause_s=0.0), 'warmly': Direction(kind='delivery', instruction='warm', pause_s=0.0), 'firmly': Direction(kind='delivery', instruction='firm', pause_s=0.0), 'quietly': Direction(kind='delivery', instruction='quieter, softer', pause_s=0.0), 'softly': Direction(kind='delivery', instruction='soft', pause_s=0.0), 'slowly': Direction(kind='delivery', instruction='slow and deliberate', pause_s=0.0), 'rushed': Direction(kind='delivery', instruction='quick, a little rushed', pause_s=0.0), 'whispers': Direction(kind='delivery', instruction='whispered', pause_s=0.0), 'laughs': Direction(kind='nonverbal', instruction='with a laugh in the voice', pause_s=0.0), 'laughs softly': Direction(kind='nonverbal', instruction='with a soft laugh in the voice', pause_s=0.0), 'chuckles': Direction(kind='nonverbal', instruction='with a chuckle in the voice', pause_s=0.0), 'sighs': Direction(kind='nonverbal', instruction='with a sigh', pause_s=0.0)})*
+
+tag -> meaning. Pause tags are silence everywhere but on an
+inline-tags model (which performs them itself); the rest become instructions.
+
+* **Type:**
+  The vocabulary
+
+### voxy.direction.DIRECTION_RE *= re.compile('\\\\[([a-z][a-z \\\\-]{1,24})\\\\]')*
+
+`[word]` or `[a few words]`, lowercase, as eleven_v3 reads them.
+
+* **Type:**
+  An inline direction
+
+### *class* voxy.direction.Dialect(name, inline_tags=False, instruction_param=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+How a backend takes direction.
+
+`inline_tags`: the model performs `[tags]` itself, so the text is sent as written.
+`instruction_param`: the synthesis option that takes a natural-language delivery
+instruction (`None`: the model takes none).
+
+### *class* voxy.direction.Directed(text, options=dict())
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One request’s worth of a directed text: its text (SSML breaks allowed) and the
+extra synthesis `options` carrying its direction.
+
+### *class* voxy.direction.Direction(kind, instruction='', pause_s=0.0)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+What one tag asks for: a `pause_s` of silence, or an `instruction` phrase.
+
+### voxy.direction.compose_instruction(instruction, tags)
+
+The instruction for a part: the voice’s standing `instruction`, then its tags.
+
+```pycon
+>>> compose_instruction("A wry essayist.", ["dryly", "laughs softly"])
+'A wry essayist. Delivery: dry, understated, a little ironic; with a soft laugh in the voice.'
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.direction.dialect_for(backend, model_id=None)
+
+The dialect of `backend`’s model `model_id` (`PLAIN` when unknown).
+
+```pycon
+>>> dialect_for("elevenlabs", "eleven_v3").name, dialect_for("elevenlabs", "eleven_multilingual_v2").name
+('inline-tags', 'plain')
+>>> dialect_for("fal", "fal-ai/bytedance/seed-speech/tts/v2").instruction_param
+'voice_instruction'
+```
+
+* **Return type:**
+  [`Dialect`](_autosummary/voxy.direction.html.md#voxy.direction.Dialect)
+
+### voxy.direction.direction(tag)
+
+The meaning of `tag` (unknown tags read as a delivery instruction).
+
+```pycon
+>>> direction("beat").pause_s, direction("tenderly").instruction
+(0.45, 'tenderly')
+```
+
+* **Return type:**
+  [`Direction`](_autosummary/voxy.direction.html.md#voxy.direction.Direction)
+
+### voxy.direction.directions(text)
+
+The inline direction tags in `text`, in order.
+
+```pycon
+>>> directions("[dryly] Fine. [beat] Really.")
+['dryly', 'beat']
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str)]
+
+### voxy.direction.instruction_dialect(param)
+
+A dialect taking a natural-language instruction in the option `param`.
+
+* **Return type:**
+  [`Dialect`](_autosummary/voxy.direction.html.md#voxy.direction.Dialect)
+
+### voxy.direction.plan_directions(text, dialect, , instruction=None)
+
+The requests that say `text` in `dialect` (see the module docstring).
+
+`instruction` is a standing delivery instruction (a character, a register) sent
+with every part on an instruction dialect, and ignored by the others.
+
+```pycon
+>>> d = instruction_dialect("instructions")
+>>> [(p.text, p.options["instructions"]) for p in plan_directions(
+...     "[curious] What gives? [emphatic] Never.", d, instruction="An essayist.")]
+[('What gives?', 'An essayist. Delivery: curious, genuinely asking.'), ('Never.', 'An essayist. Delivery: emphatic, leaning on the key words.')]
+```
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Directed`](_autosummary/voxy.direction.html.md#voxy.direction.Directed)]
+
+### voxy.direction.register_dialect(backend, model_glob, dialect)
+
+Declare that `backend`’s models matching `model_glob` speak `dialect`
+(checked before the ones already registered).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.direction.strip_directions(text)
+
+`text` with its direction tags removed and spacing tidied.
+
+```pycon
+>>> strip_directions("[wryly] I have met , [beat] some.")
+'I have met, some.'
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+
 # _autosummary/voxy.elevenlabs_model.html.md
 
 # voxy.elevenlabs_model
@@ -1839,6 +2059,7 @@ Backends are entries of `voxy.speech_model_factories`; add one with
 |---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
 | [`dflt_tts_backend`](_autosummary/voxy.facade.html.md#voxy.facade.dflt_tts_backend)()                               | `$VOXY_TTS_BACKEND`, else 'elevenlabs' (read on every call).                    |
 | [`get_speech_model`](_autosummary/voxy.facade.html.md#voxy.facade.get_speech_model)([backend, models])              | The (cached) model for `backend`; `models` replaces the shared cache.           |
+| [`has_directions`](_autosummary/voxy.facade.html.md#voxy.facade.has_directions)(text)                             | Whether `text` carries inline delivery directions (`[dryly]`, `[beat]`).        |
 | [`list_voices`](_autosummary/voxy.facade.html.md#voxy.facade.list_voices)([backend, voices, model, models])    | Our named voices (`backend=None`), or the voices a backend offers.              |
 | [`resolve_voice`](_autosummary/voxy.facade.html.md#voxy.facade.resolve_voice)(voice, \*[, backend, voices, ...]) | `(backend, voice)` to synthesize with (see the module docstring for the rules). |
 | [`speech_to_speech`](_autosummary/voxy.facade.html.md#voxy.facade.speech_to_speech)(audio[, voice, backend, ...])   | Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.  |
@@ -1865,6 +2086,13 @@ The (cached) model for `backend`; `models` replaces the shared cache.
 
 * **Return type:**
   [`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel)
+
+### voxy.facade.has_directions(text)
+
+Whether `text` carries inline delivery directions (`[dryly]`, `[beat]`).
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 ### voxy.facade.list_voices(backend=None, , voices=None, model=None, models=None, \*\*kwargs)
 
@@ -1898,7 +2126,7 @@ Our named voices (`backend=None`), or the voices a backend offers.
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](_autosummary/voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
 
-### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
+### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, \*\*kwargs)
 
 Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.
 
@@ -1910,7 +2138,7 @@ narrator’s voice, splice.
 * **Return type:**
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
-### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
+### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, \*\*kwargs)
 
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
@@ -1932,6 +2160,18 @@ compressed format asked for, e.g. mp3, through ffmpeg)
   * **models** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Model cache to use instead of the shared one.
   * **use_library** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Look `voice` up in the library first (False: always
     the backend’s own voice of that name).
+  * **directions** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Inline delivery directions (`[dryly]`, `[beat]`):
+    `'auto'` (default) renders them in the model’s dialect (performed
+    by an inline-tags model, turned into a natural-language instruction
+    per part on an instruction model, removed elsewhere, pause tags
+    becoming silence; `voxy.direction`); `'keep'` sends the text as
+    written; `'strip'` removes them.
+  * **instruction** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A standing delivery instruction (a character, a register)
+    for models that take one (Seed Speech, gpt-4o-mini-tts); ignored by
+    the rest.
+  * **cache** – `True`, a folder, or a `MutableMapping` to serve repeated
+    requests from (`voxy.speech_cache`; a served result has
+    `cached=True`); `None` (default) always synthesizes.
   * **\*\*kwargs** – Backend-specific options (e.g. `output_format=` for
     ElevenLabs, `speed=` for aix, `quality=` for fal).
 * **Return type:**
@@ -2156,6 +2396,7 @@ True
 | [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                                                                       |
 | [`benchmarks`](_autosummary/voxy.benchmarks.html.md#module-voxy.benchmarks)               | Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.                                                        |
 | [`diagnosis`](_autosummary/voxy.diagnosis.html.md#module-voxy.diagnosis)                 | Diagnosis pages: render one text through a grid of (model x parameters), listen side by side.                                                     |
+| [`direction`](_autosummary/voxy.direction.html.md#module-voxy.direction)                 | Delivery directions: one way to write *how* a line is said, rendered for whatever voice says it.                                                  |
 | [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model)   | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.                                                                 |
 | [`envs`](_autosummary/voxy.envs.html.md#module-voxy.envs)                           | Isolated Python environments for backends whose dependencies clash with yours.                                                                    |
 | [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                       | Voice generation in one call, whatever the service behind it.                                                                                     |
@@ -2176,6 +2417,7 @@ True
 | [`singing`](_autosummary/voxy.singing.html.md#module-voxy.singing)                     | Singing: sing a score with lyrics in a voice (SVS), or re-voice a sung take (SVC).                                                                |
 | [`soulx`](_autosummary/voxy.soulx.html.md#module-voxy.soulx)                         | SoulX-Singer (Soul AI Lab, 2026; code and weights Apache-2.0): zero-shot singing voice synthesis and conversion, as the `soulx` singing backend.  |
 | [`speakers`](_autosummary/voxy.speakers.html.md#module-voxy.speakers)                   | Keep one speaker: find their voice in a recording and mark everyone else's words.                                                                 |
+| [`speech_cache`](_autosummary/voxy.speech_cache.html.md#module-voxy.speech_cache)           | A content-addressed cache of synthesized speech, so re-rendering unchanged text is free.                                                          |
 | [`speechtext`](_autosummary/voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                                                                              |
 | [`splice`](_autosummary/voxy.splice.html.md#module-voxy.splice)                       | Correct words in a recording, in the speaker's voice: find, render, splice, check.                                                                |
 | [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.                                                                   |
@@ -5814,6 +6056,92 @@ simply their voice; over mixed recordings it is whoever speaks most.
   `ndarray`
 
 
+# _autosummary/voxy.speech_cache.html.md
+
+# voxy.speech_cache
+
+A content-addressed cache of synthesized speech, so re-rendering unchanged text is free.
+
+The key covers everything that reaches the audio: the backend, its model settings, the
+voice, the text and the synthesis options. A store is any `MutableMapping` from key to
+[`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech); [`SpeechCache`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.SpeechCache) is the default, a folder of audio files
+with a small JSON record each.
+
+```pycon
+>>> import tempfile
+>>> cache = SpeechCache(tempfile.mkdtemp())
+>>> calls = []
+>>> class Fake:
+...     name, model_id = "fake", "m1"
+...     def synthesize(self, text, voice=None, **kw):
+...         from voxy.base import Speech
+...         calls.append(text)
+...         return Speech(text.encode(), format="wav", backend="fake", voice=voice, text=text)
+>>> synth = cached_synthesizer(Fake(), cache)
+>>> synth("hi", "v").cached, synth("hi", "v").cached, len(calls)
+(False, True, 1)
+```
+
+### Module Attributes
+
+| [`KEY_VERSION`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.KEY_VERSION)   | Bump when the meaning of a key changes, so old entries stop matching.   |
+|----------------------------------------------------------------|-------------------------------------------------------------------------|
+
+### Functions
+
+| [`cached_synthesizer`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.cached_synthesizer)(model, cache)        | `model.synthesize`, served from `cache` when the same request was made before.                    |
+|------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| [`default_speech_cache_dir`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.default_speech_cache_dir)()              | `$VOXY_SPEECH_CACHE_DIR`, else `$XDG_CACHE_HOME/voxy/speech`, else `~/.cache/voxy/speech`.        |
+| [`resolve_cache`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.resolve_cache)(cache)                    | `None`/`False`: no cache; `True`: the default folder; a path: that folder; a mapping: used as is. |
+| [`speech_key`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.speech_key)(model, text, voice, options) | The cache key: a SHA-256 over backend, model settings, voice, text and options.                   |
+
+### Classes
+
+| [`SpeechCache`](_autosummary/voxy.speech_cache.html.md#voxy.speech_cache.SpeechCache)([root])   | Speech on disk: `<key>.<format>` audio plus `<key>.json` (everything else).   |
+|------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+
+### voxy.speech_cache.KEY_VERSION *= 1*
+
+Bump when the meaning of a key changes, so old entries stop matching.
+
+### *class* voxy.speech_cache.SpeechCache(root=None)
+
+Bases: [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping)
+
+Speech on disk: `<key>.<format>` audio plus `<key>.json` (everything else).
+
+### voxy.speech_cache.cached_synthesizer(model, cache)
+
+`model.synthesize`, served from `cache` when the same request was made before.
+
+A served result has `cached=True`, so callers can tell spend from reuse.
+
+* **Return type:**
+  [`Callable`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable)[[`...`](https://docs.python.org/3/builtins/constants.html#Ellipsis), [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)]
+
+### voxy.speech_cache.default_speech_cache_dir()
+
+`$VOXY_SPEECH_CACHE_DIR`, else `$XDG_CACHE_HOME/voxy/speech`, else `~/.cache/voxy/speech`.
+
+* **Return type:**
+  [`Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)
+
+### voxy.speech_cache.resolve_cache(cache)
+
+`None`/`False`: no cache; `True`: the default folder; a path: that folder;
+a mapping: used as is.
+
+* **Return type:**
+  [`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
+### voxy.speech_cache.speech_key(model, text, voice, options)
+
+The cache key: a SHA-256 over backend, model settings, voice, text and options.
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+
 # _autosummary/voxy.speechtext.html.md
 
 # voxy.speechtext
@@ -7537,7 +7865,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-10 21:44 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/bd7a8b3c37ca4101e73ab91fec8178067760ac0a"><code>bd7a8b3</code></a> on branch <code>main</code>, for **voxy 0.0.72** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-17 12:47 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/89cd52cd117b759c393e3c0d12f81d58b0f5b62b"><code>89cd52c</code></a> on branch <code>main</code>, for **voxy 0.0.73** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -7546,7 +7874,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/bd7a8b3c37ca4101e73ab91fec8178067760ac0a"><code>bd7a8b3c37ca4101e73ab91fec8178067760ac0a</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/89cd52cd117b759c393e3c0d12f81d58b0f5b62b"><code>89cd52cd117b759c393e3c0d12f81d58b0f5b62b</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -7557,9 +7885,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/42907512227">42907512227</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/44086089360">44086089360</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>bd7a8b3c37ca4101e73ab91fec8178067760ac0a</code> (in the history of the built commit) |
+| Event commit | <code>89cd52cd117b759c393e3c0d12f81d58b0f5b62b</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -7584,13 +7912,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.72/">0.0.72</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.73/">0.0.73</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout bd7a8b3c37ca4101e73ab91fec8178067760ac0a
+git checkout 89cd52cd117b759c393e3c0d12f81d58b0f5b62b
 pip install "epythet==0.2.22"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

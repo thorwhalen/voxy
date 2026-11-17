@@ -1,0 +1,27 @@
+voxy.speech\_cache
+==================
+
+.. automodule:: voxy.speech_cache
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      KEY_VERSION
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      cached_synthesizer
+      default_speech_cache_dir
+      resolve_cache
+      speech_key
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      SpeechCache
+   

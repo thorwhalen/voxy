@@ -33,6 +33,7 @@ Backends are entries of `voxy.speech_model_factories`; add one with
 |---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
 | [`dflt_tts_backend`](#voxy.facade.dflt_tts_backend)()                               | `$VOXY_TTS_BACKEND`, else 'elevenlabs' (read on every call).                    |
 | [`get_speech_model`](#voxy.facade.get_speech_model)([backend, models])              | The (cached) model for `backend`; `models` replaces the shared cache.           |
+| [`has_directions`](#voxy.facade.has_directions)(text)                             | Whether `text` carries inline delivery directions (`[dryly]`, `[beat]`).        |
 | [`list_voices`](#voxy.facade.list_voices)([backend, voices, model, models])    | Our named voices (`backend=None`), or the voices a backend offers.              |
 | [`resolve_voice`](#voxy.facade.resolve_voice)(voice, \*[, backend, voices, ...]) | `(backend, voice)` to synthesize with (see the module docstring for the rules). |
 | [`speech_to_speech`](#voxy.facade.speech_to_speech)(audio[, voice, backend, ...])   | Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.  |
@@ -59,6 +60,13 @@ The (cached) model for `backend`; `models` replaces the shared cache.
 
 * **Return type:**
   [`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel)
+
+### voxy.facade.has_directions(text)
+
+Whether `text` carries inline delivery directions (`[dryly]`, `[beat]`).
+
+* **Return type:**
+  [`bool`](https://docs.python.org/3/builtins/functions.html#bool)
 
 ### voxy.facade.list_voices(backend=None, , voices=None, model=None, models=None, \*\*kwargs)
 
@@ -92,7 +100,7 @@ Our named voices (`backend=None`), or the voices a backend offers.
 * **Return type:**
   [`tuple`](https://docs.python.org/3/builtins/stdtypes.html#tuple)[[`str`](https://docs.python.org/3/builtins/stdtypes.html#str), [`VoiceProfile`](voxy.base.html.md#voxy.base.VoiceProfile) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)]
 
-### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
+### voxy.facade.speech_to_speech(audio, voice=None, , backend='elevenlabs', output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, \*\*kwargs)
 
 Voice changer: re-speak `audio` in `voice`, keeping its timing and intonation.
 
@@ -104,7 +112,7 @@ narrator’s voice, splice.
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)
 
-### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, \*\*kwargs)
+### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, \*\*kwargs)
 
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
@@ -126,6 +134,18 @@ compressed format asked for, e.g. mp3, through ffmpeg)
   * **models** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Model cache to use instead of the shared one.
   * **use_library** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Look `voice` up in the library first (False: always
     the backend’s own voice of that name).
+  * **directions** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str)) – Inline delivery directions (`[dryly]`, `[beat]`):
+    `'auto'` (default) renders them in the model’s dialect (performed
+    by an inline-tags model, turned into a natural-language instruction
+    per part on an instruction model, removed elsewhere, pause tags
+    becoming silence; `voxy.direction`); `'keep'` sends the text as
+    written; `'strip'` removes them.
+  * **instruction** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A standing delivery instruction (a character, a register)
+    for models that take one (Seed Speech, gpt-4o-mini-tts); ignored by
+    the rest.
+  * **cache** – `True`, a folder, or a `MutableMapping` to serve repeated
+    requests from (`voxy.speech_cache`; a served result has
+    `cached=True`); `None` (default) always synthesizes.
   * **\*\*kwargs** – Backend-specific options (e.g. `output_format=` for
     ElevenLabs, `speed=` for aix, `quality=` for fal).
 * **Return type:**

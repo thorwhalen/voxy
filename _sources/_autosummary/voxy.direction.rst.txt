@@ -1,0 +1,34 @@
+voxy.direction
+==============
+
+.. automodule:: voxy.direction
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      DIRECTION_RE
+      DIRECTIONS
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      compose_instruction
+      dialect_for
+      direction
+      directions
+      instruction_dialect
+      plan_directions
+      register_dialect
+      strip_directions
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Dialect
+      Directed
+      Direction
+   

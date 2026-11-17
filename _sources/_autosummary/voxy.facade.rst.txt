@@ -11,6 +11,7 @@ voxy.facade
       clear_speech_models
       dflt_tts_backend
       get_speech_model
+      has_directions
       list_voices
       resolve_voice
       speech_to_speech

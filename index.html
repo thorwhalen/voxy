@@ -88,6 +88,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.base.html">voxy.base</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.benchmarks.html">voxy.benchmarks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.diagnosis.html">voxy.diagnosis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.direction.html">voxy.direction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.elevenlabs_model.html">voxy.elevenlabs_model</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.envs.html">voxy.envs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.facade.html">voxy.facade</a></li>
@@ -108,6 +109,7 @@
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.singing.html">voxy.singing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.soulx.html">voxy.soulx</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.speakers.html">voxy.speakers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.speech_cache.html">voxy.speech_cache</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.speechtext.html">voxy.speechtext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.splice.html">voxy.splice</a></li>
 <li class="toctree-l3"><a class="reference internal" href="_autosummary/voxy.stores.html">voxy.stores</a></li>
@@ -170,6 +172,20 @@
 </div>
 <p>Change the voice of a recording (speech to speech, ElevenLabs): the words, timing and intonation stay the recording’s, the voice becomes the target’s. A correction can be spoken by anyone and come out in the narrator’s voice:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">voxy</span><span class="o">.</span><span class="n">speech_to_speech</span><span class="p">(</span><span class="s2">"my_take.wav"</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="s2">"ada"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"ada_take.mp3"</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+</section>
+<section id="delivery-directions-dryly-beat-on-any-backend">
+<h2>Delivery directions: <code class="docutils literal notranslate"><span class="pre">[dryly]</span></code>, <code class="docutils literal notranslate"><span class="pre">[beat]</span></code>, on any backend<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#delivery-directions-dryly-beat-on-any-backend" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#delivery-directions-dryly-beat-on-any-backend'">¶</a></h2>
+<p>Mark delivery inline in eleven_v3’s bracket notation. voxy renders it for the engine that speaks: an inline-tags model (<code class="docutils literal notranslate"><span class="pre">eleven_v3</span></code>, <code class="docutils literal notranslate"><span class="pre">eleven_v4</span></code>) performs the tags; an instruction model (fal’s Seed Speech, OpenAI’s <code class="docutils literal notranslate"><span class="pre">gpt-4o-mini-tts</span></code>) gets the text cut where the direction changes, each part with a natural-language instruction; any other model gets the words only. Pause tags (<code class="docutils literal notranslate"><span class="pre">[beat]</span></code>, <code class="docutils literal notranslate"><span class="pre">[pause]</span></code>) become real silence wherever the model would not perform them.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span>
+</span><span id="line-2">    <span class="s2">"[dryly] We all believe in agility. [beat] [wryly] But we disagree on how."</span><span class="p">,</span>
+</span><span id="line-3">    <span class="s2">"tim_en"</span><span class="p">,</span>
+</span><span id="line-4">    <span class="n">backend</span><span class="o">=</span><span class="s2">"fal"</span><span class="p">,</span>
+</span><span id="line-5">    <span class="n">model_id</span><span class="o">=</span><span class="s2">"fal-ai/bytedance/seed-speech/tts/v2"</span><span class="p">,</span>
+</span><span id="line-6">    <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># repeats are free: content-addressed, `speech.cached` says so</span>
+</span><span id="line-7"><span class="p">)</span>
+</span><span id="line-8"><span class="n">voxy</span><span class="o">.</span><span class="n">dialect_for</span><span class="p">(</span><span class="s2">"fal"</span><span class="p">,</span> <span class="s2">"fal-ai/bytedance/seed-speech/tts/v2"</span><span class="p">)</span>  <span class="c1"># instruction:voice_instruction</span>
 </span></code></pre></div>
 </div>
 </section>
@@ -522,11 +538,12 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-10 21:44 UTC from <a href="https://github.com/thorwhalen/voxy/commit/bd7a8b3c37ca4101e73ab91fec8178067760ac0a">bd7a8b3</a> (main) · voxy 0.0.72 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-17 12:47 UTC from <a href="https://github.com/thorwhalen/voxy/commit/89cd52cd117b759c393e3c0d12f81d58b0f5b62b">89cd52c</a> (main) · voxy 0.0.73 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
 <li><a :data-current="activeSection === '#designing-a-voice-from-a-description'" class="reference internal" href="#designing-a-voice-from-a-description">Designing a voice from a description</a></li>
+<li><a :data-current="activeSection === '#delivery-directions-dryly-beat-on-any-backend'" class="reference internal" href="#delivery-directions-dryly-beat-on-any-backend">Delivery directions: <code class="docutils literal notranslate"><span class="pre">[dryly]</span></code>, <code class="docutils literal notranslate"><span class="pre">[beat]</span></code>, on any backend</a></li>
 <li><a :data-current="activeSection === '#pauses-ssml-breaks-on-any-backend'" class="reference internal" href="#pauses-ssml-breaks-on-any-backend">Pauses: SSML breaks, on any backend</a></li>
 <li><a :data-current="activeSection === '#features'" class="reference internal" href="#features">Features</a></li>
 <li><a :data-current="activeSection === '#installation'" class="reference internal" href="#installation">Installation</a><ul>
@@ -572,7 +589,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=ba6d0b80"></script>
+<script src="_static/documentation_options.js?v=1e158f99"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

@@ -15,6 +15,7 @@
    base
    benchmarks
    diagnosis
+   direction
    elevenlabs_model
    envs
    facade
@@ -35,6 +36,7 @@
    singing
    soulx
    speakers
+   speech_cache
    speechtext
    splice
    stores
