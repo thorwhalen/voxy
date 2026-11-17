@@ -151,7 +151,9 @@ def instruction_dialect(param: str) -> Dialect:
 # backend -> [(model-id glob, dialect)], first match wins; '*' matches a missing model id
 _DIALECTS: dict[str, list[tuple[str, Dialect]]] = {
     "elevenlabs": [("eleven_v3*", INLINE), ("eleven_v4*", INLINE)],
-    "fal": [("fal-ai/bytedance/seed-speech/*", instruction_dialect("voice_instruction"))],
+    "fal": [
+        ("fal-ai/bytedance/seed-speech/*", instruction_dialect("voice_instruction"))
+    ],
     "aix": [("*gpt-4o-mini-tts*", instruction_dialect("instructions"))],
 }
 

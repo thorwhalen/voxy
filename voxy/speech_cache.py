@@ -82,7 +82,9 @@ class SpeechCache(MutableMapping):
     def __setitem__(self, key: str, speech: Speech) -> None:
         meta = {k: v for k, v in asdict(speech).items() if k not in ("audio", "cached")}
         (self.root / f"{key}.{speech.format}").write_bytes(speech.audio)
-        self._meta(key).write_text(json.dumps(meta))  # written last: its presence means complete
+        self._meta(key).write_text(
+            json.dumps(meta)
+        )  # written last: its presence means complete
 
     def __delitem__(self, key: str) -> None:
         meta = self[key]

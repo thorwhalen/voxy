@@ -41,13 +41,18 @@ from voxy.base import (
 )
 from voxy.library import find_voice, profile_from_record
 from voxy.pauses import encode_audio, has_pause_markup, join_sections, plan_sections
-from voxy.direction import plan_directions, strip_directions, directions as _directions_in
+from voxy.direction import (
+    plan_directions,
+    strip_directions,
+    directions as _directions_in,
+)
 from voxy.speech_cache import cached_synthesizer, resolve_cache
 
 
 def has_directions(text: str) -> bool:
     """Whether ``text`` carries inline delivery directions (``[dryly]``, ``[beat]``)."""
     return bool(_directions_in(text))
+
 
 VOXY_TTS_BACKEND_ENVVAR = "VOXY_TTS_BACKEND"
 FALLBACK_TTS_BACKEND = "elevenlabs"
@@ -178,7 +183,9 @@ def text_to_speech(
     store = resolve_cache(cache)
     synth = cached_synthesizer(model, store) if store is not None else model.synthesize
     if directions not in ("auto", "keep", "strip"):
-        raise ValueError(f"directions must be 'auto', 'keep' or 'strip', not {directions!r}")
+        raise ValueError(
+            f"directions must be 'auto', 'keep' or 'strip', not {directions!r}"
+        )
     if directions == "strip":
         text = strip_directions(text)
     if directions == "auto" and (instruction or has_directions(text)):
@@ -230,7 +237,9 @@ def _speak_directed(
     """``text`` with delivery directions, in ``model``'s dialect (``voxy.direction``):
     each part spoken with its own options, its SSML breaks (pause tags included)
     honoured, all joined into one ``Speech``."""
-    parts = plan_directions(text, model.markup_dialect(**kwargs), instruction=instruction)
+    parts = plan_directions(
+        text, model.markup_dialect(**kwargs), instruction=instruction
+    )
     native = model.native_break_s(**kwargs)
     plan = [
         (section, part.options)
