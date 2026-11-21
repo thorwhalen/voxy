@@ -1,4 +1,4 @@
-> built 2026-11-17 13:28 UTC from a7500ae (main) · voxy 0.0.74. Details: build_info.json
+> built 2026-11-21 19:24 UTC from 675dde0 (main) · voxy 0.0.75. Details: build_info.json
 
 # index.html.md
 
@@ -7925,7 +7925,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-17 13:28 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/a7500ae216089858a25ea068b007a63d0d8b64f3"><code>a7500ae</code></a> on branch <code>main</code>, for **voxy 0.0.74** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-21 19:24 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/675dde00c75eb546861dc1ff80da5ee2e958e705"><code>675dde0</code></a> on branch <code>main</code>, for **voxy 0.0.75** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -7934,7 +7934,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/a7500ae216089858a25ea068b007a63d0d8b64f3"><code>a7500ae216089858a25ea068b007a63d0d8b64f3</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/675dde00c75eb546861dc1ff80da5ee2e958e705"><code>675dde00c75eb546861dc1ff80da5ee2e958e705</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -7945,15 +7945,15 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/44092641854">44092641854</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/44940554460">44940554460</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>a7500ae216089858a25ea068b007a63d0d8b64f3</code> (in the history of the built commit) |
+| Event commit | <code>675dde00c75eb546861dc1ff80da5ee2e958e705</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.22  |
+| epythet  | 0.2.23  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
 | Python   | 3.12.16 |
@@ -7972,14 +7972,14 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.74/">0.0.74</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.75/">0.0.75</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout a7500ae216089858a25ea068b007a63d0d8b64f3
-pip install "epythet==0.2.22"
+git checkout 675dde00c75eb546861dc1ff80da5ee2e958e705
+pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

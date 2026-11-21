@@ -326,7 +326,7 @@
 </span><span id="line-113"><span class="w">    </span><span class="sd">"""Refuse writes under keys that aren't valid voice names."""</span>
 </span><span id="line-114">    <span class="kn">from</span><span class="w"> </span><span class="nn">dol</span><span class="w"> </span><span class="kn">import</span> <span class="n">wrap_kvs</span>
 </span><span id="line-115">
-</span><span id="line-116">    <span class="k">return</span> <span class="n">wrap_kvs</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">id_of_key</span><span class="o">=</span><span class="n">check_voice_name</span><span class="p">)</span>
+</span><span id="line-116">    <span class="k">return</span> <span class="n">wrap_kvs</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">key_encoder</span><span class="o">=</span><span class="n">check_voice_name</span><span class="p">)</span>
 </span><span id="line-117">
 </span><span id="line-118">
 <div class="viewcode-block" id="audio_store">
@@ -373,7 +373,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=d59c1f54"></script>
+    <script src="../../_static/documentation_options.js?v=71e49b4d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

@@ -358,53 +358,65 @@
 </span><span id="line-143">    <span class="k">if</span> <span class="n">cps</span> <span class="o">&lt;</span> <span class="n">min_chars_per_s</span><span class="p">:</span>
 </span><span id="line-144">        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">seconds</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s for </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s2"> chars (</span><span class="si">{</span><span class="n">cps</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">/s): too slow to be this text (noise, breath, silence?)"</span>
 </span><span id="line-145">    <span class="k">if</span> <span class="n">cps</span> <span class="o">&gt;</span> <span class="n">max_chars_per_s</span><span class="p">:</span>
-</span><span id="line-146">        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">seconds</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s for </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s2"> chars (</span><span class="si">{</span><span class="n">cps</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">/s): too fast (truncated?)"</span>
-</span><span id="line-147">    <span class="k">return</span> <span class="kc">None</span></div>
+</span><span id="line-146">        <span class="k">return</span> <span class="p">(</span>
+</span><span id="line-147">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">seconds</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s for </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s2"> chars (</span><span class="si">{</span><span class="n">cps</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">/s): too fast (truncated?)"</span>
+</span><span id="line-148">        <span class="p">)</span>
+</span><span id="line-149">    <span class="k">return</span> <span class="kc">None</span></div>
 
-</span><span id="line-148">
-</span><span id="line-149">
+</span><span id="line-150">
+</span><span id="line-151">
 <div class="viewcode-block" id="validated">
 <a class="viewcode-back" href="../../_autosummary/voxy.speech_cache.html#voxy.speech_cache.validated">[docs]</a>
-</span><span id="line-150"><span class="k">def</span><span class="w"> </span><span class="nf">validated</span><span class="p">(</span><span class="n">synthesize</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Speech</span><span class="p">],</span> <span class="n">validate</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Speech</span><span class="p">]:</span>
-</span><span id="line-151"><span class="w">    </span><span class="sd">"""``synthesize`` that re-asks (up to ``retries`` times) while ``validate(speech, text)``</span>
-</span><span id="line-152"><span class="sd">    reports a problem, then raises :class:`TakeRejected`."""</span>
-</span><span id="line-153">
-</span><span id="line-154">    <span class="k">def</span><span class="w"> </span><span class="nf">synth</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-155">        <span class="n">problems</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-156">        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">retries</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="line-157">            <span class="n">speech</span> <span class="o">=</span> <span class="n">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
-</span><span id="line-158">            <span class="n">problem</span> <span class="o">=</span> <span class="n">validate</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
-</span><span id="line-159">            <span class="k">if</span> <span class="n">problem</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-160">                <span class="k">return</span> <span class="n">speech</span>
-</span><span id="line-161">            <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">problem</span><span class="p">)</span>
-</span><span id="line-162">        <span class="k">raise</span> <span class="n">TakeRejected</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">problems</span><span class="p">)</span><span class="si">}</span><span class="s2"> takes of </span><span class="si">{</span><span class="n">text</span><span class="p">[:</span><span class="mi">60</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> rejected: </span><span class="si">{</span><span class="n">problems</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="line-163">
-</span><span id="line-164">    <span class="k">return</span> <span class="n">synth</span></div>
+</span><span id="line-152"><span class="k">def</span><span class="w"> </span><span class="nf">validated</span><span class="p">(</span>
+</span><span id="line-153">    <span class="n">synthesize</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Speech</span><span class="p">],</span> <span class="n">validate</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span id="line-154"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Speech</span><span class="p">]:</span>
+</span><span id="line-155"><span class="w">    </span><span class="sd">"""``synthesize`` that re-asks (up to ``retries`` times) while ``validate(speech, text)``</span>
+</span><span id="line-156"><span class="sd">    reports a problem, then raises :class:`TakeRejected`."""</span>
+</span><span id="line-157">
+</span><span id="line-158">    <span class="k">def</span><span class="w"> </span><span class="nf">synth</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-159">        <span class="n">problems</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-160">        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">retries</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="line-161">            <span class="n">speech</span> <span class="o">=</span> <span class="n">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+</span><span id="line-162">            <span class="n">problem</span> <span class="o">=</span> <span class="n">validate</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+</span><span id="line-163">            <span class="k">if</span> <span class="n">problem</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-164">                <span class="k">return</span> <span class="n">speech</span>
+</span><span id="line-165">            <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">problem</span><span class="p">)</span>
+</span><span id="line-166">        <span class="k">raise</span> <span class="n">TakeRejected</span><span class="p">(</span>
+</span><span id="line-167">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">problems</span><span class="p">)</span><span class="si">}</span><span class="s2"> takes of </span><span class="si">{</span><span class="n">text</span><span class="p">[:</span><span class="mi">60</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> rejected: </span><span class="si">{</span><span class="n">problems</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="line-168">        <span class="p">)</span>
+</span><span id="line-169">
+</span><span id="line-170">    <span class="k">return</span> <span class="n">synth</span></div>
 
-</span><span id="line-165">
-</span><span id="line-166">
+</span><span id="line-171">
+</span><span id="line-172">
 <div class="viewcode-block" id="cached_synthesizer">
 <a class="viewcode-back" href="../../_autosummary/voxy.speech_cache.html#voxy.speech_cache.cached_synthesizer">[docs]</a>
-</span><span id="line-167"><span class="k">def</span><span class="w"> </span><span class="nf">cached_synthesizer</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">cache</span><span class="p">:</span> <span class="n">MutableMapping</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Speech</span><span class="p">]:</span>
-</span><span id="line-168"><span class="w">    </span><span class="sd">"""``model.synthesize``, served from ``cache`` when the same request was made before.</span>
-</span><span id="line-169">
-</span><span id="line-170"><span class="sd">    A served result has ``cached=True``, so callers can tell spend from reuse.</span>
-</span><span id="line-171"><span class="sd">    ``validate(speech, text) -&gt; problem | None`` (e.g. :func:`speaking_rate_check`)</span>
-</span><span id="line-172"><span class="sd">    runs on every new take before it is cached: a bad take is re-asked up to</span>
-</span><span id="line-173"><span class="sd">    ``retries`` times and never stored, so a cache cannot freeze a broken take.</span>
-</span><span id="line-174"><span class="sd">    """</span>
-</span><span id="line-175">    <span class="n">fresh</span> <span class="o">=</span> <span class="n">validated</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">synthesize</span><span class="p">,</span> <span class="n">validate</span><span class="p">,</span> <span class="n">retries</span><span class="o">=</span><span class="n">retries</span><span class="p">)</span> <span class="k">if</span> <span class="n">validate</span> <span class="k">else</span> <span class="n">model</span><span class="o">.</span><span class="n">synthesize</span>
-</span><span id="line-176">
-</span><span id="line-177">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-178">        <span class="n">key</span> <span class="o">=</span> <span class="n">speech_key</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
-</span><span id="line-179">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-180">            <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">cached</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-181">        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-</span><span id="line-182">            <span class="n">speech</span> <span class="o">=</span> <span class="n">fresh</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
-</span><span id="line-183">            <span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">speech</span>
-</span><span id="line-184">            <span class="k">return</span> <span class="n">speech</span>
-</span><span id="line-185">
-</span><span id="line-186">    <span class="k">return</span> <span class="n">synthesize</span></div>
+</span><span id="line-173"><span class="k">def</span><span class="w"> </span><span class="nf">cached_synthesizer</span><span class="p">(</span>
+</span><span id="line-174">    <span class="n">model</span><span class="p">,</span> <span class="n">cache</span><span class="p">:</span> <span class="n">MutableMapping</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span>
+</span><span id="line-175"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Speech</span><span class="p">]:</span>
+</span><span id="line-176"><span class="w">    </span><span class="sd">"""``model.synthesize``, served from ``cache`` when the same request was made before.</span>
+</span><span id="line-177">
+</span><span id="line-178"><span class="sd">    A served result has ``cached=True``, so callers can tell spend from reuse.</span>
+</span><span id="line-179"><span class="sd">    ``validate(speech, text) -&gt; problem | None`` (e.g. :func:`speaking_rate_check`)</span>
+</span><span id="line-180"><span class="sd">    runs on every new take before it is cached: a bad take is re-asked up to</span>
+</span><span id="line-181"><span class="sd">    ``retries`` times and never stored, so a cache cannot freeze a broken take.</span>
+</span><span id="line-182"><span class="sd">    """</span>
+</span><span id="line-183">    <span class="n">fresh</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-184">        <span class="n">validated</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">synthesize</span><span class="p">,</span> <span class="n">validate</span><span class="p">,</span> <span class="n">retries</span><span class="o">=</span><span class="n">retries</span><span class="p">)</span>
+</span><span id="line-185">        <span class="k">if</span> <span class="n">validate</span>
+</span><span id="line-186">        <span class="k">else</span> <span class="n">model</span><span class="o">.</span><span class="n">synthesize</span>
+</span><span id="line-187">    <span class="p">)</span>
+</span><span id="line-188">
+</span><span id="line-189">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-190">        <span class="n">key</span> <span class="o">=</span> <span class="n">speech_key</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
+</span><span id="line-191">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-192">            <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">cached</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-193">        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+</span><span id="line-194">            <span class="n">speech</span> <span class="o">=</span> <span class="n">fresh</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+</span><span id="line-195">            <span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">speech</span>
+</span><span id="line-196">            <span class="k">return</span> <span class="n">speech</span>
+</span><span id="line-197">
+</span><span id="line-198">    <span class="k">return</span> <span class="n">synthesize</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -419,7 +431,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=d59c1f54"></script>
+    <script src="../../_static/documentation_options.js?v=71e49b4d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
