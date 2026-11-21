@@ -113,7 +113,7 @@ def _checked_names(store: MutableMapping) -> MutableMapping:
     """Refuse writes under keys that aren't valid voice names."""
     from dol import wrap_kvs
 
-    return wrap_kvs(store, id_of_key=check_voice_name)
+    return wrap_kvs(store, key_encoder=check_voice_name)
 
 
 def audio_store(
