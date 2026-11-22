@@ -6,6 +6,7 @@ Facade for voice generation: speech synthesis in any voice, on any service, plus
 
 To install:	`pip install voxy` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'voxy[fal]'` for those services). torch is not installed by default: the local CSM model and tensor helpers (`cleanup_audio`, `generate_speech`) need `'voxy[local]'`, and Whisper transcription `'voxy[transcription]'`; the local backends that run in their own environments (kokoro, f5tts, …) need neither. The part-of-speech heteronym detector (`voxy.speechtext.pos_detector`) needs `'voxy[pos]'` plus `python -m spacy download fr_core_news_sm`. The LLM proposer (`voxy.speechtext.llm_detector`) uses `'voxy[aix]'` unless you pass `chat=`.
 
+<!-- wads-docs: skip - calls ElevenLabs (API key, spends credits) -->
 ```python
 import voxy
 
@@ -25,6 +26,7 @@ Command line: `python -m voxy voices [--backend X]` and `python -m voxy speak "t
 
 ## Designing a voice from a description
 
+<!-- wads-docs: skip - calls ElevenLabs and creates a voice in your account -->
 ```python
 model = voxy.get_speech_model("elevenlabs")
 line = (
@@ -41,6 +43,7 @@ voxy.design_from_description(
 
 Change the voice of a recording (speech to speech, ElevenLabs): the words, timing and intonation stay the recording’s, the voice becomes the target’s. A correction can be spoken by anyone and come out in the narrator’s voice:
 
+<!-- wads-docs: skip - needs your own recording my_take.wav and an ElevenLabs key -->
 ```python
 voxy.speech_to_speech("my_take.wav", voice="ada").save("ada_take.mp3")
 ```
@@ -49,6 +52,7 @@ voxy.speech_to_speech("my_take.wav", voice="ada").save("ada_take.mp3")
 
 Mark delivery inline in eleven_v3’s bracket notation. voxy renders it for the engine that speaks: an inline-tags model (`eleven_v3`, `eleven_v4`) performs the tags; an instruction model (fal’s Seed Speech, OpenAI’s `gpt-4o-mini-tts`) gets the text cut where the direction changes, each part with a natural-language instruction; any other model gets the words only. Pause tags (`[beat]`, `[pause]`) become real silence wherever the model would not perform them.
 
+<!-- wads-docs: skip - calls fal.ai (FAL_KEY, spends credits) -->
 ```python
 voxy.text_to_speech(
     "[dryly] We all believe in agility. [beat] [wryly] But we disagree on how.",
@@ -66,6 +70,7 @@ voxy.dialect_for(
 
 Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them with exactly that much silence (as WAV; or, when you ask for a compressed `output_format` such as `mp3_44100_128`, in that format through ffmpeg, which is how to get 44.1 kHz on ElevenLabs tiers below Pro). `eleven_v3` and `eleven_v4` render no SSML, so every break is cut there:
 
+<!-- wads-docs: skip - calls ElevenLabs (API key) -->
 ```python
 model = voxy.ElevenLabsSpeechModel(
     model_id="eleven_v4"
@@ -119,6 +124,7 @@ Try [the csm spaces](https://huggingface.co/spaces/sesame/csm-1b) where you can 
 
 ### Basic Usage
 
+<!-- wads-docs: skip - needs the local CSM model installed (voxy[local]) -->
 ```python
 from voxy import create_speech_model
 
@@ -133,6 +139,7 @@ audio = model.generate_speech(
 
 ### Voice Cloning
 
+<!-- wads-docs: skip - needs the local CSM model installed (voxy[local]) -->
 ```python
 from voxy import create_speech_model
 
@@ -155,6 +162,7 @@ audio = model.generate_speech(
 
 ### Automatic Transcription
 
+<!-- wads-docs: skip - needs the local CSM model installed (voxy[local]) -->
 ```python
 from voxy import create_speech_model
 
@@ -179,6 +187,7 @@ audio = model.generate_speech(
 
 The module supports various input formats:
 
+<!-- wads-docs: skip - needs the local CSM model installed (voxy[local]) -->
 ```python
 # From file path
 voice_profile1 = model.clone_voice(
@@ -210,6 +219,7 @@ voice_profile4 = model.clone_voice(
 
 Install with `pip install 'voxy[elevenlabs]'` and set `ELEVEN_API_KEY` or `ELEVENLABS_API_KEY` (checked in that order), or pass `api_key=`.
 
+<!-- wads-docs: skip - needs the reader's own audio or score file -->
 ```python
 from voxy import create_speech_model
 
@@ -236,6 +246,7 @@ Live tests are opt-in: `VOXY_LIVE_ELEVENLABS=1` runs a short synthesis; adding `
 
 `kokoro` speaks in one of 54 stock voices (`af_heart`, `am_michael`, `bf_emma`, …) with Kokoro-82M (Apache-2.0) through kokoro-onnx, faster than realtime on a CPU. It runs in its own small environment, which `python -m voxy setup kokoro` builds (or the first call does); the model files (about 354 MB) are fetched from the Hugging Face hub on first use into `$VOXY_DATA_DIR/models/hf`, like every other local backend’s weights. Listing its voices needs neither. A voice’s first letter is its language (`a` American, `b` British, `f` French, `e` Spanish, `i` Italian, `p` Portuguese, `h` Hindi, `j` Japanese, `z` Chinese). It runs on Linux and macOS (an environment built with the older kokoro-onnx pins failed on macOS, thorwhalen/voxy#61; delete `$VOXY_DATA_DIR/envs/kokoro` and run `python -m voxy setup kokoro` if you still see that), with no cloud key.
 
+<!-- wads-docs: skip - builds a local environment and downloads about 354 MB of model files -->
 ```python
 voxy.text_to_speech("Hello.", "bf_emma", backend="kokoro", speed=1.1).save("hi.wav")
 voxy.list_voices("kokoro")
@@ -249,6 +260,7 @@ voxy.list_voices("kokoro")
 
 `voxy.replace_words` replaces a spoken phrase with a new one in the speaker’s voice: it finds the phrase in the recording’s ASR words, renders the new phrase (TTS in `voice=` by default, or any `render=`), cuts at the quietest moment near each end, matches the loudness of the speech it replaces (pauses excluded), crossfades, and checks that the new words are heard there and the old ones are gone. Pass `voice=` (the speaker’s voice) or `render=`.
 
+<!-- wads-docs: skip - needs the reader's own audio or score file -->
 ```python
 fixed = voxy.replace_words("narration.wav", "Anna Jones", "Anna Smith", voice="ada")
 fixed.passed, fixed.checks  # True, [{'check': 'heard', 'passed': True, ...}]
@@ -261,6 +273,7 @@ Replace the whole phrase around a word (first name and surname), not the word al
 
 Five local models clone a voice from one clean clip and its transcript: `voxcpm` (VoxCPM2), `qwen3tts` (Qwen3-TTS), `chatterbox`, `f5tts` (F5-TTS) and `xtts` (XTTS-v2). Each runs in its own Python environment, built on first use with [uv](https://docs.astral.sh/uv/) under `$VOXY_DATA_DIR/envs/` (weights under `$VOXY_DATA_DIR/models/`), so their clashing torch/transformers pins never touch yours. Requirements: `uv` and `ffmpeg` on the PATH.
 
+<!-- wads-docs: skip - fragment: uses the reader's own variables -->
 ```python
 import voxy
 from voxy.local_clone import reference_profile
@@ -277,6 +290,7 @@ Languages: VoxCPM2 (30 languages), Qwen3-TTS (10, pass `language="French"` etc.)
 
 **Which backend?** [docs/benchmarks.md]() compares the cloning backends on published benchmarks (French and English accuracy, voice likeness rated by people, arenas, licence, price, watermark), with tables, charts and a link to every source. The data is `voxy/data/benchmarks.json`; `python -m voxy benchmarks docs/benchmarks.md` regenerates the tables and charts after you edit it.
 
+<!-- wads-docs: skip - loads a heavy local model -->
 ```python
 model = voxy.create_speech_model("chatterbox", variant="multilingual")
 speech = model.synthesize("Bonjour à tous.", voice, language="fr")
@@ -305,6 +319,7 @@ Cards are titled with readable names (the backend, then the settings that vary, 
 
 `voxy.sing` sings a melody (MIDI, MusicXML, a music21 stream, or `voxy.score.Note`s) with lyrics in a voice; `voxy.convert_singing` re-voices a sung take, keeping its melody, words and timing. The backend is `soulx` ([SoulX-Singer](https://github.com/Soul-AILab/SoulX-Singer), Soul AI Lab, code and weights Apache-2.0), in its own environment like the local cloners: `python -m voxy setup soulx`, or built on first use (Python 3.11, torch 2.2; needs `uv` and `git`). SoulX-Singer is not pip-installable, so voxy fetches its repository at a pinned commit into `$VOXY_DATA_DIR/models/soulx/source/`; the weights (two 2.8 GB checkpoints plus RMVPE) come from the Hugging Face Hub at pinned revisions; `openai/whisper-base` (loaded by upstream for conversion) and g2p_en’s NLTK data are fetched unpinned, at their latest versions, on first use. Reading scores needs `'voxy[singing]'` ([audiate](https://github.com/thorwhalen/audiate), with music21 for MusicXML).
 
+<!-- wads-docs: skip - needs the reader's own audio or score file -->
 ```python
 import voxy
 
@@ -335,6 +350,7 @@ voxy.convert_singing("take.wav", voice=voice).save("take-revoiced.wav")
 
 Speech models misread words with two pronunciations (French *est* as the verb /ɛ/ or the noun /ɛst/, *plus*, *tous*, *fils*, the  *-ent* verbs), and a verse line’s capital makes it worse. An ASR check never sees it: Whisper writes “est” either way. Prepare the text, then audit the audio:
 
+<!-- wads-docs: skip - fragment: uses the reader's own variables -->
 ```python
 from voxy.speechtext import prepare_speech_text
 from voxy.pronounce import audit
@@ -357,6 +373,7 @@ voxy ships a short hand-made French table (`heteronym_readings("fr")`). For more
 
 voxy keeps voice data in stores (`MutableMapping`s) under `$VOXY_DATA_DIR` (default `~/.local/share/voxy`): `voices/{name}.json` records (with each backend’s saved profile, e.g. the ElevenLabs `voice_id`), `samples/{name}/` (audio a clone is made from), `sources/{name}/` (raw media). Every library function takes its stores as arguments (`voices=`, `samples=`), so any `MutableMapping` (another folder, S3) can stand in.
 
+<!-- wads-docs: skip - needs the reader's own audio or score file -->
 ```python
 from voxy import samples_store, clone_from_samples, load_voice, create_speech_model
 
@@ -389,6 +406,7 @@ export DFLT_VOXY_DEVICE=mps
 
 The module includes an audio cleanup function that normalizes volume and removes silence:
 
+<!-- wads-docs: skip - needs torch and torchcodec (voxy[local]) -->
 ```python
 from voxy import cleanup_audio
 import torchaudio
@@ -414,6 +432,7 @@ torchaudio.save("cleaned_audio.wav", cleaned_audio, sample_rate)
 
 You can disable audio cleanup when cloning a voice:
 
+<!-- wads-docs: skip - fragment: model and sample_voice.wav are the reader's own -->
 ```python
 voice_profile = model.clone_voice(
     audio_input="sample_voice.wav",

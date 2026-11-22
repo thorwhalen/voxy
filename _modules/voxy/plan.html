@@ -256,12 +256,16 @@
 </span><span id="line-52"><span class="sd">    text, every break cut into silence).</span>
 </span><span id="line-53"><span class="sd">    """</span>
 </span><span id="line-54">    <span class="n">dialect</span> <span class="o">=</span> <span class="n">dialect_for</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">model_id</span><span class="p">)</span> <span class="k">if</span> <span class="n">dialect</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dialect</span>
-</span><span id="line-55">    <span class="n">native</span> <span class="o">=</span> <span class="n">native_break_for</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">model_id</span><span class="p">)</span> <span class="k">if</span> <span class="n">native_break_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">native_break_s</span>
-</span><span id="line-56">    <span class="k">return</span> <span class="p">[</span>
-</span><span id="line-57">        <span class="n">Request</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">options</span><span class="p">),</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span><span class="p">)</span>
-</span><span id="line-58">        <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">plan_directions</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">dialect</span><span class="p">,</span> <span class="n">instruction</span><span class="o">=</span><span class="n">instruction</span><span class="p">)</span>
-</span><span id="line-59">        <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">plan_sections</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">native_break_s</span><span class="o">=</span><span class="n">native</span><span class="p">)</span>
-</span><span id="line-60">    <span class="p">]</span></div>
+</span><span id="line-55">    <span class="n">native</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-56">        <span class="n">native_break_for</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">model_id</span><span class="p">)</span>
+</span><span id="line-57">        <span class="k">if</span> <span class="n">native_break_s</span> <span class="ow">is</span> <span class="kc">None</span>
+</span><span id="line-58">        <span class="k">else</span> <span class="n">native_break_s</span>
+</span><span id="line-59">    <span class="p">)</span>
+</span><span id="line-60">    <span class="k">return</span> <span class="p">[</span>
+</span><span id="line-61">        <span class="n">Request</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">options</span><span class="p">),</span> <span class="n">section</span><span class="o">.</span><span class="n">pause_s</span><span class="p">)</span>
+</span><span id="line-62">        <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">plan_directions</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">dialect</span><span class="p">,</span> <span class="n">instruction</span><span class="o">=</span><span class="n">instruction</span><span class="p">)</span>
+</span><span id="line-63">        <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">plan_sections</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">native_break_s</span><span class="o">=</span><span class="n">native</span><span class="p">)</span>
+</span><span id="line-64">    <span class="p">]</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -276,7 +280,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=e264953e"></script>
+    <script src="../../_static/documentation_options.js?v=0a7e36fc"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
