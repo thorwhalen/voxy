@@ -73,6 +73,8 @@ local = [
 transcription = [
     "openai-whisper",
     "voxy[local]",
+    # voxy.pronounce.align_words: the fleet's text-to-heard-word aligner
+    "mixing>=0.0.123",
 ]
 # The ElevenLabs backend (create_speech_model("elevenlabs")); imported lazily.
 elevenlabs = [

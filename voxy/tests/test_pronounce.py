@@ -865,3 +865,36 @@ def test_align_missing_aligns_only_the_gap_between_the_words_asr_placed():
     # two placed words each side, plus a margin: "un deux est trois quatre", 0.0-4.65 s
     assert calls == [(["un", "deux", "est", "trois", "quatre"], 0.0, 4.65)]
     assert found[0].located == "text" and found[0].verdict.start == 1.0
+
+
+def test_align_words_gives_the_pairs_the_old_matcher_gave():
+    """voxy#135: the fleet's aligner (mixing) pairs words as voxy's difflib matcher did."""
+    from difflib import SequenceMatcher
+
+    from voxy.pronounce import _text_words, align_words, normal_word, split_elisions
+
+    def old(text, words, elisions=()):
+        said = [normal_word(w) for _, w, _ in _text_words(text, elisions=elisions)]
+        heard = [normal_word(w["text"]) for w in words]
+        blocks = SequenceMatcher(None, said, heard, autojunk=False).get_matching_blocks()
+        return {b.a + k: b.b + k for b in blocks for k in range(b.size)}
+
+    def timed(*texts):
+        return [{"text": t, "start": i * 0.3, "end": i * 0.3 + 0.25} for i, t in enumerate(texts)]
+
+    cases = [
+        ("Il est là", timed(" Il", " et", " est", " là."), ()),
+        ("the cat sat on the mat", timed(" The", " cat,", " sat", " on", " a", " mat."), ()),
+        ("rates will stay high", timed(" um", " rates", " will", " will", " stay", " high"), ()),
+        ("c'est l'été à Paris", split_elisions(timed(" c'est", " l'été", " à", " Paris."), elisions=("c", "l")), ("c", "l")),
+    ]
+    for text, words, elisions in cases:
+        assert align_words(text, words, elisions=elisions) == old(text, words, elisions), text
+
+
+def test_a_heard_word_that_is_only_punctuation_is_never_paired():
+    from voxy.pronounce import align_words
+
+    heard = [{"text": " so", "start": 0.0, "end": 0.2}, {"text": " ...", "start": 0.2, "end": 0.3},
+             {"text": " yes", "start": 0.3, "end": 0.5}]
+    assert align_words("so yes", heard) == {0: 0, 1: 2}
