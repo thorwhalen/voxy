@@ -257,7 +257,9 @@ def _character_settings(voice, instruction: str | None, kwargs: dict):
     ('Paris, 1882.', {'model_id': 'gpt-4o-mini-tts', 'speed': 1.1})
     """
     metadata = getattr(voice, "metadata", None) or {}
-    if not metadata.get("character"):  # other profiles' metadata is theirs, not settings
+    if not metadata.get(
+        "character"
+    ):  # other profiles' metadata is theirs, not settings
         return instruction, kwargs
     return (
         instruction or metadata.get("direction"),
