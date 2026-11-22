@@ -26,6 +26,7 @@ Backends are entries of ``voxy.speech_model_factories``; add one with
 """
 
 import os
+import warnings
 from dataclasses import replace
 from functools import partial
 from collections.abc import Mapping, MutableMapping
@@ -142,6 +143,7 @@ def text_to_speech(
     instruction: str | None = None,
     cache=None,
     validate=None,
+    language: str | None = None,
     **kwargs,
 ) -> Speech:
     """Speak ``text`` in ``voice`` and return the encoded audio (``.save(path)``).
@@ -179,8 +181,15 @@ def text_to_speech(
         validate: ``(speech, text) -> problem | None`` run on each new take
             (e.g. ``voxy.speaking_rate_check``): a failing take is re-asked
             twice, never cached, then ``TakeRejected`` is raised.
+        language: The language of ``text`` ('en', 'fr'), said once for every
+            engine: sent in the model's own option (Seed Speech ``language``,
+            ElevenLabs flash/turbo v2.5 and v3 ``language_code``; ``voxy.language``),
+            warned about and dropped on a model that takes none. Unset on a model
+            that guesses the language per request, a warning says so: such a model
+            has read an English sentence with numbers in it as Tagalog.
         **kwargs: Backend-specific options (e.g. ``output_format=`` for
-            ElevenLabs, ``speed=`` for aix, ``quality=`` for fal).
+            ElevenLabs, ``speed=`` for aix, ``quality=`` for fal). An explicit
+            option wins over the one ``language`` maps to.
     """
     if model is not None:
         backend = backend or model.name
@@ -190,6 +199,7 @@ def text_to_speech(
     model = model or get_speech_model(backend, models=models)
     if voice is None:
         voice = model.dflt_voice
+    kwargs = _with_language(model, language, kwargs)
     store = resolve_cache(cache)
     if store is not None:
         synth = cached_synthesizer(model, store, validate=validate)
@@ -212,6 +222,32 @@ def text_to_speech(
     if output_path:
         speech.save(output_path)
     return speech
+
+
+def _with_language(model: SpeechModel, language: str | None, kwargs: dict) -> dict:
+    """``kwargs`` with ``language`` in ``model``'s own option (``voxy.language``).
+
+    Explicit ``kwargs`` win. Warns when the language cannot be pinned on this model,
+    and when it is left unset on a model that guesses it per request.
+    """
+    option = model.language_option(**kwargs)
+    if language is None:
+        if option.detects and option.param not in kwargs:
+            warnings.warn(
+                f"{model.name!r} model guesses the language of each request; pass "
+                f"language= (e.g. 'en') to pin it, or a take may come back in another "
+                f"language",
+                stacklevel=3,
+            )
+        return kwargs
+    if option.param is None:
+        warnings.warn(
+            f"{model.name!r} model takes no language option; language={language!r} "
+            f"is ignored",
+            stacklevel=3,
+        )
+        return kwargs
+    return {option.param: language, **kwargs}
 
 
 def _requested_bitrate(options: Mapping) -> str | None:

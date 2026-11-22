@@ -37,6 +37,12 @@ from voxy.pauses import (
     register_native_breaks,
 )
 from voxy.plan import Request, plan_requests
+from voxy.language import (
+    LanguageOption,
+    language_option,
+    language_options,
+    register_language_option,
+)
 from voxy.direction import (
     DIRECTIONS,
     Dialect,
