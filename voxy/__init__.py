@@ -23,6 +23,7 @@ from voxy.elevenlabs_model import ElevenLabsSpeechModel
 from voxy.stores import voxy_data_dir, voices_store, samples_store, sources_store
 from voxy.library import (
     save_voice,
+    add_character,
     load_voice,
     find_voice,
     clone_from_samples,

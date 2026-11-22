@@ -76,6 +76,45 @@ def save_voice(
     return record
 
 
+def add_character(
+    name: str,
+    *,
+    voice: str,
+    backend: str,
+    direction: str | None = None,
+    model: str | None = None,
+    options: Mapping[str, Any] | None = None,
+    voices: MutableMapping | None = None,
+    **record_fields: Any,
+) -> dict:
+    """Save a character: a backend's stock ``voice`` plus the acting ``direction`` that
+    makes it someone, so ``text_to_speech(text, voice=name)`` applies both.
+
+    For an instruction model (OpenAI's ``gpt-4o-mini-tts``, Seed Speech) the direction
+    is most of the character: accent, era, temperament. It is the call's standing
+    ``instruction`` (a call's own ``instruction=`` replaces it); ``model`` is the
+    backend's model id to speak with and ``options`` any other synthesis options, both
+    under the call's own. Saved as the record's ``backend`` profile, like any voice, so
+    aliases and the other record fields work as for :func:`save_voice`.
+
+    >>> import tempfile
+    >>> voices = voices_store(rootdir=tempfile.mkdtemp())
+    >>> _ = add_character("sarah-bernhardt", voice="shimmer", backend="aix",
+    ...     direction="Light French accent, theatrical, Paris 1882.",
+    ...     model="gpt-4o-mini-tts", voices=voices)
+    >>> p = load_voice("sarah-bernhardt", model_type="aix", voices=voices)
+    >>> p.segment, p.metadata["direction"][:19], p.metadata["options"]
+    ('shimmer', 'Light French accent', {'model_id': 'gpt-4o-mini-tts'})
+    """
+    stores.check_voice_name(name)
+    settings = {**dict(options or {}), **({"model_id": model} if model else {})}
+    metadata = {"character": True, "direction": direction, "options": settings}
+    # A stock voice of a service has no sample rate of its own: 0 means unknown.
+    profile = VoiceProfile(voice, 0, backend, 0, metadata=metadata)
+    record_fields.setdefault("kind", "character")
+    return save_voice(name, profile, voices=voices, **record_fields)
+
+
 def find_voice(name: str, *, voices: Mapping | None = None) -> str | None:
     """The library key of the voice called ``name`` (case-insensitive, aliases too).
 

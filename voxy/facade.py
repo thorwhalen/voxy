@@ -136,7 +136,7 @@ def text_to_speech(
     backend: str | None = None,
     output_path: str | None = None,
     voices: Mapping | None = None,
-    model: SpeechModel | None = None,
+    model: SpeechModel | str | None = None,
     models: MutableMapping | None = None,
     use_library: bool = True,
     directions: str = "auto",
@@ -162,7 +162,9 @@ def text_to_speech(
             any registered). Inferred from library voices.
         output_path: Also save the audio there.
         voices: Voice library store (default ``voxy.voices_store()``).
-        model: A ready model to use (its backend is then the backend).
+        model: A ready model to use (its backend is then the backend), or the
+            name of the backend's model to use ('gpt-4o-mini-tts', 'eleven_v3'),
+            sent as the ``model_id`` option.
         models: Model cache to use instead of the shared one.
         use_library: Look ``voice`` up in the library first (False: always
             the backend's own voice of that name).
@@ -193,6 +195,9 @@ def text_to_speech(
             ElevenLabs, ``speed=`` for aix, ``quality=`` for fal). An explicit
             option wins over the one ``language`` maps to.
     """
+    if isinstance(model, str):  # the backend's model id, not a SpeechModel (#128)
+        kwargs = {"model_id": model, **kwargs}
+        model = None
     if model is not None:
         backend = backend or model.name
     backend, voice = resolve_voice(
@@ -201,6 +206,7 @@ def text_to_speech(
     model = model or get_speech_model(backend, models=models)
     if voice is None:
         voice = model.dflt_voice
+    instruction, kwargs = _character_settings(voice, instruction, kwargs)
     kwargs = _with_language(model, language, kwargs)
     store = resolve_cache(cache)
     if store is not None:
@@ -224,6 +230,22 @@ def text_to_speech(
     if output_path:
         speech.save(output_path)
     return speech
+
+
+def _character_settings(voice, instruction: str | None, kwargs: dict):
+    """A character's standing direction and synthesis options (``voxy.add_character``),
+    under the call's own: an explicit ``instruction`` or option wins.
+
+    >>> v = VoiceProfile("shimmer", 0, "aix", 0, metadata={"direction": "Paris, 1882.",
+    ...     "options": {"model_id": "gpt-4o-mini-tts"}})
+    >>> _character_settings(v, None, {"speed": 1.1})
+    ('Paris, 1882.', {'model_id': 'gpt-4o-mini-tts', 'speed': 1.1})
+    """
+    metadata = getattr(voice, "metadata", None) or {}
+    return (
+        instruction or metadata.get("direction"),
+        {**metadata.get("options", {}), **kwargs},
+    )
 
 
 def _with_language(model, language: str | None, kwargs: dict) -> dict:

@@ -73,12 +73,19 @@ class AixSpeechModel(SpeechModel):
     def synthesize(
         self, text, voice: VoiceProfile | str | None = None, **kwargs
     ) -> Speech:
-        """Speech from aix; extra kwargs (``speed=``, ``api_key=``...) go to aix."""
+        """Speech from aix; extra kwargs (``speed=``, ``api_key=``...) go to aix.
+
+        ``model_id=`` (or ``model=``) picks the TTS model for this call, so the facade
+        can name it the way it does for every backend (``model="gpt-4o-mini-tts"``).
+        """
         text = _resolve_text_input(text)
         voice = getattr(voice, "segment", voice)
         fmt = kwargs.pop("response_format", self.response_format)
+        model_id = kwargs.pop("model_id", None)
+        model = model_id or kwargs.pop("model", None) or self.model
+        kwargs.pop("model", None)
         result = self._tts(
-            text, model=self.model, voice=voice, response_format=fmt, **kwargs
+            text, model=model, voice=voice, response_format=fmt, **kwargs
         )
         audio = result if isinstance(result, bytes) else result.data
         return Speech(
