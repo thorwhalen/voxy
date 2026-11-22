@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Union
 import numpy as np
 
 from voxy.wavutil import pcm_to_float, read_wav
+
 # The longest <break> each ElevenLabs model renders itself: kept in voxy.pauses's registry
 # (native_break_for), re-exported here for the callers that read it from this module.
 from voxy.pauses import ELEVENLABS_NATIVE_BREAK_S

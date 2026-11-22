@@ -52,7 +52,11 @@ def plan_requests(
     text, every break cut into silence).
     """
     dialect = dialect_for(backend, model_id) if dialect is None else dialect
-    native = native_break_for(backend, model_id) if native_break_s is None else native_break_s
+    native = (
+        native_break_for(backend, model_id)
+        if native_break_s is None
+        else native_break_s
+    )
     return [
         Request(section.text, dict(part.options), section.pause_s)
         for part in plan_directions(text, dialect, instruction=instruction)
