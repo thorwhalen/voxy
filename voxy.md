@@ -1,4 +1,4 @@
-> built 2026-11-22 19:01 UTC from 9dead52 (main) · voxy 0.0.76. Details: build_info.json
+> built 2026-11-22 19:02 UTC from 445171e (main) · voxy 0.0.77. Details: build_info.json
 
 # index.html.md
 
@@ -8006,16 +8006,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-22 19:01 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/9dead52c5702a6db7f36e044aeca4589b0e42390"><code>9dead52</code></a> on branch <code>main</code>, for **voxy 0.0.76** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 19:02 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/445171ef2db79ba9dbeda019680e0af25a8096bf"><code>445171e</code></a> on branch <code>main</code>, for **voxy 0.0.77** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.77) is behind the latest release on PyPI (0.0.78): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/9dead52c5702a6db7f36e044aeca4589b0e42390"><code>9dead52c5702a6db7f36e044aeca4589b0e42390</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/445171ef2db79ba9dbeda019680e0af25a8096bf"><code>445171ef2db79ba9dbeda019680e0af25a8096bf</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -8026,9 +8028,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45058099201">45058099201</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45058113247">45058113247</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>e41100fa7bae8f98edf73fa566473de11e45bd72</code> (in the history of the built commit) |
+| Event commit | <code>9dead52c5702a6db7f36e044aeca4589b0e42390</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -8053,13 +8055,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.76/">0.0.76</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.78/">0.0.78</a>, newer than the documented version (0.0.77).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 9dead52c5702a6db7f36e044aeca4589b0e42390
+git checkout 445171ef2db79ba9dbeda019680e0af25a8096bf
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
