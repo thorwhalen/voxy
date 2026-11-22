@@ -35,7 +35,7 @@
 <link href="../_static/epythet.css?v=22887b56" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
-<link href="voxy.pronounce.html" rel="next" title="voxy.pronounce"/>
+<link href="voxy.plan.html" rel="next" title="voxy.plan"/>
 <link href="voxy.local_clone.html" rel="prev" title="voxy.local_clone"/>
 </head>
 <body :class="{ 'overflow-hidden': showSidebar }" class="min-h-screen font-sans antialiased bg-background text-foreground" x-data="{ showSidebar: false, showScrollTop: false }">
@@ -101,6 +101,7 @@
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.local_clone.html">voxy.local_clone</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">voxy.pauses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.plan.html">voxy.plan</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.pronounce.html">voxy.pronounce</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.say_model.html">voxy.say_model</a></li>
@@ -187,7 +188,10 @@ section: no other change is needed for that.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.pauses.BREAK_STRENGTH_S" title="voxy.pauses.BREAK_STRENGTH_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BREAK_STRENGTH_S</span></code></a></p></td>
 <td><p>Seconds for each SSML <code class="docutils literal notranslate"><span class="pre">strength</span></code> (SSML leaves them to the engine; these are Azure Speech's documented values).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.pauses.DFLT_SILENCE_RATE" title="voxy.pauses.DFLT_SILENCE_RATE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_SILENCE_RATE</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.pauses.ELEVENLABS_NATIVE_BREAK_S" title="voxy.pauses.ELEVENLABS_NATIVE_BREAK_S"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ELEVENLABS_NATIVE_BREAK_S</span></code></a></p></td>
+<td><p>The longest SSML <code class="docutils literal notranslate"><span class="pre">&lt;break&gt;</span></code> each ElevenLabs model renders itself (seconds).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.pauses.DFLT_SILENCE_RATE" title="voxy.pauses.DFLT_SILENCE_RATE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DFLT_SILENCE_RATE</span></code></a></p></td>
 <td><p>The rate of a render that is nothing but silence (no section had text).</p></td>
 </tr>
 </tbody>
@@ -210,11 +214,17 @@ section: no other change is needed for that.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#voxy.pauses.join_sections" title="voxy.pauses.join_sections"><code class="xref py py-obj docutils literal notranslate"><span class="pre">join_sections</span></code></a>(sections, synthesize, *[, ...])</p></td>
 <td><p>One <code class="docutils literal notranslate"><span class="pre">Speech</span></code>: each section spoken by <code class="docutils literal notranslate"><span class="pre">synthesize</span></code>, then its silence.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#voxy.pauses.parse_sections" title="voxy.pauses.parse_sections"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_sections</span></code></a>(text)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.pauses.native_break_for" title="voxy.pauses.native_break_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">native_break_for</span></code></a>(backend[, model_id])</p></td>
+<td><p>The longest SSML <code class="docutils literal notranslate"><span class="pre">&lt;break&gt;</span></code> <code class="docutils literal notranslate"><span class="pre">backend</span></code>'s model <code class="docutils literal notranslate"><span class="pre">model_id</span></code> renders itself (<code class="docutils literal notranslate"><span class="pre">0.0</span></code> when unknown: voxy then cuts at every break, which is exact on any model).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.pauses.parse_sections" title="voxy.pauses.parse_sections"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_sections</span></code></a>(text)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">text</span></code> cut at every SSML <code class="docutils literal notranslate"><span class="pre">&lt;break&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;mark&gt;</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.pauses.plan_sections" title="voxy.pauses.plan_sections"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plan_sections</span></code></a>(text, *[, native_break_s])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#voxy.pauses.plan_sections" title="voxy.pauses.plan_sections"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plan_sections</span></code></a>(text, *[, native_break_s])</p></td>
 <td><p>The sections to synthesize separately, for a backend that renders breaks of up to <code class="docutils literal notranslate"><span class="pre">native_break_s</span></code> seconds itself.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#voxy.pauses.register_native_breaks" title="voxy.pauses.register_native_breaks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_native_breaks</span></code></a>(backend, table)</p></td>
+<td><p>Declare the longest <code class="docutils literal notranslate"><span class="pre">&lt;break&gt;</span></code> each of <code class="docutils literal notranslate"><span class="pre">backend</span></code>'s models renders itself (<code class="docutils literal notranslate"><span class="pre">{model_id:</span> <span class="pre">seconds}</span></code>; a model not listed renders none).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#voxy.pauses.render_break" title="voxy.pauses.render_break"><code class="xref py py-obj docutils literal notranslate"><span class="pre">render_break</span></code></a>(seconds)</p></td>
 <td><p>The SSML break for <code class="docutils literal notranslate"><span class="pre">seconds</span></code>, in the form ElevenLabs documents.</p></td>
@@ -239,6 +249,14 @@ Azure Speech’s documented values). A bare <code class="docutils literal notran
 <dt class="sig sig-object py" id="voxy.pauses.DFLT_SILENCE_RATE">
 <span class="sig-prename descclassname"><span class="pre">voxy.pauses.</span></span><span class="sig-name descname"><span class="pre">DFLT_SILENCE_RATE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">24000</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.pauses.DFLT_SILENCE_RATE" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.pauses.DFLT_SILENCE_RATE'">¶</a></dt>
 <dd><p>The rate of a render that is nothing but silence (no section had text).</p>
+</dd></dl>
+<dl class="py data">
+<dt class="sig sig-object py" id="voxy.pauses.ELEVENLABS_NATIVE_BREAK_S">
+<span class="sig-prename descclassname"><span class="pre">voxy.pauses.</span></span><span class="sig-name descname"><span class="pre">ELEVENLABS_NATIVE_BREAK_S</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'eleven_flash_v2':</span> <span class="pre">3.0,</span> <span class="pre">'eleven_flash_v2_5':</span> <span class="pre">3.0,</span> <span class="pre">'eleven_monolingual_v1':</span> <span class="pre">3.0,</span> <span class="pre">'eleven_multilingual_v1':</span> <span class="pre">3.0,</span> <span class="pre">'eleven_multilingual_v2':</span> <span class="pre">3.0,</span> <span class="pre">'eleven_turbo_v2':</span> <span class="pre">3.0,</span> <span class="pre">'eleven_turbo_v2_5':</span> <span class="pre">3.0,</span> <span class="pre">'eleven_v3':</span> <span class="pre">0.0,</span> <span class="pre">'eleven_v4':</span> <span class="pre">0.0,</span> <span class="pre">'eleven_v4_turbo':</span> <span class="pre">0.0}</span></span><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.pauses.ELEVENLABS_NATIVE_BREAK_S" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.pauses.ELEVENLABS_NATIVE_BREAK_S'">¶</a></dt>
+<dd><p>The longest SSML <code class="docutils literal notranslate"><span class="pre">&lt;break&gt;</span></code> each ElevenLabs model renders itself (seconds).
+The v2 family honours <code class="docutils literal notranslate"><span class="pre">&lt;break</span> <span class="pre">time="..."/&gt;</span></code> up to 3 s; <code class="docutils literal notranslate"><span class="pre">eleven_v3</span></code> and
+<code class="docutils literal notranslate"><span class="pre">eleven_v4</span></code> support no SSML at all. A model not listed gets 0 (voxy cuts at
+every break, which is exact on any model).</p>
 </dd></dl>
 <dl class="py class">
 <dt class="sig sig-object py" id="voxy.pauses.Section">
@@ -316,6 +334,23 @@ render can be up to ~50 ms off; ask for WAV or PCM where that matters.</p>
 </dl>
 </dd></dl>
 <dl class="py function">
+<dt class="sig sig-object py" id="voxy.pauses.native_break_for">
+<span class="sig-prename descclassname"><span class="pre">voxy.pauses.</span></span><span class="sig-name descname"><span class="pre">native_break_for</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/pauses.html#native_break_for"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.pauses.native_break_for" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.pauses.native_break_for'">¶</a></dt>
+<dd><p>The longest SSML <code class="docutils literal notranslate"><span class="pre">&lt;break&gt;</span></code> <code class="docutils literal notranslate"><span class="pre">backend</span></code>’s model <code class="docutils literal notranslate"><span class="pre">model_id</span></code> renders itself
+(<code class="docutils literal notranslate"><span class="pre">0.0</span></code> when unknown: voxy then cuts at every break, which is exact on any model).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">native_break_for</span><span class="p">(</span><span class="s2">"elevenlabs"</span><span class="p">,</span> <span class="s2">"eleven_multilingual_v2"</span><span class="p">),</span> <span class="n">native_break_for</span><span class="p">(</span><span class="s2">"elevenlabs"</span><span class="p">,</span> <span class="s2">"eleven_v3"</span><span class="p">)</span>
+</span><span id="line-2"><span class="go">(3.0, 0.0)</span>
+</span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="n">native_break_for</span><span class="p">(</span><span class="s2">"kokoro"</span><span class="p">)</span>
+</span><span id="line-4"><span class="go">0.0</span>
+</span></code></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="voxy.pauses.parse_sections">
 <span class="sig-prename descclassname"><span class="pre">voxy.pauses.</span></span><span class="sig-name descname"><span class="pre">parse_sections</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/pauses.html#parse_sections"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.pauses.parse_sections" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.pauses.parse_sections'">¶</a></dt>
 <dd><p><code class="docutils literal notranslate"><span class="pre">text</span></code> cut at every SSML <code class="docutils literal notranslate"><span class="pre">&lt;break&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;mark&gt;</span></code>.</p>
@@ -354,6 +389,17 @@ section.</p>
 </dl>
 </dd></dl>
 <dl class="py function">
+<dt class="sig sig-object py" id="voxy.pauses.register_native_breaks">
+<span class="sig-prename descclassname"><span class="pre">voxy.pauses.</span></span><span class="sig-name descname"><span class="pre">register_native_breaks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/pauses.html#register_native_breaks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.pauses.register_native_breaks" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.pauses.register_native_breaks'">¶</a></dt>
+<dd><p>Declare the longest <code class="docutils literal notranslate"><span class="pre">&lt;break&gt;</span></code> each of <code class="docutils literal notranslate"><span class="pre">backend</span></code>’s models renders itself
+(<code class="docutils literal notranslate"><span class="pre">{model_id:</span> <span class="pre">seconds}</span></code>; a model not listed renders none).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><span class="highlight sphinx_autodoc_typehints-value"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" rel="nofollow noopener" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="kc"><span class="pre">None</span></span></code><svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a></span></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="voxy.pauses.render_break">
 <span class="sig-prename descclassname"><span class="pre">voxy.pauses.</span></span><span class="sig-name descname"><span class="pre">render_break</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seconds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/pauses.html#render_break"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.pauses.render_break" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.pauses.render_break'">¶</a></dt>
 <dd><p>The SSML break for <code class="docutils literal notranslate"><span class="pre">seconds</span></code>, in the form ElevenLabs documents.</p>
@@ -373,14 +419,17 @@ section.</p>
 <ul>
 <li><a :data-current="activeSection === '#voxy.pauses.BREAK_STRENGTH_S'" class="reference internal" href="#voxy.pauses.BREAK_STRENGTH_S"><code class="docutils literal notranslate"><span class="pre">BREAK_STRENGTH_S</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.DFLT_SILENCE_RATE'" class="reference internal" href="#voxy.pauses.DFLT_SILENCE_RATE"><code class="docutils literal notranslate"><span class="pre">DFLT_SILENCE_RATE</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.pauses.ELEVENLABS_NATIVE_BREAK_S'" class="reference internal" href="#voxy.pauses.ELEVENLABS_NATIVE_BREAK_S"><code class="docutils literal notranslate"><span class="pre">ELEVENLABS_NATIVE_BREAK_S</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.Section'" class="reference internal" href="#voxy.pauses.Section"><code class="docutils literal notranslate"><span class="pre">Section</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.break_seconds'" class="reference internal" href="#voxy.pauses.break_seconds"><code class="docutils literal notranslate"><span class="pre">break_seconds()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.decode_speech'" class="reference internal" href="#voxy.pauses.decode_speech"><code class="docutils literal notranslate"><span class="pre">decode_speech()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.encode_audio'" class="reference internal" href="#voxy.pauses.encode_audio"><code class="docutils literal notranslate"><span class="pre">encode_audio()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.has_pause_markup'" class="reference internal" href="#voxy.pauses.has_pause_markup"><code class="docutils literal notranslate"><span class="pre">has_pause_markup()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.join_sections'" class="reference internal" href="#voxy.pauses.join_sections"><code class="docutils literal notranslate"><span class="pre">join_sections()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.pauses.native_break_for'" class="reference internal" href="#voxy.pauses.native_break_for"><code class="docutils literal notranslate"><span class="pre">native_break_for()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.parse_sections'" class="reference internal" href="#voxy.pauses.parse_sections"><code class="docutils literal notranslate"><span class="pre">parse_sections()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.plan_sections'" class="reference internal" href="#voxy.pauses.plan_sections"><code class="docutils literal notranslate"><span class="pre">plan_sections()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.pauses.register_native_breaks'" class="reference internal" href="#voxy.pauses.register_native_breaks"><code class="docutils literal notranslate"><span class="pre">register_native_breaks()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.pauses.render_break'" class="reference internal" href="#voxy.pauses.render_break"><code class="docutils literal notranslate"><span class="pre">render_break()</span></code></a></li>
 </ul>
 </div>
@@ -395,7 +444,7 @@ section.</p>
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=71e49b4d"></script>
+<script src="../_static/documentation_options.js?v=461c1127"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

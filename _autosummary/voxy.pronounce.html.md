@@ -333,13 +333,18 @@ alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#col
 
 `{index of a word of text: index of the ASR word heard for it}`.
 
-Words are matched by aligning the two sequences (`difflib`), so a word ASR missed,
-merged or added elsewhere does not shift the others; a text word with no exact
-counterpart is left out. A word elided onto one of `elisions` counts as two
-(`_text_words()`).
+The fleet’s aligner, `mixing.transcript.align_words()` (shared with an and
+braidio), on voxy’s terms: words compared as [`normal_word()`](#voxy.pronounce.normal_word) says, each heard
+word kept whole (`split_elisions` has already cut it as the text is cut). A word
+ASR missed, merged or added elsewhere does not shift the others; a text word with no
+exact counterpart is left out, and so is a heard word that is only punctuation. A
+word elided onto one of `elisions` counts as two (`_text_words()`). Heard
+words are timed (`start`, `end`), in time order, as ASR gives them.
 
 ```pycon
->>> align_words("Il est là", [{"text": " Il"}, {"text": " et"}, {"text": " est"}, {"text": " là."}])
+>>> heard = [{"text": " Il", "start": 0.0, "end": 0.2}, {"text": " et", "start": 0.2, "end": 0.4},
+...          {"text": " est", "start": 0.4, "end": 0.6}, {"text": " là.", "start": 0.6, "end": 0.9}]
+>>> align_words("Il est là", heard)
 {0: 0, 1: 2, 2: 3}
 ```
 

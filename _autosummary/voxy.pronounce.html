@@ -36,7 +36,7 @@
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
 <link href="voxy.refprep.html" rel="next" title="voxy.refprep"/>
-<link href="voxy.pauses.html" rel="prev" title="voxy.pauses"/>
+<link href="voxy.plan.html" rel="prev" title="voxy.plan"/>
 </head>
 <body :class="{ 'overflow-hidden': showSidebar }" class="min-h-screen font-sans antialiased bg-background text-foreground" x-data="{ showSidebar: false, showScrollTop: false }">
 <div @click.self="showSidebar = false" class="fixed inset-0 z-50 overflow-hidden bg-background/80 backdrop-blur-sm md:hidden" x-cloak="" x-show="showSidebar"></div><div class="relative flex flex-col min-h-screen" id="page"><a class="absolute top-0 left-0 z-[100] block bg-background p-4 text-xl transition -translate-x-full opacity-0 focus:translate-x-0 focus:opacity-100" href="#content">
@@ -101,6 +101,7 @@
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.local_clone.html">voxy.local_clone</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.pauses.html">voxy.pauses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.plan.html">voxy.plan</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">voxy.pronounce</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.refprep.html">voxy.refprep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.say_model.html">voxy.say_model</a></li>
@@ -655,12 +656,17 @@ are totals in nats).</p>
 <dt class="sig sig-object py" id="voxy.pronounce.align_words">
 <span class="sig-prename descclassname"><span class="pre">voxy.pronounce.</span></span><span class="sig-name descname"><span class="pre">align_words</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">words</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">elisions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/pronounce.html#align_words"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.pronounce.align_words" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.pronounce.align_words'">¶</a></dt>
 <dd><p><code class="docutils literal notranslate"><span class="pre">{index</span> <span class="pre">of</span> <span class="pre">a</span> <span class="pre">word</span> <span class="pre">of</span> <span class="pre">text:</span> <span class="pre">index</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">ASR</span> <span class="pre">word</span> <span class="pre">heard</span> <span class="pre">for</span> <span class="pre">it}</span></code>.</p>
-<p>Words are matched by aligning the two sequences (<code class="docutils literal notranslate"><span class="pre">difflib</span></code>), so a word ASR missed,
-merged or added elsewhere does not shift the others; a text word with no exact
-counterpart is left out. A word elided onto one of <code class="docutils literal notranslate"><span class="pre">elisions</span></code> counts as two
-(<code class="xref py py-func docutils literal notranslate"><span class="pre">_text_words()</span></code>).</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">align_words</span><span class="p">(</span><span class="s2">"Il est là"</span><span class="p">,</span> <span class="p">[{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" Il"</span><span class="p">},</span> <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" et"</span><span class="p">},</span> <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" est"</span><span class="p">},</span> <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" là."</span><span class="p">}])</span>
-</span><span id="line-2"><span class="go">{0: 0, 1: 2, 2: 3}</span>
+<p>The fleet’s aligner, <code class="xref py py-func docutils literal notranslate"><span class="pre">mixing.transcript.align_words()</span></code> (shared with an and
+braidio), on voxy’s terms: words compared as <a class="reference internal" href="#voxy.pronounce.normal_word" title="voxy.pronounce.normal_word"><code class="xref py py-func docutils literal notranslate"><span class="pre">normal_word()</span></code></a> says, each heard
+word kept whole (<code class="docutils literal notranslate"><span class="pre">split_elisions</span></code> has already cut it as the text is cut). A word
+ASR missed, merged or added elsewhere does not shift the others; a text word with no
+exact counterpart is left out, and so is a heard word that is only punctuation. A
+word elided onto one of <code class="docutils literal notranslate"><span class="pre">elisions</span></code> counts as two (<code class="xref py py-func docutils literal notranslate"><span class="pre">_text_words()</span></code>). Heard
+words are timed (<code class="docutils literal notranslate"><span class="pre">start</span></code>, <code class="docutils literal notranslate"><span class="pre">end</span></code>), in time order, as ASR gives them.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">heard</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" Il"</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span> <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" et"</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">},</span>
+</span><span id="line-2"><span class="gp">... </span>         <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" est"</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="mf">0.6</span><span class="p">},</span> <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" là."</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="mf">0.6</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="mf">0.9</span><span class="p">}]</span>
+</span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="n">align_words</span><span class="p">(</span><span class="s2">"Il est là"</span><span class="p">,</span> <span class="n">heard</span><span class="p">)</span>
+</span><span id="line-4"><span class="go">{0: 0, 1: 2, 2: 3}</span>
 </span></code></pre></div>
 </div>
 <dl class="field-list simple">
@@ -1407,7 +1413,7 @@ inject <code class="docutils literal notranslate"><span class="pre">phrase_score
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=71e49b4d"></script>
+<script src="../_static/documentation_options.js?v=461c1127"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

@@ -1,0 +1,18 @@
+voxy.plan
+=========
+
+.. automodule:: voxy.plan
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      plan_requests
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Request
+   

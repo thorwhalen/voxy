@@ -1,4 +1,4 @@
-> built 2026-11-21 19:24 UTC from 675dde0 (main) · voxy 0.0.75. Details: build_info.json
+> built 2026-11-22 19:01 UTC from 9dead52 (main) · voxy 0.0.76. Details: build_info.json
 
 # index.html.md
 
@@ -1581,11 +1581,6 @@ the voice’s owner (or their guardian) to do so.
 24000
 ```
 
-### Module Attributes
-
-| [`ELEVENLABS_NATIVE_BREAK_S`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.ELEVENLABS_NATIVE_BREAK_S)   | The longest SSML `<break>` each ElevenLabs model renders itself (seconds).   |
-|------------------------------------------------------------------------------|------------------------------------------------------------------------------|
-
 ### Functions
 
 | [`default_elevenlabs_client_factory`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.default_elevenlabs_client_factory)(api_key)     | Build the official SDK client (imported lazily).                        |
@@ -1597,13 +1592,6 @@ the voice’s owner (or their guardian) to do so.
 | [`ElevenLabsSpeechModel`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.ElevenLabsSpeechModel)(\*[, api_key, ...])     | Speech model backed by the ElevenLabs API (Instant Voice Cloning + TTS).   |
 |------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
 | [`VoiceDesignPreview`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.VoiceDesignPreview)(generated_voice_id, audio) | One candidate voice from `design_voice_previews`: listen, then pick.       |
-
-### voxy.elevenlabs_model.ELEVENLABS_NATIVE_BREAK_S *= {'eleven_flash_v2': 3.0, 'eleven_flash_v2_5': 3.0, 'eleven_monolingual_v1': 3.0, 'eleven_multilingual_v1': 3.0, 'eleven_multilingual_v2': 3.0, 'eleven_turbo_v2': 3.0, 'eleven_turbo_v2_5': 3.0, 'eleven_v3': 0.0, 'eleven_v4': 0.0, 'eleven_v4_turbo': 0.0}*
-
-The longest SSML `<break>` each ElevenLabs model renders itself (seconds).
-The v2 family honours `<break time="..."/>` up to 3 s; `eleven_v3` and
-`eleven_v4` support no SSML at all. A model not listed gets 0 (voxy cuts at
-every break, which is exact on any model).
 
 ### *class* voxy.elevenlabs_model.ElevenLabsSpeechModel(, api_key=None, model_id='eleven_multilingual_v2', output_format='pcm_24000', client_factory=None, device=None)
 
@@ -1723,7 +1711,7 @@ Registry name of the backend (also each profile’s `model_type`).
 #### native_break_s(, model_id=None, \*\*\_)
 
 The longest `<break>` the call’s model renders (see
-[`ELEVENLABS_NATIVE_BREAK_S`](_autosummary/voxy.elevenlabs_model.html.md#voxy.elevenlabs_model.ELEVENLABS_NATIVE_BREAK_S)).
+`ELEVENLABS_NATIVE_BREAK_S`).
 
 ```pycon
 >>> m = ElevenLabsSpeechModel(model_id="eleven_v4")
@@ -2395,42 +2383,43 @@ True
 
 ### Modules
 
-| [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.                                                         |
-|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`align`](_autosummary/voxy.align.html.md#module-voxy.align)                         | Where each word of a known text is in a recording, to the character: forced alignment.                                                            |
-| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                                                                       |
-| [`benchmarks`](_autosummary/voxy.benchmarks.html.md#module-voxy.benchmarks)               | Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.                                                        |
-| [`diagnosis`](_autosummary/voxy.diagnosis.html.md#module-voxy.diagnosis)                 | Diagnosis pages: render one text through a grid of (model x parameters), listen side by side.                                                     |
-| [`direction`](_autosummary/voxy.direction.html.md#module-voxy.direction)                 | Delivery directions: one way to write *how* a line is said, rendered for whatever voice says it.                                                  |
-| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model)   | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.                                                                 |
-| [`envs`](_autosummary/voxy.envs.html.md#module-voxy.envs)                           | Isolated Python environments for backends whose dependencies clash with yours.                                                                    |
-| [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                       | Voice generation in one call, whatever the service behind it.                                                                                     |
-| [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)                 | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.                                                                 |
-| [`finetune`](_autosummary/voxy.finetune.html.md#module-voxy.finetune)                   | Fine-tuning datasets from prepared clips: one export per training recipe.                                                                         |
-| [`formant_singer`](_autosummary/voxy.formant_singer.html.md#module-voxy.formant_singer)       | A formant synthesiser that sings "la" on a list of notes: voices that belong to no one.                                                           |
-| [`kokoro_model`](_autosummary/voxy.kokoro_model.html.md#module-voxy.kokoro_model)           | Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.                                                                    |
-| [`lexique`](_autosummary/voxy.lexique.html.md#module-voxy.lexique)                     | French heteronyms derived from Lexique, to merge under voxy's hand-made table.                                                                    |
-| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                                                                              |
-| [`local_clone`](_autosummary/voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.                                                               |
-| [`pauses`](_autosummary/voxy.pauses.html.md#module-voxy.pauses)                       | Pauses in text to speak: SSML breaks, honoured on every backend.                                                                                  |
-| [`pronounce`](_autosummary/voxy.pronounce.html.md#module-voxy.pronounce)                 | Checking, in the audio, which reading of a flagged word a render used.                                                                            |
-| [`refprep`](_autosummary/voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.                                                        |
-| [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                                                                    |
-| [`score`](_autosummary/voxy.score.html.md#module-voxy.score)                         | Scores for singing: the notes of a melody (pitch, timing, word) in the form voxy's singing backends take, read from MIDI, MusicXML or plain code. |
-| [`script`](_autosummary/voxy.script.html.md#module-voxy.script)                       | Render a cast script: text segments, each read by its own voice, one audio file per section.                                                      |
-| [`separate`](_autosummary/voxy.separate.html.md#module-voxy.separate)                   | Split a recording into the voice and the rest (music, noise) before using the voice.                                                              |
-| [`singing`](_autosummary/voxy.singing.html.md#module-voxy.singing)                     | Singing: sing a score with lyrics in a voice (SVS), or re-voice a sung take (SVC).                                                                |
-| [`soulx`](_autosummary/voxy.soulx.html.md#module-voxy.soulx)                         | SoulX-Singer (Soul AI Lab, 2026; code and weights Apache-2.0): zero-shot singing voice synthesis and conversion, as the `soulx` singing backend.  |
-| [`speakers`](_autosummary/voxy.speakers.html.md#module-voxy.speakers)                   | Keep one speaker: find their voice in a recording and mark everyone else's words.                                                                 |
-| [`speech_cache`](_autosummary/voxy.speech_cache.html.md#module-voxy.speech_cache)           | A content-addressed cache of synthesized speech, so re-rendering unchanged text is free.                                                          |
-| [`speechtext`](_autosummary/voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                                                                              |
-| [`splice`](_autosummary/voxy.splice.html.md#module-voxy.splice)                       | Correct words in a recording, in the speaker's voice: find, render, splice, check.                                                                |
-| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.                                                                   |
-| [`textsplit`](_autosummary/voxy.textsplit.html.md#module-voxy.textsplit)                 | Split long text (a chapter) into chunks a speech model can say in one breath.                                                                     |
-| [`voicestudio_model`](_autosummary/voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).                                                                   |
-| [`wavutil`](_autosummary/voxy.wavutil.html.md#module-voxy.wavutil)                     | Mono PCM WAV in and out as float arrays, plus the few edits narration needs.                                                                      |
-| [`worker`](_autosummary/voxy.worker.html.md#module-voxy.worker)                       | Talk to a model running in another Python environment, as if it were local.                                                                       |
-| [`workers`](_autosummary/voxy.workers.html.md#module-voxy.workers)                     | Backend adapters run by `voxy.worker` inside each backend's own environment.                                                                      |
+| [`aix_model`](_autosummary/voxy.aix_model.html.md#module-voxy.aix_model)                 | Speech through aix (LiteLLM): OpenAI's TTS voices and the other providers LiteLLM routes.                                                          |
+|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`align`](_autosummary/voxy.align.html.md#module-voxy.align)                         | Where each word of a known text is in a recording, to the character: forced alignment.                                                             |
+| [`base`](_autosummary/voxy.base.html.md#module-voxy.base)                           | Voxy: A flexible speech synthesis and voice cloning module.                                                                                        |
+| [`benchmarks`](_autosummary/voxy.benchmarks.html.md#module-voxy.benchmarks)               | Published benchmarks of the cloning backends, kept as data, rendered as tables and charts.                                                         |
+| [`diagnosis`](_autosummary/voxy.diagnosis.html.md#module-voxy.diagnosis)                 | Diagnosis pages: render one text through a grid of (model x parameters), listen side by side.                                                      |
+| [`direction`](_autosummary/voxy.direction.html.md#module-voxy.direction)                 | Delivery directions: one way to write *how* a line is said, rendered for whatever voice says it.                                                   |
+| [`elevenlabs_model`](_autosummary/voxy.elevenlabs_model.html.md#module-voxy.elevenlabs_model)   | ElevenLabs backend for voxy: instant voice cloning and synthesis through the API.                                                                  |
+| [`envs`](_autosummary/voxy.envs.html.md#module-voxy.envs)                           | Isolated Python environments for backends whose dependencies clash with yours.                                                                     |
+| [`facade`](_autosummary/voxy.facade.html.md#module-voxy.facade)                       | Voice generation in one call, whatever the service behind it.                                                                                      |
+| [`fal_model`](_autosummary/voxy.fal_model.html.md#module-voxy.fal_model)                 | Speech through fal.ai, via falaw: many hosted TTS models, chosen by quality tier.                                                                  |
+| [`finetune`](_autosummary/voxy.finetune.html.md#module-voxy.finetune)                   | Fine-tuning datasets from prepared clips: one export per training recipe.                                                                          |
+| [`formant_singer`](_autosummary/voxy.formant_singer.html.md#module-voxy.formant_singer)       | A formant synthesiser that sings "la" on a list of notes: voices that belong to no one.                                                            |
+| [`kokoro_model`](_autosummary/voxy.kokoro_model.html.md#module-voxy.kokoro_model)           | Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.                                                                     |
+| [`lexique`](_autosummary/voxy.lexique.html.md#module-voxy.lexique)                     | French heteronyms derived from Lexique, to merge under voxy's hand-made table.                                                                     |
+| [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                                                                               |
+| [`local_clone`](_autosummary/voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.                                                                |
+| [`pauses`](_autosummary/voxy.pauses.html.md#module-voxy.pauses)                       | Pauses in text to speak: SSML breaks, honoured on every backend.                                                                                   |
+| [`plan`](_autosummary/voxy.plan.html.md#module-voxy.plan)                           | The requests one model needs for a directed text: the text and options of each, and the silence to splice after it, without synthesizing anything. |
+| [`pronounce`](_autosummary/voxy.pronounce.html.md#module-voxy.pronounce)                 | Checking, in the audio, which reading of a flagged word a render used.                                                                             |
+| [`refprep`](_autosummary/voxy.refprep.html.md#module-voxy.refprep)                     | Prepare a speaker's recordings for cloning and fine-tuning: clean, cut, transcribe, score.                                                         |
+| [`say_model`](_autosummary/voxy.say_model.html.md#module-voxy.say_model)                 | Local speech with the macOS `say` command: free, offline, no API key, no deps.                                                                     |
+| [`score`](_autosummary/voxy.score.html.md#module-voxy.score)                         | Scores for singing: the notes of a melody (pitch, timing, word) in the form voxy's singing backends take, read from MIDI, MusicXML or plain code.  |
+| [`script`](_autosummary/voxy.script.html.md#module-voxy.script)                       | Render a cast script: text segments, each read by its own voice, one audio file per section.                                                       |
+| [`separate`](_autosummary/voxy.separate.html.md#module-voxy.separate)                   | Split a recording into the voice and the rest (music, noise) before using the voice.                                                               |
+| [`singing`](_autosummary/voxy.singing.html.md#module-voxy.singing)                     | Singing: sing a score with lyrics in a voice (SVS), or re-voice a sung take (SVC).                                                                 |
+| [`soulx`](_autosummary/voxy.soulx.html.md#module-voxy.soulx)                         | SoulX-Singer (Soul AI Lab, 2026; code and weights Apache-2.0): zero-shot singing voice synthesis and conversion, as the `soulx` singing backend.   |
+| [`speakers`](_autosummary/voxy.speakers.html.md#module-voxy.speakers)                   | Keep one speaker: find their voice in a recording and mark everyone else's words.                                                                  |
+| [`speech_cache`](_autosummary/voxy.speech_cache.html.md#module-voxy.speech_cache)           | A content-addressed cache of synthesized speech, so re-rendering unchanged text is free.                                                           |
+| [`speechtext`](_autosummary/voxy.speechtext.html.md#module-voxy.speechtext)               | Display text vs speech text, and spotting words a model may misread.                                                                               |
+| [`splice`](_autosummary/voxy.splice.html.md#module-voxy.splice)                       | Correct words in a recording, in the speaker's voice: find, render, splice, check.                                                                 |
+| [`stores`](_autosummary/voxy.stores.html.md#module-voxy.stores)                       | Where voxy keeps its data: voice records and audio, as `MutableMapping` stores.                                                                    |
+| [`textsplit`](_autosummary/voxy.textsplit.html.md#module-voxy.textsplit)                 | Split long text (a chapter) into chunks a speech model can say in one breath.                                                                      |
+| [`voicestudio_model`](_autosummary/voxy.voicestudio_model.html.md#module-voxy.voicestudio_model) | Local description-prompted speech through VoiceStudio (Parler-TTS and friends).                                                                    |
+| [`wavutil`](_autosummary/voxy.wavutil.html.md#module-voxy.wavutil)                     | Mono PCM WAV in and out as float arrays, plus the few edits narration needs.                                                                       |
+| [`worker`](_autosummary/voxy.worker.html.md#module-voxy.worker)                       | Talk to a model running in another Python environment, as if it were local.                                                                        |
+| [`workers`](_autosummary/voxy.workers.html.md#module-voxy.workers)                     | Backend adapters run by `voxy.worker` inside each backend's own environment.                                                                       |
 
 
 # _autosummary/voxy.kokoro_model.html.md
@@ -3225,21 +3214,24 @@ section: no other change is needed for that.
 
 ### Module Attributes
 
-| [`BREAK_STRENGTH_S`](_autosummary/voxy.pauses.html.md#voxy.pauses.BREAK_STRENGTH_S)   | Seconds for each SSML `strength` (SSML leaves them to the engine; these are Azure Speech's documented values).   |
-|---------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| [`DFLT_SILENCE_RATE`](_autosummary/voxy.pauses.html.md#voxy.pauses.DFLT_SILENCE_RATE)  | The rate of a render that is nothing but silence (no section had text).                                          |
+| [`BREAK_STRENGTH_S`](_autosummary/voxy.pauses.html.md#voxy.pauses.BREAK_STRENGTH_S)          | Seconds for each SSML `strength` (SSML leaves them to the engine; these are Azure Speech's documented values).   |
+|----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
+| [`ELEVENLABS_NATIVE_BREAK_S`](_autosummary/voxy.pauses.html.md#voxy.pauses.ELEVENLABS_NATIVE_BREAK_S) | The longest SSML `<break>` each ElevenLabs model renders itself (seconds).                                       |
+| [`DFLT_SILENCE_RATE`](_autosummary/voxy.pauses.html.md#voxy.pauses.DFLT_SILENCE_RATE)         | The rate of a render that is nothing but silence (no section had text).                                          |
 
 ### Functions
 
-| [`break_seconds`](_autosummary/voxy.pauses.html.md#voxy.pauses.break_seconds)(attrs)                           | The silence a `<break>` asks for, from its attribute string.                                                                                        |
-|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`decode_speech`](_autosummary/voxy.pauses.html.md#voxy.pauses.decode_speech)(speech)                          | `(samples, rate)` of a `Speech`: WAV directly, anything else (mp3, ...) through ffmpeg.                                                             |
-| [`encode_audio`](_autosummary/voxy.pauses.html.md#voxy.pauses.encode_audio)(samples, rate, audio_format, \*)  | `samples` as `audio_format` bytes: WAV directly, anything else through ffmpeg (at `bitrate` if given, else the encoder default of `ffmpeg_encode`). |
-| [`has_pause_markup`](_autosummary/voxy.pauses.html.md#voxy.pauses.has_pause_markup)(text)                         | Whether `text` holds an SSML `<break>` or `<mark>`.                                                                                                 |
-| [`join_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.join_sections)(sections, synthesize, \*[, ...]) | One `Speech`: each section spoken by `synthesize`, then its silence.                                                                                |
-| [`parse_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.parse_sections)(text)                           | `text` cut at every SSML `<break>` and `<mark>`.                                                                                                    |
-| [`plan_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.plan_sections)(text, \*[, native_break_s])      | The sections to synthesize separately, for a backend that renders breaks of up to `native_break_s` seconds itself.                                  |
-| [`render_break`](_autosummary/voxy.pauses.html.md#voxy.pauses.render_break)(seconds)                          | The SSML break for `seconds`, in the form ElevenLabs documents.                                                                                     |
+| [`break_seconds`](_autosummary/voxy.pauses.html.md#voxy.pauses.break_seconds)(attrs)                           | The silence a `<break>` asks for, from its attribute string.                                                                                             |
+|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`decode_speech`](_autosummary/voxy.pauses.html.md#voxy.pauses.decode_speech)(speech)                          | `(samples, rate)` of a `Speech`: WAV directly, anything else (mp3, ...) through ffmpeg.                                                                  |
+| [`encode_audio`](_autosummary/voxy.pauses.html.md#voxy.pauses.encode_audio)(samples, rate, audio_format, \*)  | `samples` as `audio_format` bytes: WAV directly, anything else through ffmpeg (at `bitrate` if given, else the encoder default of `ffmpeg_encode`).      |
+| [`has_pause_markup`](_autosummary/voxy.pauses.html.md#voxy.pauses.has_pause_markup)(text)                         | Whether `text` holds an SSML `<break>` or `<mark>`.                                                                                                      |
+| [`join_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.join_sections)(sections, synthesize, \*[, ...]) | One `Speech`: each section spoken by `synthesize`, then its silence.                                                                                     |
+| [`native_break_for`](_autosummary/voxy.pauses.html.md#voxy.pauses.native_break_for)(backend[, model_id])          | The longest SSML `<break>` `backend`'s model `model_id` renders itself (`0.0` when unknown: voxy then cuts at every break, which is exact on any model). |
+| [`parse_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.parse_sections)(text)                           | `text` cut at every SSML `<break>` and `<mark>`.                                                                                                         |
+| [`plan_sections`](_autosummary/voxy.pauses.html.md#voxy.pauses.plan_sections)(text, \*[, native_break_s])      | The sections to synthesize separately, for a backend that renders breaks of up to `native_break_s` seconds itself.                                       |
+| [`register_native_breaks`](_autosummary/voxy.pauses.html.md#voxy.pauses.register_native_breaks)(backend, table)         | Declare the longest `<break>` each of `backend`'s models renders itself (`{model_id: seconds}`; a model not listed renders none).                        |
+| [`render_break`](_autosummary/voxy.pauses.html.md#voxy.pauses.render_break)(seconds)                          | The SSML break for `seconds`, in the form ElevenLabs documents.                                                                                          |
 
 ### Classes
 
@@ -3254,6 +3246,13 @@ Azure Speech’s documented values). A bare `<break/>` is `medium`.
 ### voxy.pauses.DFLT_SILENCE_RATE *= 24000*
 
 The rate of a render that is nothing but silence (no section had text).
+
+### voxy.pauses.ELEVENLABS_NATIVE_BREAK_S *= {'eleven_flash_v2': 3.0, 'eleven_flash_v2_5': 3.0, 'eleven_monolingual_v1': 3.0, 'eleven_multilingual_v1': 3.0, 'eleven_multilingual_v2': 3.0, 'eleven_turbo_v2': 3.0, 'eleven_turbo_v2_5': 3.0, 'eleven_v3': 0.0, 'eleven_v4': 0.0, 'eleven_v4_turbo': 0.0}*
+
+The longest SSML `<break>` each ElevenLabs model renders itself (seconds).
+The v2 family honours `<break time="..."/>` up to 3 s; `eleven_v3` and
+`eleven_v4` support no SSML at all. A model not listed gets 0 (voxy cuts at
+every break, which is exact on any model).
 
 ### *class* voxy.pauses.Section(text, pause_s=0.0, mark=None)
 
@@ -3318,6 +3317,21 @@ compressed one (default: ffmpeg), so a request for mp3 gets mp3 back. Lossy
 encoders pad each section by tens of milliseconds, so a pause in a compressed
 render can be up to ~50 ms off; ask for WAV or PCM where that matters.
 
+### voxy.pauses.native_break_for(backend, model_id=None)
+
+The longest SSML `<break>` `backend`’s model `model_id` renders itself
+(`0.0` when unknown: voxy then cuts at every break, which is exact on any model).
+
+```pycon
+>>> native_break_for("elevenlabs", "eleven_multilingual_v2"), native_break_for("elevenlabs", "eleven_v3")
+(3.0, 0.0)
+>>> native_break_for("kokoro")
+0.0
+```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
 ### voxy.pauses.parse_sections(text)
 
 `text` cut at every SSML `<break>` and `<mark>`.
@@ -3354,6 +3368,14 @@ section.
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Section`](_autosummary/voxy.pauses.html.md#voxy.pauses.Section)]
 
+### voxy.pauses.register_native_breaks(backend, table)
+
+Declare the longest `<break>` each of `backend`’s models renders itself
+(`{model_id: seconds}`; a model not listed renders none).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
+
 ### voxy.pauses.render_break(seconds)
 
 The SSML break for `seconds`, in the form ElevenLabs documents.
@@ -3365,6 +3387,60 @@ The SSML break for `seconds`, in the form ElevenLabs documents.
 
 * **Return type:**
   [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+
+# _autosummary/voxy.plan.html.md
+
+# voxy.plan
+
+The requests one model needs for a directed text: the text and options of each, and the
+silence to splice after it, without synthesizing anything.
+
+A caller that sends its own requests (its own client, cache key and billing) still needs
+voxy’s knowledge of how a model takes a directed line: its markup dialect
+([`voxy.direction`](_autosummary/voxy.direction.html.md#module-voxy.direction)) and the longest pause it renders itself ([`voxy.pauses`](_autosummary/voxy.pauses.html.md#module-voxy.pauses)).
+[`plan_requests()`](_autosummary/voxy.plan.html.md#voxy.plan.plan_requests) combines the two, as `voxy.text_to_speech` does before speaking.
+
+```pycon
+>>> [(r.text, r.options, r.pause_s) for r in plan_requests('Hello. <break time="5s"/> [whispers] Bye.', "elevenlabs", "eleven_v3")]
+[('Hello.', {}, 5.0), ('[whispers] Bye.', {}, 0.0)]
+>>> [(r.text, r.pause_s) for r in plan_requests('A. <break time="1s"/> B.', "elevenlabs", "eleven_multilingual_v2")]
+[('A. <break time="1s" /> B.', 0.0)]
+```
+
+### Functions
+
+| [`plan_requests`](_autosummary/voxy.plan.html.md#voxy.plan.plan_requests)(text, backend[, model_id, ...])   | The requests that speak `text` on `backend`'s model `model_id`, in order.   |
+|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+
+### Classes
+
+| [`Request`](_autosummary/voxy.plan.html.md#voxy.plan.Request)(text[, options, pause_s])   | One request to send: its `text` (SSML breaks the model renders itself kept inline), the synthesis `options` carrying its direction, and the `pause_s` of silence to splice after its audio.   |
+|--------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+
+### *class* voxy.plan.Request(text, options=dict(), pause_s=0.0)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+One request to send: its `text` (SSML breaks the model renders itself kept
+inline), the synthesis `options` carrying its direction, and the `pause_s` of
+silence to splice after its audio. A request with no text is a pause alone.
+
+### voxy.plan.plan_requests(text, backend, model_id=None, , instruction=None, dialect=None, native_break_s=None)
+
+The requests that speak `text` on `backend`’s model `model_id`, in order.
+
+`text` may hold delivery directions (`[dryly]`, `[beat]`) and SSML
+`<break>``s; ``instruction` is a direction for the whole text. The model’s
+dialect ([`voxy.direction.dialect_for()`](_autosummary/voxy.direction.html.md#voxy.direction.dialect_for)) decides how directions are sent, and
+the longest break it renders ([`voxy.pauses.native_break_for()`](_autosummary/voxy.pauses.html.md#voxy.pauses.native_break_for)) decides which
+breaks stay in the text and which become silence between requests. `dialect` and
+`native_break_s` override the two lookups (a model object passes its own). Pass
+the model id the caller will send: an unknown model is planned conservatively (plain
+text, every break cut into silence).
+
+* **Return type:**
+  [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Request`](_autosummary/voxy.plan.html.md#voxy.plan.Request)]
 
 
 # _autosummary/voxy.pronounce.html.md
@@ -3704,13 +3780,18 @@ alias of [`Callable`](https://docs.python.org/3/library/collections.abc.html#col
 
 `{index of a word of text: index of the ASR word heard for it}`.
 
-Words are matched by aligning the two sequences (`difflib`), so a word ASR missed,
-merged or added elsewhere does not shift the others; a text word with no exact
-counterpart is left out. A word elided onto one of `elisions` counts as two
-(`_text_words()`).
+The fleet’s aligner, `mixing.transcript.align_words()` (shared with an and
+braidio), on voxy’s terms: words compared as [`normal_word()`](_autosummary/voxy.pronounce.html.md#voxy.pronounce.normal_word) says, each heard
+word kept whole (`split_elisions` has already cut it as the text is cut). A word
+ASR missed, merged or added elsewhere does not shift the others; a text word with no
+exact counterpart is left out, and so is a heard word that is only punctuation. A
+word elided onto one of `elisions` counts as two (`_text_words()`). Heard
+words are timed (`start`, `end`), in time order, as ASR gives them.
 
 ```pycon
->>> align_words("Il est là", [{"text": " Il"}, {"text": " et"}, {"text": " est"}, {"text": " là."}])
+>>> heard = [{"text": " Il", "start": 0.0, "end": 0.2}, {"text": " et", "start": 0.2, "end": 0.4},
+...          {"text": " est", "start": 0.4, "end": 0.6}, {"text": " là.", "start": 0.6, "end": 0.9}]
+>>> align_words("Il est là", heard)
 {0: 0, 1: 2, 2: 3}
 ```
 
@@ -7925,7 +8006,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-21 19:24 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/675dde00c75eb546861dc1ff80da5ee2e958e705"><code>675dde0</code></a> on branch <code>main</code>, for **voxy 0.0.75** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 19:01 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/9dead52c5702a6db7f36e044aeca4589b0e42390"><code>9dead52</code></a> on branch <code>main</code>, for **voxy 0.0.76** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -7934,7 +8015,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/675dde00c75eb546861dc1ff80da5ee2e958e705"><code>675dde00c75eb546861dc1ff80da5ee2e958e705</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/9dead52c5702a6db7f36e044aeca4589b0e42390"><code>9dead52c5702a6db7f36e044aeca4589b0e42390</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -7945,9 +8026,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/44940554460">44940554460</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45058099201">45058099201</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>675dde00c75eb546861dc1ff80da5ee2e958e705</code> (in the history of the built commit) |
+| Event commit | <code>e41100fa7bae8f98edf73fa566473de11e45bd72</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -7972,13 +8053,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.75/">0.0.75</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.76/">0.0.76</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 675dde00c75eb546861dc1ff80da5ee2e958e705
+git checkout 9dead52c5702a6db7f36e044aeca4589b0e42390
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

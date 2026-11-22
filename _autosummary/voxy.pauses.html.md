@@ -38,21 +38,24 @@ section: no other change is needed for that.
 
 ### Module Attributes
 
-| [`BREAK_STRENGTH_S`](#voxy.pauses.BREAK_STRENGTH_S)   | Seconds for each SSML `strength` (SSML leaves them to the engine; these are Azure Speech's documented values).   |
-|---------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| [`DFLT_SILENCE_RATE`](#voxy.pauses.DFLT_SILENCE_RATE)  | The rate of a render that is nothing but silence (no section had text).                                          |
+| [`BREAK_STRENGTH_S`](#voxy.pauses.BREAK_STRENGTH_S)          | Seconds for each SSML `strength` (SSML leaves them to the engine; these are Azure Speech's documented values).   |
+|----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
+| [`ELEVENLABS_NATIVE_BREAK_S`](#voxy.pauses.ELEVENLABS_NATIVE_BREAK_S) | The longest SSML `<break>` each ElevenLabs model renders itself (seconds).                                       |
+| [`DFLT_SILENCE_RATE`](#voxy.pauses.DFLT_SILENCE_RATE)         | The rate of a render that is nothing but silence (no section had text).                                          |
 
 ### Functions
 
-| [`break_seconds`](#voxy.pauses.break_seconds)(attrs)                           | The silence a `<break>` asks for, from its attribute string.                                                                                        |
-|-------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`decode_speech`](#voxy.pauses.decode_speech)(speech)                          | `(samples, rate)` of a `Speech`: WAV directly, anything else (mp3, ...) through ffmpeg.                                                             |
-| [`encode_audio`](#voxy.pauses.encode_audio)(samples, rate, audio_format, \*)  | `samples` as `audio_format` bytes: WAV directly, anything else through ffmpeg (at `bitrate` if given, else the encoder default of `ffmpeg_encode`). |
-| [`has_pause_markup`](#voxy.pauses.has_pause_markup)(text)                         | Whether `text` holds an SSML `<break>` or `<mark>`.                                                                                                 |
-| [`join_sections`](#voxy.pauses.join_sections)(sections, synthesize, \*[, ...]) | One `Speech`: each section spoken by `synthesize`, then its silence.                                                                                |
-| [`parse_sections`](#voxy.pauses.parse_sections)(text)                           | `text` cut at every SSML `<break>` and `<mark>`.                                                                                                    |
-| [`plan_sections`](#voxy.pauses.plan_sections)(text, \*[, native_break_s])      | The sections to synthesize separately, for a backend that renders breaks of up to `native_break_s` seconds itself.                                  |
-| [`render_break`](#voxy.pauses.render_break)(seconds)                          | The SSML break for `seconds`, in the form ElevenLabs documents.                                                                                     |
+| [`break_seconds`](#voxy.pauses.break_seconds)(attrs)                           | The silence a `<break>` asks for, from its attribute string.                                                                                             |
+|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`decode_speech`](#voxy.pauses.decode_speech)(speech)                          | `(samples, rate)` of a `Speech`: WAV directly, anything else (mp3, ...) through ffmpeg.                                                                  |
+| [`encode_audio`](#voxy.pauses.encode_audio)(samples, rate, audio_format, \*)  | `samples` as `audio_format` bytes: WAV directly, anything else through ffmpeg (at `bitrate` if given, else the encoder default of `ffmpeg_encode`).      |
+| [`has_pause_markup`](#voxy.pauses.has_pause_markup)(text)                         | Whether `text` holds an SSML `<break>` or `<mark>`.                                                                                                      |
+| [`join_sections`](#voxy.pauses.join_sections)(sections, synthesize, \*[, ...]) | One `Speech`: each section spoken by `synthesize`, then its silence.                                                                                     |
+| [`native_break_for`](#voxy.pauses.native_break_for)(backend[, model_id])          | The longest SSML `<break>` `backend`'s model `model_id` renders itself (`0.0` when unknown: voxy then cuts at every break, which is exact on any model). |
+| [`parse_sections`](#voxy.pauses.parse_sections)(text)                           | `text` cut at every SSML `<break>` and `<mark>`.                                                                                                         |
+| [`plan_sections`](#voxy.pauses.plan_sections)(text, \*[, native_break_s])      | The sections to synthesize separately, for a backend that renders breaks of up to `native_break_s` seconds itself.                                       |
+| [`register_native_breaks`](#voxy.pauses.register_native_breaks)(backend, table)         | Declare the longest `<break>` each of `backend`'s models renders itself (`{model_id: seconds}`; a model not listed renders none).                        |
+| [`render_break`](#voxy.pauses.render_break)(seconds)                          | The SSML break for `seconds`, in the form ElevenLabs documents.                                                                                          |
 
 ### Classes
 
@@ -67,6 +70,13 @@ Azure Speech’s documented values). A bare `<break/>` is `medium`.
 ### voxy.pauses.DFLT_SILENCE_RATE *= 24000*
 
 The rate of a render that is nothing but silence (no section had text).
+
+### voxy.pauses.ELEVENLABS_NATIVE_BREAK_S *= {'eleven_flash_v2': 3.0, 'eleven_flash_v2_5': 3.0, 'eleven_monolingual_v1': 3.0, 'eleven_multilingual_v1': 3.0, 'eleven_multilingual_v2': 3.0, 'eleven_turbo_v2': 3.0, 'eleven_turbo_v2_5': 3.0, 'eleven_v3': 0.0, 'eleven_v4': 0.0, 'eleven_v4_turbo': 0.0}*
+
+The longest SSML `<break>` each ElevenLabs model renders itself (seconds).
+The v2 family honours `<break time="..."/>` up to 3 s; `eleven_v3` and
+`eleven_v4` support no SSML at all. A model not listed gets 0 (voxy cuts at
+every break, which is exact on any model).
 
 ### *class* voxy.pauses.Section(text, pause_s=0.0, mark=None)
 
@@ -131,6 +141,21 @@ compressed one (default: ffmpeg), so a request for mp3 gets mp3 back. Lossy
 encoders pad each section by tens of milliseconds, so a pause in a compressed
 render can be up to ~50 ms off; ask for WAV or PCM where that matters.
 
+### voxy.pauses.native_break_for(backend, model_id=None)
+
+The longest SSML `<break>` `backend`’s model `model_id` renders itself
+(`0.0` when unknown: voxy then cuts at every break, which is exact on any model).
+
+```pycon
+>>> native_break_for("elevenlabs", "eleven_multilingual_v2"), native_break_for("elevenlabs", "eleven_v3")
+(3.0, 0.0)
+>>> native_break_for("kokoro")
+0.0
+```
+
+* **Return type:**
+  [`float`](https://docs.python.org/3/builtins/functions.html#float)
+
 ### voxy.pauses.parse_sections(text)
 
 `text` cut at every SSML `<break>` and `<mark>`.
@@ -166,6 +191,14 @@ section.
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Section`](#voxy.pauses.Section)]
+
+### voxy.pauses.register_native_breaks(backend, table)
+
+Declare the longest `<break>` each of `backend`’s models renders itself
+(`{model_id: seconds}`; a model not listed renders none).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 ### voxy.pauses.render_break(seconds)
 

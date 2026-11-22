@@ -9,6 +9,7 @@ voxy.pauses
    .. autosummary::
    
       BREAK_STRENGTH_S
+      ELEVENLABS_NATIVE_BREAK_S
       DFLT_SILENCE_RATE
    
    .. rubric:: Functions
@@ -20,8 +21,10 @@ voxy.pauses
       encode_audio
       has_pause_markup
       join_sections
+      native_break_for
       parse_sections
       plan_sections
+      register_native_breaks
       render_break
    
    .. rubric:: Classes

@@ -27,6 +27,7 @@
    library
    local_clone
    pauses
+   plan
    pronounce
    refprep
    say_model
