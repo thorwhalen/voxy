@@ -29,7 +29,14 @@ from voxy.library import (
     design_from_description,
 )
 from voxy.splice import replace_words
-from voxy.pauses import Section, parse_sections, plan_sections
+from voxy.pauses import (
+    Section,
+    native_break_for,
+    parse_sections,
+    plan_sections,
+    register_native_breaks,
+)
+from voxy.plan import Request, plan_requests
 from voxy.direction import (
     DIRECTIONS,
     Dialect,

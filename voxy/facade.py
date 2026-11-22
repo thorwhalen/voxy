@@ -40,9 +40,9 @@ from voxy.base import (
     create_speech_model,
 )
 from voxy.library import find_voice, profile_from_record
-from voxy.pauses import encode_audio, has_pause_markup, join_sections, plan_sections
+from voxy.pauses import Section, encode_audio, has_pause_markup, join_sections, plan_sections
+from voxy.plan import plan_requests
 from voxy.direction import (
-    plan_directions,
     strip_directions,
     directions as _directions_in,
 )
@@ -246,21 +246,18 @@ def _speak_directed(
     """``text`` with delivery directions, in ``model``'s dialect (``voxy.direction``):
     each part spoken with its own options, its SSML breaks (pause tags included)
     honoured, all joined into one ``Speech``."""
-    parts = plan_directions(
-        text, model.markup_dialect(**kwargs), instruction=instruction
+    plan = plan_requests(  # the plan a caller with its own client gets (voxy.plan)
+        text,
+        model.name,
+        instruction=instruction,
+        dialect=model.markup_dialect(**kwargs),
+        native_break_s=model.native_break_s(**kwargs),
     )
-    native = model.native_break_s(**kwargs)
-    plan = [
-        (section, part.options)
-        for part in parts
-        for section in plan_sections(part.text, native_break_s=native)
-    ]
-    if len(plan) == 1 and not plan[0][0].pause_s:
-        section, options = plan[0]
-        speech = synth(section.text, voice, **{**kwargs, **options})
+    if len(plan) == 1 and not plan[0].pause_s:
+        speech = synth(plan[0].text, voice, **{**kwargs, **plan[0].options})
         return replace(speech, text=text)
     base = {**model.wav_synth_kwargs, **kwargs}
-    queue = iter([options for section, options in plan if section.text])
+    queue = iter([request.options for request in plan if request.text])
     flags: list[bool] = []
 
     def speak(part: str) -> Speech:
@@ -269,7 +266,7 @@ def _speak_directed(
         return speech
 
     speech = join_sections(
-        [section for section, _ in plan],
+        [Section(request.text, request.pause_s) for request in plan],
         speak,
         backend=model.name,
         encode=partial(encode_audio, bitrate=_requested_bitrate(base)),
