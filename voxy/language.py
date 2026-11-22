@@ -84,7 +84,9 @@ def language_name(code: str) -> str:
 
 # backend -> [(model-id glob, option)], first match wins; '*' matches a missing model id
 _LANGUAGE_OPTIONS: dict[str, list[tuple[str, LanguageOption]]] = {
-    "fal": [("fal-ai/bytedance/seed-speech/*", LanguageOption("language", detects=True))],
+    "fal": [
+        ("fal-ai/bytedance/seed-speech/*", LanguageOption("language", detects=True))
+    ],
     # ElevenLabs returns an error when a model cannot enforce a language, so only the
     # models documented to accept ``language_code`` get it; the rest take none.
     "elevenlabs": [
@@ -101,7 +103,9 @@ _LANGUAGE_OPTIONS: dict[str, list[tuple[str, LanguageOption]]] = {
 }
 
 
-def register_language_option(backend: str, model_glob: str, option: LanguageOption) -> None:
+def register_language_option(
+    backend: str, model_glob: str, option: LanguageOption
+) -> None:
     """Declare how ``backend``'s models matching ``model_glob`` take a language
     (checked before the ones already registered)."""
     _LANGUAGE_OPTIONS.setdefault(backend, []).insert(0, (model_glob, option))
