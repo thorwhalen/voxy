@@ -56,3 +56,38 @@ def test_model_as_a_string_is_the_backends_model_id():
     (kw,) = calls
     assert kw["model"] == "gpt-4o-mini-tts"
     assert kw["instructions"] == "Dry."  # the model id reached the dialect lookup too
+
+
+def test_a_direction_on_a_model_that_takes_none_warns(tmp_path):
+    voices = voices_store(rootdir=tmp_path)
+    add_character("narrator", voice="nova", backend="aix", direction="Warm.", voices=voices)  # no model named
+    model, calls = _aix()
+    with pytest.warns(UserWarning, match="takes no delivery instruction"):
+        text_to_speech("Hi.", "narrator", voices=voices, models={"aix": model})
+    assert "instructions" not in calls[0]
+
+
+def test_other_profiles_metadata_is_not_read_as_settings():
+    from voxy import VoiceProfile
+
+    model, calls = _aix()
+    cloned = VoiceProfile("nova", 0, "aix", 0, metadata={"options": {"speed": 9}, "direction": "x"})
+    text_to_speech("Hi.", cloned, models={"aix": model})
+    assert "speed" not in calls[0] and "instructions" not in calls[0]
+
+
+def test_add_character_refuses_unknown_backends_and_existing_voices(tmp_path):
+    from voxy import VoiceProfile, save_voice
+
+    voices = voices_store(rootdir=tmp_path)
+    with pytest.raises(ValueError, match="Unknown backend"):
+        add_character("x", voice="v", backend="nope", voices=voices)
+    save_voice("ada", VoiceProfile("el-ada", 1, "elevenlabs", 24000), voices=voices)
+    with pytest.raises(ValueError, match="not a character"):
+        add_character("ada", voice="nova", backend="aix", voices=voices)
+
+
+def test_model_and_model_id_naming_two_models_is_an_error():
+    model, _ = _aix()
+    with pytest.raises(ValueError, match="name two models"):
+        text_to_speech("Hi.", "nova", backend="aix", model="tts-1", model_id="gpt-4o-mini-tts", models={"aix": model})
