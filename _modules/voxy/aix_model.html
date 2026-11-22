@@ -280,21 +280,28 @@
 </span><span id="line-73">    <span class="k">def</span><span class="w"> </span><span class="nf">synthesize</span><span class="p">(</span>
 </span><span id="line-74">        <span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
 </span><span id="line-75">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-76"><span class="w">        </span><span class="sd">"""Speech from aix; extra kwargs (``speed=``, ``api_key=``...) go to aix."""</span>
-</span><span id="line-77">        <span class="n">text</span> <span class="o">=</span> <span class="n">_resolve_text_input</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-</span><span id="line-78">        <span class="n">voice</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="s2">"segment"</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span>
-</span><span id="line-79">        <span class="n">fmt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"response_format"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">response_format</span><span class="p">)</span>
-</span><span id="line-80">        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tts</span><span class="p">(</span>
-</span><span id="line-81">            <span class="n">text</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span> <span class="n">response_format</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
-</span><span id="line-82">        <span class="p">)</span>
-</span><span id="line-83">        <span class="n">audio</span> <span class="o">=</span> <span class="n">result</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">result</span><span class="o">.</span><span class="n">data</span>
-</span><span id="line-84">        <span class="k">return</span> <span class="n">Speech</span><span class="p">(</span>
-</span><span id="line-85">            <span class="n">audio</span><span class="p">,</span>
-</span><span id="line-86">            <span class="nb">format</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span>
-</span><span id="line-87">            <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-</span><span id="line-88">            <span class="n">voice</span><span class="o">=</span><span class="n">voice</span> <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s2">"voice"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-</span><span id="line-89">            <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
-</span><span id="line-90">        <span class="p">)</span></div>
+</span><span id="line-76"><span class="w">        </span><span class="sd">"""Speech from aix; extra kwargs (``speed=``, ``api_key=``...) go to aix.</span>
+</span><span id="line-77">
+</span><span id="line-78"><span class="sd">        ``model_id=`` (or ``model=``) picks the TTS model for this call, so the facade</span>
+</span><span id="line-79"><span class="sd">        can name it the way it does for every backend (``model="gpt-4o-mini-tts"``).</span>
+</span><span id="line-80"><span class="sd">        """</span>
+</span><span id="line-81">        <span class="n">text</span> <span class="o">=</span> <span class="n">_resolve_text_input</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+</span><span id="line-82">        <span class="n">voice</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="s2">"segment"</span><span class="p">,</span> <span class="n">voice</span><span class="p">)</span>
+</span><span id="line-83">        <span class="n">fmt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"response_format"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">response_format</span><span class="p">)</span>
+</span><span id="line-84">        <span class="n">model_id</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model_id"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-85">        <span class="n">model</span> <span class="o">=</span> <span class="n">model_id</span> <span class="ow">or</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span>
+</span><span id="line-86">        <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-87">        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tts</span><span class="p">(</span>
+</span><span id="line-88">            <span class="n">text</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">voice</span><span class="o">=</span><span class="n">voice</span><span class="p">,</span> <span class="n">response_format</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+</span><span id="line-89">        <span class="p">)</span>
+</span><span id="line-90">        <span class="n">audio</span> <span class="o">=</span> <span class="n">result</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span> <span class="k">else</span> <span class="n">result</span><span class="o">.</span><span class="n">data</span>
+</span><span id="line-91">        <span class="k">return</span> <span class="n">Speech</span><span class="p">(</span>
+</span><span id="line-92">            <span class="n">audio</span><span class="p">,</span>
+</span><span id="line-93">            <span class="nb">format</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span>
+</span><span id="line-94">            <span class="n">backend</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="line-95">            <span class="n">voice</span><span class="o">=</span><span class="n">voice</span> <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s2">"voice"</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+</span><span id="line-96">            <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+</span><span id="line-97">        <span class="p">)</span></div>
 </div>
 
 </span></code></pre></div>
@@ -310,7 +317,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=0a7e36fc"></script>
+    <script src="../../_static/documentation_options.js?v=ae06b2e5"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

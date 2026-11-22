@@ -209,6 +209,8 @@ lazily (<code class="docutils literal notranslate"><span class="pre">pip</span> 
 <dt class="sig sig-object py" id="voxy.aix_model.AixSpeechModel.synthesize">
 <span class="sig-name descname"><span class="pre">synthesize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/aix_model.html#AixSpeechModel.synthesize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.aix_model.AixSpeechModel.synthesize" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.aix_model.AixSpeechModel.synthesize'">¶</a></dt>
 <dd><p>Speech from aix; extra kwargs (<code class="docutils literal notranslate"><span class="pre">speed=</span></code>, <code class="docutils literal notranslate"><span class="pre">api_key=</span></code>…) go to aix.</p>
+<p><code class="docutils literal notranslate"><span class="pre">model_id=</span></code> (or <code class="docutils literal notranslate"><span class="pre">model=</span></code>) picks the TTS model for this call, so the facade
+can name it the way it does for every backend (<code class="docutils literal notranslate"><span class="pre">model="gpt-4o-mini-tts"</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="voxy.base.html#voxy.base.Speech" title="voxy.base.Speech"><code class="xref py py-class docutils literal notranslate"><span class="pre">Speech</span></code></a></span></p>
@@ -245,7 +247,7 @@ lazily (<code class="docutils literal notranslate"><span class="pre">pip</span> 
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=0a7e36fc"></script>
+<script src="../_static/documentation_options.js?v=ae06b2e5"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

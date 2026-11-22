@@ -8,6 +8,7 @@ voxy.library
 
    .. autosummary::
    
+      add_character
       clone_from_samples
       design_from_description
       find_voice

@@ -25,14 +25,45 @@ saved; a local model’s in-memory segment (CSM) cannot.
 
 ### Functions
 
-| [`clone_from_samples`](#voxy.library.clone_from_samples)(name, \*[, model, ...])        | Clone the voice `name` from its stored samples and save the profile.                 |
-|----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| [`design_from_description`](#voxy.library.design_from_description)(name, description, \*)    | Design a new voice from a text `description` and save it as `name`.                  |
-| [`find_voice`](#voxy.library.find_voice)(name, \*[, voices])                    | The library key of the voice called `name` (case-insensitive, aliases too).          |
-| [`load_voice`](#voxy.library.load_voice)(name, \*[, model_type, voices])        | The saved `model_type` profile of the voice called `name` (or an alias).             |
-| [`profile_from_record`](#voxy.library.profile_from_record)(record[, model_type, prefer]) | The record's saved `model_type` profile.                                             |
-| [`profile_to_dict`](#voxy.library.profile_to_dict)(profile)                          | A JSON-ready dict of `profile`; refuses segments that aren't plain data.             |
-| [`save_voice`](#voxy.library.save_voice)(name, profile, \*[, voices])           | Save `profile` under `name` (merged into any existing record) and return the record. |
+| [`add_character`](#voxy.library.add_character)(name, \*, voice, backend[, ...])    | Save a character: a backend's stock `voice` plus the acting `direction` that makes it someone, so `text_to_speech(text, voice=name)` applies both.   |
+|----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`clone_from_samples`](#voxy.library.clone_from_samples)(name, \*[, model, ...])        | Clone the voice `name` from its stored samples and save the profile.                                                                                 |
+| [`design_from_description`](#voxy.library.design_from_description)(name, description, \*)    | Design a new voice from a text `description` and save it as `name`.                                                                                  |
+| [`find_voice`](#voxy.library.find_voice)(name, \*[, voices])                    | The library key of the voice called `name` (case-insensitive, aliases too).                                                                          |
+| [`load_voice`](#voxy.library.load_voice)(name, \*[, model_type, voices])        | The saved `model_type` profile of the voice called `name` (or an alias).                                                                             |
+| [`profile_from_record`](#voxy.library.profile_from_record)(record[, model_type, prefer]) | The record's saved `model_type` profile.                                                                                                             |
+| [`profile_to_dict`](#voxy.library.profile_to_dict)(profile)                          | A JSON-ready dict of `profile`; refuses segments that aren't plain data.                                                                             |
+| [`save_voice`](#voxy.library.save_voice)(name, profile, \*[, voices])           | Save `profile` under `name` (merged into any existing record) and return the record.                                                                 |
+
+### voxy.library.add_character(name, , voice, backend, direction=None, model=None, options=None, voices=None, \*\*record_fields)
+
+Save a character: a backend’s stock `voice` plus the acting `direction` that
+makes it someone, so `text_to_speech(text, voice=name)` applies both.
+
+For an instruction model (OpenAI’s `gpt-4o-mini-tts`, Seed Speech) the direction
+is most of the character: accent, era, temperament. It is the call’s standing
+`instruction` (a call’s own `instruction=` replaces it); `model` is the
+backend’s model id to speak with and `options` any other synthesis options, both
+under the call’s own. Name a model that takes an instruction (on aix,
+`gpt-4o-mini-tts`): on one that takes none the direction is dropped, with a
+warning, and it is not sent at all with `directions="keep"` or `"strip"`. Saved
+as the record’s `backend` profile, like any voice, so aliases and the other
+record fields work as for [`save_voice()`](#voxy.library.save_voice); a name already used by a voice that
+is not a character is refused.
+
+```pycon
+>>> import tempfile
+>>> voices = voices_store(rootdir=tempfile.mkdtemp())
+>>> _ = add_character("sarah-bernhardt", voice="shimmer", backend="aix",
+...     direction="Light French accent, theatrical, Paris 1882.",
+...     model="gpt-4o-mini-tts", voices=voices)
+>>> p = load_voice("sarah-bernhardt", model_type="aix", voices=voices)
+>>> p.segment, p.metadata["direction"][:19], p.metadata["options"]
+('shimmer', 'Light French accent', {'model_id': 'gpt-4o-mini-tts'})
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 ### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, overwrite=False, display_name=None, \*\*clone_kwargs)
 

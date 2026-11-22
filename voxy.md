@@ -1,4 +1,4 @@
-> built 2026-11-22 22:12 UTC from b89f901 (main) · voxy 0.0.78. Details: build_info.json
+> built 2026-11-22 22:57 UTC from 7e12dc5 (main) · voxy 0.0.79. Details: build_info.json
 
 # index.html.md
 
@@ -73,6 +73,24 @@ voxy.dialect_for(
 ```
 
 Say the language once with `language=`: voxy sends it in each engine’s own option and spelling (Seed Speech `language`, ElevenLabs flash/turbo v2.5 and v3 `language_code`, Qwen3-TTS `"English"`; `voxy.language_option` says which, `voxy.register_language_option` adds a model), passes it through unchanged to a model nobody registered, drops it with a `LanguageIgnoredWarning` on a model known to take none (OpenAI, older ElevenLabs models), and gives a `LanguageUnsetWarning` when you leave it unset on a model that guesses the language per request.
+
+## Characters: a stock voice plus an acting direction
+
+On an instruction model the direction is most of a character (accent, era, temperament). Save it once with the voice and the model, then use the character by name like any library voice; a call’s own `instruction=` or options win:
+
+<!-- wads-docs: skip - calls OpenAI through aix (API key) -->
+```python
+voxy.add_character(
+    "sarah-bernhardt",
+    voice="shimmer",
+    backend="aix",
+    model="gpt-4o-mini-tts",
+    direction="Light French accent, theatrical, Paris 1882.",
+)
+voxy.text_to_speech("My dear, the stage is life.", "sarah-bernhardt", cache=True)
+```
+
+`model=` also takes a backend’s model id as a string (`text_to_speech(text, "nova", backend="aix", model="gpt-4o-mini-tts")`), sent as `model_id`.
 
 ## Pauses: SSML breaks, on any backend
 
@@ -514,6 +532,9 @@ Registry name of the backend (also each profile’s `model_type`).
 #### synthesize(text, voice=None, \*\*kwargs)
 
 Speech from aix; extra kwargs (`speed=`, `api_key=`…) go to aix.
+
+`model_id=` (or `model=`) picks the TTS model for this call, so the facade
+can name it the way it does for every backend (`model="gpt-4o-mini-tts"`).
 
 * **Return type:**
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
@@ -2175,7 +2196,9 @@ compressed format asked for, e.g. mp3, through ffmpeg)
     any registered). Inferred from library voices.
   * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Also save the audio there.
   * **voices** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice library store (default `voxy.voices_store()`).
-  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready model to use (its backend is then the backend).
+  * **model** ([`SpeechModel`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready model to use (its backend is then the backend), or the
+    name of the backend’s model to use (‘gpt-4o-mini-tts’, ‘eleven_v3’),
+    sent as the `model_id` option.
   * **models** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Model cache to use instead of the shared one.
   * **use_library** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Look `voice` up in the library first (False: always
     the backend’s own voice of that name).
@@ -2967,14 +2990,45 @@ saved; a local model’s in-memory segment (CSM) cannot.
 
 ### Functions
 
-| [`clone_from_samples`](_autosummary/voxy.library.html.md#voxy.library.clone_from_samples)(name, \*[, model, ...])        | Clone the voice `name` from its stored samples and save the profile.                 |
-|----------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| [`design_from_description`](_autosummary/voxy.library.html.md#voxy.library.design_from_description)(name, description, \*)    | Design a new voice from a text `description` and save it as `name`.                  |
-| [`find_voice`](_autosummary/voxy.library.html.md#voxy.library.find_voice)(name, \*[, voices])                    | The library key of the voice called `name` (case-insensitive, aliases too).          |
-| [`load_voice`](_autosummary/voxy.library.html.md#voxy.library.load_voice)(name, \*[, model_type, voices])        | The saved `model_type` profile of the voice called `name` (or an alias).             |
-| [`profile_from_record`](_autosummary/voxy.library.html.md#voxy.library.profile_from_record)(record[, model_type, prefer]) | The record's saved `model_type` profile.                                             |
-| [`profile_to_dict`](_autosummary/voxy.library.html.md#voxy.library.profile_to_dict)(profile)                          | A JSON-ready dict of `profile`; refuses segments that aren't plain data.             |
-| [`save_voice`](_autosummary/voxy.library.html.md#voxy.library.save_voice)(name, profile, \*[, voices])           | Save `profile` under `name` (merged into any existing record) and return the record. |
+| [`add_character`](_autosummary/voxy.library.html.md#voxy.library.add_character)(name, \*, voice, backend[, ...])    | Save a character: a backend's stock `voice` plus the acting `direction` that makes it someone, so `text_to_speech(text, voice=name)` applies both.   |
+|----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`clone_from_samples`](_autosummary/voxy.library.html.md#voxy.library.clone_from_samples)(name, \*[, model, ...])        | Clone the voice `name` from its stored samples and save the profile.                                                                                 |
+| [`design_from_description`](_autosummary/voxy.library.html.md#voxy.library.design_from_description)(name, description, \*)    | Design a new voice from a text `description` and save it as `name`.                                                                                  |
+| [`find_voice`](_autosummary/voxy.library.html.md#voxy.library.find_voice)(name, \*[, voices])                    | The library key of the voice called `name` (case-insensitive, aliases too).                                                                          |
+| [`load_voice`](_autosummary/voxy.library.html.md#voxy.library.load_voice)(name, \*[, model_type, voices])        | The saved `model_type` profile of the voice called `name` (or an alias).                                                                             |
+| [`profile_from_record`](_autosummary/voxy.library.html.md#voxy.library.profile_from_record)(record[, model_type, prefer]) | The record's saved `model_type` profile.                                                                                                             |
+| [`profile_to_dict`](_autosummary/voxy.library.html.md#voxy.library.profile_to_dict)(profile)                          | A JSON-ready dict of `profile`; refuses segments that aren't plain data.                                                                             |
+| [`save_voice`](_autosummary/voxy.library.html.md#voxy.library.save_voice)(name, profile, \*[, voices])           | Save `profile` under `name` (merged into any existing record) and return the record.                                                                 |
+
+### voxy.library.add_character(name, , voice, backend, direction=None, model=None, options=None, voices=None, \*\*record_fields)
+
+Save a character: a backend’s stock `voice` plus the acting `direction` that
+makes it someone, so `text_to_speech(text, voice=name)` applies both.
+
+For an instruction model (OpenAI’s `gpt-4o-mini-tts`, Seed Speech) the direction
+is most of the character: accent, era, temperament. It is the call’s standing
+`instruction` (a call’s own `instruction=` replaces it); `model` is the
+backend’s model id to speak with and `options` any other synthesis options, both
+under the call’s own. Name a model that takes an instruction (on aix,
+`gpt-4o-mini-tts`): on one that takes none the direction is dropped, with a
+warning, and it is not sent at all with `directions="keep"` or `"strip"`. Saved
+as the record’s `backend` profile, like any voice, so aliases and the other
+record fields work as for [`save_voice()`](_autosummary/voxy.library.html.md#voxy.library.save_voice); a name already used by a voice that
+is not a character is refused.
+
+```pycon
+>>> import tempfile
+>>> voices = voices_store(rootdir=tempfile.mkdtemp())
+>>> _ = add_character("sarah-bernhardt", voice="shimmer", backend="aix",
+...     direction="Light French accent, theatrical, Paris 1882.",
+...     model="gpt-4o-mini-tts", voices=voices)
+>>> p = load_voice("sarah-bernhardt", model_type="aix", voices=voices)
+>>> p.segment, p.metadata["direction"][:19], p.metadata["options"]
+('shimmer', 'Light French accent', {'model_id': 'gpt-4o-mini-tts'})
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
 
 ### voxy.library.clone_from_samples(name, , model=None, model_type='elevenlabs', samples=None, voices=None, record_fields=None, overwrite=False, display_name=None, \*\*clone_kwargs)
 
@@ -8199,7 +8253,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-22 22:12 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/b89f901c47db3c0a11bd46a1cfaf71dfe1a87155"><code>b89f901</code></a> on branch <code>main</code>, for **voxy 0.0.78** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 22:57 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/7e12dc56dc116364ca634ed6f85fa146262a6c41"><code>7e12dc5</code></a> on branch <code>main</code>, for **voxy 0.0.79** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -8208,7 +8262,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/b89f901c47db3c0a11bd46a1cfaf71dfe1a87155"><code>b89f901c47db3c0a11bd46a1cfaf71dfe1a87155</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/7e12dc56dc116364ca634ed6f85fa146262a6c41"><code>7e12dc56dc116364ca634ed6f85fa146262a6c41</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -8219,9 +8273,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45076155524">45076155524</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45080181251">45080181251</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>b89f901c47db3c0a11bd46a1cfaf71dfe1a87155</code> (in the history of the built commit) |
+| Event commit | <code>7e12dc56dc116364ca634ed6f85fa146262a6c41</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -8246,13 +8300,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.78/">0.0.78</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.79/">0.0.79</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout b89f901c47db3c0a11bd46a1cfaf71dfe1a87155
+git checkout 7e12dc56dc116364ca634ed6f85fa146262a6c41
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

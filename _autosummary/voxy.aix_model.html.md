@@ -47,6 +47,9 @@ Registry name of the backend (also each profile’s `model_type`).
 
 Speech from aix; extra kwargs (`speed=`, `api_key=`…) go to aix.
 
+`model_id=` (or `model=`) picks the TTS model for this call, so the facade
+can name it the way it does for every backend (`model="gpt-4o-mini-tts"`).
+
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)
 

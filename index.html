@@ -200,6 +200,22 @@
 </div>
 <p>Say the language once with <code class="docutils literal notranslate"><span class="pre">language=</span></code>: voxy sends it in each engine’s own option and spelling (Seed Speech <code class="docutils literal notranslate"><span class="pre">language</span></code>, ElevenLabs flash/turbo v2.5 and v3 <code class="docutils literal notranslate"><span class="pre">language_code</span></code>, Qwen3-TTS <code class="docutils literal notranslate"><span class="pre">"English"</span></code>; <code class="docutils literal notranslate"><span class="pre">voxy.language_option</span></code> says which, <code class="docutils literal notranslate"><span class="pre">voxy.register_language_option</span></code> adds a model), passes it through unchanged to a model nobody registered, drops it with a <code class="docutils literal notranslate"><span class="pre">LanguageIgnoredWarning</span></code> on a model known to take none (OpenAI, older ElevenLabs models), and gives a <code class="docutils literal notranslate"><span class="pre">LanguageUnsetWarning</span></code> when you leave it unset on a model that guesses the language per request.</p>
 </section>
+<section id="characters-a-stock-voice-plus-an-acting-direction">
+<h2>Characters: a stock voice plus an acting direction<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#characters-a-stock-voice-plus-an-acting-direction" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#characters-a-stock-voice-plus-an-acting-direction'">¶</a></h2>
+<p>On an instruction model the direction is most of a character (accent, era, temperament). Save it once with the voice and the model, then use the character by name like any library voice; a call’s own <code class="docutils literal notranslate"><span class="pre">instruction=</span></code> or options win:</p>
+
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">voxy</span><span class="o">.</span><span class="n">add_character</span><span class="p">(</span>
+</span><span id="line-2">    <span class="s2">"sarah-bernhardt"</span><span class="p">,</span>
+</span><span id="line-3">    <span class="n">voice</span><span class="o">=</span><span class="s2">"shimmer"</span><span class="p">,</span>
+</span><span id="line-4">    <span class="n">backend</span><span class="o">=</span><span class="s2">"aix"</span><span class="p">,</span>
+</span><span id="line-5">    <span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o-mini-tts"</span><span class="p">,</span>
+</span><span id="line-6">    <span class="n">direction</span><span class="o">=</span><span class="s2">"Light French accent, theatrical, Paris 1882."</span><span class="p">,</span>
+</span><span id="line-7"><span class="p">)</span>
+</span><span id="line-8"><span class="n">voxy</span><span class="o">.</span><span class="n">text_to_speech</span><span class="p">(</span><span class="s2">"My dear, the stage is life."</span><span class="p">,</span> <span class="s2">"sarah-bernhardt"</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">model=</span></code> also takes a backend’s model id as a string (<code class="docutils literal notranslate"><span class="pre">text_to_speech(text,</span> <span class="pre">"nova",</span> <span class="pre">backend="aix",</span> <span class="pre">model="gpt-4o-mini-tts")</span></code>), sent as <code class="docutils literal notranslate"><span class="pre">model_id</span></code>.</p>
+</section>
 <section id="pauses-ssml-breaks-on-any-backend">
 <h2>Pauses: SSML breaks, on any backend<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#pauses-ssml-breaks-on-any-backend" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#pauses-ssml-breaks-on-any-backend'">¶</a></h2>
 <p>Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them with exactly that much silence (as WAV; or, when you ask for a compressed <code class="docutils literal notranslate"><span class="pre">output_format</span></code> such as <code class="docutils literal notranslate"><span class="pre">mp3_44100_128</span></code>, in that format through ffmpeg, which is how to get 44.1 kHz on ElevenLabs tiers below Pro). <code class="docutils literal notranslate"><span class="pre">eleven_v3</span></code> and <code class="docutils literal notranslate"><span class="pre">eleven_v4</span></code> render no SSML, so every break is cut there:</p>
@@ -564,12 +580,13 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-22 22:12 UTC from <a href="https://github.com/thorwhalen/voxy/commit/b89f901c47db3c0a11bd46a1cfaf71dfe1a87155">b89f901</a> (main) · voxy 0.0.78 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-22 22:57 UTC from <a href="https://github.com/thorwhalen/voxy/commit/7e12dc56dc116364ca634ed6f85fa146262a6c41">7e12dc5</a> (main) · voxy 0.0.79 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
 <li><a :data-current="activeSection === '#designing-a-voice-from-a-description'" class="reference internal" href="#designing-a-voice-from-a-description">Designing a voice from a description</a></li>
 <li><a :data-current="activeSection === '#delivery-directions-dryly-beat-on-any-backend'" class="reference internal" href="#delivery-directions-dryly-beat-on-any-backend">Delivery directions: <code class="docutils literal notranslate"><span class="pre">[dryly]</span></code>, <code class="docutils literal notranslate"><span class="pre">[beat]</span></code>, on any backend</a></li>
+<li><a :data-current="activeSection === '#characters-a-stock-voice-plus-an-acting-direction'" class="reference internal" href="#characters-a-stock-voice-plus-an-acting-direction">Characters: a stock voice plus an acting direction</a></li>
 <li><a :data-current="activeSection === '#pauses-ssml-breaks-on-any-backend'" class="reference internal" href="#pauses-ssml-breaks-on-any-backend">Pauses: SSML breaks, on any backend</a></li>
 <li><a :data-current="activeSection === '#features'" class="reference internal" href="#features">Features</a></li>
 <li><a :data-current="activeSection === '#installation'" class="reference internal" href="#installation">Installation</a><ul>
@@ -615,7 +632,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=0a7e36fc"></script>
+<script src="_static/documentation_options.js?v=ae06b2e5"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

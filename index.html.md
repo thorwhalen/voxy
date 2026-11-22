@@ -70,6 +70,24 @@ voxy.dialect_for(
 
 Say the language once with `language=`: voxy sends it in each engine’s own option and spelling (Seed Speech `language`, ElevenLabs flash/turbo v2.5 and v3 `language_code`, Qwen3-TTS `"English"`; `voxy.language_option` says which, `voxy.register_language_option` adds a model), passes it through unchanged to a model nobody registered, drops it with a `LanguageIgnoredWarning` on a model known to take none (OpenAI, older ElevenLabs models), and gives a `LanguageUnsetWarning` when you leave it unset on a model that guesses the language per request.
 
+## Characters: a stock voice plus an acting direction
+
+On an instruction model the direction is most of a character (accent, era, temperament). Save it once with the voice and the model, then use the character by name like any library voice; a call’s own `instruction=` or options win:
+
+<!-- wads-docs: skip - calls OpenAI through aix (API key) -->
+```python
+voxy.add_character(
+    "sarah-bernhardt",
+    voice="shimmer",
+    backend="aix",
+    model="gpt-4o-mini-tts",
+    direction="Light French accent, theatrical, Paris 1882.",
+)
+voxy.text_to_speech("My dear, the stage is life.", "sarah-bernhardt", cache=True)
+```
+
+`model=` also takes a backend’s model id as a string (`text_to_speech(text, "nova", backend="aix", model="gpt-4o-mini-tts")`), sent as `model_id`.
+
 ## Pauses: SSML breaks, on any backend
 
 Write silences as standard SSML breaks in the text. voxy keeps a break the backend renders itself (ElevenLabs’ v2 models, up to 3 s) and, for any other one, speaks the parts separately and joins them with exactly that much silence (as WAV; or, when you ask for a compressed `output_format` such as `mp3_44100_128`, in that format through ffmpeg, which is how to get 44.1 kHz on ElevenLabs tiers below Pro). `eleven_v3` and `eleven_v4` render no SSML, so every break is cut there:

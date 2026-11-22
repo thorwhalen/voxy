@@ -130,7 +130,9 @@ compressed format asked for, e.g. mp3, through ffmpeg)
     any registered). Inferred from library voices.
   * **output_path** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Also save the audio there.
   * **voices** ([`Mapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Voice library store (default `voxy.voices_store()`).
-  * **model** ([`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready model to use (its backend is then the backend).
+  * **model** ([`SpeechModel`](voxy.base.html.md#voxy.base.SpeechModel) | [`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – A ready model to use (its backend is then the backend), or the
+    name of the backend’s model to use (‘gpt-4o-mini-tts’, ‘eleven_v3’),
+    sent as the `model_id` option.
   * **models** ([`MutableMapping`](https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – Model cache to use instead of the shared one.
   * **use_library** ([`bool`](https://docs.python.org/3/builtins/functions.html#bool)) – Look `voice` up in the library first (False: always
     the backend’s own voice of that name).
