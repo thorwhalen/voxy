@@ -38,7 +38,9 @@ from voxy.pauses import (
 )
 from voxy.plan import Request, plan_requests
 from voxy.language import (
+    LanguageIgnoredWarning,
     LanguageOption,
+    LanguageUnsetWarning,
     language_option,
     language_options,
     register_language_option,

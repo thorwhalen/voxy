@@ -66,7 +66,7 @@ voxy.dialect_for(
 )  # instruction:voice_instruction
 ```
 
-Say the language once with `language=`: voxy sends it in each engine's own option (Seed Speech `language`, ElevenLabs flash/turbo v2.5 and v3 `language_code`; `voxy.language_option` says which), warns when a model takes none, and warns when you leave it unset on a model that guesses the language per request.
+Say the language once with `language=`: voxy sends it in each engine's own option and spelling (Seed Speech `language`, ElevenLabs flash/turbo v2.5 and v3 `language_code`, Qwen3-TTS `"English"`; `voxy.language_option` says which, `voxy.register_language_option` adds a model), passes it through unchanged to a model nobody registered, drops it with a `LanguageIgnoredWarning` on a model known to take none (OpenAI, older ElevenLabs models), and gives a `LanguageUnsetWarning` when you leave it unset on a model that guesses the language per request.
 
 ### Pauses: SSML breaks, on any backend
 

@@ -183,8 +183,10 @@ def text_to_speech(
             twice, never cached, then ``TakeRejected`` is raised.
         language: The language of ``text`` ('en', 'fr'), said once for every
             engine: sent in the model's own option (Seed Speech ``language``,
-            ElevenLabs flash/turbo v2.5 and v3 ``language_code``; ``voxy.language``),
-            warned about and dropped on a model that takes none. Unset on a model
+            ElevenLabs flash/turbo v2.5 and v3 ``language_code``, Qwen3-TTS
+            'English'...; ``voxy.language``), passed through as ``language`` on a
+            model nobody registered, warned about and dropped on a model known to
+            take none (OpenAI, older ElevenLabs models). Unset on a model
             that guesses the language per request, a warning says so: such a model
             has read an English sentence with numbers in it as Tagalog.
         **kwargs: Backend-specific options (e.g. ``output_format=`` for
@@ -224,19 +226,33 @@ def text_to_speech(
     return speech
 
 
-def _with_language(model: SpeechModel, language: str | None, kwargs: dict) -> dict:
+def _with_language(model, language: str | None, kwargs: dict) -> dict:
     """``kwargs`` with ``language`` in ``model``'s own option (``voxy.language``).
 
-    Explicit ``kwargs`` win. Warns when the language cannot be pinned on this model,
-    and when it is left unset on a model that guesses it per request.
+    Explicit ``kwargs`` win. Warns (``LanguageIgnoredWarning``) when a language is
+    asked of a model that takes none, and (``LanguageUnsetWarning``) when none is
+    given to a model that guesses it per request.
     """
-    option = model.language_option(**kwargs)
+    from voxy.language import (
+        LanguageIgnoredWarning,
+        LanguageUnsetWarning,
+        language_option,
+        options_for,
+    )
+
+    lookup = getattr(model, "language_option", None)
+    option = (
+        lookup(**kwargs)
+        if lookup is not None
+        else language_option(getattr(model, "name", ""), kwargs.get("model_id"))
+    )
     if language is None:
         if option.detects and option.param not in kwargs:
             warnings.warn(
                 f"{model.name!r} model guesses the language of each request; pass "
                 f"language= (e.g. 'en') to pin it, or a take may come back in another "
                 f"language",
+                LanguageUnsetWarning,
                 stacklevel=3,
             )
         return kwargs
@@ -244,10 +260,11 @@ def _with_language(model: SpeechModel, language: str | None, kwargs: dict) -> di
         warnings.warn(
             f"{model.name!r} model takes no language option; language={language!r} "
             f"is ignored",
+            LanguageIgnoredWarning,
             stacklevel=3,
         )
         return kwargs
-    return {option.param: language, **kwargs}
+    return {**options_for(option, language), **kwargs}
 
 
 def _requested_bitrate(options: Mapping) -> str | None:

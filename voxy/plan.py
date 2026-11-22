@@ -17,7 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from voxy.direction import Dialect, dialect_for, plan_directions
-from voxy.language import language_options
+from voxy.language import LanguageOption, options_for
+from voxy.language import language_option as lookup_language_option
 from voxy.pauses import native_break_for, plan_sections
 
 
@@ -41,6 +42,7 @@ def plan_requests(
     dialect: Dialect | None = None,
     native_break_s: float | None = None,
     language: str | None = None,
+    language_option: LanguageOption | None = None,
 ) -> list[Request]:
     """The requests that speak ``text`` on ``backend``'s model ``model_id``, in order.
 
@@ -53,7 +55,8 @@ def plan_requests(
     the model id the caller will send: an unknown model is planned conservatively (plain
     text, every break cut into silence). ``language`` ('en') is added to every request
     in the model's own option (:func:`voxy.language.language_options`), or not at all
-    on a model that takes none.
+    on a model that takes none. ``language_option`` overrides that lookup, as
+    ``dialect`` does (a model object passes its own ``language_option()``).
 
     >>> plan_requests("Hi.", "fal", "fal-ai/bytedance/seed-speech/tts/v2", language="en")[0].options
     {'language': 'en'}
@@ -64,7 +67,12 @@ def plan_requests(
         if native_break_s is None
         else native_break_s
     )
-    pinned = language_options(backend, model_id, language)
+    option = (
+        lookup_language_option(backend, model_id)
+        if language_option is None
+        else language_option
+    )
+    pinned = options_for(option, language)
     return [
         Request(section.text, {**pinned, **part.options}, section.pause_s)
         for part in plan_directions(text, dialect, instruction=instruction)

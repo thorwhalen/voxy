@@ -80,3 +80,47 @@ def test_a_new_model_registers_its_option(monkeypatch):
     model = Recorder("rec")
     text_to_speech("Hello.", "v", model=model, language="de")
     assert model.calls == [{"lang": "de"}]
+
+
+def test_a_backend_nobody_registered_gets_language_passed_through_silently():
+    # As before the seam: a local model that takes ``language`` itself keeps getting it.
+    model = Recorder("someone-new")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        text_to_speech("Bonjour.", "v", model=model, language="fr")
+    assert model.calls == [{"language": "fr"}]
+
+
+@pytest.mark.parametrize(
+    "backend, sent",
+    [("chatterbox", {"language": "fr"}), ("xtts", {"language": "fr"}), ("qwen3tts", {"language": "French"})],
+)
+def test_local_engines_get_their_own_spelling(backend, sent):
+    model = Recorder(backend)
+    text_to_speech("Bonjour.", "v", model=model, language="fr")
+    assert model.calls == [sent]
+
+
+def test_openai_takes_none_and_the_warnings_have_their_own_classes():
+    from voxy import LanguageIgnoredWarning, LanguageUnsetWarning
+
+    with pytest.warns(LanguageIgnoredWarning):
+        text_to_speech("Hello.", "v", model=Recorder("aix", "gpt-4o-mini-tts"), language="en")
+    with pytest.warns(LanguageUnsetWarning):
+        text_to_speech("Hello.", "v", model=Recorder("elevenlabs", "eleven_v3"))
+
+
+def test_a_model_that_is_not_a_speech_model_still_works():
+    class Bare:
+        name, dflt_voice = "bare", "v"
+
+        def __init__(self):
+            self.calls = []
+
+        def synthesize(self, text, voice=None, **kwargs):
+            self.calls.append(kwargs)
+            return Speech(_silence(), format="wav", backend="bare", voice=None, text=text)
+
+    model = Bare()
+    text_to_speech("Hello.", "v", model=model, language="en")
+    assert model.calls == [{"language": "en"}]
