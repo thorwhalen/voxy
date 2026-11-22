@@ -14,7 +14,9 @@ The default aligner is torchaudio's ``MMS_FA`` (multilingual, Latin letters; acc
 dropped for matching) in its own environment, built on first use (or ``python -m voxy
 setup align``). Its weights are non-commercial (see ``workers/align_adapter.py``).
 Align short stretches (a line, a word and its neighbours, under about 30 s): one pass
-over a long recording drifts, sung audio most.
+over a long recording drifts, sung audio most. For a whole recording (an episode),
+``align_long`` finds the stretches itself: a rough speech-recognition pass gives anchor
+words, and each stretch between anchors is aligned exactly.
 
 ``run`` is the seam: ``(audio_path, words, *, start, end) -> [span or None, ...]``.
 
@@ -187,4 +189,158 @@ def which_said(
         out.append(
             {"text": text, "score": score, "margin": margin, "decisive": decisive}
         )
+    return out
+
+
+# long recordings ---------------------------------------------------------------
+
+#: The longest stretch handed to the aligner (s): under its 30 s limit, with margin.
+DFLT_MAX_STRETCH_S = 25.0
+#: A stretch whose mean word score is under this is reported as unreliable.
+DFLT_MIN_STRETCH_SCORE = 0.5
+#: A cut prefers a pause at least this long (s) between two anchored words, so a rough
+#: pass's timing error (Whisper's is a few tenths) cannot put the cut inside a word.
+DFLT_MIN_CUT_GAP_S = 0.25
+#: Each stretch's crop reaches this far (s) past its cuts, for the same reason.
+DFLT_CROP_PAD_S = 0.3
+
+#: ``audio_path -> [{"text", "start", "end"}, ...]``: timed words heard, in time order.
+Heard = Callable[[str], Sequence[dict]]
+
+
+def plan_stretches(
+    n_words: int,
+    anchor_times: dict[int, tuple[float, float]],
+    duration: float,
+    *,
+    max_stretch_s: float = DFLT_MAX_STRETCH_S,
+    min_gap_s: float = DFLT_MIN_CUT_GAP_S,
+) -> list[dict]:
+    """Cut ``n_words`` text words, ``[0, duration)`` s of audio, into stretches.
+
+    ``anchor_times`` maps a text word's index to the ``(start, end)`` heard for it. A
+    cut falls only between two consecutive text words that are BOTH anchored, in the
+    middle of the gap between them, so every word between two cuts is known to be in
+    that stretch of audio. Greedy: each stretch reaches the farthest such cut within
+    ``max_stretch_s`` in a pause of at least ``min_gap_s`` (else the widest pause in
+    reach). A stretch with no such cut in reach is longer than that and is
+    marked ``too_long`` (the default aligner refuses it), never cut on a guess.
+
+    >>> times = {0: (0.0, 0.4), 1: (0.5, 0.9), 2: (10.0, 10.4), 3: (10.5, 10.9), 4: (20.0, 20.4)}
+    >>> [(s["words"], s["start"], s["end"]) for s in plan_stretches(5, times, 21.0, max_stretch_s=12)]
+    [((0, 2), 0.0, 5.45), ((2, 4), 5.45, 15.45), ((4, 5), 15.45, 21.0)]
+    """
+    cuts = [
+        (j + 1, (anchor_times[j][1] + anchor_times[j + 1][0]) / 2, anchor_times[j + 1][0] - anchor_times[j][1])
+        for j in range(n_words - 1)
+        if j in anchor_times and j + 1 in anchor_times
+    ]
+    stretches, word, at = [], 0, 0.0
+    while word < n_words:
+        if duration - at <= max_stretch_s:
+            stretches.append({"words": (word, n_words), "start": at, "end": duration, "too_long": False})
+            break
+        ahead = [cut for cut in cuts if cut[0] > word and cut[1] > at]
+        reach = [cut for cut in ahead if cut[1] - at <= max_stretch_s]
+        if reach:
+            pauses = [cut for cut in reach if cut[2] >= min_gap_s]
+            i, c, _ = pauses[-1] if pauses else max(reach, key=lambda cut: cut[2])
+            stretches.append({"words": (word, i), "start": at, "end": c, "too_long": False})
+        elif ahead:
+            i, c, _ = ahead[0]
+            stretches.append({"words": (word, i), "start": at, "end": c, "too_long": True})
+        else:
+            stretches.append({"words": (word, n_words), "start": at, "end": duration, "too_long": True})
+            break
+        word, at = i, c
+    return stretches
+
+
+def _duration_s(path: str, fallback: float) -> float:
+    """A WAV's length from its header (no decode of an hour of audio), else ``fallback``."""
+    import wave
+
+    try:
+        with wave.open(path, "rb") as w:
+            return w.getnframes() / w.getframerate()
+    except (wave.Error, EOFError, OSError):
+        return fallback
+
+
+def _transcribed_words(path: str, *, language: str | None = None) -> list[dict]:
+    """The rough pass: timed words heard by voxy's speech recognition (``voxy.refprep``)."""
+    from voxy.refprep import _words, transcribe
+
+    return _words(transcribe(path, language=language))
+
+
+def align_long(
+    audio: str | os.PathLike | bytes,
+    text: str | Sequence[str],
+    *,
+    heard: Heard | None = None,
+    run: Run | None = None,
+    language: str | None = None,
+    max_stretch_s: float = DFLT_MAX_STRETCH_S,
+    min_score: float = DFLT_MIN_STRETCH_SCORE,
+    pad_s: float = DFLT_CROP_PAD_S,
+) -> list[dict]:
+    """:func:`force_align` for a recording of any length (a whole episode).
+
+    1. A rough pass of speech recognition (``heard``: default voxy's ASR) gives
+       approximate times for the words it heard.
+    2. The known text is matched to those words as two sequences
+       (``mixing.transcript.align_words``, as ``voxy.pronounce`` does); matched words
+       are anchors, and the text between two anchors belongs to the audio between them.
+    3. The recording is cut between anchored words into stretches of at most
+       ``max_stretch_s`` (:func:`plan_stretches`), and each is aligned exactly with
+       :func:`force_align`, its crop reaching ``pad_s`` past each cut so a rough time
+       a few tenths off cannot clip a word.
+
+    Each word comes back as :func:`force_align` gives it (``word``, ``start``, ``end``,
+    ``score``, ``chars``), plus ``stretch`` (its index) and ``reliable``: False when its
+    stretch's mean score is under ``min_score``, or when no cut could keep the stretch
+    short enough (its times are then None: reported, not guessed).
+
+    >>> heard = lambda path: [{"text": w, "start": 2.0 * i, "end": 2.0 * i + 1}
+    ...                       for i, w in enumerate("one two three four".split())]
+    >>> fake = lambda audio, words, *, start, end: [
+    ...     {"start": start + i, "end": start + i + 0.5, "score": 0.9, "chars": []}
+    ...     for i, _ in enumerate(words)]
+    >>> out = align_long(b"not a wav", "One two, three four.", heard=heard, run=fake,
+    ...                  max_stretch_s=4)
+    >>> [(w["word"], w["stretch"], w["reliable"]) for w in out]
+    [('One', 0, True), ('two,', 0, True), ('three', 1, True), ('four.', 2, True)]
+    """
+    from mixing.transcript import align_words
+    from voxy.pronounce import normal_word
+
+    words = text.split() if isinstance(text, str) else list(text)
+    with tempfile.TemporaryDirectory() as tmp:
+        if isinstance(audio, bytes):
+            path = Path(tmp) / "audio.wav"
+            path.write_bytes(audio)
+            audio = path
+        path = str(audio)
+        timed = list(heard(path) if heard else _transcribed_words(path, language=language))
+        timed = sorted((w for w in timed if normal_word(w["text"])), key=lambda w: w["start"])
+        anchors = align_words(words, timed, normalize=normal_word, split=None).anchors
+        anchor_times = {j: (timed[h]["start"], timed[h]["end"]) for j, h in anchors.items()}
+        last_heard = max((w["end"] for w in timed), default=0.0)
+        duration = _duration_s(path, last_heard + 1.0)
+        out: list[dict] = []
+        for k, s in enumerate(plan_stretches(len(words), anchor_times, duration, max_stretch_s=max_stretch_s)):
+            lo, hi = s["words"]
+            if s["too_long"]:
+                spans = [
+                    {"word": w, "start": None, "end": None, "score": None, "chars": []}
+                    for w in words[lo:hi]
+                ]
+                reliable = False
+            else:
+                start, end = max(0.0, s["start"] - pad_s), min(duration, s["end"] + pad_s)
+                spans = force_align(path, words[lo:hi], start=start, end=end, run=run)
+                scores = [x["score"] for x in spans if x["score"] is not None]
+                reliable = bool(scores) and sum(scores) / len(scores) >= min_score
+            out += [{**x, "stretch": k, "reliable": reliable} for x in spans]
     return out
