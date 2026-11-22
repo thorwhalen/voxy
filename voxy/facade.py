@@ -40,7 +40,13 @@ from voxy.base import (
     create_speech_model,
 )
 from voxy.library import find_voice, profile_from_record
-from voxy.pauses import Section, encode_audio, has_pause_markup, join_sections, plan_sections
+from voxy.pauses import (
+    Section,
+    encode_audio,
+    has_pause_markup,
+    join_sections,
+    plan_sections,
+)
 from voxy.plan import plan_requests
 from voxy.direction import (
     strip_directions,
