@@ -26,11 +26,14 @@ class Recorder(SpeechModel):
         return Speech(write_wav(np.zeros(80, np.float32), 8000), format="wav", backend=self.name, voice=voice, text=text)
 
 
-@pytest.mark.parametrize("backend, model_id, native", [("fal", SEED, 0.0), ("elevenlabs", "eleven_v3", 0.0), ("say", None, 0.0), ("fal", SEED, 3.0)])
-def test_the_plan_is_what_text_to_speech_sends(backend, model_id, native):
+@pytest.mark.parametrize(
+    "backend, model_id, native, language",
+    [("fal", SEED, 0.0, "en"), ("elevenlabs", "eleven_v3", 0.0, "en"), ("say", None, 0.0, None), ("fal", SEED, 3.0, "fr")],
+)
+def test_the_plan_is_what_text_to_speech_sends(backend, model_id, native, language):
     model = Recorder(backend, model_id, native)
-    text_to_speech(TEXT, "someone", model=model, instruction="An essayist.")
-    planned = plan_requests(TEXT, backend, model_id, instruction="An essayist.", native_break_s=native)
+    text_to_speech(TEXT, "someone", model=model, instruction="An essayist.", language=language)
+    planned = plan_requests(TEXT, backend, model_id, instruction="An essayist.", native_break_s=native, language=language)
     spoken = [(r.text, r.options) for r in planned if r.text]
     assert [(t, {k: v for k, v in kw.items() if k in r_opts}) for (t, kw), (_, r_opts) in zip(model.calls, spoken)] == spoken
     assert len(model.calls) == len(spoken)

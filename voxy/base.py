@@ -582,12 +582,23 @@ class SpeechModel:
         """
         from voxy.direction import dialect_for
 
+        return dialect_for(self.name, self._model_id(synth_kwargs))
+
+    def _model_id(self, synth_kwargs) -> str | None:
         model_id = (
             synth_kwargs.get("model_id")
             or getattr(self, "model_id", None)
             or getattr(self, "model", None)
         )
-        return dialect_for(self.name, model_id if isinstance(model_id, str) else None)
+        return model_id if isinstance(model_id, str) else None
+
+    def language_option(self, **synth_kwargs):
+        """How this backend's model takes a language (``voxy.language``): the option
+        that pins it, if any, and whether the model guesses it per request otherwise.
+        Looked up by backend name and model id, like :meth:`markup_dialect`."""
+        from voxy.language import language_option
+
+        return language_option(self.name, self._model_id(synth_kwargs))
 
     def list_voices(self) -> list[VoiceInfo]:
         """The voices this backend offers."""
