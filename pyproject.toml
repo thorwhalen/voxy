@@ -49,6 +49,8 @@ dependencies = [
     "i2>=0.1.92",
     # voxy.envs / voxy.worker: building isolated environments and running adapters
     "ps>=0.1.19",
+    # voxy.pronounce.align_words: the fleet's text-to-heard-word aligner (base install: pure modules)
+    "mixing>=0.0.123",
 ]
 
 [project.urls]

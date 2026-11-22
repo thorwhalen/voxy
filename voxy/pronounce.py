@@ -1290,24 +1290,23 @@ def align_words(
 ) -> dict[int, int]:
     """``{index of a word of text: index of the ASR word heard for it}``.
 
-    Words are matched by aligning the two sequences (``difflib``), so a word ASR missed,
-    merged or added elsewhere does not shift the others; a text word with no exact
-    counterpart is left out. A word elided onto one of ``elisions`` counts as two
-    (:func:`_text_words`).
+    The fleet's aligner, :func:`mixing.transcript.align_words` (shared with an and
+    braidio), on voxy's terms: words compared as :func:`normal_word` says, each heard
+    word kept whole (``split_elisions`` has already cut it as the text is cut). A word
+    ASR missed, merged or added elsewhere does not shift the others; a text word with no
+    exact counterpart is left out, and so is a heard word that is only punctuation. A
+    word elided onto one of ``elisions`` counts as two (:func:`_text_words`). Heard
+    words are timed (``start``, ``end``), in time order, as ASR gives them.
 
-    >>> align_words("Il est là", [{"text": " Il"}, {"text": " et"}, {"text": " est"}, {"text": " là."}])
+    >>> heard = [{"text": " Il", "start": 0.0, "end": 0.2}, {"text": " et", "start": 0.2, "end": 0.4},
+    ...          {"text": " est", "start": 0.4, "end": 0.6}, {"text": " là.", "start": 0.6, "end": 0.9}]
+    >>> align_words("Il est là", heard)
     {0: 0, 1: 2, 2: 3}
     """
-    from difflib import SequenceMatcher
+    from mixing.transcript import align_words as align
 
-    said = [normal_word(w) for _, w, _ in _text_words(text, elisions=elisions)]
-    heard = [normal_word(w["text"]) for w in words]
-    matcher = SequenceMatcher(None, said, heard, autojunk=False)
-    return {
-        block.a + k: block.b + k
-        for block in matcher.get_matching_blocks()
-        for k in range(block.size)
-    }
+    said = [w for _, w, _ in _text_words(text, elisions=elisions)]
+    return align(said, words, normalize=normal_word, split=None).anchors
 
 
 def _risk_places(
