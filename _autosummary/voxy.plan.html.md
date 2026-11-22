@@ -33,7 +33,7 @@ One request to send: its `text` (SSML breaks the model renders itself kept
 inline), the synthesis `options` carrying its direction, and the `pause_s` of
 silence to splice after its audio. A request with no text is a pause alone.
 
-### voxy.plan.plan_requests(text, backend, model_id=None, , instruction=None, dialect=None, native_break_s=None)
+### voxy.plan.plan_requests(text, backend, model_id=None, , instruction=None, dialect=None, native_break_s=None, language=None, language_option=None)
 
 The requests that speak `text` on `backend`’s model `model_id`, in order.
 
@@ -44,7 +44,15 @@ the longest break it renders ([`voxy.pauses.native_break_for()`](voxy.pauses.htm
 breaks stay in the text and which become silence between requests. `dialect` and
 `native_break_s` override the two lookups (a model object passes its own). Pass
 the model id the caller will send: an unknown model is planned conservatively (plain
-text, every break cut into silence).
+text, every break cut into silence). `language` (‘en’) is added to every request
+in the model’s own option ([`voxy.language.language_options()`](voxy.language.html.md#voxy.language.language_options)), or not at all
+on a model that takes none. `language_option` overrides that lookup, as
+`dialect` does (a model object passes its own `language_option()`).
+
+```pycon
+>>> plan_requests("Hi.", "fal", "fal-ai/bytedance/seed-speech/tts/v2", language="en")[0].options
+{'language': 'en'}
+```
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Request`](#voxy.plan.Request)]

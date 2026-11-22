@@ -176,6 +176,12 @@ Generate speech using a voice profile.
 * **Returns:**
   Generated audio tensor
 
+#### language_option(\*\*synth_kwargs)
+
+How this backend’s model takes a language (`voxy.language`): the option
+that pins it, if any, and whether the model guesses it per request otherwise.
+Looked up by backend name and model id, like [`markup_dialect()`](#voxy.base.SpeechModel.markup_dialect).
+
 #### list_voices()
 
 The voices this backend offers.

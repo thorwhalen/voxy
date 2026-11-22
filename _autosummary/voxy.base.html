@@ -97,6 +97,7 @@
 <li class="toctree-l3"><a class="reference internal" href="voxy.finetune.html">voxy.finetune</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.formant_singer.html">voxy.formant_singer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.kokoro_model.html">voxy.kokoro_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="voxy.language.html">voxy.language</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.lexique.html">voxy.lexique</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.library.html">voxy.library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="voxy.local_clone.html">voxy.local_clone</a></li>
@@ -408,6 +409,13 @@ Annotations are postponed and torch is imported only for type checking, so
 </dl>
 </dd></dl>
 <dl class="py method">
+<dt class="sig sig-object py" id="voxy.base.SpeechModel.language_option">
+<span class="sig-name descname"><span class="pre">language_option</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">synth_kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/base.html#SpeechModel.language_option"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.base.SpeechModel.language_option" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.base.SpeechModel.language_option'">¶</a></dt>
+<dd><p>How this backend’s model takes a language (<code class="docutils literal notranslate"><span class="pre">voxy.language</span></code>): the option
+that pins it, if any, and whether the model guesses it per request otherwise.
+Looked up by backend name and model id, like <a class="reference internal" href="#voxy.base.SpeechModel.markup_dialect" title="voxy.base.SpeechModel.markup_dialect"><code class="xref py py-meth docutils literal notranslate"><span class="pre">markup_dialect()</span></code></a>.</p>
+</dd></dl>
+<dl class="py method">
 <dt class="sig sig-object py" id="voxy.base.SpeechModel.list_voices">
 <span class="sig-name descname"><span class="pre">list_voices</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/voxy/base.html#SpeechModel.list_voices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy.base.SpeechModel.list_voices" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#voxy.base.SpeechModel.list_voices'">¶</a></dt>
 <dd><p>The voices this backend offers.</p>
@@ -711,6 +719,7 @@ square input is read channels-first); channels are averaged, and
 <li><a :data-current="activeSection === '#voxy.base.SpeechModel.device'" class="reference internal" href="#voxy.base.SpeechModel.device"><code class="docutils literal notranslate"><span class="pre">SpeechModel.device</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.base.SpeechModel.dflt_voice'" class="reference internal" href="#voxy.base.SpeechModel.dflt_voice"><code class="docutils literal notranslate"><span class="pre">SpeechModel.dflt_voice</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.base.SpeechModel.generate_speech'" class="reference internal" href="#voxy.base.SpeechModel.generate_speech"><code class="docutils literal notranslate"><span class="pre">SpeechModel.generate_speech()</span></code></a></li>
+<li><a :data-current="activeSection === '#voxy.base.SpeechModel.language_option'" class="reference internal" href="#voxy.base.SpeechModel.language_option"><code class="docutils literal notranslate"><span class="pre">SpeechModel.language_option()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.base.SpeechModel.list_voices'" class="reference internal" href="#voxy.base.SpeechModel.list_voices"><code class="docutils literal notranslate"><span class="pre">SpeechModel.list_voices()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.base.SpeechModel.markup_dialect'" class="reference internal" href="#voxy.base.SpeechModel.markup_dialect"><code class="docutils literal notranslate"><span class="pre">SpeechModel.markup_dialect()</span></code></a></li>
 <li><a :data-current="activeSection === '#voxy.base.SpeechModel.name'" class="reference internal" href="#voxy.base.SpeechModel.name"><code class="docutils literal notranslate"><span class="pre">SpeechModel.name</span></code></a></li>

@@ -112,7 +112,7 @@ narrator’s voice, splice.
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)
 
-### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, validate=None, \*\*kwargs)
+### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, validate=None, language=None, \*\*kwargs)
 
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
@@ -149,8 +149,17 @@ compressed format asked for, e.g. mp3, through ffmpeg)
   * **validate** – `(speech, text) -> problem | None` run on each new take
     (e.g. `voxy.speaking_rate_check`): a failing take is re-asked
     twice, never cached, then `TakeRejected` is raised.
+  * **language** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The language of `text` (‘en’, ‘fr’), said once for every
+    engine: sent in the model’s own option (Seed Speech `language`,
+    ElevenLabs flash/turbo v2.5 and v3 `language_code`, Qwen3-TTS
+    ‘English’…; `voxy.language`), passed through as `language` on a
+    model nobody registered, warned about and dropped on a model known to
+    take none (OpenAI, older ElevenLabs models). Unset on a model
+    that guesses the language per request, a warning says so: such a model
+    has read an English sentence with numbers in it as Tagalog.
   * **\*\*kwargs** – Backend-specific options (e.g. `output_format=` for
-    ElevenLabs, `speed=` for aix, `quality=` for fal).
+    ElevenLabs, `speed=` for aix, `quality=` for fal). An explicit
+    option wins over the one `language` maps to.
 * **Return type:**
   [`Speech`](voxy.base.html.md#voxy.base.Speech)
 

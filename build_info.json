@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-22T19:30:38Z",
+  "built_at": "2026-11-22T22:12:31Z",
   "package": {
     "name": "voxy",
     "version": "0.0.78",
@@ -9,24 +9,24 @@
   },
   "git": {
     "available": true,
-    "commit": "bf09296066b43ce8ff90e487e24d86d552684fbd",
-    "short_commit": "bf09296",
+    "commit": "b89f901c47db3c0a11bd46a1cfaf71dfe1a87155",
+    "short_commit": "b89f901",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/thorwhalen/voxy",
-    "commit_url": "https://github.com/thorwhalen/voxy/commit/bf09296066b43ce8ff90e487e24d86d552684fbd",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/b89f901c47db3c0a11bd46a1cfaf71dfe1a87155",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "thorwhalen/voxy",
-    "sha": "bf09296066b43ce8ff90e487e24d86d552684fbd",
+    "sha": "b89f901c47db3c0a11bd46a1cfaf71dfe1a87155",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "45060873986",
-    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/45060873986",
+    "run_id": "45076155524",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/45076155524",
     "server_url": "https://github.com"
   },
   "tools": {
@@ -55,8 +55,8 @@
     "docs_dir": "docsrc"
   },
   "site": {
-    "modules_documented": 49,
-    "objects_documented": 534
+    "modules_documented": 50,
+    "objects_documented": 545
   },
   "pypi": {
     "checked": true,
@@ -64,7 +64,7 @@
     "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout bf09296066b43ce8ff90e487e24d86d552684fbd\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout b89f901c47db3c0a11bd46a1cfaf71dfe1a87155\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
     "aligned": true,

@@ -1,0 +1,36 @@
+voxy.language
+=============
+
+.. automodule:: voxy.language
+
+   
+   .. rubric:: Module Attributes
+
+   .. autosummary::
+   
+      PASSTHROUGH
+      LANGUAGE_NAMES
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      language_name
+      language_option
+      language_options
+      options_for
+      register_language_option
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      LanguageOption
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      LanguageIgnoredWarning
+      LanguageUnsetWarning
+   

@@ -60,11 +60,15 @@ voxy.text_to_speech(
     backend="fal",
     model_id="fal-ai/bytedance/seed-speech/tts/v2",
     cache=True,  # repeats are free: content-addressed, `speech.cached` says so
+    language="en",  # pinned in the engine's own option, so a take cannot flip language
+    validate=voxy.speaking_rate_check,  # a take of noise or breath is re-asked, never cached
 )
 voxy.dialect_for(
     "fal", "fal-ai/bytedance/seed-speech/tts/v2"
 )  # instruction:voice_instruction
 ```
+
+Say the language once with `language=`: voxy sends it in each engine’s own option and spelling (Seed Speech `language`, ElevenLabs flash/turbo v2.5 and v3 `language_code`, Qwen3-TTS `"English"`; `voxy.language_option` says which, `voxy.register_language_option` adds a model), passes it through unchanged to a model nobody registered, drops it with a `LanguageIgnoredWarning` on a model known to take none (OpenAI, older ElevenLabs models), and gives a `LanguageUnsetWarning` when you leave it unset on a model that guesses the language per request.
 
 ## Pauses: SSML breaks, on any backend
 

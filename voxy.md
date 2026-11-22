@@ -1,4 +1,4 @@
-> built 2026-11-22 19:30 UTC from bf09296 (main) · voxy 0.0.78. Details: build_info.json
+> built 2026-11-22 22:12 UTC from b89f901 (main) · voxy 0.0.78. Details: build_info.json
 
 # index.html.md
 
@@ -64,11 +64,15 @@ voxy.text_to_speech(
     backend="fal",
     model_id="fal-ai/bytedance/seed-speech/tts/v2",
     cache=True,  # repeats are free: content-addressed, `speech.cached` says so
+    language="en",  # pinned in the engine's own option, so a take cannot flip language
+    validate=voxy.speaking_rate_check,  # a take of noise or breath is re-asked, never cached
 )
 voxy.dialect_for(
     "fal", "fal-ai/bytedance/seed-speech/tts/v2"
 )  # instruction:voice_instruction
 ```
+
+Say the language once with `language=`: voxy sends it in each engine’s own option and spelling (Seed Speech `language`, ElevenLabs flash/turbo v2.5 and v3 `language_code`, Qwen3-TTS `"English"`; `voxy.language_option` says which, `voxy.register_language_option` adds a model), passes it through unchanged to a model nobody registered, drops it with a `LanguageIgnoredWarning` on a model known to take none (OpenAI, older ElevenLabs models), and gives a `LanguageUnsetWarning` when you leave it unset on a model that guesses the language per request.
 
 ## Pauses: SSML breaks, on any backend
 
@@ -832,6 +836,12 @@ Generate speech using a voice profile.
   `Tensor`
 * **Returns:**
   Generated audio tensor
+
+#### language_option(\*\*synth_kwargs)
+
+How this backend’s model takes a language (`voxy.language`): the option
+that pins it, if any, and whether the model guesses it per request otherwise.
+Looked up by backend name and model id, like [`markup_dialect()`](_autosummary/voxy.base.html.md#voxy.base.SpeechModel.markup_dialect).
 
 #### list_voices()
 
@@ -2147,7 +2157,7 @@ narrator’s voice, splice.
 * **Return type:**
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
-### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, validate=None, \*\*kwargs)
+### voxy.facade.text_to_speech(text, voice=None, , backend=None, output_path=None, voices=None, model=None, models=None, use_library=True, directions='auto', instruction=None, cache=None, validate=None, language=None, \*\*kwargs)
 
 Speak `text` in `voice` and return the encoded audio (`.save(path)`).
 
@@ -2184,8 +2194,17 @@ compressed format asked for, e.g. mp3, through ffmpeg)
   * **validate** – `(speech, text) -> problem | None` run on each new take
     (e.g. `voxy.speaking_rate_check`): a failing take is re-asked
     twice, never cached, then `TakeRejected` is raised.
+  * **language** ([`str`](https://docs.python.org/3/builtins/stdtypes.html#str) | [`None`](https://docs.python.org/3/builtins/constants.html#None)) – The language of `text` (‘en’, ‘fr’), said once for every
+    engine: sent in the model’s own option (Seed Speech `language`,
+    ElevenLabs flash/turbo v2.5 and v3 `language_code`, Qwen3-TTS
+    ‘English’…; `voxy.language`), passed through as `language` on a
+    model nobody registered, warned about and dropped on a model known to
+    take none (OpenAI, older ElevenLabs models). Unset on a model
+    that guesses the language per request, a warning says so: such a model
+    has read an English sentence with numbers in it as Tagalog.
   * **\*\*kwargs** – Backend-specific options (e.g. `output_format=` for
-    ElevenLabs, `speed=` for aix, `quality=` for fal).
+    ElevenLabs, `speed=` for aix, `quality=` for fal). An explicit
+    option wins over the one `language` maps to.
 * **Return type:**
   [`Speech`](_autosummary/voxy.base.html.md#voxy.base.Speech)
 
@@ -2416,6 +2435,7 @@ True
 | [`finetune`](_autosummary/voxy.finetune.html.md#module-voxy.finetune)                   | Fine-tuning datasets from prepared clips: one export per training recipe.                                                                          |
 | [`formant_singer`](_autosummary/voxy.formant_singer.html.md#module-voxy.formant_singer)       | A formant synthesiser that sings "la" on a list of notes: voices that belong to no one.                                                            |
 | [`kokoro_model`](_autosummary/voxy.kokoro_model.html.md#module-voxy.kokoro_model)           | Kokoro: a neutral local voice that needs no reference clip, no key and no GPU.                                                                     |
+| [`language`](_autosummary/voxy.language.html.md#module-voxy.language)                   | Say the language once, and have each engine get it in its own option.                                                                              |
 | [`lexique`](_autosummary/voxy.lexique.html.md#module-voxy.lexique)                     | French heteronyms derived from Lexique, to merge under voxy's hand-made table.                                                                     |
 | [`library`](_autosummary/voxy.library.html.md#module-voxy.library)                     | A persistent voice library: clone a voice once, then use it by name.                                                                               |
 | [`local_clone`](_autosummary/voxy.local_clone.html.md#module-voxy.local_clone)             | Local voice cloning: speak any text in a voice learned from a short reference clip.                                                                |
@@ -2559,6 +2579,152 @@ What a stock voice’s name says about it.
 
 * **Return type:**
   [`VoiceInfo`](_autosummary/voxy.base.html.md#voxy.base.VoiceInfo)
+
+
+# _autosummary/voxy.language.html.md
+
+# voxy.language
+
+Say the language once, and have each engine get it in its own option.
+
+Engines disagree on how a caller pins the language of a take: Seed Speech on fal takes
+`language`, ElevenLabs’ newer models take `language_code`, Qwen3-TTS takes
+`language` spelled out (“English”), OpenAI’s voices take none. Left unset, an engine
+that detects the language per request can flip: an English sentence carrying a year and
+two percentages came back read in Tagalog. So the caller says `language="en"` once
+(`voxy.text_to_speech(..., language="en")`) and this module maps it, by backend and
+model id, the way `voxy.direction` maps delivery directions. A model nobody registered
+gets `language` passed through unchanged, as before this seam existed. A new model only
+needs [`register_language_option()`](_autosummary/voxy.language.html.md#voxy.language.register_language_option).
+
+```pycon
+>>> language_option("fal", "fal-ai/bytedance/seed-speech/tts/v2")
+LanguageOption(param='language', detects=True, to_value=None)
+>>> language_options("elevenlabs", "eleven_flash_v2_5", "en")
+{'language_code': 'en'}
+>>> language_options("elevenlabs", "eleven_multilingual_v2", "en")  # takes none: nothing sent
+{}
+>>> language_options("qwen3tts", None, "fr")
+{'language': 'French'}
+>>> language_options("someone-new", None, "de")  # unregistered: passed through
+{'language': 'de'}
+```
+
+### Module Attributes
+
+| [`PASSTHROUGH`](_autosummary/voxy.language.html.md#voxy.language.PASSTHROUGH)    | `language` passed through as given.                                        |
+|-----------------------------------------------------------------|----------------------------------------------------------------------------|
+| [`LANGUAGE_NAMES`](_autosummary/voxy.language.html.md#voxy.language.LANGUAGE_NAMES) | ISO 639-1 codes to the English names some models want ("en" -> "English"). |
+
+### Functions
+
+| [`language_name`](_autosummary/voxy.language.html.md#voxy.language.language_name)(code)                           | 'English' for 'en' (and 'en-US'); anything else unchanged.                                                                                                                                          |
+|------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`language_option`](_autosummary/voxy.language.html.md#voxy.language.language_option)(backend[, model_id])          | The language option of `backend`'s model `model_id`: the registered one, else [`PASSTHROUGH`](_autosummary/voxy.language.html.md#voxy.language.PASSTHROUGH) (`language` sent as given, as before this seam existed). |
+| [`language_options`](_autosummary/voxy.language.html.md#voxy.language.language_options)(backend, model_id, language) | The synthesis options that pin `language` on this model: `{}` when no language is asked or the model takes none.                                                                                    |
+| [`options_for`](_autosummary/voxy.language.html.md#voxy.language.options_for)(option, language)                 | The synthesis options `option` sends for `language` (`{}` for none).                                                                                                                                |
+| [`register_language_option`](_autosummary/voxy.language.html.md#voxy.language.register_language_option)(backend, ...)        | Declare how `backend`'s models matching `model_glob` take a language (checked before the ones already registered).                                                                                  |
+
+### Classes
+
+| [`LanguageOption`](_autosummary/voxy.language.html.md#voxy.language.LanguageOption)([param, detects, to_value])   | How a model takes a language.   |
+|-----------------------------------------------------------------------------------------------|---------------------------------|
+
+### Exceptions
+
+| [`LanguageIgnoredWarning`](_autosummary/voxy.language.html.md#voxy.language.LanguageIgnoredWarning)   | `language=` asked of a model that takes no language option (dropped).   |
+|---------------------------------------------------------------------------|-------------------------------------------------------------------------|
+| [`LanguageUnsetWarning`](_autosummary/voxy.language.html.md#voxy.language.LanguageUnsetWarning)     | No `language=` on a model that guesses the language of each request.    |
+
+### voxy.language.LANGUAGE_NAMES *= {'de': 'German', 'en': 'English', 'es': 'Spanish', 'fr': 'French', 'it': 'Italian', 'ja': 'Japanese', 'ko': 'Korean', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese'}*
+
+ISO 639-1 codes to the English names some models want (“en” -> “English”).
+
+### *exception* voxy.language.LanguageIgnoredWarning
+
+Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWarning)
+
+`language=` asked of a model that takes no language option (dropped).
+
+### *class* voxy.language.LanguageOption(param=None, detects=False, to_value=None)
+
+Bases: [`object`](https://docs.python.org/3/builtins/functions.html#object)
+
+How a model takes a language.
+
+`param`: the synthesis option that pins the language (`None`: the model takes
+none, so a requested language is dropped, with a warning). `detects`: the model
+guesses the language per request when it is not pinned, so an unpinned call can
+come back in the wrong language. `to_value`: turns the caller’s code (‘en’) into
+what the model wants (‘English’); `None` sends it as given.
+
+### *exception* voxy.language.LanguageUnsetWarning
+
+Bases: [`UserWarning`](https://docs.python.org/3/builtins/exceptions.html#UserWarning)
+
+No `language=` on a model that guesses the language of each request.
+
+### voxy.language.PASSTHROUGH *= LanguageOption(param='language', detects=False, to_value=None)*
+
+`language` passed through as given.
+
+* **Type:**
+  What a model nobody registered gets
+
+### voxy.language.language_name(code)
+
+‘English’ for ‘en’ (and ‘en-US’); anything else unchanged.
+
+```pycon
+>>> language_name("en-US"), language_name("English")
+('English', 'English')
+```
+
+* **Return type:**
+  [`str`](https://docs.python.org/3/builtins/stdtypes.html#str)
+
+### voxy.language.language_option(backend, model_id=None)
+
+The language option of `backend`’s model `model_id`: the registered one, else
+[`PASSTHROUGH`](_autosummary/voxy.language.html.md#voxy.language.PASSTHROUGH) (`language` sent as given, as before this seam existed).
+
+```pycon
+>>> language_option("elevenlabs", "eleven_multilingual_v2").param is None
+True
+```
+
+* **Return type:**
+  [`LanguageOption`](_autosummary/voxy.language.html.md#voxy.language.LanguageOption)
+
+### voxy.language.language_options(backend, model_id, language)
+
+The synthesis options that pin `language` on this model: `{}` when no
+language is asked or the model takes none.
+
+```pycon
+>>> language_options("fal", "fal-ai/bytedance/seed-speech/tts/v2", "en")
+{'language': 'en'}
+>>> language_options("fal", "fal-ai/bytedance/seed-speech/tts/v2", None)
+{}
+```
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### voxy.language.options_for(option, language)
+
+The synthesis options `option` sends for `language` (`{}` for none).
+
+* **Return type:**
+  [`dict`](https://docs.python.org/3/builtins/stdtypes.html#dict)
+
+### voxy.language.register_language_option(backend, model_glob, option)
+
+Declare how `backend`’s models matching `model_glob` take a language
+(checked before the ones already registered).
+
+* **Return type:**
+  [`None`](https://docs.python.org/3/builtins/constants.html#None)
 
 
 # _autosummary/voxy.lexique.html.md
@@ -3445,7 +3611,7 @@ One request to send: its `text` (SSML breaks the model renders itself kept
 inline), the synthesis `options` carrying its direction, and the `pause_s` of
 silence to splice after its audio. A request with no text is a pause alone.
 
-### voxy.plan.plan_requests(text, backend, model_id=None, , instruction=None, dialect=None, native_break_s=None)
+### voxy.plan.plan_requests(text, backend, model_id=None, , instruction=None, dialect=None, native_break_s=None, language=None, language_option=None)
 
 The requests that speak `text` on `backend`’s model `model_id`, in order.
 
@@ -3456,7 +3622,15 @@ the longest break it renders ([`voxy.pauses.native_break_for()`](_autosummary/vo
 breaks stay in the text and which become silence between requests. `dialect` and
 `native_break_s` override the two lookups (a model object passes its own). Pass
 the model id the caller will send: an unknown model is planned conservatively (plain
-text, every break cut into silence).
+text, every break cut into silence). `language` (‘en’) is added to every request
+in the model’s own option ([`voxy.language.language_options()`](_autosummary/voxy.language.html.md#voxy.language.language_options)), or not at all
+on a model that takes none. `language_option` overrides that lookup, as
+`dialect` does (a model object passes its own `language_option()`).
+
+```pycon
+>>> plan_requests("Hi.", "fal", "fal-ai/bytedance/seed-speech/tts/v2", language="en")[0].options
+{'language': 'en'}
+```
 
 * **Return type:**
   [`list`](https://docs.python.org/3/builtins/stdtypes.html#list)[[`Request`](_autosummary/voxy.plan.html.md#voxy.plan.Request)]
@@ -8025,7 +8199,7 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-22 19:30 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/bf09296066b43ce8ff90e487e24d86d552684fbd"><code>bf09296</code></a> on branch <code>main</code>, for **voxy 0.0.78** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-22 22:12 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/b89f901c47db3c0a11bd46a1cfaf71dfe1a87155"><code>b89f901</code></a> on branch <code>main</code>, for **voxy 0.0.78** (from <code>pyproject.toml</code>).
 
 #### NOTE
 Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
@@ -8034,7 +8208,7 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/bf09296066b43ce8ff90e487e24d86d552684fbd"><code>bf09296066b43ce8ff90e487e24d86d552684fbd</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/b89f901c47db3c0a11bd46a1cfaf71dfe1a87155"><code>b89f901c47db3c0a11bd46a1cfaf71dfe1a87155</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -8045,9 +8219,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45060873986">45060873986</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45076155524">45076155524</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>bf09296066b43ce8ff90e487e24d86d552684fbd</code> (in the history of the built commit) |
+| Event commit | <code>b89f901c47db3c0a11bd46a1cfaf71dfe1a87155</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -8078,7 +8252,7 @@ Latest release: <a href="https://pypi.org/project/voxy/0.0.78/">0.0.78</a>, the 
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout bf09296066b43ce8ff90e487e24d86d552684fbd
+git checkout b89f901c47db3c0a11bd46a1cfaf71dfe1a87155
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

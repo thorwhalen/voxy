@@ -23,6 +23,7 @@
    finetune
    formant_singer
    kokoro_model
+   language
    lexique
    library
    local_clone
