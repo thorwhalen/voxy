@@ -53,7 +53,6 @@ OPTIONAL_MODULE_EXTRAS = {
     "whisper": "transcription",
     "huggingface_hub": "local",
     "audiate": "singing",
-    "mixing.transcript": "transcription",
 }
 
 

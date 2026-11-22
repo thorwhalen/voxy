@@ -41,7 +41,6 @@ from typing import Protocol
 
 import numpy as np
 
-from voxy.base import optional_import
 from voxy.envs import EnvSpec
 from voxy.worker import WorkerPool
 from voxy.speechtext import (
@@ -1304,9 +1303,10 @@ def align_words(
     >>> align_words("Il est là", heard)
     {0: 0, 1: 2, 2: 3}
     """
-    transcript = optional_import("mixing.transcript")
+    from mixing.transcript import align_words as align
+
     said = [w for _, w, _ in _text_words(text, elisions=elisions)]
-    return transcript.align_words(said, words, normalize=normal_word, split=None).anchors
+    return align(said, words, normalize=normal_word, split=None).anchors
 
 
 def _risk_places(
