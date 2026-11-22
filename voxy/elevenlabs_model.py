@@ -33,6 +33,9 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Union
 import numpy as np
 
 from voxy.wavutil import pcm_to_float, read_wav
+# The longest <break> each ElevenLabs model renders itself: kept in voxy.pauses's registry
+# (native_break_for), re-exported here for the callers that read it from this module.
+from voxy.pauses import ELEVENLABS_NATIVE_BREAK_S
 from voxy.base import (
     DFLT_ASSUMED_SAMPLE_RATE,
     Speech,
@@ -57,22 +60,6 @@ DFLT_ELEVENLABS_MODEL_ID = os.environ.get(
 # Raw PCM is available on every ElevenLabs tier and decodes without ffmpeg.
 DFLT_ELEVENLABS_OUTPUT_FORMAT = "pcm_24000"
 DFLT_CLONE_NAME_TEMPLATE = "voxy-{speaker_id}"
-#: The longest SSML ``<break>`` each ElevenLabs model renders itself (seconds).
-#: The v2 family honours ``<break time="..."/>`` up to 3 s; ``eleven_v3`` and
-#: ``eleven_v4`` support no SSML at all. A model not listed gets 0 (voxy cuts at
-#: every break, which is exact on any model).
-ELEVENLABS_NATIVE_BREAK_S = {
-    "eleven_multilingual_v2": 3.0,
-    "eleven_flash_v2_5": 3.0,
-    "eleven_turbo_v2_5": 3.0,
-    "eleven_flash_v2": 3.0,
-    "eleven_turbo_v2": 3.0,
-    "eleven_monolingual_v1": 3.0,
-    "eleven_multilingual_v1": 3.0,
-    "eleven_v3": 0.0,
-    "eleven_v4": 0.0,
-    "eleven_v4_turbo": 0.0,
-}
 # What synthesize() returns by default: a playable file, on every tier.
 DFLT_ELEVENLABS_SYNTH_FORMAT = "mp3_44100_128"
 DFLT_ELEVENLABS_STS_MODEL_ID = os.environ.get(

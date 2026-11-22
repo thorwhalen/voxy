@@ -57,6 +57,44 @@ _ATTR = re.compile(r"""([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
 _TIME = re.compile(r"^\s*(\d+(?:\.\d+)?|\.\d+)\s*(ms|s)\s*$", re.I)
 
 
+#: The longest SSML ``<break>`` each ElevenLabs model renders itself (seconds).
+#: The v2 family honours ``<break time="..."/>`` up to 3 s; ``eleven_v3`` and
+#: ``eleven_v4`` support no SSML at all. A model not listed gets 0 (voxy cuts at
+#: every break, which is exact on any model).
+ELEVENLABS_NATIVE_BREAK_S = {
+    "eleven_multilingual_v2": 3.0,
+    "eleven_flash_v2_5": 3.0,
+    "eleven_turbo_v2_5": 3.0,
+    "eleven_flash_v2": 3.0,
+    "eleven_turbo_v2": 3.0,
+    "eleven_monolingual_v1": 3.0,
+    "eleven_multilingual_v1": 3.0,
+    "eleven_v3": 0.0,
+    "eleven_v4": 0.0,
+    "eleven_v4_turbo": 0.0,
+}
+
+_NATIVE_BREAKS: dict[str, dict[str, float]] = {"elevenlabs": ELEVENLABS_NATIVE_BREAK_S}
+
+
+def register_native_breaks(backend: str, table: Mapping[str, float]) -> None:
+    """Declare the longest ``<break>`` each of ``backend``'s models renders itself
+    (``{model_id: seconds}``; a model not listed renders none)."""
+    _NATIVE_BREAKS.setdefault(backend, {}).update(table)
+
+
+def native_break_for(backend: str, model_id: str | None = None) -> float:
+    """The longest SSML ``<break>`` ``backend``'s model ``model_id`` renders itself
+    (``0.0`` when unknown: voxy then cuts at every break, which is exact on any model).
+
+    >>> native_break_for("elevenlabs", "eleven_multilingual_v2"), native_break_for("elevenlabs", "eleven_v3")
+    (3.0, 0.0)
+    >>> native_break_for("kokoro")
+    0.0
+    """
+    return _NATIVE_BREAKS.get(backend, {}).get(model_id or "", 0.0)
+
+
 @dataclass(frozen=True)
 class Section:
     """A stretch of text to speak, and how it ends.
