@@ -243,6 +243,7 @@ def plan_stretches(
     >>> [(s["words"], s["start"], s["end"]) for s in plan_stretches(5, times, 21.0, max_stretch_s=12)]
     [((0, 4), 0.0, 11.9), ((4, 5), 19.0, 21.0)]
     """
+
     def before(j):  # the anchored word at or before j, skipping transparent ones
         while j >= 0 and j in transparent:
             j -= 1
@@ -266,11 +267,17 @@ def plan_stretches(
         cuts.append((j + 1, end, start, gap))
     first, last = after(0), before(n_words - 1)
     at = max(0.0, anchor_times[first][0] - edge_s) if first == 0 else 0.0
-    tail = min(duration, anchor_times[last][1] + edge_s) if last == n_words - 1 else duration
+    tail = (
+        min(duration, anchor_times[last][1] + edge_s)
+        if last == n_words - 1
+        else duration
+    )
     stretches, word = [], 0
     while word < n_words:
         if tail - at <= max_stretch_s:
-            stretches.append({"words": (word, n_words), "start": at, "end": tail, "too_long": False})
+            stretches.append(
+                {"words": (word, n_words), "start": at, "end": tail, "too_long": False}
+            )
             break
         ahead = [c for c in cuts if c[0] > word and c[1] > at]
         reach = [c for c in ahead if c[1] - at <= max_stretch_s]
@@ -282,9 +289,13 @@ def plan_stretches(
             i, end, start, _ = ahead[0]
             too_long = True
         else:
-            stretches.append({"words": (word, n_words), "start": at, "end": tail, "too_long": True})
+            stretches.append(
+                {"words": (word, n_words), "start": at, "end": tail, "too_long": True}
+            )
             break
-        stretches.append({"words": (word, i), "start": at, "end": end, "too_long": too_long})
+        stretches.append(
+            {"words": (word, i), "start": at, "end": end, "too_long": too_long}
+        )
         word, at = i, start
     return stretches
 
@@ -300,13 +311,19 @@ def _as_16k_wav(path: str, tmp: str) -> str:
 
     try:
         with wave.open(path, "rb") as w:
-            if (w.getframerate(), w.getnchannels(), w.getsampwidth()) == (ALIGN_RATE, 1, 2):
+            if (w.getframerate(), w.getnchannels(), w.getsampwidth()) == (
+                ALIGN_RATE,
+                1,
+                2,
+            ):
                 return path
     except (wave.Error, EOFError, OSError):
         pass
     out = str(Path(tmp) / "audio-16k.wav")
     cmd = [_ffmpeg_path(None), "-hide_banner", "-loglevel", "error", "-y", "-i", path]
-    subprocess.run([*cmd, "-ac", "1", "-ar", str(ALIGN_RATE), "-c:a", "pcm_s16le", out], check=True)
+    subprocess.run(
+        [*cmd, "-ac", "1", "-ar", str(ALIGN_RATE), "-c:a", "pcm_s16le", out], check=True
+    )
     return out
 
 
@@ -327,8 +344,16 @@ def _crop(wav_path: str, start: float, end: float, out: str) -> str:
 def _shifted(span: dict, by: float) -> dict:
     """A word span on a crop's clock moved to the recording's."""
     move = lambda t: None if t is None else t + by
-    chars = [{**c, "start": move(c.get("start")), "end": move(c.get("end"))} for c in span.get("chars") or ()]
-    return {**span, "start": move(span.get("start")), "end": move(span.get("end")), "chars": chars}
+    chars = [
+        {**c, "start": move(c.get("start")), "end": move(c.get("end"))}
+        for c in span.get("chars") or ()
+    ]
+    return {
+        **span,
+        "start": move(span.get("start")),
+        "end": move(span.get("end")),
+        "chars": chars,
+    }
 
 
 def _transcribed_words(path: str, *, language: str | None = None) -> list[dict]:
@@ -402,13 +427,25 @@ def align_long(
             path = Path(tmp) / "audio"
             path.write_bytes(audio)
             audio = path
-        timed = list(heard(str(audio)) if heard else _transcribed_words(str(audio), language=language))
+        timed = list(
+            heard(str(audio))
+            if heard
+            else _transcribed_words(str(audio), language=language)
+        )
         timed = sorted(
-            (w for w in timed if w.get("start") is not None and w.get("end") is not None and normal_word(text_of(w))),
+            (
+                w
+                for w in timed
+                if w.get("start") is not None
+                and w.get("end") is not None
+                and normal_word(text_of(w))
+            ),
             key=lambda w: w["start"],
         )
         anchors = align_words(words, timed, normalize=normal_word, split=None).anchors
-        anchor_times = {j: (timed[h]["start"], timed[h]["end"]) for j, h in anchors.items()}
+        anchor_times = {
+            j: (timed[h]["start"], timed[h]["end"]) for j, h in anchors.items()
+        }
         wav = _as_16k_wav(str(audio), tmp)
         import wave
 
@@ -416,7 +453,11 @@ def align_long(
             duration = w.getnframes() / w.getframerate()
         transparent = frozenset(j for j, w in enumerate(words) if not normal_word(w))
         plan = plan_stretches(
-            len(words), anchor_times, duration, max_stretch_s=max_stretch_s, transparent=transparent
+            len(words),
+            anchor_times,
+            duration,
+            max_stretch_s=max_stretch_s,
+            transparent=transparent,
         )
         out: list[dict] = []
         for k, s in enumerate(plan):
@@ -428,9 +469,14 @@ def align_long(
                 ]
                 reliable = False
             else:
-                start, end = max(0.0, s["start"] - pad_s), min(duration, s["end"] + pad_s)
+                start, end = (
+                    max(0.0, s["start"] - pad_s),
+                    min(duration, s["end"] + pad_s),
+                )
                 crop = _crop(wav, start, end, str(Path(tmp) / f"stretch-{k}.wav"))
-                spans = [_shifted(x, start) for x in force_align(crop, words[lo:hi], run=run)]
+                spans = [
+                    _shifted(x, start) for x in force_align(crop, words[lo:hi], run=run)
+                ]
                 scores = [x["score"] for x in spans if x["score"] is not None]
                 reliable = bool(scores) and sum(scores) / len(scores) >= min_score
             out += [{**x, "stretch": k, "reliable": reliable} for x in spans]
