@@ -289,6 +289,18 @@ fixed.save("narration-fixed.wav")
 
 Replace the whole phrase around a word (first name and surname), not the word alone: the neighbouring sounds anticipate it. `old` is the phrase as ASR heard it.
 
+### Word times for a known text, in a recording of any length
+
+`voxy.align.force_align` places each word of a known text in a stretch of audio under 30 s. `voxy.align.align_long` does it for a whole recording (an episode, an audiobook chapter): a rough speech-recognition pass finds anchor words, the recording is cut between them in real pauses, and each stretch is aligned exactly. Every word comes back with `start`, `end`, `score` and `reliable` (False for a stretch that scored low or could not be cut short enough, rather than a guess). On a synthetic 60-minute reading, 9,437 of 9,438 words started within 0.3 s of the reference.
+
+<!-- wads-docs: skip - needs the reader's own audio, and the align and asr environments -->
+```python
+from voxy.align import align_long
+
+words = align_long("episode.wav", open("transcript.txt").read(), language="en")
+[(w["word"], w["start"]) for w in words if w["reliable"]][:3]
+```
+
 ### Local voice cloning (no service, CPU works)
 
 Five local models clone a voice from one clean clip and its transcript: `voxcpm` (VoxCPM2), `qwen3tts` (Qwen3-TTS), `chatterbox`, `f5tts` (F5-TTS) and `xtts` (XTTS-v2). Each runs in its own Python environment, built on first use with [uv](https://docs.astral.sh/uv/) under `$VOXY_DATA_DIR/envs/` (weights under `$VOXY_DATA_DIR/models/`), so their clashing torch/transformers pins never touch yours. Requirements: `uv` and `ffmpeg` on the PATH.
