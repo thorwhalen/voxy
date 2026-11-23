@@ -475,215 +475,217 @@
 </span><span id="line-257"><span class="sd">    ('Paris, 1882.', {'model_id': 'gpt-4o-mini-tts', 'speed': 1.1})</span>
 </span><span id="line-258"><span class="sd">    """</span>
 </span><span id="line-259">    <span class="n">metadata</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">voice</span><span class="p">,</span> <span class="s2">"metadata"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
-</span><span id="line-260">    <span class="k">if</span> <span class="ow">not</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"character"</span><span class="p">):</span>  <span class="c1"># other profiles' metadata is theirs, not settings</span>
-</span><span id="line-261">        <span class="k">return</span> <span class="n">instruction</span><span class="p">,</span> <span class="n">kwargs</span>
-</span><span id="line-262">    <span class="k">return</span> <span class="p">(</span>
-</span><span id="line-263">        <span class="n">instruction</span> <span class="ow">or</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"direction"</span><span class="p">),</span>
-</span><span id="line-264">        <span class="p">{</span><span class="o">**</span><span class="p">(</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"options"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">},</span>
-</span><span id="line-265">    <span class="p">)</span>
-</span><span id="line-266">
-</span><span id="line-267">
-</span><span id="line-268"><span class="k">def</span><span class="w"> </span><span class="nf">_with_language</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-</span><span id="line-269"><span class="w">    </span><span class="sd">"""``kwargs`` with ``language`` in ``model``'s own option (``voxy.language``).</span>
-</span><span id="line-270">
-</span><span id="line-271"><span class="sd">    Explicit ``kwargs`` win. Warns (``LanguageIgnoredWarning``) when a language is</span>
-</span><span id="line-272"><span class="sd">    asked of a model that takes none, and (``LanguageUnsetWarning``) when none is</span>
-</span><span id="line-273"><span class="sd">    given to a model that guesses it per request.</span>
-</span><span id="line-274"><span class="sd">    """</span>
-</span><span id="line-275">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.language</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-</span><span id="line-276">        <span class="n">LanguageIgnoredWarning</span><span class="p">,</span>
-</span><span id="line-277">        <span class="n">LanguageUnsetWarning</span><span class="p">,</span>
-</span><span id="line-278">        <span class="n">language_option</span><span class="p">,</span>
-</span><span id="line-279">        <span class="n">options_for</span><span class="p">,</span>
-</span><span id="line-280">    <span class="p">)</span>
-</span><span id="line-281">
-</span><span id="line-282">    <span class="n">lookup</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"language_option"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="line-283">    <span class="n">option</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-284">        <span class="n">lookup</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="line-285">        <span class="k">if</span> <span class="n">lookup</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-</span><span id="line-286">        <span class="k">else</span> <span class="n">language_option</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_id"</span><span class="p">))</span>
-</span><span id="line-287">    <span class="p">)</span>
-</span><span id="line-288">    <span class="k">if</span> <span class="n">language</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-289">        <span class="k">if</span> <span class="n">option</span><span class="o">.</span><span class="n">detects</span> <span class="ow">and</span> <span class="n">option</span><span class="o">.</span><span class="n">param</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-</span><span id="line-290">            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-</span><span id="line-291">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> model guesses the language of each request; pass "</span>
-</span><span id="line-292">                <span class="sa">f</span><span class="s2">"language= (e.g. 'en') to pin it, or a take may come back in another "</span>
-</span><span id="line-293">                <span class="sa">f</span><span class="s2">"language"</span><span class="p">,</span>
-</span><span id="line-294">                <span class="n">LanguageUnsetWarning</span><span class="p">,</span>
-</span><span id="line-295">                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-</span><span id="line-296">            <span class="p">)</span>
-</span><span id="line-297">        <span class="k">return</span> <span class="n">kwargs</span>
-</span><span id="line-298">    <span class="k">if</span> <span class="n">option</span><span class="o">.</span><span class="n">param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-299">        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-</span><span id="line-300">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> model takes no language option; language=</span><span class="si">{</span><span class="n">language</span><span class="si">!r}</span><span class="s2"> "</span>
-</span><span id="line-301">            <span class="sa">f</span><span class="s2">"is ignored"</span><span class="p">,</span>
-</span><span id="line-302">            <span class="n">LanguageIgnoredWarning</span><span class="p">,</span>
-</span><span id="line-303">            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-</span><span id="line-304">        <span class="p">)</span>
-</span><span id="line-305">        <span class="k">return</span> <span class="n">kwargs</span>
-</span><span id="line-306">    <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">options_for</span><span class="p">(</span><span class="n">option</span><span class="p">,</span> <span class="n">language</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
-</span><span id="line-307">
-</span><span id="line-308">
-</span><span id="line-309"><span class="k">def</span><span class="w"> </span><span class="nf">_requested_bitrate</span><span class="p">(</span><span class="n">options</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-310"><span class="w">    </span><span class="sd">"""The bitrate an ``output_format`` like ``mp3_44100_128`` asks for ('128k').</span>
-</span><span id="line-311">
-</span><span id="line-312"><span class="sd">    &gt;&gt;&gt; _requested_bitrate({"output_format": "mp3_44100_128"}), _requested_bitrate({})</span>
-</span><span id="line-313"><span class="sd">    ('128k', None)</span>
-</span><span id="line-314"><span class="sd">    """</span>
-</span><span id="line-315">    <span class="n">parts</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"output_format"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
-</span><span id="line-316">    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">k"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
-</span><span id="line-317">
-</span><span id="line-318">
-</span><span id="line-319"><span class="k">def</span><span class="w"> </span><span class="nf">_speak_with_pauses</span><span class="p">(</span>
-</span><span id="line-320">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">synth</span><span class="o">=</span><span class="kc">None</span>
-</span><span id="line-321"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-322"><span class="w">    </span><span class="sd">"""``text`` with SSML breaks and marks, spoken by ``model`` (``voxy.pauses``).</span>
-</span><span id="line-323">
-</span><span id="line-324"><span class="sd">    One call when every break is one the model renders; otherwise one call per</span>
-</span><span id="line-325"><span class="sd">    section, joined with exactly the requested silences (as WAV, or mp3 etc. via ffmpeg).</span>
-</span><span id="line-326"><span class="sd">    """</span>
-</span><span id="line-327">    <span class="n">synth</span> <span class="o">=</span> <span class="n">synth</span> <span class="ow">or</span> <span class="n">model</span><span class="o">.</span><span class="n">synthesize</span>
-</span><span id="line-328">    <span class="n">sections</span> <span class="o">=</span> <span class="n">plan_sections</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">native_break_s</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">native_break_s</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
-</span><span id="line-329">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sections</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">sections</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pause_s</span><span class="p">:</span>
-</span><span id="line-330">        <span class="k">return</span> <span class="n">synth</span><span class="p">(</span><span class="n">sections</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="line-331">    <span class="n">options</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">model</span><span class="o">.</span><span class="n">wav_synth_kwargs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
-</span><span id="line-332">    <span class="n">speech</span> <span class="o">=</span> <span class="n">join_sections</span><span class="p">(</span>
-</span><span id="line-333">        <span class="n">sections</span><span class="p">,</span>
-</span><span id="line-334">        <span class="k">lambda</span> <span class="n">part</span><span class="p">:</span> <span class="n">synth</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">),</span>
-</span><span id="line-335">        <span class="n">backend</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-</span><span id="line-336">        <span class="n">encode</span><span class="o">=</span><span class="n">partial</span><span class="p">(</span><span class="n">encode_audio</span><span class="p">,</span> <span class="n">bitrate</span><span class="o">=</span><span class="n">_requested_bitrate</span><span class="p">(</span><span class="n">options</span><span class="p">)),</span>
-</span><span id="line-337">    <span class="p">)</span>
-</span><span id="line-338">    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">)</span>
-</span><span id="line-339">
-</span><span id="line-340">
-</span><span id="line-341"><span class="k">def</span><span class="w"> </span><span class="nf">_speak_directed</span><span class="p">(</span>
-</span><span id="line-342">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span><span class="p">,</span> <span class="n">synth</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">instruction</span>
-</span><span id="line-343"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-344"><span class="w">    </span><span class="sd">"""``text`` with delivery directions, in ``model``'s dialect (``voxy.direction``):</span>
-</span><span id="line-345"><span class="sd">    each part spoken with its own options, its SSML breaks (pause tags included)</span>
-</span><span id="line-346"><span class="sd">    honoured, all joined into one ``Speech``."""</span>
-</span><span id="line-347">    <span class="n">plan</span> <span class="o">=</span> <span class="n">plan_requests</span><span class="p">(</span>  <span class="c1"># the plan a caller with its own client gets (voxy.plan)</span>
-</span><span id="line-348">        <span class="n">text</span><span class="p">,</span>
-</span><span id="line-349">        <span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-</span><span id="line-350">        <span class="n">instruction</span><span class="o">=</span><span class="n">instruction</span><span class="p">,</span>
-</span><span id="line-351">        <span class="n">dialect</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">markup_dialect</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">),</span>
-</span><span id="line-352">        <span class="n">native_break_s</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">native_break_s</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">),</span>
-</span><span id="line-353">    <span class="p">)</span>
-</span><span id="line-354">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">plan</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pause_s</span><span class="p">:</span>
-</span><span id="line-355">        <span class="n">speech</span> <span class="o">=</span> <span class="n">synth</span><span class="p">(</span><span class="n">plan</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span class="o">**</span><span class="n">plan</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">options</span><span class="p">})</span>
-</span><span id="line-356">        <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">)</span>
-</span><span id="line-357">    <span class="n">base</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">model</span><span class="o">.</span><span class="n">wav_synth_kwargs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
-</span><span id="line-358">    <span class="n">queue</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">([</span><span class="n">request</span><span class="o">.</span><span class="n">options</span> <span class="k">for</span> <span class="n">request</span> <span class="ow">in</span> <span class="n">plan</span> <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">text</span><span class="p">])</span>
-</span><span id="line-359">    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="line-360">
-</span><span id="line-361">    <span class="k">def</span><span class="w"> </span><span class="nf">speak</span><span class="p">(</span><span class="n">part</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-362">        <span class="n">speech</span> <span class="o">=</span> <span class="n">synth</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="n">base</span><span class="p">,</span> <span class="o">**</span><span class="nb">next</span><span class="p">(</span><span class="n">queue</span><span class="p">)})</span>
-</span><span id="line-363">        <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">speech</span><span class="o">.</span><span class="n">cached</span><span class="p">)</span>
-</span><span id="line-364">        <span class="k">return</span> <span class="n">speech</span>
-</span><span id="line-365">
-</span><span id="line-366">    <span class="n">speech</span> <span class="o">=</span> <span class="n">join_sections</span><span class="p">(</span>
-</span><span id="line-367">        <span class="p">[</span><span class="n">Section</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">pause_s</span><span class="p">)</span> <span class="k">for</span> <span class="n">request</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">],</span>
-</span><span id="line-368">        <span class="n">speak</span><span class="p">,</span>
-</span><span id="line-369">        <span class="n">backend</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-</span><span id="line-370">        <span class="n">encode</span><span class="o">=</span><span class="n">partial</span><span class="p">(</span><span class="n">encode_audio</span><span class="p">,</span> <span class="n">bitrate</span><span class="o">=</span><span class="n">_requested_bitrate</span><span class="p">(</span><span class="n">base</span><span class="p">)),</span>
-</span><span id="line-371">    <span class="p">)</span>
-</span><span id="line-372">    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="n">cached</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">flags</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">flags</span><span class="p">))</span>
-</span><span id="line-373">
-</span><span id="line-374">
+</span><span id="line-260">    <span class="k">if</span> <span class="ow">not</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+</span><span id="line-261">        <span class="s2">"character"</span>
+</span><span id="line-262">    <span class="p">):</span>  <span class="c1"># other profiles' metadata is theirs, not settings</span>
+</span><span id="line-263">        <span class="k">return</span> <span class="n">instruction</span><span class="p">,</span> <span class="n">kwargs</span>
+</span><span id="line-264">    <span class="k">return</span> <span class="p">(</span>
+</span><span id="line-265">        <span class="n">instruction</span> <span class="ow">or</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"direction"</span><span class="p">),</span>
+</span><span id="line-266">        <span class="p">{</span><span class="o">**</span><span class="p">(</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"options"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">},</span>
+</span><span id="line-267">    <span class="p">)</span>
+</span><span id="line-268">
+</span><span id="line-269">
+</span><span id="line-270"><span class="k">def</span><span class="w"> </span><span class="nf">_with_language</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="line-271"><span class="w">    </span><span class="sd">"""``kwargs`` with ``language`` in ``model``'s own option (``voxy.language``).</span>
+</span><span id="line-272">
+</span><span id="line-273"><span class="sd">    Explicit ``kwargs`` win. Warns (``LanguageIgnoredWarning``) when a language is</span>
+</span><span id="line-274"><span class="sd">    asked of a model that takes none, and (``LanguageUnsetWarning``) when none is</span>
+</span><span id="line-275"><span class="sd">    given to a model that guesses it per request.</span>
+</span><span id="line-276"><span class="sd">    """</span>
+</span><span id="line-277">    <span class="kn">from</span><span class="w"> </span><span class="nn">voxy.language</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="line-278">        <span class="n">LanguageIgnoredWarning</span><span class="p">,</span>
+</span><span id="line-279">        <span class="n">LanguageUnsetWarning</span><span class="p">,</span>
+</span><span id="line-280">        <span class="n">language_option</span><span class="p">,</span>
+</span><span id="line-281">        <span class="n">options_for</span><span class="p">,</span>
+</span><span id="line-282">    <span class="p">)</span>
+</span><span id="line-283">
+</span><span id="line-284">    <span class="n">lookup</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"language_option"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="line-285">    <span class="n">option</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-286">        <span class="n">lookup</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="line-287">        <span class="k">if</span> <span class="n">lookup</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+</span><span id="line-288">        <span class="k">else</span> <span class="n">language_option</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_id"</span><span class="p">))</span>
+</span><span id="line-289">    <span class="p">)</span>
+</span><span id="line-290">    <span class="k">if</span> <span class="n">language</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-291">        <span class="k">if</span> <span class="n">option</span><span class="o">.</span><span class="n">detects</span> <span class="ow">and</span> <span class="n">option</span><span class="o">.</span><span class="n">param</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+</span><span id="line-292">            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+</span><span id="line-293">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> model guesses the language of each request; pass "</span>
+</span><span id="line-294">                <span class="sa">f</span><span class="s2">"language= (e.g. 'en') to pin it, or a take may come back in another "</span>
+</span><span id="line-295">                <span class="sa">f</span><span class="s2">"language"</span><span class="p">,</span>
+</span><span id="line-296">                <span class="n">LanguageUnsetWarning</span><span class="p">,</span>
+</span><span id="line-297">                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+</span><span id="line-298">            <span class="p">)</span>
+</span><span id="line-299">        <span class="k">return</span> <span class="n">kwargs</span>
+</span><span id="line-300">    <span class="k">if</span> <span class="n">option</span><span class="o">.</span><span class="n">param</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-301">        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+</span><span id="line-302">            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> model takes no language option; language=</span><span class="si">{</span><span class="n">language</span><span class="si">!r}</span><span class="s2"> "</span>
+</span><span id="line-303">            <span class="sa">f</span><span class="s2">"is ignored"</span><span class="p">,</span>
+</span><span id="line-304">            <span class="n">LanguageIgnoredWarning</span><span class="p">,</span>
+</span><span id="line-305">            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+</span><span id="line-306">        <span class="p">)</span>
+</span><span id="line-307">        <span class="k">return</span> <span class="n">kwargs</span>
+</span><span id="line-308">    <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">options_for</span><span class="p">(</span><span class="n">option</span><span class="p">,</span> <span class="n">language</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
+</span><span id="line-309">
+</span><span id="line-310">
+</span><span id="line-311"><span class="k">def</span><span class="w"> </span><span class="nf">_requested_bitrate</span><span class="p">(</span><span class="n">options</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-312"><span class="w">    </span><span class="sd">"""The bitrate an ``output_format`` like ``mp3_44100_128`` asks for ('128k').</span>
+</span><span id="line-313">
+</span><span id="line-314"><span class="sd">    &gt;&gt;&gt; _requested_bitrate({"output_format": "mp3_44100_128"}), _requested_bitrate({})</span>
+</span><span id="line-315"><span class="sd">    ('128k', None)</span>
+</span><span id="line-316"><span class="sd">    """</span>
+</span><span id="line-317">    <span class="n">parts</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"output_format"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+</span><span id="line-318">    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">k"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
+</span><span id="line-319">
+</span><span id="line-320">
+</span><span id="line-321"><span class="k">def</span><span class="w"> </span><span class="nf">_speak_with_pauses</span><span class="p">(</span>
+</span><span id="line-322">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">synth</span><span class="o">=</span><span class="kc">None</span>
+</span><span id="line-323"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-324"><span class="w">    </span><span class="sd">"""``text`` with SSML breaks and marks, spoken by ``model`` (``voxy.pauses``).</span>
+</span><span id="line-325">
+</span><span id="line-326"><span class="sd">    One call when every break is one the model renders; otherwise one call per</span>
+</span><span id="line-327"><span class="sd">    section, joined with exactly the requested silences (as WAV, or mp3 etc. via ffmpeg).</span>
+</span><span id="line-328"><span class="sd">    """</span>
+</span><span id="line-329">    <span class="n">synth</span> <span class="o">=</span> <span class="n">synth</span> <span class="ow">or</span> <span class="n">model</span><span class="o">.</span><span class="n">synthesize</span>
+</span><span id="line-330">    <span class="n">sections</span> <span class="o">=</span> <span class="n">plan_sections</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">native_break_s</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">native_break_s</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+</span><span id="line-331">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sections</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">sections</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pause_s</span><span class="p">:</span>
+</span><span id="line-332">        <span class="k">return</span> <span class="n">synth</span><span class="p">(</span><span class="n">sections</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="line-333">    <span class="n">options</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">model</span><span class="o">.</span><span class="n">wav_synth_kwargs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
+</span><span id="line-334">    <span class="n">speech</span> <span class="o">=</span> <span class="n">join_sections</span><span class="p">(</span>
+</span><span id="line-335">        <span class="n">sections</span><span class="p">,</span>
+</span><span id="line-336">        <span class="k">lambda</span> <span class="n">part</span><span class="p">:</span> <span class="n">synth</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">),</span>
+</span><span id="line-337">        <span class="n">backend</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="line-338">        <span class="n">encode</span><span class="o">=</span><span class="n">partial</span><span class="p">(</span><span class="n">encode_audio</span><span class="p">,</span> <span class="n">bitrate</span><span class="o">=</span><span class="n">_requested_bitrate</span><span class="p">(</span><span class="n">options</span><span class="p">)),</span>
+</span><span id="line-339">    <span class="p">)</span>
+</span><span id="line-340">    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">)</span>
+</span><span id="line-341">
+</span><span id="line-342">
+</span><span id="line-343"><span class="k">def</span><span class="w"> </span><span class="nf">_speak_directed</span><span class="p">(</span>
+</span><span id="line-344">    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span><span class="p">,</span> <span class="n">synth</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">instruction</span>
+</span><span id="line-345"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-346"><span class="w">    </span><span class="sd">"""``text`` with delivery directions, in ``model``'s dialect (``voxy.direction``):</span>
+</span><span id="line-347"><span class="sd">    each part spoken with its own options, its SSML breaks (pause tags included)</span>
+</span><span id="line-348"><span class="sd">    honoured, all joined into one ``Speech``."""</span>
+</span><span id="line-349">    <span class="n">plan</span> <span class="o">=</span> <span class="n">plan_requests</span><span class="p">(</span>  <span class="c1"># the plan a caller with its own client gets (voxy.plan)</span>
+</span><span id="line-350">        <span class="n">text</span><span class="p">,</span>
+</span><span id="line-351">        <span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="line-352">        <span class="n">instruction</span><span class="o">=</span><span class="n">instruction</span><span class="p">,</span>
+</span><span id="line-353">        <span class="n">dialect</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">markup_dialect</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">),</span>
+</span><span id="line-354">        <span class="n">native_break_s</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">native_break_s</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">),</span>
+</span><span id="line-355">    <span class="p">)</span>
+</span><span id="line-356">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">plan</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pause_s</span><span class="p">:</span>
+</span><span id="line-357">        <span class="n">speech</span> <span class="o">=</span> <span class="n">synth</span><span class="p">(</span><span class="n">plan</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span class="o">**</span><span class="n">plan</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">options</span><span class="p">})</span>
+</span><span id="line-358">        <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">)</span>
+</span><span id="line-359">    <span class="n">base</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">model</span><span class="o">.</span><span class="n">wav_synth_kwargs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">}</span>
+</span><span id="line-360">    <span class="n">queue</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">([</span><span class="n">request</span><span class="o">.</span><span class="n">options</span> <span class="k">for</span> <span class="n">request</span> <span class="ow">in</span> <span class="n">plan</span> <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">text</span><span class="p">])</span>
+</span><span id="line-361">    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="line-362">
+</span><span id="line-363">    <span class="k">def</span><span class="w"> </span><span class="nf">speak</span><span class="p">(</span><span class="n">part</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-364">        <span class="n">speech</span> <span class="o">=</span> <span class="n">synth</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="n">base</span><span class="p">,</span> <span class="o">**</span><span class="nb">next</span><span class="p">(</span><span class="n">queue</span><span class="p">)})</span>
+</span><span id="line-365">        <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">speech</span><span class="o">.</span><span class="n">cached</span><span class="p">)</span>
+</span><span id="line-366">        <span class="k">return</span> <span class="n">speech</span>
+</span><span id="line-367">
+</span><span id="line-368">    <span class="n">speech</span> <span class="o">=</span> <span class="n">join_sections</span><span class="p">(</span>
+</span><span id="line-369">        <span class="p">[</span><span class="n">Section</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">pause_s</span><span class="p">)</span> <span class="k">for</span> <span class="n">request</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">],</span>
+</span><span id="line-370">        <span class="n">speak</span><span class="p">,</span>
+</span><span id="line-371">        <span class="n">backend</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="line-372">        <span class="n">encode</span><span class="o">=</span><span class="n">partial</span><span class="p">(</span><span class="n">encode_audio</span><span class="p">,</span> <span class="n">bitrate</span><span class="o">=</span><span class="n">_requested_bitrate</span><span class="p">(</span><span class="n">base</span><span class="p">)),</span>
+</span><span id="line-373">    <span class="p">)</span>
+</span><span id="line-374">    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="n">cached</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">flags</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">flags</span><span class="p">))</span>
+</span><span id="line-375">
+</span><span id="line-376">
 <div class="viewcode-block" id="speech_to_speech">
 <a class="viewcode-back" href="../../_autosummary/voxy.facade.html#voxy.facade.speech_to_speech">[docs]</a>
-</span><span id="line-375"><span class="k">def</span><span class="w"> </span><span class="nf">speech_to_speech</span><span class="p">(</span>
-</span><span id="line-376">    <span class="n">audio</span><span class="p">,</span>
-</span><span id="line-377">    <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-378">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-379">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">"elevenlabs"</span><span class="p">,</span>
-</span><span id="line-380">    <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-381">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-382">    <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-383">    <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-384">    <span class="n">use_library</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="line-385">    <span class="n">directions</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"auto"</span><span class="p">,</span>
-</span><span id="line-386">    <span class="n">instruction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-387">    <span class="n">cache</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="line-388">    <span class="n">validate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="line-389">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-</span><span id="line-390"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
-</span><span id="line-391"><span class="w">    </span><span class="sd">"""Voice changer: re-speak ``audio`` in ``voice``, keeping its timing and intonation.</span>
-</span><span id="line-392">
-</span><span id="line-393"><span class="sd">    Same voice resolution as ``text_to_speech``. Needs a backend with a</span>
-</span><span id="line-394"><span class="sd">    ``speech_to_speech`` method (ElevenLabs). ``audio`` is a path, bytes, file-like</span>
-</span><span id="line-395"><span class="sd">    or tensor. Use it to correct a word: say the fix yourself, convert it to the</span>
-</span><span id="line-396"><span class="sd">    narrator's voice, splice.</span>
-</span><span id="line-397"><span class="sd">    """</span>
-</span><span id="line-398">    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-399">        <span class="n">backend</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">name</span>
-</span><span id="line-400">    <span class="n">backend</span><span class="p">,</span> <span class="n">voice</span> <span class="o">=</span> <span class="n">resolve_voice</span><span class="p">(</span>
-</span><span id="line-401">        <span class="n">voice</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">,</span> <span class="n">use_library</span><span class="o">=</span><span class="n">use_library</span>
-</span><span id="line-402">    <span class="p">)</span>
-</span><span id="line-403">    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="n">get_speech_model</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">)</span>
-</span><span id="line-404">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"speech_to_speech"</span><span class="p">):</span>
-</span><span id="line-405">        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Backend </span><span class="si">{</span><span class="n">backend</span><span class="si">!r}</span><span class="s2"> has no speech-to-speech"</span><span class="p">)</span>
-</span><span id="line-406">    <span class="n">speech</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">speech_to_speech</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="line-407">    <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
-</span><span id="line-408">        <span class="n">speech</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
-</span><span id="line-409">    <span class="k">return</span> <span class="n">speech</span></div>
+</span><span id="line-377"><span class="k">def</span><span class="w"> </span><span class="nf">speech_to_speech</span><span class="p">(</span>
+</span><span id="line-378">    <span class="n">audio</span><span class="p">,</span>
+</span><span id="line-379">    <span class="n">voice</span><span class="p">:</span> <span class="n">VoiceProfile</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-380">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-381">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">"elevenlabs"</span><span class="p">,</span>
+</span><span id="line-382">    <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-383">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-384">    <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-385">    <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-386">    <span class="n">use_library</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="line-387">    <span class="n">directions</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"auto"</span><span class="p">,</span>
+</span><span id="line-388">    <span class="n">instruction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-389">    <span class="n">cache</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-390">    <span class="n">validate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="line-391">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span><span id="line-392"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Speech</span><span class="p">:</span>
+</span><span id="line-393"><span class="w">    </span><span class="sd">"""Voice changer: re-speak ``audio`` in ``voice``, keeping its timing and intonation.</span>
+</span><span id="line-394">
+</span><span id="line-395"><span class="sd">    Same voice resolution as ``text_to_speech``. Needs a backend with a</span>
+</span><span id="line-396"><span class="sd">    ``speech_to_speech`` method (ElevenLabs). ``audio`` is a path, bytes, file-like</span>
+</span><span id="line-397"><span class="sd">    or tensor. Use it to correct a word: say the fix yourself, convert it to the</span>
+</span><span id="line-398"><span class="sd">    narrator's voice, splice.</span>
+</span><span id="line-399"><span class="sd">    """</span>
+</span><span id="line-400">    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-401">        <span class="n">backend</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">name</span>
+</span><span id="line-402">    <span class="n">backend</span><span class="p">,</span> <span class="n">voice</span> <span class="o">=</span> <span class="n">resolve_voice</span><span class="p">(</span>
+</span><span id="line-403">        <span class="n">voice</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">,</span> <span class="n">use_library</span><span class="o">=</span><span class="n">use_library</span>
+</span><span id="line-404">    <span class="p">)</span>
+</span><span id="line-405">    <span class="n">model</span> <span class="o">=</span> <span class="n">model</span> <span class="ow">or</span> <span class="n">get_speech_model</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">)</span>
+</span><span id="line-406">    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"speech_to_speech"</span><span class="p">):</span>
+</span><span id="line-407">        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Backend </span><span class="si">{</span><span class="n">backend</span><span class="si">!r}</span><span class="s2"> has no speech-to-speech"</span><span class="p">)</span>
+</span><span id="line-408">    <span class="n">speech</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">speech_to_speech</span><span class="p">(</span><span class="n">audio</span><span class="p">,</span> <span class="n">voice</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="line-409">    <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+</span><span id="line-410">        <span class="n">speech</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+</span><span id="line-411">    <span class="k">return</span> <span class="n">speech</span></div>
 
-</span><span id="line-410">
-</span><span id="line-411">
+</span><span id="line-412">
+</span><span id="line-413">
 <div class="viewcode-block" id="list_voices">
 <a class="viewcode-back" href="../../_autosummary/voxy.facade.html#voxy.facade.list_voices">[docs]</a>
-</span><span id="line-412"><span class="k">def</span><span class="w"> </span><span class="nf">list_voices</span><span class="p">(</span>
-</span><span id="line-413">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-414">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-415">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-416">    <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-417">    <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-418">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-</span><span id="line-419"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">VoiceInfo</span><span class="p">]:</span>
-</span><span id="line-420"><span class="w">    </span><span class="sd">"""Our named voices (``backend=None``), or the voices a backend offers.</span>
-</span><span id="line-421">
-</span><span id="line-422"><span class="sd">    &gt;&gt;&gt; lib = {"ada": {"name": "ada", "aliases": ["Addie"], "description": "d",</span>
-</span><span id="line-423"><span class="sd">    ...                 "profiles": {"elevenlabs": {"segment": "v1"}}}}</span>
-</span><span id="line-424"><span class="sd">    &gt;&gt;&gt; [(v.name, v.labels["backends"]) for v in list_voices(voices=lib)]</span>
-</span><span id="line-425"><span class="sd">    [('ada', ['elevenlabs'])]</span>
-</span><span id="line-426"><span class="sd">    """</span>
-</span><span id="line-427">    <span class="k">if</span> <span class="n">backend</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-428">        <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
-</span><span id="line-429">        <span class="k">return</span> <span class="p">[</span>
-</span><span id="line-430">            <span class="n">VoiceInfo</span><span class="p">(</span>
-</span><span id="line-431">                <span class="n">voice_id</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
-</span><span id="line-432">                <span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
-</span><span id="line-433">                <span class="n">backend</span><span class="o">=</span><span class="n">LIBRARY_BACKEND</span><span class="p">,</span>
-</span><span id="line-434">                <span class="n">description</span><span class="o">=</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"description"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
-</span><span id="line-435">                <span class="n">labels</span><span class="o">=</span><span class="p">{</span>
-</span><span id="line-436">                    <span class="s2">"aliases"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"aliases"</span><span class="p">,</span> <span class="p">[])),</span>
-</span><span id="line-437">                    <span class="s2">"backends"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"profiles"</span><span class="p">,</span> <span class="p">{})),</span>
-</span><span id="line-438">                <span class="p">},</span>
-</span><span id="line-439">            <span class="p">)</span>
-</span><span id="line-440">            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">voices</span><span class="p">)</span>
-</span><span id="line-441">        <span class="p">]</span>
-</span><span id="line-442">    <span class="k">return</span> <span class="p">(</span><span class="n">model</span> <span class="ow">or</span> <span class="n">get_speech_model</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">))</span><span class="o">.</span><span class="n">list_voices</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+</span><span id="line-414"><span class="k">def</span><span class="w"> </span><span class="nf">list_voices</span><span class="p">(</span>
+</span><span id="line-415">    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-416">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-417">    <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-418">    <span class="n">model</span><span class="p">:</span> <span class="n">SpeechModel</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-419">    <span class="n">models</span><span class="p">:</span> <span class="n">MutableMapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-420">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span><span id="line-421"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">VoiceInfo</span><span class="p">]:</span>
+</span><span id="line-422"><span class="w">    </span><span class="sd">"""Our named voices (``backend=None``), or the voices a backend offers.</span>
+</span><span id="line-423">
+</span><span id="line-424"><span class="sd">    &gt;&gt;&gt; lib = {"ada": {"name": "ada", "aliases": ["Addie"], "description": "d",</span>
+</span><span id="line-425"><span class="sd">    ...                 "profiles": {"elevenlabs": {"segment": "v1"}}}}</span>
+</span><span id="line-426"><span class="sd">    &gt;&gt;&gt; [(v.name, v.labels["backends"]) for v in list_voices(voices=lib)]</span>
+</span><span id="line-427"><span class="sd">    [('ada', ['elevenlabs'])]</span>
+</span><span id="line-428"><span class="sd">    """</span>
+</span><span id="line-429">    <span class="k">if</span> <span class="n">backend</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-430">        <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
+</span><span id="line-431">        <span class="k">return</span> <span class="p">[</span>
+</span><span id="line-432">            <span class="n">VoiceInfo</span><span class="p">(</span>
+</span><span id="line-433">                <span class="n">voice_id</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+</span><span id="line-434">                <span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+</span><span id="line-435">                <span class="n">backend</span><span class="o">=</span><span class="n">LIBRARY_BACKEND</span><span class="p">,</span>
+</span><span id="line-436">                <span class="n">description</span><span class="o">=</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"description"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+</span><span id="line-437">                <span class="n">labels</span><span class="o">=</span><span class="p">{</span>
+</span><span id="line-438">                    <span class="s2">"aliases"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"aliases"</span><span class="p">,</span> <span class="p">[])),</span>
+</span><span id="line-439">                    <span class="s2">"backends"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"profiles"</span><span class="p">,</span> <span class="p">{})),</span>
+</span><span id="line-440">                <span class="p">},</span>
+</span><span id="line-441">            <span class="p">)</span>
+</span><span id="line-442">            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">voices</span><span class="p">)</span>
+</span><span id="line-443">        <span class="p">]</span>
+</span><span id="line-444">    <span class="k">return</span> <span class="p">(</span><span class="n">model</span> <span class="ow">or</span> <span class="n">get_speech_model</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">))</span><span class="o">.</span><span class="n">list_voices</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
-</span><span id="line-443">
-</span><span id="line-444">
+</span><span id="line-445">
+</span><span id="line-446">
 <div class="viewcode-block" id="voice_id">
 <a class="viewcode-back" href="../../_autosummary/voxy.facade.html#voxy.facade.voice_id">[docs]</a>
-</span><span id="line-445"><span class="k">def</span><span class="w"> </span><span class="nf">voice_id</span><span class="p">(</span>
-</span><span id="line-446">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"elevenlabs"</span><span class="p">,</span> <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="line-447"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="line-448"><span class="w">    </span><span class="sd">"""The provider's id for library voice ``name`` (for code that calls a provider).</span>
-</span><span id="line-449">
-</span><span id="line-450"><span class="sd">    &gt;&gt;&gt; lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {</span>
-</span><span id="line-451"><span class="sd">    ...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",</span>
-</span><span id="line-452"><span class="sd">    ...                    "sample_rate": 24000}}}}</span>
-</span><span id="line-453"><span class="sd">    &gt;&gt;&gt; voice_id("Addie", voices=lib)</span>
-</span><span id="line-454"><span class="sd">    'v1'</span>
-</span><span id="line-455"><span class="sd">    """</span>
-</span><span id="line-456">    <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
-</span><span id="line-457">    <span class="n">key</span> <span class="o">=</span> <span class="n">find_voice</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
-</span><span id="line-458">    <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-459">        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No voice named </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">voices</span><span class="p">))</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-</span><span id="line-460">    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">profile_from_record</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">canonical_backend</span><span class="p">(</span><span class="n">backend</span><span class="p">))</span><span class="o">.</span><span class="n">segment</span><span class="p">)</span></div>
+</span><span id="line-447"><span class="k">def</span><span class="w"> </span><span class="nf">voice_id</span><span class="p">(</span>
+</span><span id="line-448">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"elevenlabs"</span><span class="p">,</span> <span class="n">voices</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="line-449"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-450"><span class="w">    </span><span class="sd">"""The provider's id for library voice ``name`` (for code that calls a provider).</span>
+</span><span id="line-451">
+</span><span id="line-452"><span class="sd">    &gt;&gt;&gt; lib = {"ada": {"name": "ada", "aliases": ["Addie"], "profiles": {</span>
+</span><span id="line-453"><span class="sd">    ...     "elevenlabs": {"segment": "v1", "speaker_id": 1, "model_type": "elevenlabs",</span>
+</span><span id="line-454"><span class="sd">    ...                    "sample_rate": 24000}}}}</span>
+</span><span id="line-455"><span class="sd">    &gt;&gt;&gt; voice_id("Addie", voices=lib)</span>
+</span><span id="line-456"><span class="sd">    'v1'</span>
+</span><span id="line-457"><span class="sd">    """</span>
+</span><span id="line-458">    <span class="n">voices</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">voices_store</span><span class="p">()</span> <span class="k">if</span> <span class="n">voices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">voices</span>
+</span><span id="line-459">    <span class="n">key</span> <span class="o">=</span> <span class="n">find_voice</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">voices</span><span class="o">=</span><span class="n">voices</span><span class="p">)</span>
+</span><span id="line-460">    <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-461">        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No voice named </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> (have: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">voices</span><span class="p">))</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+</span><span id="line-462">    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">profile_from_record</span><span class="p">(</span><span class="n">voices</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">canonical_backend</span><span class="p">(</span><span class="n">backend</span><span class="p">))</span><span class="o">.</span><span class="n">segment</span><span class="p">)</span></div>
 
 </span></code></pre></div>
     </div></div>
@@ -698,7 +700,7 @@
 </footer>
     </div>
     
-    <script src="../../_static/documentation_options.js?v=ae06b2e5"></script>
+    <script src="../../_static/documentation_options.js?v=5c6fbccc"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

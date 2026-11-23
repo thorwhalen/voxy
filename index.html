@@ -414,6 +414,17 @@ to install the CSM model and its dependencies.</p>
 </div>
 <p>Replace the whole phrase around a word (first name and surname), not the word alone: the neighbouring sounds anticipate it. <code class="docutils literal notranslate"><span class="pre">old</span></code> is the phrase as ASR heard it.</p>
 </section>
+<section id="word-times-for-a-known-text-in-a-recording-of-any-length">
+<h3>Word times for a known text, in a recording of any length<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#word-times-for-a-known-text-in-a-recording-of-any-length" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#word-times-for-a-known-text-in-a-recording-of-any-length'">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">voxy.align.force_align</span></code> places each word of a known text in a stretch of audio under 30 s. <code class="docutils literal notranslate"><span class="pre">voxy.align.align_long</span></code> does it for a whole recording (an episode, an audiobook chapter): a rough speech-recognition pass finds anchor words, the recording is cut between them in real pauses, and each stretch is aligned exactly. Every word comes back with <code class="docutils literal notranslate"><span class="pre">start</span></code>, <code class="docutils literal notranslate"><span class="pre">end</span></code>, <code class="docutils literal notranslate"><span class="pre">score</span></code> and <code class="docutils literal notranslate"><span class="pre">reliable</span></code> (False for a stretch that scored low or could not be cut short enough, rather than a guess). On a synthetic 60-minute reading, 9,437 of 9,438 words started within 0.3 s of the reference.</p>
+
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">voxy.align</span><span class="w"> </span><span class="kn">import</span> <span class="n">align_long</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="n">words</span> <span class="o">=</span> <span class="n">align_long</span><span class="p">(</span><span class="s2">"episode.wav"</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"transcript.txt"</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="n">language</span><span class="o">=</span><span class="s2">"en"</span><span class="p">)</span>
+</span><span id="line-4"><span class="p">[(</span><span class="n">w</span><span class="p">[</span><span class="s2">"word"</span><span class="p">],</span> <span class="n">w</span><span class="p">[</span><span class="s2">"start"</span><span class="p">])</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span> <span class="k">if</span> <span class="n">w</span><span class="p">[</span><span class="s2">"reliable"</span><span class="p">]][:</span><span class="mi">3</span><span class="p">]</span>
+</span></code></pre></div>
+</div>
+</section>
 <section id="local-voice-cloning-no-service-cpu-works">
 <h3>Local voice cloning (no service, CPU works)<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#local-voice-cloning-no-service-cpu-works" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#local-voice-cloning-no-service-cpu-works'">¶</a></h3>
 <p>Five local models clone a voice from one clean clip and its transcript: <code class="docutils literal notranslate"><span class="pre">voxcpm</span></code> (VoxCPM2), <code class="docutils literal notranslate"><span class="pre">qwen3tts</span></code> (Qwen3-TTS), <code class="docutils literal notranslate"><span class="pre">chatterbox</span></code>, <code class="docutils literal notranslate"><span class="pre">f5tts</span></code> (F5-TTS) and <code class="docutils literal notranslate"><span class="pre">xtts</span></code> (XTTS-v2). Each runs in its own Python environment, built on first use with <a class="reference external" href="https://docs.astral.sh/uv/" rel="nofollow noopener">uv<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> under <code class="docutils literal notranslate"><span class="pre">$VOXY_DATA_DIR/envs/</span></code> (weights under <code class="docutils literal notranslate"><span class="pre">$VOXY_DATA_DIR/models/</span></code>), so their clashing torch/transformers pins never touch yours. Requirements: <code class="docutils literal notranslate"><span class="pre">uv</span></code> and <code class="docutils literal notranslate"><span class="pre">ffmpeg</span></code> on the PATH.</p>
@@ -580,7 +591,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-22 22:57 UTC from <a href="https://github.com/thorwhalen/voxy/commit/7e12dc56dc116364ca634ed6f85fa146262a6c41">7e12dc5</a> (main) · voxy 0.0.79 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-23 01:23 UTC from <a href="https://github.com/thorwhalen/voxy/commit/7951af81ffb22223dc45b13acf8293661c9c9675">7951af8</a> (main) · voxy 0.0.80 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -606,6 +617,7 @@ to install the CSM model and its dependencies.</p>
 <li><a :data-current="activeSection === '#a-local-stock-voice-no-service-no-clip-no-torch'" class="reference internal" href="#a-local-stock-voice-no-service-no-clip-no-torch">A local stock voice (no service, no clip, no torch)</a></li>
 <li><a :data-current="activeSection === '#separating-the-voice-from-music'" class="reference internal" href="#separating-the-voice-from-music">Separating the voice from music</a></li>
 <li><a :data-current="activeSection === '#correcting-words-in-a-recording'" class="reference internal" href="#correcting-words-in-a-recording">Correcting words in a recording</a></li>
+<li><a :data-current="activeSection === '#word-times-for-a-known-text-in-a-recording-of-any-length'" class="reference internal" href="#word-times-for-a-known-text-in-a-recording-of-any-length">Word times for a known text, in a recording of any length</a></li>
 <li><a :data-current="activeSection === '#local-voice-cloning-no-service-cpu-works'" class="reference internal" href="#local-voice-cloning-no-service-cpu-works">Local voice cloning (no service, CPU works)</a></li>
 <li><a :data-current="activeSection === '#singing-a-score-with-lyrics-or-a-sung-take-re-voiced'" class="reference internal" href="#singing-a-score-with-lyrics-or-a-sung-take-re-voiced">Singing: a score with lyrics, or a sung take re-voiced</a></li>
 <li><a :data-current="activeSection === '#heteronyms-what-to-send-and-checking-what-was-said'" class="reference internal" href="#heteronyms-what-to-send-and-checking-what-was-said">Heteronyms: what to send, and checking what was said</a></li>
@@ -632,7 +644,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=ae06b2e5"></script>
+<script src="_static/documentation_options.js?v=5c6fbccc"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

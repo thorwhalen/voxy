@@ -11,13 +11,23 @@ voxy.align
       ALIGN_ENV
       Run
       DFLT_DECISIVE_MARGIN
+      DFLT_MAX_STRETCH_S
+      DFLT_MIN_STRETCH_SCORE
+      DFLT_MIN_CUT_GAP_S
+      DFLT_EDGE_S
+      DFLT_CROP_PAD_S
+      ALIGNER_MAX_S
+      ALIGN_RATE
+      Heard
    
    .. rubric:: Functions
 
    .. autosummary::
    
+      align_long
       close_alignment
       force_align
+      plan_stretches
       which_said
       worker_run
       worker_score
