@@ -142,7 +142,18 @@
 <section id="voxy">
 <h1>voxy<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#voxy">¶</a></h1>
 <p>Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designing voices.</p>
-<p>To install:	<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">voxy</span></code> (add <code class="docutils literal notranslate"><span class="pre">'voxy[elevenlabs]'</span></code>, <code class="docutils literal notranslate"><span class="pre">'voxy[aix]'</span></code> or <code class="docutils literal notranslate"><span class="pre">'voxy[fal]'</span></code> for those services). torch is not installed by default: the local CSM model and tensor helpers (<code class="docutils literal notranslate"><span class="pre">cleanup_audio</span></code>, <code class="docutils literal notranslate"><span class="pre">generate_speech</span></code>) need <code class="docutils literal notranslate"><span class="pre">'voxy[local]'</span></code>, and Whisper transcription <code class="docutils literal notranslate"><span class="pre">'voxy[transcription]'</span></code>; the local backends that run in their own environments (kokoro, f5tts, …) need neither. The part-of-speech heteronym detector (<code class="docutils literal notranslate"><span class="pre">voxy.speechtext.pos_detector</span></code>) needs <code class="docutils literal notranslate"><span class="pre">'voxy[pos]'</span></code> plus <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">spacy</span> <span class="pre">download</span> <span class="pre">fr_core_news_sm</span></code>. The LLM proposer (<code class="docutils literal notranslate"><span class="pre">voxy.speechtext.llm_detector</span></code>) uses <code class="docutils literal notranslate"><span class="pre">'voxy[aix]'</span></code> unless you pass <code class="docutils literal notranslate"><span class="pre">chat=</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">pip<span class="w"> </span>install<span class="w"> </span>voxy
+</span></code></pre></div>
+</div>
+<p>Extras, added as <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'voxy[extra]'</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">elevenlabs</span></code>, <code class="docutils literal notranslate"><span class="pre">aix</span></code>, <code class="docutils literal notranslate"><span class="pre">fal</span></code>: those services.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">local</span></code>: the local CSM model and the tensor helpers (<code class="docutils literal notranslate"><span class="pre">cleanup_audio</span></code>, <code class="docutils literal notranslate"><span class="pre">generate_speech</span></code>). torch is not installed by default.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">transcription</span></code>: Whisper transcription.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pos</span></code>: the part-of-speech heteronym detector (<code class="docutils literal notranslate"><span class="pre">voxy.speechtext.pos_detector</span></code>); also run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">spacy</span> <span class="pre">download</span> <span class="pre">fr_core_news_sm</span></code>.</p></li>
+<li><p>The LLM proposer (<code class="docutils literal notranslate"><span class="pre">voxy.speechtext.llm_detector</span></code>) uses <code class="docutils literal notranslate"><span class="pre">aix</span></code> unless you pass <code class="docutils literal notranslate"><span class="pre">chat=</span></code>.</p></li>
+</ul>
+<p>The local backends that run in their own environments (kokoro, f5tts, …) need none of these.</p>
 
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">import</span><span class="w"> </span><span class="nn">voxy</span>
 </span><span id="line-2">
@@ -258,16 +269,8 @@
 <h3>Install at least one model<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#install-at-least-one-model" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#install-at-least-one-model'">¶</a></h3>
 <section id="example-the-csm-model">
 <h4>Example: the CSM Model<a @click.prevent="window.navigator.clipboard.writeText($el.href); $el.setAttribute('data-tooltip', 'Copied!'); setTimeout(() =&gt; $el.setAttribute('data-tooltip', 'Copy link to this element'), 2000)" aria-label="Copy link to this element" class="headerlink" data-tooltip="Copy link to this element" href="#example-the-csm-model">¶</a></h4>
-<p>The intention is to make <code class="docutils literal notranslate"><span class="pre">voxy</span></code> into a plugin-enabled facade, where you can chose your
-own engine (for voice cloning, voice synthesis, etc.).
-But for now, we just support, what seems to be the best open-source model out there
-(at the time of writing this):
-<a class="reference external" href="https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice" rel="nofollow noopener">Sesame AI Lab’s<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>
-CSM model. It’s just that, well, they did an amazing job at the model, but a terrible one
-(so far) for the python interface – which is what inspired me to develop <code class="docutils literal notranslate"><span class="pre">voxy</span></code>
-in the first place.</p>
-<p>Follow the instructions in the <a class="reference external" href="https://github.com/SesameAILabs/csm" rel="nofollow noopener">CSM repository<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a>
-to install the CSM model and its dependencies.</p>
+<p>The intention is to make <code class="docutils literal notranslate"><span class="pre">voxy</span></code> into a plugin-enabled facade, where you can chose your own engine (for voice cloning, voice synthesis, etc.). But for now, we just support, what seems to be the best open-source model out there (at the time of writing this): <a class="reference external" href="https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice" rel="nofollow noopener">Sesame AI Lab’s<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> CSM model. It’s just that, well, they did an amazing job at the model, but a terrible one (so far) for the python interface – which is what inspired me to develop <code class="docutils literal notranslate"><span class="pre">voxy</span></code> in the first place.</p>
+<p>Follow the instructions in the <a class="reference external" href="https://github.com/SesameAILabs/csm" rel="nofollow noopener">CSM repository<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> to install the CSM model and its dependencies.</p>
 <p>Try <a class="reference external" href="https://huggingface.co/spaces/sesame/csm-1b" rel="nofollow noopener">the csm spaces<svg fill="currentColor" height="1em" stroke="none" viewbox="0 96 960 960" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M188 868q-11-11-11-28t11-28l436-436H400q-17 0-28.5-11.5T360 336q0-17 11.5-28.5T400 296h320q17 0 28.5 11.5T760 336v320q0 17-11.5 28.5T720 696q-17 0-28.5-11.5T680 656V432L244 868q-11 11-28 11t-28-11Z"></path></svg></a> where you can try various functionalities of csm.</p>
 </section>
 </section>
@@ -591,7 +594,7 @@ to install the CSM model and its dependencies.</p>
 </section>
 </section>
 </section>
-<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-23 01:23 UTC from <a href="https://github.com/thorwhalen/voxy/commit/7951af81ffb22223dc45b13acf8293661c9c9675">7951af8</a> (main) · voxy 0.0.80 · <a href="about-this-build.html">about this build</a></p>
+<p class="epythet-provenance" style="font-size:.8em;opacity:.65;margin-top:2.5em;text-align:right">built 2026-11-23 02:37 UTC from <a href="https://github.com/thorwhalen/voxy/commit/ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b">ec7c351</a> (main) · voxy 0.0.81 · <a href="about-this-build.html">about this build</a></p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] h-full overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
@@ -644,7 +647,7 @@ to install the CSM model and its dependencies.</p>
 </div>
 </footer>
 </div>
-<script src="_static/documentation_options.js?v=5c6fbccc"></script>
+<script src="_static/documentation_options.js?v=f81738d5"></script>
 <script src="_static/doctools.js?v=fd6eb6e6"></script>
 <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="_static/clipboard.min.js?v=a7894cd8"></script>

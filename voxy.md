@@ -1,4 +1,4 @@
-> built 2026-11-23 01:23 UTC from 7951af8 (main) · voxy 0.0.80. Details: build_info.json
+> built 2026-11-23 02:37 UTC from ec7c351 (main) · voxy 0.0.81. Details: build_info.json
 
 # index.html.md
 
@@ -8,7 +8,19 @@
 
 Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designing voices.
 
-To install:	`pip install voxy` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'voxy[fal]'` for those services). torch is not installed by default: the local CSM model and tensor helpers (`cleanup_audio`, `generate_speech`) need `'voxy[local]'`, and Whisper transcription `'voxy[transcription]'`; the local backends that run in their own environments (kokoro, f5tts, …) need neither. The part-of-speech heteronym detector (`voxy.speechtext.pos_detector`) needs `'voxy[pos]'` plus `python -m spacy download fr_core_news_sm`. The LLM proposer (`voxy.speechtext.llm_detector`) uses `'voxy[aix]'` unless you pass `chat=`.
+```bash
+pip install voxy
+```
+
+Extras, added as `pip install 'voxy[extra]'`:
+
+- `elevenlabs`, `aix`, `fal`: those services.
+- `local`: the local CSM model and the tensor helpers (`cleanup_audio`, `generate_speech`). torch is not installed by default.
+- `transcription`: Whisper transcription.
+- `pos`: the part-of-speech heteronym detector (`voxy.speechtext.pos_detector`); also run `python -m spacy download fr_core_news_sm`.
+- The LLM proposer (`voxy.speechtext.llm_detector`) uses `aix` unless you pass `chat=`.
+
+The local backends that run in their own environments (kokoro, f5tts, …) need none of these.
 
 <!-- wads-docs: skip - calls ElevenLabs (API key, spends credits) -->
 ```python
@@ -132,17 +144,9 @@ voxy.text_to_speech(
 
 #### Example: the CSM Model
 
-The intention is to make `voxy` into a plugin-enabled facade, where you can chose your
-own engine (for voice cloning, voice synthesis, etc.).
-But for now, we just support, what seems to be the best open-source model out there
-(at the time of writing this):
-[Sesame AI Lab’s](https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice)
-CSM model. It’s just that, well, they did an amazing job at the model, but a terrible one
-(so far) for the python interface – which is what inspired me to develop `voxy`
-in the first place.
+The intention is to make `voxy` into a plugin-enabled facade, where you can chose your own engine (for voice cloning, voice synthesis, etc.). But for now, we just support, what seems to be the best open-source model out there (at the time of writing this): [Sesame AI Lab’s](https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice) CSM model. It’s just that, well, they did an amazing job at the model, but a terrible one (so far) for the python interface – which is what inspired me to develop `voxy` in the first place.
 
-Follow the instructions in the [CSM repository](https://github.com/SesameAILabs/csm)
-to install the CSM model and its dependencies.
+Follow the instructions in the [CSM repository](https://github.com/SesameAILabs/csm) to install the CSM model and its dependencies.
 
 Try [the csm spaces](https://huggingface.co/spaces/sesame/csm-1b) where you can try various functionalities of csm.
 
@@ -8387,16 +8391,18 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-23 01:23 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/7951af81ffb22223dc45b13acf8293661c9c9675"><code>7951af8</code></a> on branch <code>main</code>, for **voxy 0.0.80** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-23 02:37 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b"><code>ec7c351</code></a> on branch <code>main</code>, for **voxy 0.0.81** (from <code>pyproject.toml</code>).
 
-#### NOTE
-Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
+#### WARNING
+The documentation and the package may be misaligned:
+
+- The documented version (0.0.81) is behind the latest release on PyPI (0.0.82): `pip install voxy` gives newer code than these docs describe.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/7951af81ffb22223dc45b13acf8293661c9c9675"><code>7951af81ffb22223dc45b13acf8293661c9c9675</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b"><code>ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -8407,9 +8413,9 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45094047872">45094047872</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45101038310">45101038310</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>7951af81ffb22223dc45b13acf8293661c9c9675</code> (in the history of the built commit) |
+| Event commit | <code>ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b</code> (in the history of the built commit) |
 
 ## Tools
 
@@ -8434,13 +8440,13 @@ Nothing suggests a mismatch: the tree was clean at the commit above, and the doc
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.80/">0.0.80</a>, the same as the documented version.
+Latest release: <a href="https://pypi.org/project/voxy/0.0.82/">0.0.82</a>, newer than the documented version (0.0.81).
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout 7951af81ffb22223dc45b13acf8293661c9c9675
+git checkout ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b
 pip install "epythet==0.2.23"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```

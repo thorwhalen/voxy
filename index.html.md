@@ -4,7 +4,19 @@
 
 Facade for voice generation: speech synthesis in any voice, on any service, plus cloning and designing voices.
 
-To install:	`pip install voxy` (add `'voxy[elevenlabs]'`, `'voxy[aix]'` or `'voxy[fal]'` for those services). torch is not installed by default: the local CSM model and tensor helpers (`cleanup_audio`, `generate_speech`) need `'voxy[local]'`, and Whisper transcription `'voxy[transcription]'`; the local backends that run in their own environments (kokoro, f5tts, …) need neither. The part-of-speech heteronym detector (`voxy.speechtext.pos_detector`) needs `'voxy[pos]'` plus `python -m spacy download fr_core_news_sm`. The LLM proposer (`voxy.speechtext.llm_detector`) uses `'voxy[aix]'` unless you pass `chat=`.
+```bash
+pip install voxy
+```
+
+Extras, added as `pip install 'voxy[extra]'`:
+
+- `elevenlabs`, `aix`, `fal`: those services.
+- `local`: the local CSM model and the tensor helpers (`cleanup_audio`, `generate_speech`). torch is not installed by default.
+- `transcription`: Whisper transcription.
+- `pos`: the part-of-speech heteronym detector (`voxy.speechtext.pos_detector`); also run `python -m spacy download fr_core_news_sm`.
+- The LLM proposer (`voxy.speechtext.llm_detector`) uses `aix` unless you pass `chat=`.
+
+The local backends that run in their own environments (kokoro, f5tts, …) need none of these.
 
 <!-- wads-docs: skip - calls ElevenLabs (API key, spends credits) -->
 ```python
@@ -128,17 +140,9 @@ voxy.text_to_speech(
 
 #### Example: the CSM Model
 
-The intention is to make `voxy` into a plugin-enabled facade, where you can chose your
-own engine (for voice cloning, voice synthesis, etc.).
-But for now, we just support, what seems to be the best open-source model out there
-(at the time of writing this):
-[Sesame AI Lab’s](https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice)
-CSM model. It’s just that, well, they did an amazing job at the model, but a terrible one
-(so far) for the python interface – which is what inspired me to develop `voxy`
-in the first place.
+The intention is to make `voxy` into a plugin-enabled facade, where you can chose your own engine (for voice cloning, voice synthesis, etc.). But for now, we just support, what seems to be the best open-source model out there (at the time of writing this): [Sesame AI Lab’s](https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice) CSM model. It’s just that, well, they did an amazing job at the model, but a terrible one (so far) for the python interface – which is what inspired me to develop `voxy` in the first place.
 
-Follow the instructions in the [CSM repository](https://github.com/SesameAILabs/csm)
-to install the CSM model and its dependencies.
+Follow the instructions in the [CSM repository](https://github.com/SesameAILabs/csm) to install the CSM model and its dependencies.
 
 Try [the csm spaces](https://huggingface.co/spaces/sesame/csm-1b) where you can try various functionalities of csm.
 
