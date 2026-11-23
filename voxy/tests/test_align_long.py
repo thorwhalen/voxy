@@ -1,8 +1,32 @@
 """align_long (#129): a known text aligned to a recording of any length, in stretches."""
 
+import io
 import random
+import wave
 
+import voxy.align as va
 from voxy.align import align_long, plan_stretches
+
+
+def _silent_wav(seconds: float) -> bytes:
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1), w.setsampwidth(2), w.setframerate(va.ALIGN_RATE)
+        w.writeframes(bytes(2 * int(seconds * va.ALIGN_RATE)))
+    return buf.getvalue()
+
+
+def _recording_crops(monkeypatch):
+    """Record where each crop starts, so a fake aligner can answer on the crop's clock."""
+    starts = []
+    real = va._crop
+
+    def crop(wav_path, start, end, out):
+        starts.append((start, end))
+        return real(wav_path, start, end, out)
+
+    monkeypatch.setattr(va, "_crop", crop)
+    return starts
 
 
 def _episode(n_words=600, seed=0):
@@ -38,7 +62,7 @@ def test_a_long_unanchored_run_is_reported_not_cut_on_a_guess():
     assert [s["too_long"] for s in stretches] == [False, True]
 
 
-def test_align_long_puts_each_word_near_its_reference():
+def test_align_long_puts_each_word_near_its_reference(monkeypatch):
     words, ref, total = _episode(n_words=400, seed=1)
     rng = random.Random(2)
     # the rough pass: most words heard, times off by up to 0.3 s, a few misheard
@@ -48,24 +72,50 @@ def test_align_long_puts_each_word_near_its_reference():
         if rng.random() > 0.08
     ]
     index = {w: j for j, w in enumerate(words)}
+    crops = _recording_crops(monkeypatch)
 
-    def exact(audio, ws, *, start, end):  # a perfect aligner, which also checks its crop
+    def exact(audio, ws, *, start, end):  # a perfect aligner on the crop's clock, which checks the crop holds its words
+        lo, hi = crops[-1]
         out = []
         for w in ws:
             s, e = ref[index[w]]
-            assert start <= s and e <= end, (w, start, end)
-            out.append({"start": s, "end": e, "score": 0.9, "chars": []})
+            assert lo <= s and e <= hi, (w, lo, hi)
+            out.append({"start": s - lo, "end": e - lo, "score": 0.9, "chars": [{"char": w[0], "start": s - lo, "end": s - lo + 0.05}]})
         return out
 
-    got = align_long(b"", " ".join(words), heard=lambda path: heard, run=exact, max_stretch_s=25)
+    got = align_long(_silent_wav(total), " ".join(words), heard=lambda path: heard, run=exact, max_stretch_s=25)
     assert [w["word"] for w in got] == words
     close = sum(abs(w["start"] - s) <= 0.3 for w, (s, _) in zip(got, ref))
     assert close / len(words) >= 0.95
     assert all(w["reliable"] for w in got)
+    assert all(abs(w["chars"][0]["start"] - w["start"]) < 1e-9 for w in got)  # chars moved too
+    assert all(hi - lo < va.ALIGNER_MAX_S for lo, hi in crops)
+
+
+def test_an_intro_an_outro_and_a_long_break_are_left_out_not_flagged(monkeypatch):
+    # 50 words between 30 s and 80 s of a 120 s recording, and a 60 s break in the middle of them
+    times = {j: (30 + 0.5 * j + (60 if j >= 25 else 0), 30.3 + 0.5 * j + (60 if j >= 25 else 0)) for j in range(50)}
+    stretches = plan_stretches(50, times, 180.0, max_stretch_s=25)
+    assert not any(s["too_long"] for s in stretches)
+    assert stretches[0]["start"] >= 28 and stretches[-1]["end"] <= 117
+    assert all(s["end"] - s["start"] <= 25 for s in stretches)
+
+
+def test_punctuation_between_anchors_does_not_remove_the_cut():
+    times = {0: (0.0, 0.4), 2: (30.0, 30.4)}  # word 1 is a dash: nothing hears it
+    stretches = plan_stretches(3, times, 31.0, max_stretch_s=25, transparent=frozenset({1}))
+    assert [s["too_long"] for s in stretches] == [False, False]
+
+
+def test_a_crop_over_the_aligners_limit_is_refused_up_front():
+    import pytest
+
+    with pytest.raises(ValueError, match="must stay under"):
+        align_long(b"", "a b", heard=lambda p: [], max_stretch_s=29.8)
 
 
 def test_a_low_scoring_stretch_is_flagged():
     heard = [{"text": w, "start": 2.0 * i, "end": 2.0 * i + 1} for i, w in enumerate("a b c d".split())]
-    poor = lambda audio, ws, *, start, end: [{"start": start, "end": start + 0.1, "score": 0.1, "chars": []} for _ in ws]
-    got = align_long(b"", "a b c d", heard=lambda p: heard, run=poor, max_stretch_s=4)
+    poor = lambda audio, ws, *, start, end: [{"start": 0.0, "end": 0.1, "score": 0.1, "chars": []} for _ in ws]
+    got = align_long(_silent_wav(9), "a b c d", heard=lambda p: heard, run=poor, max_stretch_s=4)
     assert not any(w["reliable"] for w in got)
