@@ -898,3 +898,20 @@ def test_a_heard_word_that_is_only_punctuation_is_never_paired():
     heard = [{"text": " so", "start": 0.0, "end": 0.2}, {"text": " ...", "start": 0.2, "end": 0.3},
              {"text": " yes", "start": 0.3, "end": 0.5}]
     assert align_words("so yes", heard) == {0: 0, 1: 2}
+
+
+def test_align_words_orders_heard_words_a_few_ms_apart():
+    from voxy.pronounce import align_words
+
+    heard = [
+        {"text": " yes", "start": 0.51, "end": 0.9},
+        {"text": " so", "start": 0.5, "end": 0.505},  # a hair out of order
+    ]
+    assert align_words("so yes", heard) == {0: 1, 1: 0}
+
+
+def test_align_words_ignores_a_heard_word_with_no_times():
+    from voxy.pronounce import align_words
+
+    heard = [{"text": " so"}, {"text": " so", "start": 0.0, "end": 0.3}, {"text": " yes", "start": 0.3, "end": 0.6}]
+    assert align_words("so yes", heard) == {0: 1, 1: 2}

@@ -1285,6 +1285,12 @@ def split_elisions(
     return out
 
 
+def _timed(word: Mapping) -> bool:
+    return isinstance(word.get("start"), (int, float)) and isinstance(
+        word.get("end"), (int, float)
+    )
+
+
 def align_words(
     text: str, words: Sequence[Mapping], *, elisions: Collection[str] = ()
 ) -> dict[int, int]:
@@ -1296,7 +1302,7 @@ def align_words(
     ASR missed, merged or added elsewhere does not shift the others; a text word with no
     exact counterpart is left out, and so is a heard word that is only punctuation. A
     word elided onto one of ``elisions`` counts as two (:func:`_text_words`). Heard
-    words are timed (``start``, ``end``), in time order, as ASR gives them.
+    words are timed (``start``, ``end``); they are put in time order here, and an untimed one is ignored.
 
     >>> heard = [{"text": " Il", "start": 0.0, "end": 0.2}, {"text": " et", "start": 0.2, "end": 0.4},
     ...          {"text": " est", "start": 0.4, "end": 0.6}, {"text": " là.", "start": 0.6, "end": 0.9}]
@@ -1306,7 +1312,15 @@ def align_words(
     from mixing.transcript import align_words as align
 
     said = [w for _, w, _ in _text_words(text, elisions=elisions)]
-    return align(said, words, normalize=normal_word, split=None).anchors
+    # a ``words_of=`` seam may give words a few ms out of order, or untimed: the aligner
+    # wants them in time order, so order the timed ones and map the indices back
+    order = sorted(
+        (i for i, w in enumerate(words) if _timed(w)), key=lambda i: words[i]["start"]
+    )
+    anchors = align(
+        said, [words[i] for i in order], normalize=normal_word, split=None
+    ).anchors
+    return {k: order[v] for k, v in anchors.items()}
 
 
 def _risk_places(

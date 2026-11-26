@@ -119,3 +119,22 @@ def test_a_low_scoring_stretch_is_flagged():
     poor = lambda audio, ws, *, start, end: [{"start": 0.0, "end": 0.1, "score": 0.1, "chars": []} for _ in ws]
     got = align_long(_silent_wav(9), "a b c d", heard=lambda p: heard, run=poor, max_stretch_s=4)
     assert not any(w["reliable"] for w in got)
+
+
+def test_a_leading_dash_does_not_stop_the_lead_in_being_skipped():
+    # word 0 is punctuation; word 1 is heard at 40 s after a 40 s intro
+    times = {1: (40.0, 40.4), 2: (40.5, 40.9)}
+    (s,) = plan_stretches(3, times, 45.0, max_stretch_s=25, transparent=frozenset({0}))
+    assert s["start"] >= 38 and not s["too_long"]
+
+
+def test_an_unheard_first_word_does_not_stop_the_lead_in_being_skipped():
+    times = {1: (40.0, 40.4), 2: (40.5, 40.9)}  # word 0 was not heard
+    (s,) = plan_stretches(3, times, 45.0, max_stretch_s=25)
+    assert 30 <= s["start"] <= 40 and not s["too_long"]
+
+
+def test_an_unheard_last_word_does_not_stop_the_outro_being_skipped():
+    times = {0: (1.0, 1.4), 1: (1.5, 1.9)}  # word 2 was not heard; a 60 s outro
+    (s,) = plan_stretches(3, times, 62.0, max_stretch_s=25)
+    assert s["end"] <= 10 and not s["too_long"]
