@@ -265,13 +265,16 @@ def plan_stretches(
         else:
             end = start = (anchor_times[a][1] + anchor_times[b][0]) / 2
         cuts.append((j + 1, end, start, gap))
-    first, last = after(0), before(n_words - 1)
-    at = max(0.0, anchor_times[first][0] - edge_s) if first == 0 else 0.0
-    tail = (
-        min(duration, anchor_times[last][1] + edge_s)
-        if last == n_words - 1
-        else duration
-    )
+    # the edges: past transparent words, and past unheard words (each gets an extra
+    # ``edge_s`` of room before the first anchor / after the last one)
+    heard = sorted(anchor_times)
+    if heard:
+        lead = sum(1 for j in range(heard[0]) if j not in transparent)
+        trail = sum(1 for j in range(heard[-1] + 1, n_words) if j not in transparent)
+        at = max(0.0, anchor_times[heard[0]][0] - edge_s * (1 + lead))
+        tail = min(duration, anchor_times[heard[-1]][1] + edge_s * (1 + trail))
+    else:
+        at, tail = 0.0, duration
     stretches, word = [], 0
     while word < n_words:
         if tail - at <= max_stretch_s:
