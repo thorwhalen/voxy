@@ -1,36 +1,36 @@
 {
   "schema_version": 1,
-  "built_at": "2026-11-23T02:37:53Z",
+  "built_at": "2026-11-26T17:45:39Z",
   "package": {
     "name": "voxy",
-    "version": "0.0.81",
+    "version": "0.0.82",
     "display_name": "voxy",
     "source": "pyproject.toml"
   },
   "git": {
     "available": true,
-    "commit": "ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b",
-    "short_commit": "ec7c351",
+    "commit": "f779e9da8be6188762ada994505f06b74c9ea381",
+    "short_commit": "f779e9d",
     "branch": "main",
     "tags": [],
     "dirty": false,
     "remote_url": "https://github.com/thorwhalen/voxy",
-    "commit_url": "https://github.com/thorwhalen/voxy/commit/ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b",
+    "commit_url": "https://github.com/thorwhalen/voxy/commit/f779e9da8be6188762ada994505f06b74c9ea381",
     "error": null
   },
   "ci": {
     "provider": "github",
     "repository": "thorwhalen/voxy",
-    "sha": "ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b",
+    "sha": "f779e9da8be6188762ada994505f06b74c9ea381",
     "sha_in_history": true,
     "ref": "refs/heads/main",
     "ref_name": "main",
-    "run_id": "45101038310",
-    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/45101038310",
+    "run_id": "45870037243",
+    "run_url": "https://github.com/thorwhalen/voxy/actions/runs/45870037243",
     "server_url": "https://github.com"
   },
   "tools": {
-    "epythet": "0.2.23",
+    "epythet": "0.2.25",
     "sphinx": "9.1.1",
     "docutils": "0.22.4",
     "python": "3.12.16"
@@ -61,15 +61,13 @@
   "pypi": {
     "checked": true,
     "latest": "0.0.82",
-    "relation": "behind",
+    "relation": "same",
     "error": null
   },
-  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b\npip install \"epythet==0.2.23\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
+  "reproduce": "git clone https://github.com/thorwhalen/voxy && cd voxy\ngit checkout f779e9da8be6188762ada994505f06b74c9ea381\npip install \"epythet==0.2.25\"\nepythet quickstart . --ignore tests/ scrap/ examples/",
   "warnings": [],
   "alignment": {
-    "aligned": false,
-    "notes": [
-      "The documented version (0.0.81) is behind the latest release on PyPI (0.0.82): `pip install voxy` gives newer code than these docs describe."
-    ]
+    "aligned": true,
+    "notes": []
   }
 }

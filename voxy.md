@@ -1,4 +1,4 @@
-> built 2026-11-23 02:37 UTC from ec7c351 (main) · voxy 0.0.81. Details: build_info.json
+> built 2026-11-26 17:45 UTC from f779e9d (main) · voxy 0.0.82. Details: build_info.json
 
 # index.html.md
 
@@ -4171,7 +4171,7 @@ word kept whole (`split_elisions` has already cut it as the text is cut). A word
 ASR missed, merged or added elsewhere does not shift the others; a text word with no
 exact counterpart is left out, and so is a heard word that is only punctuation. A
 word elided onto one of `elisions` counts as two (`_text_words()`). Heard
-words are timed (`start`, `end`), in time order, as ASR gives them.
+words are timed (`start`, `end`); they are put in time order here, and an untimed one is ignored.
 
 ```pycon
 >>> heard = [{"text": " Il", "start": 0.0, "end": 0.2}, {"text": " et", "start": 0.2, "end": 0.4},
@@ -8391,18 +8391,16 @@ XTTS-v2 (Coqui, maintained by idiap as coqui-tts): GPT-style cloning from a shor
 
 # About this build
 
-This documentation was built on **2026-11-23 02:37 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b"><code>ec7c351</code></a> on branch <code>main</code>, for **voxy 0.0.81** (from <code>pyproject.toml</code>).
+This documentation was built on **2026-11-26 17:45 UTC** from commit <a href="https://github.com/thorwhalen/voxy/commit/f779e9da8be6188762ada994505f06b74c9ea381"><code>f779e9d</code></a> on branch <code>main</code>, for **voxy 0.0.82** (from <code>pyproject.toml</code>).
 
-#### WARNING
-The documentation and the package may be misaligned:
-
-- The documented version (0.0.81) is behind the latest release on PyPI (0.0.82): `pip install voxy` gives newer code than these docs describe.
+#### NOTE
+Nothing suggests a mismatch: the tree was clean at the commit above, and the documented version is the one on PyPI.
 
 ## Source
 
 |                     |                                                                                                                                                        |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b"><code>ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b</code></a> |
+| Commit              | <a href="https://github.com/thorwhalen/voxy/commit/f779e9da8be6188762ada994505f06b74c9ea381"><code>f779e9da8be6188762ada994505f06b74c9ea381</code></a> |
 | Branch              | <code>main</code>                                                                                                                                      |
 | Tags at this commit | none                                                                                                                                                   |
 | Working tree        | clean                                                                                                                                                  |
@@ -8413,15 +8411,15 @@ The documentation and the package may be misaligned:
 |              |                                                                                            |
 |--------------|--------------------------------------------------------------------------------------------|
 | Repository   | <code>thorwhalen/voxy</code>                                                               |
-| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45101038310">45101038310</a>      |
+| Run          | <a href="https://github.com/thorwhalen/voxy/actions/runs/45870037243">45870037243</a>      |
 | Ref          | <code>refs/heads/main</code>                                                               |
-| Event commit | <code>ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b</code> (in the history of the built commit) |
+| Event commit | <code>f779e9da8be6188762ada994505f06b74c9ea381</code> (in the history of the built commit) |
 
 ## Tools
 
 |          |         |
 |----------|---------|
-| epythet  | 0.2.23  |
+| epythet  | 0.2.25  |
 | Sphinx   | 9.1.1   |
 | docutils | 0.22.4  |
 | Python   | 3.12.16 |
@@ -8440,14 +8438,14 @@ The documentation and the package may be misaligned:
 
 ## Package on PyPI
 
-Latest release: <a href="https://pypi.org/project/voxy/0.0.82/">0.0.82</a>, newer than the documented version (0.0.81).
+Latest release: <a href="https://pypi.org/project/voxy/0.0.82/">0.0.82</a>, the same as the documented version.
 
 ## Reproduce
 
 ```bash
 git clone https://github.com/thorwhalen/voxy && cd voxy
-git checkout ec7c3512adedb2211ff09eb2f2e4ec3963cabc1b
-pip install "epythet==0.2.23"
+git checkout f779e9da8be6188762ada994505f06b74c9ea381
+pip install "epythet==0.2.25"
 epythet quickstart . --ignore tests/ scrap/ examples/
 ```
 

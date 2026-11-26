@@ -339,7 +339,7 @@ word kept whole (`split_elisions` has already cut it as the text is cut). A word
 ASR missed, merged or added elsewhere does not shift the others; a text word with no
 exact counterpart is left out, and so is a heard word that is only punctuation. A
 word elided onto one of `elisions` counts as two (`_text_words()`). Heard
-words are timed (`start`, `end`), in time order, as ASR gives them.
+words are timed (`start`, `end`); they are put in time order here, and an untimed one is ignored.
 
 ```pycon
 >>> heard = [{"text": " Il", "start": 0.0, "end": 0.2}, {"text": " et", "start": 0.2, "end": 0.4},

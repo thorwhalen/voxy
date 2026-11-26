@@ -663,7 +663,7 @@ word kept whole (<code class="docutils literal notranslate"><span class="pre">sp
 ASR missed, merged or added elsewhere does not shift the others; a text word with no
 exact counterpart is left out, and so is a heard word that is only punctuation. A
 word elided onto one of <code class="docutils literal notranslate"><span class="pre">elisions</span></code> counts as two (<code class="xref py py-func docutils literal notranslate"><span class="pre">_text_words()</span></code>). Heard
-words are timed (<code class="docutils literal notranslate"><span class="pre">start</span></code>, <code class="docutils literal notranslate"><span class="pre">end</span></code>), in time order, as ASR gives them.</p>
+words are timed (<code class="docutils literal notranslate"><span class="pre">start</span></code>, <code class="docutils literal notranslate"><span class="pre">end</span></code>); they are put in time order here, and an untimed one is ignored.</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">heard</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" Il"</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span> <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" et"</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">},</span>
 </span><span id="line-2"><span class="gp">... </span>         <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" est"</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="mf">0.6</span><span class="p">},</span> <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">" là."</span><span class="p">,</span> <span class="s2">"start"</span><span class="p">:</span> <span class="mf">0.6</span><span class="p">,</span> <span class="s2">"end"</span><span class="p">:</span> <span class="mf">0.9</span><span class="p">}]</span>
 </span><span id="line-3"><span class="gp">&gt;&gt;&gt; </span><span class="n">align_words</span><span class="p">(</span><span class="s2">"Il est là"</span><span class="p">,</span> <span class="n">heard</span><span class="p">)</span>
@@ -1414,7 +1414,7 @@ inject <code class="docutils literal notranslate"><span class="pre">phrase_score
 </div>
 </footer>
 </div>
-<script src="../_static/documentation_options.js?v=f81738d5"></script>
+<script src="../_static/documentation_options.js?v=cfefb2bf"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
 <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
